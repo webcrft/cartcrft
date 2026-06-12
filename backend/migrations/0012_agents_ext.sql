@@ -1,5 +1,5 @@
 -- ============================================================================
--- 0009_AGENTS_EXT — extend agents + mandates for AP2-style trust layer (T3.3)
+-- 0012_AGENTS_EXT — extend agents + mandates for AP2-style trust layer (T3.3)
 --
 -- Adds to agents:
 --   public_key  TEXT  — hex-encoded DER ed25519 public key

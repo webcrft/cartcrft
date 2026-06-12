@@ -10,9 +10,11 @@
     "typecheck": "tsc --project tsconfig.json --noEmit",
     "test": "vitest run",
     "suite": "node scripts/suite.mjs",
-    "migrate": "tsx src/main.ts migrate"
+    "migrate": "tsx src/main.ts migrate",
+    "mcp:stdio": "tsx src/agent/mcp/stdio.ts"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "dotenv": "^16.4.7",
     "fastify": "^5.8.5",
     "fastify-type-provider-zod": "^6.1.0",
