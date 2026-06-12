@@ -4,7 +4,10 @@
  * Ported faithfully from:
  *   webcrft-mono/backend/internal/webhooks/router/router.go
  *
- * Route: POST /webhooks/:storeId/payment/:providerRef
+ * Routes:
+ *   POST /webhooks/:storeId/payment/:providerRef  (path-based — T2.5)
+ *   POST /{providerType}/{ref}  via Host: {storeId}.webhooks.{BASE_DOMAIN}  (T6.3)
+ *   GET  /commerce/stores/:storeId/webhook-url  (T6.3)
  *
  * The `:providerRef` param is the payment provider id or slug. The handler:
  *  1. Reads the raw body (needed for HMAC verification — must run before JSON parsing).
@@ -18,6 +21,16 @@
  * Note: the tracking webhook /webhooks/:storeId/tracking/:shipmentId is owned by
  * T2.6 (logistics). This router is mounted at /webhooks/:storeId/payment/:providerRef
  * so both coexist under the same /webhooks prefix without conflict.
+ *
+ * Subdomain routing (T6.3):
+ *   An onRequest hook inspects the Host header. If it matches
+ *   {storeId}.webhooks.{BASE_DOMAIN}, the storeId is extracted and the
+ *   path is interpreted as /{providerType}/{providerRef}. Both path-based and
+ *   subdomain-based routing call the same handleWebhook() core, so signature
+ *   verification, replay dedup, and payment recording are identical.
+ *
+ *   When BASE_DOMAIN is absent or "localhost", subdomain routing is disabled and
+ *   the onRequest hook is a no-op (path-based routing still works).
  */
 
 import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
@@ -46,8 +59,57 @@ import {
   verifyAndParseXendit,
   type XenditEvent,
 } from "./verifiers/xendit.js";
+import { storeAuthRead } from "../lib/auth/middleware.js";
 
 const secretsKey = config.AUTH_SECRETS_KEY ?? "";
+
+// ── Subdomain routing helpers (T6.3) ──────────────────────────────────────────
+
+/**
+ * Returns the effective BASE_DOMAIN at call time, stripped of protocol and port.
+ *
+ * Reads from process.env directly so that tests can override BASE_DOMAIN after
+ * the module is loaded (the config singleton is frozen at import time).
+ * Falls back to config.BASE_DOMAIN when the env var is not set at call time.
+ */
+function getBaseDomain(): string {
+  const raw = process.env["BASE_DOMAIN"] ?? config.BASE_DOMAIN ?? "";
+  return raw
+    .replace(/^https?:\/\//, "")
+    .replace(/:.*$/, ""); // strip port if any
+}
+
+/**
+ * Whether subdomain webhook routing is enabled.
+ * Evaluated lazily so tests can set BASE_DOMAIN after module load.
+ * Disabled when BASE_DOMAIN is absent, "localhost", or "127.0.0.1".
+ */
+export function isSubdomainRoutingEnabled(): boolean {
+  const bd = getBaseDomain();
+  return Boolean(bd) &&
+    bd !== "localhost" &&
+    bd !== "127.0.0.1";
+}
+
+/**
+ * Given a Host header value, extract the storeId UUID if the host matches
+ * the pattern `{storeId}.webhooks.{BASE_DOMAIN}`.
+ * Returns null when subdomain routing is disabled or the host does not match.
+ */
+export function storeIdFromHost(host: string): string | null {
+  const bd = getBaseDomain();
+  if (!bd || bd === "localhost" || bd === "127.0.0.1") return null;
+
+  // Strip port suffix (e.g. host:3000 → host).
+  const bareHost = host.split(":")[0] ?? host;
+  const suffix = `.webhooks.${bd}`;
+  if (!bareHost.endsWith(suffix)) return null;
+
+  const storeId = bareHost.slice(0, bareHost.length - suffix.length);
+  // Must be a UUID (36 chars with dashes).
+  if (storeId.length !== 36) return null;
+  return storeId;
+}
 
 /** 1-cent tolerance to allow for provider rounding. */
 const AMOUNT_TOLERANCE = 0.01;
@@ -75,6 +137,13 @@ interface ProviderRow {
  *   PUT  /webhooks/:storeId/payment/:providerRef
  *   POST /webhooks/:storeId/payment              (no providerRef — load by type)
  *   PUT  /webhooks/:storeId/payment              (no providerRef — load by type)
+ *   GET  /commerce/stores/:storeId/webhook-url   (T6.3)
+ *
+ * Subdomain routing (T6.3):
+ *   An onRequest hook detects Host: {storeId}.webhooks.{BASE_DOMAIN} and
+ *   dispatches to handleWebhook() with the storeId from the subdomain and
+ *   the providerType/ref from the URL path. The request is replied inside the
+ *   hook, so none of the path-based routes run for subdomain requests.
  *
  * Does NOT register /webhooks/:storeId/tracking/:shipmentId (owned by T2.6).
  */
@@ -97,6 +166,76 @@ export async function webhooksPlugin(app: FastifyInstance): Promise<void> {
     (_req, body, done) => {
       done(null, body);
     }
+  );
+
+  // ── T6.3: Subdomain webhook routing ─────────────────────────────────────────
+  // Mechanism: wildcard routes registered for paths /:providerType and
+  // /:providerType/:providerRef with a preHandler that verifies the Host header
+  // matches the {storeId}.webhooks.{BASE_DOMAIN} pattern.
+  //
+  // Why wildcard routes rather than an onRequest hook:
+  //   In Fastify 5, hooks registered inside a plugin scope only run for routes
+  //   in that scope. Requests to unregistered paths skip plugin-scoped hooks
+  //   and go directly to the not-found handler. Wildcard routes ARE proper
+  //   routes and participate in normal route matching + body parsing.
+  //
+  // Both POST and PUT are registered (payment providers may use either).
+  // Raw body is available as a Buffer because of the content-type parsers above.
+
+  const subdomainHandler = async (
+    request: FastifyRequest,
+    reply: FastifyReply
+  ): Promise<void> => {
+    const host = (request.headers["host"] as string | undefined) ?? "";
+    const storeId = storeIdFromHost(host);
+    if (!storeId) {
+      // Not a subdomain request — this wildcard route should not match for
+      // non-subdomain hosts, but guard here just in case.
+      return reply.status(404).send({ error: { code: "NOT_FOUND", message: "Route not found" } });
+    }
+
+    // Parse /:providerType and optional /:providerRef from route params.
+    const params = request.params as Record<string, string>;
+    const providerType = params["providerType"] ?? "";
+    const providerRef = params["providerRef"] ?? "";
+
+    if (!providerType) {
+      return reply.status(400).send({ message: "path must be /{provider_type}/{provider_ref}" });
+    }
+
+    const rawBody: Buffer =
+      request.body instanceof Buffer
+        ? request.body
+        : Buffer.from(
+            typeof request.body === "string"
+              ? request.body
+              : JSON.stringify(request.body ?? ""),
+            "utf8"
+          );
+
+    await handleWebhook(request, reply, storeId, providerType, providerRef, rawBody);
+  };
+
+  // Wildcard routes for subdomain-based dispatch: /{providerType}/{providerRef}
+  // These routes have broad paths so they ONLY handle requests when the Host
+  // header matches the subdomain pattern (checked inside subdomainHandler).
+  // They are registered AFTER the specific path-based routes above to ensure
+  // Fastify's router prefers the more specific /webhooks/:storeId/... routes.
+  app.post<{ Params: { providerType: string; providerRef: string } }>(
+    "/:providerType/:providerRef",
+    subdomainHandler
+  );
+  app.put<{ Params: { providerType: string; providerRef: string } }>(
+    "/:providerType/:providerRef",
+    subdomainHandler
+  );
+  app.post<{ Params: { providerType: string; providerRef?: string } }>(
+    "/:providerType",
+    subdomainHandler
+  );
+  app.put<{ Params: { providerType: string; providerRef?: string } }>(
+    "/:providerType",
+    subdomainHandler
   );
 
   const handler = async (
@@ -137,6 +276,96 @@ export async function webhooksPlugin(app: FastifyInstance): Promise<void> {
   app.put<{ Params: { storeId: string; providerRef?: string } }>(
     "/webhooks/:storeId/payment",
     handler
+  );
+
+  // ── T6.3: GET /commerce/stores/:storeId/webhook-url ─────────────────────────
+  // Returns subdomain + path-based webhook URLs for all active providers.
+  // Ported from: webcrft-mono/backend/internal/handlers/commerce.go GetWebhookURL().
+  app.get<{ Params: { storeId: string } }>(
+    "/commerce/stores/:storeId/webhook-url",
+    { preHandler: storeAuthRead },
+    async (request, reply) => {
+      const { storeId } = request.params;
+      const pool = getPool();
+
+      // Evaluate lazily at request time so tests can override BASE_DOMAIN.
+      const baseDomain = getBaseDomain();
+      const subdomainEnabled = isSubdomainRoutingEnabled();
+
+      // Provider tables and their routing types.
+      // Columns differ by table: payment_providers has slug+position;
+      // shipping has position but no slug; notification/tax have neither.
+      // We handle this by per-table SQL with available columns only.
+      interface TableDef {
+        table: string;
+        ptype: string;
+        hasSlug: boolean;
+        hasPosition: boolean;
+      }
+      const providerTables: TableDef[] = [
+        { table: "payment_providers",      ptype: "payment",      hasSlug: true,  hasPosition: true  },
+        { table: "shipping_providers",     ptype: "shipping",     hasSlug: false, hasPosition: true  },
+        { table: "notification_providers", ptype: "notification", hasSlug: false, hasPosition: false },
+        { table: "tax_providers",          ptype: "tax",          hasSlug: false, hasPosition: false },
+      ];
+
+      interface WebhookEntry {
+        provider_id: string;
+        provider_type: string;
+        name: string;
+        slug: string;
+        subdomain_url: string | null;
+        path_url: string;
+      }
+
+      const entries: WebhookEntry[] = [];
+
+      for (const { table, ptype, hasSlug, hasPosition } of providerTables) {
+        const slugCol = hasSlug ? ", coalesce(slug, '') AS slug" : ", '' AS slug";
+        const orderClause = hasPosition
+          ? "ORDER BY position ASC, created_at ASC"
+          : "ORDER BY created_at ASC";
+
+        const { rows } = await pool.query<{
+          id: string;
+          name: string;
+          slug: string;
+        }>(
+          `SELECT id::text, name${slugCol}
+           FROM ${table}
+           WHERE store_id = $1::uuid AND is_active = true
+           ${orderClause}`,
+          [storeId]
+        );
+
+        for (const row of rows) {
+          const ref = row.slug || row.id;
+
+          // Path-based URL (always available).
+          const pathUrl = `/webhooks/${storeId}/${ptype}/${ref}`;
+
+          // Subdomain URL (null when BASE_DOMAIN not configured or is localhost).
+          const subdomainUrl = subdomainEnabled
+            ? `https://${storeId}.webhooks.${baseDomain}/${ptype}/${ref}`
+            : null;
+
+          entries.push({
+            provider_id: row.id,
+            provider_type: ptype,
+            name: row.name,
+            slug: row.slug,
+            subdomain_url: subdomainUrl,
+            path_url: pathUrl,
+          });
+        }
+      }
+
+      return reply.status(200).send({
+        webhooks: entries,
+        base_domain: baseDomain || null,
+        subdomain_routing_enabled: subdomainEnabled,
+      });
+    }
   );
 }
 

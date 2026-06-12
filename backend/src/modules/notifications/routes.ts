@@ -6,8 +6,11 @@
  *   POST   /commerce/stores/:storeId/notification-providers      admin
  *   PUT    /commerce/stores/:storeId/notification-providers/:providerId  admin
  *   DELETE /commerce/stores/:storeId/notification-providers/:providerId  admin
- *   GET    /commerce/stores/:storeId/webhook-url                 admin
  *   GET    /commerce/stores/:storeId/webhook-log                 admin
+ *
+ * Note: GET /commerce/stores/:storeId/webhook-url is handled by webhooksPlugin
+ * (webhooks/router.ts) which aggregates all provider types. The duplicate here
+ * was removed to prevent FastifyError on startup.
  */
 
 import type { FastifyPluginAsync } from "fastify";
@@ -18,7 +21,6 @@ import {
   createNotificationProvider,
   updateNotificationProvider,
   deleteNotificationProvider,
-  getWebhookUrl,
   getWebhookLog,
 } from "./service.js";
 
@@ -141,27 +143,6 @@ export const notificationsPlugin: FastifyPluginAsync = async (app) => {
         return reply.status(404).send({ error: { code: "NOT_FOUND", message: "notification provider not found" } });
       }
       return reply.send({ ok: true });
-    }
-  );
-
-  // ── GET /commerce/stores/:storeId/webhook-url ─────────────────────────────
-  app.get(
-    "/commerce/stores/:storeId/webhook-url",
-    { preHandler: [storeAuthAdmin] },
-    async (request, reply) => {
-      const params = StoreIdParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({ error: { code: "VALIDATION_ERROR", message: "Invalid storeId" } });
-      }
-      try {
-        const url = await getWebhookUrl(params.data.storeId);
-        return reply.send({ webhook_url: url });
-      } catch (err) {
-        if (err instanceof Error && (err as NodeJS.ErrnoException).code === "NOT_FOUND") {
-          return reply.status(404).send({ error: { code: "NOT_FOUND", message: "store not found" } });
-        }
-        throw err;
-      }
     }
   );
 
