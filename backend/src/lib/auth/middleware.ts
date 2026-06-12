@@ -41,6 +41,7 @@ import { verifyJwt } from "./jwt.js";
 import { lookupApiKey, hasScope } from "../../modules/apikeys/service.js";
 import { storeExistsInOrg } from "../../modules/stores/service.js";
 import { config } from "../../config/config.js";
+import { buildKv, getKvSync, MemoryKv } from "../cache/kv.js";
 
 // ── Request decoration ────────────────────────────────────────────────────────
 
@@ -58,27 +59,15 @@ declare module "fastify" {
   }
 }
 
-// ── In-memory IP rate limiter ─────────────────────────────────────────────────
+// ── IP rate limiter (KV-backed) ───────────────────────────────────────────────
 
-interface RateBucket {
-  count: number;
-  windowStart: number;
+/**
+ * Initialise the KV singleton at app boot so the first request doesn't pay
+ * the lazy-init cost.  Fire-and-forget — never blocks startup.
+ */
+export function initRateLimitKv(): void {
+  void buildKv();
 }
-
-const ipBuckets = new Map<string, RateBucket>();
-
-// Prune stale buckets every 5 minutes (Wave 6: replace with Redis adapter).
-setInterval(
-  () => {
-    const now = Date.now();
-    for (const [ip, bucket] of ipBuckets) {
-      if (now - bucket.windowStart > 60_000) {
-        ipBuckets.delete(ip);
-      }
-    }
-  },
-  5 * 60_000
-).unref();
 
 function getClientIp(request: FastifyRequest): string {
   // Trust X-Forwarded-For in production (behind a load balancer).
@@ -90,8 +79,21 @@ function getClientIp(request: FastifyRequest): string {
 }
 
 /**
+ * Fallback in-memory bucket used only during the brief async-init window
+ * before the KV singleton is ready.  After init the KV singleton handles all
+ * requests.  Exported so tests can inject a custom KV via setKvForTesting()
+ * and this path is never hit.
+ */
+const _fallbackKv = new MemoryKv();
+
+/**
  * IP rate-limit preHandler.
- * Uses IP_RATE_LIMIT_PER_MINUTE from config.
+ *
+ * Uses the process-singleton KV (MemoryKv by default; RedisKv when REDIS_URL
+ * is configured).  The KV's incrWithWindow() enforces a fixed 60-second
+ * window — identical semantics to the original ipBuckets Map, so existing
+ * apikeys.test.ts behaviour is preserved without modification.
+ *
  * Responds 429 with RATE_LIMIT_EXCEEDED on breach.
  */
 export const rateLimitHook: preHandlerHookHandler = async (
@@ -99,17 +101,15 @@ export const rateLimitHook: preHandlerHookHandler = async (
   reply
 ) => {
   const ip = getClientIp(request);
-  const now = Date.now();
   const limit = config.IP_RATE_LIMIT_PER_MINUTE;
 
-  let bucket = ipBuckets.get(ip);
-  if (!bucket || now - bucket.windowStart > 60_000) {
-    bucket = { count: 0, windowStart: now };
-    ipBuckets.set(ip, bucket);
-  }
-  bucket.count++;
+  // Use the already-initialised singleton if available; fall back to the
+  // in-memory bucket for the tiny window before first async init resolves.
+  const kv = getKvSync() ?? _fallbackKv;
 
-  if (bucket.count > limit) {
+  const count = await kv.incrWithWindow(`rl:${ip}`, 60_000);
+
+  if (count > limit) {
     await reply.status(429).send({
       error: {
         code: "RATE_LIMIT_EXCEEDED",

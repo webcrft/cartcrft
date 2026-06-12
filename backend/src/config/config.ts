@@ -66,6 +66,11 @@ const configSchema = z.object({
 
   // Rate limiting
   IP_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().default(60),
+
+  // Optional Redis URL — enables RedisKv (rate limiting) + RedisWorkerLock.
+  // When absent, the OSS default in-memory KV and Postgres advisory locks are used.
+  // No new infra required for self-hosted installs.
+  REDIS_URL: z.string().optional(),
 });
 
 export type RawConfig = z.infer<typeof configSchema>;

@@ -26,7 +26,8 @@
     "zod": "^4.4.3"
   },
   "optionalDependencies": {
-    "@cartcrft/cloud-billing": "workspace:*"
+    "@cartcrft/cloud-billing": "workspace:*",
+    "ioredis": "^5.11.1"
   },
   "devDependencies": {
     "@types/node": "^22.15.30",
