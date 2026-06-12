@@ -107,7 +107,7 @@ const ProductTypeEnum = z.enum([
 
 const ProductStatusEnum = z.enum(["draft", "active", "archived"]);
 
-const MediaTypeEnum = z.enum(["image", "video", "3d_model"]);
+const MediaTypeEnum = z.enum(["image", "video", "model_3d"]);
 
 const RuleFieldEnum = z.enum(["title", "vendor", "status", "type", "tag"]);
 
@@ -1508,7 +1508,6 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
         type: MetafieldTypeEnum.optional(),
         validations: z.unknown().optional(),
         is_required: z.boolean().optional(),
-        pin_to_form: z.boolean().optional(),
       });
 
       const parsed = Body.safeParse(request.body);
@@ -1535,7 +1534,6 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
         type: MetafieldTypeEnum.optional(),
         validations: z.unknown().optional(),
         is_required: z.boolean().optional(),
-        pin_to_form: z.boolean().optional(),
       });
 
       const parsed = Body.safeParse(request.body);

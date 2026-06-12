@@ -132,8 +132,6 @@ export interface OptionPublic {
   product_id: string;
   name: string;
   position: number;
-  created_at: string;
-  updated_at: string;
 }
 
 export interface OptionValuePublic {
@@ -141,7 +139,6 @@ export interface OptionValuePublic {
   option_id: string;
   value: string;
   position: number;
-  created_at: string;
 }
 
 export interface OptionWithValues extends OptionPublic {
@@ -156,7 +153,7 @@ export interface CreateOptionInput {
 
 // ── Media ─────────────────────────────────────────────────────────────────────
 
-export type MediaType = "image" | "video" | "3d_model";
+export type MediaType = "image" | "video" | "model_3d";
 
 export interface MediaPublic {
   id: string;
@@ -168,7 +165,6 @@ export interface MediaPublic {
   alt_text: string | null;
   position: number;
   created_at: string;
-  updated_at: string;
 }
 
 export interface AddMediaInput {
@@ -457,9 +453,8 @@ export interface MetafieldDefinitionPublic {
   owner_resource: string;
   description: string | null;
   type: MetafieldType;
-  validations: unknown | null;
+  validations: unknown;
   is_required: boolean;
-  pin_to_form: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -473,7 +468,6 @@ export interface CreateMetafieldDefinitionInput {
   type?: MetafieldType | undefined;
   validations?: unknown | undefined;
   is_required?: boolean | undefined;
-  pin_to_form?: boolean | undefined;
 }
 
 export interface UpdateMetafieldDefinitionInput {
@@ -482,7 +476,6 @@ export interface UpdateMetafieldDefinitionInput {
   type?: MetafieldType | undefined;
   validations?: unknown | undefined;
   is_required?: boolean | undefined;
-  pin_to_form?: boolean | undefined;
 }
 
 // ── Translations ──────────────────────────────────────────────────────────────

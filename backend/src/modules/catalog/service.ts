@@ -1665,7 +1665,7 @@ export async function upsertMetafield(
       input.owner_id,
       input.namespace,
       input.key,
-      input.value ?? null,
+      input.value ?? "",
       input.type ?? "string",
     ]
   );
@@ -1732,7 +1732,7 @@ export async function createMetafieldDefinition(
     `INSERT INTO metafield_definitions
        (store_id, namespace, key, name, owner_resource, description, value_type, validations, is_required)
      VALUES
-       ($1::uuid, $2, $3, $4, $5, $6, $7, $8, $9)
+       ($1::uuid, $2, $3, $4, $5, $6, $7, $8::jsonb, $9)
      RETURNING id::text`,
     [
       storeId,
@@ -1742,7 +1742,7 @@ export async function createMetafieldDefinition(
       input.owner_resource,
       input.description ?? null,
       input.type ?? "string",
-      input.validations ? JSON.stringify(input.validations) : null,
+      input.validations ? JSON.stringify(input.validations) : "{}",
       input.is_required ?? false,
     ]
   );
@@ -1762,7 +1762,7 @@ export async function updateMetafieldDefinition(
        name        = COALESCE($3, name),
        description = COALESCE($4, description),
        value_type  = COALESCE($5, value_type),
-       validations = COALESCE($6, validations),
+       validations = COALESCE($6::jsonb, validations),
        is_required = COALESCE($7, is_required),
        updated_at  = now()
      WHERE id = $1::uuid AND store_id = $2::uuid`,
