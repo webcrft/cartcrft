@@ -1,0 +1,9 @@
+packages:
+  - backend
+  - admin
+  - sdk
+  - cloud/billing
+
+onlyBuiltDependencies: []
+allowBuilds:
+  esbuild: true
