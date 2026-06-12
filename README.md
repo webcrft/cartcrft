@@ -1,6 +1,10 @@
+<p align="center">
+  <img src="assets/logo.svg" width="96" alt="Cartcrft logo" />
+</p>
+
 # Cartcrft
 
-**The open-source, agent-native, headless commerce backend.**
+**The open-source, agent-native, headless commerce backend. TypeScript end-to-end.**
 
 > The Supabase of commerce, built for the agentic era.
 
@@ -79,12 +83,13 @@ cartcrft/
 ├── LICENSE                    # MIT (everything except cloud/)
 ├── README.md
 ├── roadmap.md / tasks.md      # planning pair
-├── backend/                   # Go headless commerce core (MIT) — in development
-│   ├── cmd/server/            # single binary: serve | worker
-│   ├── internal/              # commerce, payments, webhooks, shipping, auth, agent
-│   ├── migrations/            # Postgres schema (numbered, idempotent up)
-│   └── tests/                 # suite harness: go run . -suite <name>
-├── mcp/                       # MCP server spec + conformance examples (MIT) — in development
+├── assets/                    # logo + brand
+├── package.json               # pnpm workspace root
+├── backend/                   # TypeScript headless commerce core (MIT) — in development
+│   ├── src/                   # one entrypoint: serve | worker | migrate (Fastify + zod + pg)
+│   ├── migrations/            # Postgres schema (plain SQL, numbered)
+│   └── tests/                 # vitest suites: pnpm suite <name>
+├── mcp/                       # MCP usage docs + conformance examples (MIT) — in development
 ├── sdk/                       # @cartcrft/sdk (TS, generated from OpenAPI) (MIT) — in development
 ├── admin/                     # React 19 + Vite admin dashboard SPA (MIT)
 ├── cloud/                     # thin cloud layer (Cartcrft Cloud License — source-visible, not MIT)
