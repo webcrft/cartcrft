@@ -24,6 +24,8 @@ import { checkoutPlugin } from "../modules/checkout/routes.js";
 import { discountsPlugin } from "../modules/discounts/routes.js";
 import { walletPlugin } from "../modules/wallet/routes.js";
 import { catalogPlugin } from "../modules/catalog/routes.js";
+import { customersPlugin } from "../modules/customers/routes.js";
+import { customerAuthPlugin } from "../modules/customer-auth/routes.js";
 
 const VERSION = process.env["npm_package_version"] ?? "0.0.0";
 
@@ -106,6 +108,8 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(discountsPlugin);
   await app.register(walletPlugin);
   await app.register(catalogPlugin);
+  await app.register(customersPlugin);
+  await app.register(customerAuthPlugin);
 
   // ── GET /healthz ────────────────────────────────────────────────────────
   app.get("/healthz", async (_request, reply) => {

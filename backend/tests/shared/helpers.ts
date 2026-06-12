@@ -243,14 +243,36 @@ export interface CustomerFixture {
  */
 export async function insertOrg(
   pool: pg.Pool,
-  opts: { name?: string } = {}
+  opts: { name?: string; slug?: string } = {}
 ): Promise<OrgFixture> {
   const name = opts.name ?? `Test Org ${Date.now()}`;
+  const slug =
+    opts.slug ??
+    `test-org-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
   return resilientFixture(async () => {
-    const res = await pool.query<{ id: string; name: string }>(
-      `INSERT INTO organizations (name) VALUES ($1) RETURNING id::text, name`,
-      [name]
-    );
+    // Try inserting with slug (required in most deployments).
+    // Fall back to name-only insert if the slug column doesn't exist.
+    let res: { rows: { id: string; name: string }[] };
+    try {
+      res = await pool.query<{ id: string; name: string }>(
+        `INSERT INTO organizations (name, slug) VALUES ($1, $2) RETURNING id::text, name`,
+        [name, slug]
+      );
+    } catch (err: unknown) {
+      // If slug column doesn't exist, try without it
+      if (
+        err instanceof Error &&
+        err.message.includes("slug") &&
+        err.message.includes("column")
+      ) {
+        res = await pool.query<{ id: string; name: string }>(
+          `INSERT INTO organizations (name) VALUES ($1) RETURNING id::text, name`,
+          [name]
+        );
+      } else {
+        throw err;
+      }
+    }
     const row = res.rows[0];
     if (!row) throw new Error("insertOrg: no row returned");
     return { id: row.id, name: row.name };
@@ -301,15 +323,24 @@ export async function insertStore(
  */
 export async function insertProduct(
   pool: pg.Pool,
-  opts: { storeId: string; title?: string }
+  opts: { storeId: string; title?: string; slug?: string }
 ): Promise<ProductFixture> {
   const title = opts.title ?? `Test Product ${Date.now()}`;
+  const slug =
+    opts.slug ??
+    title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 80) +
+      "-" +
+      Math.random().toString(36).slice(2, 7);
   return resilientFixture(async () => {
     const res = await pool.query<{ id: string; store_id: string; title: string }>(
-      `INSERT INTO products (store_id, title)
-       VALUES ($1::uuid, $2)
+      `INSERT INTO products (store_id, title, slug)
+       VALUES ($1::uuid, $2, $3)
        RETURNING id::text, store_id::text, title`,
-      [opts.storeId, title]
+      [opts.storeId, title, slug]
     );
     const row = res.rows[0];
     if (!row) throw new Error("insertProduct: no row returned");
