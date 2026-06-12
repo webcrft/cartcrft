@@ -1,0 +1,53 @@
+Cartcrft Cloud License v1.0
+Copyright (c) 2026 Webcrft Systems
+
+This license governs the files contained in the cloud/ directory of the
+Cartcrft repository. All other files in this repository are licensed under
+the MIT License (see root LICENSE).
+
+1. GRANT OF RIGHTS
+
+   Subject to the terms of this license, Webcrft Systems grants you a
+   limited, non-exclusive, non-transferable right to:
+
+   a. View and read the source code in this directory.
+   b. Modify the source code for the purposes of development, testing,
+      debugging, and submitting contributions to the Cartcrft project.
+   c. Run the code in this directory in non-production, non-commercial
+      environments (local development, staging, CI pipelines).
+
+2. RESTRICTIONS
+
+   The following uses are NOT permitted without a separate written agreement
+   with Webcrft Systems:
+
+   a. Running the code in this directory in production for any purpose.
+   b. Providing the functionality of this directory as a commercial service
+      or as part of a hosted offering.
+   c. Distributing this code, in source or compiled form, to third parties
+      for production or commercial use.
+
+3. SELF-HOSTING
+
+   Self-hosting Cartcrft does NOT require any code from this directory.
+   The core backend, MCP server, SDK, and admin dashboard are all MIT-licensed
+   and fully functional without cloud/. This directory exists solely for the
+   cartcrft.com hosted service operated by Webcrft Systems.
+
+4. CONTRIBUTIONS
+
+   Contributions to files in this directory are accepted under the same terms
+   as contributions to the rest of the project. By submitting a contribution
+   you grant Webcrft Systems a perpetual, royalty-free license to use your
+   contribution under this license or any future license Webcrft Systems
+   chooses for this directory.
+
+5. NO WARRANTY
+
+   This software is provided "as is", without warranty of any kind. Webcrft
+   Systems shall not be liable for any damages arising from its use.
+
+6. CONTACT
+
+   To obtain a production/commercial use agreement, contact:
+   legal@webcrft.com

@@ -7,10 +7,16 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# JS/TS build artifacts (unanchored — matches admin/, sdk/, etc.)
 node_modules
 dist
 dist-ssr
 *.local
+
+# Go build artifacts
+backend/bin/
+*.test
+*.out
 
 # Env / secrets
 .env
