@@ -288,8 +288,16 @@ export async function createCtx(): Promise<TestCtx> {
 
     let bodyStr: string | undefined;
     if (opts.body !== undefined) {
-      bodyStr = JSON.stringify(opts.body);
-      headers["content-type"] = "application/json";
+      // If the caller already provided a content-type AND the body is a raw
+      // string (e.g. text/csv, text/plain), send it as-is without JSON-encoding.
+      const callerContentType = opts.headers?.["content-type"] ?? opts.headers?.["Content-Type"] ?? "";
+      if (typeof opts.body === "string" && callerContentType && !callerContentType.includes("application/json")) {
+        bodyStr = opts.body;
+        // content-type already in headers — don't override it
+      } else {
+        bodyStr = JSON.stringify(opts.body);
+        headers["content-type"] = "application/json";
+      }
     }
 
     const res = await fetch(url, {

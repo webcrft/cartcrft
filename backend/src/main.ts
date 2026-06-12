@@ -15,6 +15,9 @@ import { closePool } from "./db/pool.js";
 import { runMigrations } from "./db/migrate.js";
 import { buildApp } from "./http/app.js";
 import { startEmbeddingWorkerJob } from "./agent/search/indexer.js";
+import { startRecoveryWorkerJob } from "./modules/recovery/worker.js";
+import { ConsoleMailer } from "./lib/mailer/console.js";
+import { SesMailer } from "./lib/mailer/ses.js";
 
 // ── Subcommand dispatch ───────────────────────────────────────────────────
 const subcommand = process.argv[2] ?? "serve";
@@ -80,11 +83,28 @@ async function runWorker(): Promise<void> {
   const stopEmbedding = startEmbeddingWorkerJob();
   console.log("[worker] embedding job registered (30s poll interval)");
 
+  // T6.5 — abandoned-cart recovery email worker job.
+  const mailer =
+    config.AWS_SES_REGION &&
+    config.AWS_SES_ACCESS_KEY_ID &&
+    config.AWS_SES_SECRET_ACCESS_KEY &&
+    config.EMAIL_FROM
+      ? new SesMailer({
+          region: config.AWS_SES_REGION,
+          accessKeyId: config.AWS_SES_ACCESS_KEY_ID,
+          secretAccessKey: config.AWS_SES_SECRET_ACCESS_KEY,
+          fromAddress: config.EMAIL_FROM,
+        })
+      : new ConsoleMailer();
+  const stopRecovery = startRecoveryWorkerJob({ mailer });
+  console.log("[worker] recovery job registered (5-min poll interval)");
+
   // Keep alive.
   await new Promise<void>((resolve) => {
     const shutdown = () => {
       console.log("[worker] shutdown");
       stopEmbedding();
+      stopRecovery();
       void closePool().then(resolve);
     };
     process.on("SIGINT", shutdown);
