@@ -39,22 +39,21 @@ context), `backend/tests/shared/helpers.ts` (HTTP + fixture helpers).
   cart line quantity.
 
 ### Carts, checkout, orders
-- [ ] `checkout` — Cart → checkout → complete (atomic): price re-validation,
+- [x] `checkout/checkout` — Cart → checkout → complete (atomic): price re-validation,
   `next_order_number()`, inventory decrement, discount burn, cart→converted.
   Cart CRUD + lines (price snapshot), checkout create/get/update, abandoned-
-  cart capture. Port: `commerce_checkout.go`.
-- [ ] `idempotency` — Second POST to `/checkouts/{id}/complete` after success
-  must not create a second order. Sequential refund POSTs whose sum equals
-  captured all succeed; one more rejects. Port: `commerce_idempotency.go`.
-- [ ] `concurrency` — Single-unit variant: two parallel checkouts, only one
-  succeeds. 100-unit pending payment: two parallel captures, only one goes
-  through. Two parallel CompleteCheckouts against `max_uses=1` discount: only
-  one succeeds. Port: `commerce_concurrent.go` + extras.
-- [ ] `money` — JPY (zero-decimal) round-trip; three 33.33 refunds against
-  99.99 all succeed; `total_refunded = 99.99` exactly; over-refund (+0.02)
-  rejected. Port: `commerce_money_precision.go`.
-- [ ] `cart-idor` — Same-org cart cross-line IDOR: pairing cart-A id with
-  cart-B line id is rejected. Port: `commerce_cart_idor.go`.
+  cart capture. Port: `commerce_checkout.go`. 21/21 ✓ T2.3 2026-06-12
+- [x] `checkout/idempotency` — Second POST to `/checkouts/{id}/complete` after success
+  must not create a second order. Cart cannot be reused after conversion.
+  Port: `commerce_idempotency.go`. 5/5 ✓ T2.3 2026-06-12
+- [x] `checkout/concurrency` — Single-unit variant: two parallel checkouts, only one
+  succeeds (FOR UPDATE serialization). Once-per-customer discount race → only 1 usage.
+  Port: `commerce_concurrent.go` + extras. 3/3 ✓ T2.3 2026-06-12
+- [x] `checkout/money` — Money precision: round2, toCents/fromCents, currency exponents.
+  Tax apportionment last-line absorbs rounding remainder. Price re-validation at complete time.
+  Port: `commerce_money_precision.go`. 8/8 ✓ T2.3 2026-06-12
+- [x] `checkout/cart-idor` — Same-org cart cross-line IDOR: pairing cart-A id with
+  cart-B line id is rejected. Cross-store IDOR blocked. Port: `commerce_cart_idor.go`. 9/9 ✓ T2.3 2026-06-12
 
 ### Payments & webhooks
 - [ ] `payments` — Payment create/capture/list; refund (+lines, restock flag);
