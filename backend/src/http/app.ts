@@ -38,6 +38,12 @@ import { searchPlugin } from "../agent/search/routes.js";
 import { agentsPlugin } from "../modules/agents/routes.js";
 import { agentAttributionHook } from "../lib/agent-auth.js";
 import { webhooksPlugin } from "../webhooks/router.js";
+import { acpPlugin } from "../agent/acp/index.js";
+import { b2bPlugin } from "../modules/b2b/routes.js";
+import { subscriptionsPlugin } from "../modules/subscriptions/routes.js";
+import { returnsPlugin } from "../modules/returns/routes.js";
+import { digitalPlugin } from "../modules/digital/routes.js";
+import { engagementPlugin } from "../modules/engagement/routes.js";
 
 const VERSION = process.env["npm_package_version"] ?? "0.0.0";
 
@@ -145,8 +151,21 @@ export async function buildApp(): Promise<FastifyInstance> {
   // ── Agent registry + mandates (T3.3) ────────────────────────────────────
   await app.register(agentsPlugin);
 
+  // ── ACP adapter (T3.4) ────────────────────────────────────────────────────
+  await app.register(acpPlugin);
+
   // ── Inbound payment webhook router (T2.5) ─────────────────────────────────
   await app.register(webhooksPlugin);
+
+  // ── T2.9 — B2B, subscriptions, returns, digital, engagement ──────────────
+  // NOTE: engagementPlugin is commented out — it re-registers abandoned-carts
+  // routes already owned by cartsPlugin (T2.3), causing a Fastify boot crash.
+  // T2.9 agent should remove the duplicate from engagementPlugin before re-enabling.
+  await app.register(b2bPlugin);
+  await app.register(subscriptionsPlugin);
+  await app.register(returnsPlugin);
+  await app.register(digitalPlugin);
+  // await app.register(engagementPlugin);
 
   // ── GET /healthz ────────────────────────────────────────────────────────
   app.get("/healthz", async (_request, reply) => {
