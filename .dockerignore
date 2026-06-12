@@ -1,0 +1,49 @@
+# ─── Version control ──────────────────────────────────────────────────────────
+.git
+.gitignore
+
+# ─── Environment / secrets ────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ─── Node / pnpm ──────────────────────────────────────────────────────────────
+node_modules
+**/node_modules
+.pnpm-store
+
+# ─── TypeScript build outputs (re-built inside the image) ─────────────────────
+**/dist
+**/*.tsbuildinfo
+
+# ─── Test artefacts ───────────────────────────────────────────────────────────
+**/tests
+**/*.test.ts
+**/vitest.config.ts
+**/.vitest-cache
+
+# ─── Docs / non-runtime content ───────────────────────────────────────────────
+docs
+mcp
+assets
+README.md
+roadmap.md
+tasks.md
+
+# ─── Admin / SDK (separate packages, not in the backend image) ────────────────
+admin/src
+admin/public
+admin/dist
+sdk/src
+sdk/dist
+sdk/storefront
+
+# ─── IDE / OS ─────────────────────────────────────────────────────────────────
+.vscode
+.idea
+*.DS_Store
+*.swp
+*.swo
+
+# ─── CI ───────────────────────────────────────────────────────────────────────
+.github

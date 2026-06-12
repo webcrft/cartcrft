@@ -1,0 +1,117 @@
+###############################################################################
+# Cartcrft — docker-compose stack
+#
+# Services:
+#   db        — Postgres 16 + pgvector (persistent volume)
+#   migrate   — one-shot migration runner (exits 0 when done)
+#   server    — Fastify HTTP server (depends on db healthy + migrate complete)
+#   worker    — background embedding / billing job runner
+#
+# Optional profiles:
+#   seed      — run `--profile seed` to load the demo store into the DB
+#
+# Quickstart:
+#   docker compose up          # starts db + migrate + server + worker
+#   docker compose --profile seed run --rm seed   # load demo data
+#   docker compose down -v     # tear down including the db volume
+###############################################################################
+
+x-backend-common: &backend-common
+  build:
+    context: .
+    dockerfile: backend/Dockerfile
+  environment:
+    DATABASE_URL: "postgres://cartcrft:cartcrft@db:5432/cartcrft?sslmode=disable"
+    APP_ENV: development
+    PORT: "3000"
+    JWT_SECRET: "dev-jwt-secret-change-in-production"
+    JWT_EXPIRY_HOURS: "24"
+    FRONTEND_URL: "http://localhost:5173"
+    BASE_DOMAIN: "localhost"
+    # AUTH_SECRETS_KEY: ""          # set in production for AES-256-GCM encryption
+    # PAYSTACK_SECRET_KEY: ""       # BYO — optional
+    # AWS_SES_REGION: ""            # BYO — optional
+    # AWS_SES_ACCESS_KEY_ID: ""     # BYO — optional
+    # AWS_SES_SECRET_ACCESS_KEY: "" # BYO — optional
+    # EMAIL_FROM: ""                # BYO — optional
+    # EXCHANGE_RATE_API_KEY: ""     # BYO — optional
+    BILLING_SIM_ENABLED: "false"
+    BILLING_SIM_DAY_SECONDS: "86400"
+    IP_RATE_LIMIT_PER_MINUTE: "60"
+  depends_on:
+    db:
+      condition: service_healthy
+
+services:
+  # ── Postgres 16 + pgvector ────────────────────────────────────────────────
+  db:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: cartcrft
+      POSTGRES_PASSWORD: cartcrft
+      POSTGRES_DB: cartcrft
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      # Enable pgcrypto + vector extensions on first boot.
+      # The /docker-entrypoint-initdb.d/ scripts only run when the data
+      # directory is empty (i.e., on first container creation).
+      - ./backend/db-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cartcrft -d cartcrft"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  # ── One-shot migration runner ────────────────────────────────────────────
+  migrate:
+    <<: *backend-common
+    command: ["node", "backend/dist/main.js", "migrate"]
+    restart: "no"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # ── HTTP server ──────────────────────────────────────────────────────────
+  server:
+    <<: *backend-common
+    command: ["node", "backend/dist/main.js", "serve"]
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  # ── Background worker (embedding indexer, billing jobs) ──────────────────
+  worker:
+    <<: *backend-common
+    command: ["node", "backend/dist/main.js", "worker"]
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  # ── Demo seed (optional — run with --profile seed) ────────────────────────
+  seed:
+    <<: *backend-common
+    command: ["node", "backend/dist/seed/index.js"]
+    restart: "no"
+    profiles:
+      - seed
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  db_data:
+    driver: local

@@ -1,0 +1,157 @@
+###############################################################################
+# Cartcrft CI
+#
+# Runs on every push and pull-request targeting main.
+#
+# Jobs:
+#   typecheck-build   — pnpm -r typecheck + pnpm -r build (all workspace pkgs)
+#   integration       — full vitest suite against a real Postgres + pgvector
+#                       service container (same image as docker-compose)
+#   cloud-billing     — cloud/billing vitest (math, engine, billingsim) in
+#                       isolation; runs in parallel with integration
+###############################################################################
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  PNPM_VERSION: "11"
+  NODE_VERSION: "22"
+
+jobs:
+  # ── 1. Typecheck + build (all workspace packages) ─────────────────────────
+  typecheck-build:
+    name: Typecheck + Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck all packages
+        run: pnpm -r typecheck
+
+      - name: Build all packages
+        run: pnpm -r build
+
+
+  # ── 2. Integration tests (backend vitest against real Postgres + pgvector) ─
+  integration:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: typecheck-build
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: cartcrft_test
+          POSTGRES_PASSWORD: cartcrft_test
+          POSTGRES_DB: cartcrft_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U cartcrft_test -d cartcrft_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: "postgres://cartcrft_test:cartcrft_test@localhost:5432/cartcrft_test"
+      APP_ENV: test
+      PORT: "3000"
+      JWT_SECRET: "ci-test-jwt-secret-not-real"
+      JWT_EXPIRY_HOURS: "24"
+      FRONTEND_URL: "http://localhost:5173"
+      BASE_DOMAIN: "localhost"
+      # Provider keys are intentionally absent — suites use stubs/mocks.
+      BILLING_SIM_ENABLED: "false"
+      BILLING_SIM_DAY_SECONDS: "86400"
+      IP_RATE_LIMIT_PER_MINUTE: "1000"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build backend (needed for seed/index.js path resolution in tests)
+        run: pnpm --filter backend build
+
+      - name: Run backend integration suites
+        working-directory: backend
+        run: pnpm test --reporter=verbose
+        timeout-minutes: 15
+
+
+  # ── 3. Cloud billing unit suites (parallel with integration) ──────────────
+  cloud-billing:
+    name: Cloud Billing Tests
+    runs-on: ubuntu-latest
+    needs: typecheck-build
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: cartcrft_billing
+          POSTGRES_PASSWORD: cartcrft_billing
+          POSTGRES_DB: cartcrft_billing
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U cartcrft_billing -d cartcrft_billing"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: "postgres://cartcrft_billing:cartcrft_billing@localhost:5432/cartcrft_billing"
+      APP_ENV: test
+      JWT_SECRET: "ci-billing-jwt-secret-not-real"
+      BILLING_SIM_ENABLED: "false"
+      BILLING_SIM_DAY_SECONDS: "1"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run cloud/billing suites
+        working-directory: cloud/billing
+        run: pnpm test --reporter=verbose
+        timeout-minutes: 10
