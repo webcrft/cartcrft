@@ -51,6 +51,7 @@ import { subscriptionsPlugin } from "../modules/subscriptions/routes.js";
 import { returnsPlugin } from "../modules/returns/routes.js";
 import { digitalPlugin } from "../modules/digital/routes.js";
 import { engagementPlugin } from "../modules/engagement/routes.js";
+import { staticPlugin } from "./static.js";
 
 const VERSION = process.env["npm_package_version"] ?? "0.0.0";
 const OPENAPI_VERSION = "2026-06-12";
@@ -254,6 +255,9 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
   await app.register(returnsPlugin);
   await app.register(digitalPlugin);
   await app.register(engagementPlugin);
+
+  // ── Static: drop-in storefront.js bundle ───────────────────────────────────
+  await app.register(staticPlugin);
 
   // ── GET /healthz ────────────────────────────────────────────────────────
   app.get("/healthz", async (_request, reply) => {

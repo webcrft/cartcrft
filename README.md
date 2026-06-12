@@ -90,11 +90,11 @@ cartcrft/
 │   ├── migrations/            # Postgres schema (plain SQL, numbered — 12 migration files)
 │   └── tests/                 # vitest suites: pnpm suite <name>
 ├── mcp/                       # MCP usage docs + conformance examples (MIT)
-├── sdk/                       # @cartcrft/sdk (TS, generated from OpenAPI) (MIT) — in development
+├── sdk/                       # @cartcrft/sdk (generated from OpenAPI) + storefront.js (MIT)
 ├── admin/                     # React 19 + Vite admin dashboard SPA (MIT)
 ├── cloud/                     # thin cloud layer (Cartcrft Cloud License — source-visible, not MIT)
 │   ├── LICENSE
-│   └── billing/               # tenants, plans, Paystack, USD→ZAR fx, wallet, invoices — in development
+│   └── billing/               # plans, Paystack, USD→ZAR fx snapshots, wallet, billingsim
 └── docs/                      # markdown docs, OpenAPI spec, protocol conformance
 ```
 
@@ -130,7 +130,7 @@ curl http://localhost:3000/healthz
 
 Full local-dev guide (prereqs, env vars, first API calls): [docs/quickstart.md](./docs/quickstart.md).
 
-Docker Compose (`docker compose up`) is coming in T5.5.
+Or run the whole stack with Docker: `docker compose up` (see [docs/self-host.md](./docs/self-host.md)).
 
 ---
 
