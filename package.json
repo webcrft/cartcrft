@@ -8,7 +8,8 @@
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",
     "suite": "pnpm --filter backend suite --",
-    "migrate": "pnpm --filter backend migrate"
+    "migrate": "pnpm --filter backend migrate",
+    "seed": "pnpm --filter backend seed"
   },
   "engines": {
     "node": ">=22",

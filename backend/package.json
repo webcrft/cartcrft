@@ -11,7 +11,8 @@
     "test": "vitest run",
     "suite": "node scripts/suite.mjs",
     "migrate": "tsx src/main.ts migrate",
-    "mcp:stdio": "tsx src/agent/mcp/stdio.ts"
+    "mcp:stdio": "tsx src/agent/mcp/stdio.ts",
+    "seed": "tsx src/seed/index.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
