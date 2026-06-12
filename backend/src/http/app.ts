@@ -14,6 +14,9 @@ import {
   validatorCompiler,
 } from "fastify-type-provider-zod";
 import { getPool } from "../db/pool.js";
+import { authPlugin, rateLimitHook } from "../lib/auth/middleware.js";
+import { storesPlugin } from "../modules/stores/routes.js";
+import { apiKeysPlugin } from "../modules/apikeys/routes.js";
 
 const VERSION = process.env["npm_package_version"] ?? "0.0.0";
 
@@ -79,6 +82,16 @@ export async function buildApp(): Promise<FastifyInstance> {
       error: { code: "NOT_FOUND", message: "Route not found" },
     });
   });
+
+  // ── Auth plugin (request.auth decorator) ──────────────────────────────────
+  await app.register(authPlugin);
+
+  // ── IP rate-limit on all routes ────────────────────────────────────────────
+  app.addHook("preHandler", rateLimitHook);
+
+  // ── Commerce modules ───────────────────────────────────────────────────────
+  await app.register(storesPlugin);
+  await app.register(apiKeysPlugin);
 
   // ── GET /healthz ────────────────────────────────────────────────────────
   app.get("/healthz", async (_request, reply) => {
