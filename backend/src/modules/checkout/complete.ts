@@ -185,6 +185,10 @@ export async function completeCheckout(
 
     // ── Step 2: Fetch checkout (must be pending) ──────────────────────────
     // Invariant 9: status = 'pending' filter — errors on already-completed
+    // FOR UPDATE: serialize concurrent completes on the same checkout row.
+    // Without this, two concurrent transactions can both read 'pending' and
+    // both proceed, creating duplicate orders (no oversell guard for
+    // untracked-inventory checkouts).
     const { rows: chRows } = await client.query<{
       cart_id: string;
       customer_id: string | null;
@@ -207,7 +211,8 @@ export async function completeCheckout(
               subtotal::text, shipping_total::text, tax_total::text,
               discount_total::text, total::text, currency
        FROM checkouts
-       WHERE id = $1::uuid AND store_id = $2::uuid AND status = 'pending'`,
+       WHERE id = $1::uuid AND store_id = $2::uuid AND status = 'pending'
+       FOR UPDATE`,
       [checkoutId, storeId]
     );
     if (chRows.length === 0) {
@@ -288,8 +293,8 @@ export async function completeCheckout(
        VALUES ($1::uuid, $2, $3, $4::uuid, $5,
                'open', 'pending', 'unfulfilled',
                $6, $7, $8, $9, $10, $11,
-               $12, $13,
-               $14::jsonb, $15::jsonb, $16::jsonb,
+               COALESCE($12::jsonb, '{}'), COALESCE($13::jsonb, '{}'),
+               COALESCE($14::jsonb, '[]'::jsonb), COALESCE($15::jsonb, 'null'::jsonb), COALESCE($16::jsonb, '[]'::jsonb),
                'web')
        RETURNING id::text`,
       [
@@ -306,9 +311,9 @@ export async function completeCheckout(
         total,
         ch.shipping_address,
         ch.billing_address,
-        ch.tax_lines ?? "[]",
-        ch.shipping_rate ?? "null",
-        ch.discount_lines ?? "[]",
+        ch.tax_lines ?? null,
+        ch.shipping_rate ?? null,
+        ch.discount_lines ?? null,
       ]
     );
     const orderId = orderRows[0]!.id;

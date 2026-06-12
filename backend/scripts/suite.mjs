@@ -28,11 +28,13 @@ if (!name) {
   process.exit(1);
 }
 
+// Support subdirectory suites: if name already contains a slash (e.g. "checkout/checkout"),
+// resolve it as a subdirectory path. Otherwise treat as a top-level file.
 const testFile = resolve(backendRoot, "tests", "suites", `${name}.test.ts`);
 
 if (!existsSync(testFile)) {
   console.error(`Suite file not found: ${testFile}`);
-  console.error(`Available suites are .ts files in backend/tests/suites/`);
+  console.error(`Available suites are .ts files in backend/tests/suites/ (subdirectories supported, e.g. "checkout/checkout")`);
   process.exit(1);
 }
 
