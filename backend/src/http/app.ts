@@ -26,6 +26,18 @@ import { walletPlugin } from "../modules/wallet/routes.js";
 import { catalogPlugin } from "../modules/catalog/routes.js";
 import { customersPlugin } from "../modules/customers/routes.js";
 import { customerAuthPlugin } from "../modules/customer-auth/routes.js";
+import { inventoryPlugin } from "../modules/inventory/routes.js";
+import { shippingPlugin } from "../modules/shipping/routes.js";
+import { taxPlugin } from "../modules/tax/routes.js";
+import { feedsPlugin } from "../modules/feeds/routes.js";
+import { integrationsPlugin } from "../modules/integrations/routes.js";
+import { notificationsPlugin } from "../modules/notifications/routes.js";
+import { analyticsPlugin } from "../modules/analytics/routes.js";
+import { mcpHttpPlugin } from "../agent/mcp/http.js";
+import { searchPlugin } from "../agent/search/routes.js";
+import { agentsPlugin } from "../modules/agents/routes.js";
+import { agentAttributionHook } from "../lib/agent-auth.js";
+import { webhooksPlugin } from "../webhooks/router.js";
 
 const VERSION = process.env["npm_package_version"] ?? "0.0.0";
 
@@ -94,9 +106,15 @@ export async function buildApp(): Promise<FastifyInstance> {
 
   // ── Auth plugin (request.auth decorator) ──────────────────────────────────
   await app.register(authPlugin);
+  // Agent context decorator (agentCtx populated by agentAttributionHook below)
+  app.decorateRequest("agentCtx", undefined);
 
   // ── IP rate-limit on all routes ────────────────────────────────────────────
   app.addHook("preHandler", rateLimitHook);
+
+  // ── Agent attribution hook — runs before all route handlers ─────────────────
+  // Must be added directly (not via plugin) so it applies to all routes.
+  app.addHook("preHandler", agentAttributionHook);
 
   // ── Commerce modules ───────────────────────────────────────────────────────
   await app.register(storesPlugin);
@@ -110,6 +128,25 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(catalogPlugin);
   await app.register(customersPlugin);
   await app.register(customerAuthPlugin);
+  await app.register(inventoryPlugin);
+  await app.register(shippingPlugin);
+  await app.register(taxPlugin);
+  await app.register(feedsPlugin);
+  await app.register(integrationsPlugin);
+  await app.register(notificationsPlugin);
+  await app.register(analyticsPlugin);
+
+  // ── MCP server (agent-native layer) ───────────────────────────────────────
+  await app.register(mcpHttpPlugin);
+
+  // ── Semantic catalog search (T3.2) ────────────────────────────────────────
+  await app.register(searchPlugin);
+
+  // ── Agent registry + mandates (T3.3) ────────────────────────────────────
+  await app.register(agentsPlugin);
+
+  // ── Inbound payment webhook router (T2.5) ─────────────────────────────────
+  await app.register(webhooksPlugin);
 
   // ── GET /healthz ────────────────────────────────────────────────────────
   app.get("/healthz", async (_request, reply) => {

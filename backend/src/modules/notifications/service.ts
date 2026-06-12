@@ -1,0 +1,421 @@
+/**
+ * notifications/service.ts — Notification providers CRUD + DispatchStoreEvent.
+ *
+ * DispatchStoreEvent:
+ *   - Loads active providers for the store subscribed to the event
+ *   - For webhook type: POST with HMAC-SHA256 signature header (X-Cartcrft-Signature)
+ *     + retries (up to MAX_RETRIES attempts with exponential backoff)
+ *     + logs each attempt to notification_delivery_log
+ *   - For email type: delegates to Mailer if available, else console fallback
+ *   - Fire-and-forget: runs in background, never blocks HTTP response
+ *
+ * Export dispatchStoreEvent for other modules (e.g. checkout, orders).
+ *
+ * DISCOVERED: dispatchStoreEvent is not wired into checkout/orders in this
+ * task per scope rules. Integration pass required.
+ */
+
+import { createHmac } from "node:crypto";
+import { getPool } from "../../db/pool.js";
+import type {
+  NotificationProviderRow,
+  CreateNotificationProviderInput,
+  UpdateNotificationProviderInput,
+  DeliveryLogRow,
+} from "./types.js";
+import { isValidEvent } from "./types.js";
+
+const MAX_RETRIES = 3;
+const RETRY_DELAYS_MS = [1_000, 5_000, 15_000]; // exponential-ish backoff
+
+// ── CRUD ───────────────────────────────────────────────────────────────────────
+
+export async function listNotificationProviders(
+  storeId: string
+): Promise<NotificationProviderRow[]> {
+  const pool = getPool();
+  const res = await pool.query<NotificationProviderRow>(
+    `SELECT id::text, name, type, webhook_url,
+            COALESCE(config, '{}') AS config,
+            events, is_active, created_at, updated_at
+     FROM notification_providers
+     WHERE store_id = $1::uuid
+     ORDER BY created_at`,
+    [storeId]
+  );
+  return res.rows;
+}
+
+export async function createNotificationProvider(
+  storeId: string,
+  input: CreateNotificationProviderInput
+): Promise<string> {
+  const pool = getPool();
+
+  const name = input.name.trim();
+  if (!name) throw Object.assign(new Error("name is required"), { code: "VALIDATION_ERROR" });
+  if (!input.webhook_url?.trim()) throw Object.assign(new Error("webhook_url is required"), { code: "VALIDATION_ERROR" });
+  if (!input.events || input.events.length === 0) {
+    throw Object.assign(new Error("events must contain at least one event type"), { code: "VALIDATION_ERROR" });
+  }
+  for (const ev of input.events) {
+    if (!isValidEvent(ev)) {
+      throw Object.assign(new Error(`unknown event type: "${ev}"`), { code: "VALIDATION_ERROR" });
+    }
+  }
+
+  // Config can carry webhook_secret
+  const cfg: Record<string, unknown> = { ...(input.config ?? {}) };
+  if (input.webhook_secret) {
+    cfg["webhook_secret"] = input.webhook_secret;
+  }
+
+  const providerType = input.type ?? "webhook";
+  const res = await pool.query<{ id: string }>(
+    `INSERT INTO notification_providers
+       (store_id, name, type, webhook_url, config, events, is_active)
+     VALUES ($1::uuid, $2, $3, $4, $5::jsonb, $6, true)
+     RETURNING id::text`,
+    [storeId, name, providerType, input.webhook_url.trim(), JSON.stringify(cfg), input.events]
+  );
+  const id = res.rows[0]?.id;
+  if (!id) throw new Error("createNotificationProvider: no id returned");
+  return id;
+}
+
+export async function updateNotificationProvider(
+  providerId: string,
+  storeId: string,
+  input: UpdateNotificationProviderInput
+): Promise<boolean> {
+  const pool = getPool();
+
+  const sets: string[] = [];
+  const args: unknown[] = [providerId, storeId];
+  let n = 3;
+
+  const add = (col: string, val: unknown) => {
+    sets.push(`${col} = $${n}`);
+    args.push(val);
+    n++;
+  };
+
+  if (input.name !== undefined) add("name", input.name);
+  if (input.webhook_url !== undefined) add("webhook_url", input.webhook_url);
+  if (input.is_active !== undefined) add("is_active", input.is_active);
+
+  if (input.events !== undefined) {
+    if (input.events.length === 0) {
+      throw Object.assign(new Error("events cannot be empty"), { code: "VALIDATION_ERROR" });
+    }
+    for (const ev of input.events) {
+      if (!isValidEvent(ev)) {
+        throw Object.assign(new Error(`unknown event type: "${ev}"`), { code: "VALIDATION_ERROR" });
+      }
+    }
+    add("events", input.events);
+  }
+
+  if (input.config !== undefined) {
+    const cfg: Record<string, unknown> = { ...(input.config ?? {}) };
+    if (input.webhook_secret) cfg["webhook_secret"] = input.webhook_secret;
+    add("config", JSON.stringify(cfg));
+  } else if (input.webhook_secret !== undefined) {
+    // Only updating the secret — merge into existing config
+    // We do this via a jsonb || expression
+    sets.push(`config = config || $${n}::jsonb`);
+    args.push(JSON.stringify({ webhook_secret: input.webhook_secret }));
+    n++;
+  }
+
+  if (sets.length === 0) {
+    throw Object.assign(new Error("nothing to update"), { code: "VALIDATION_ERROR" });
+  }
+  sets.push("updated_at = now()");
+
+  const query = `UPDATE notification_providers SET ${sets.join(", ")} WHERE id = $1::uuid AND store_id = $2::uuid`;
+  const res = await pool.query(query, args);
+  return (res.rowCount ?? 0) > 0;
+}
+
+export async function deleteNotificationProvider(
+  providerId: string,
+  storeId: string
+): Promise<boolean> {
+  const pool = getPool();
+  const res = await pool.query(
+    `DELETE FROM notification_providers WHERE id = $1::uuid AND store_id = $2::uuid`,
+    [providerId, storeId]
+  );
+  return (res.rowCount ?? 0) > 0;
+}
+
+// ── Delivery log ───────────────────────────────────────────────────────────────
+
+export async function getWebhookLog(storeId: string): Promise<DeliveryLogRow[]> {
+  const pool = getPool();
+  const res = await pool.query<DeliveryLogRow>(
+    `SELECT id::text, provider_id::text, store_id::text, event, payload,
+            attempt_number, status_code, response_body, error_message, duration_ms, delivered_at
+     FROM notification_delivery_log
+     WHERE store_id = $1::uuid
+     ORDER BY delivered_at DESC
+     LIMIT 500`,
+    [storeId]
+  );
+  return res.rows;
+}
+
+export async function getWebhookUrl(storeId: string): Promise<string> {
+  // The webhook URL for the store is the inbound endpoint.
+  // This is a placeholder — actual inbound routing is T2.5.
+  const pool = getPool();
+  const res = await pool.query<{ id: string }>(
+    `SELECT id::text FROM stores WHERE id = $1::uuid`,
+    [storeId]
+  );
+  if (!res.rows[0]) throw Object.assign(new Error("store not found"), { code: "NOT_FOUND" });
+  return `/webhooks/${storeId}`;
+}
+
+// ── Outbound dispatch ──────────────────────────────────────────────────────────
+
+interface ProviderRecord {
+  id: string;
+  type: string;
+  webhook_url: string | null;
+  config: Record<string, unknown>;
+}
+
+/**
+ * dispatchStoreEvent fires outbound webhooks to all active notification providers
+ * subscribed to eventType for the given store.
+ *
+ * This is fire-and-forget — it runs in the background and never blocks callers.
+ * Export this for use by checkout/orders in the integration pass.
+ *
+ * DISCOVERED: Not wired into checkout/orders here (scope constraint T2.10).
+ * Integration pass note: call dispatchStoreEvent from orders service on
+ * order.created, from payments service on payment.captured/refunded,
+ * from shipments service on shipment.created/updated/delivered.
+ */
+export function dispatchStoreEvent(
+  storeId: string,
+  eventType: string,
+  payload: Record<string, unknown>
+): void {
+  void _dispatchStoreEvent(storeId, eventType, payload);
+}
+
+async function _dispatchStoreEvent(
+  storeId: string,
+  eventType: string,
+  payload: Record<string, unknown>
+): Promise<void> {
+  const pool = getPool();
+
+  // Enrich payload with standard fields (mirrors Go source)
+  const out: Record<string, unknown> = {
+    ...payload,
+    event: eventType,
+    store_id: storeId,
+    timestamp: new Date().toISOString(),
+  };
+
+  const body = JSON.stringify(out);
+
+  // Load active providers for this event
+  let providers: ProviderRecord[];
+  try {
+    const res = await pool.query<{ id: string; type: string; webhook_url: string | null; config: string }>(
+      `SELECT id::text, type, webhook_url, COALESCE(config::text, '{}') AS config
+       FROM notification_providers
+       WHERE store_id = $1::uuid
+         AND is_active = true
+         AND $2 = ANY(events)`,
+      [storeId, eventType]
+    );
+    providers = res.rows.map((r) => ({
+      id: r.id,
+      type: r.type,
+      webhook_url: r.webhook_url,
+      config: JSON.parse(r.config) as Record<string, unknown>,
+    }));
+  } catch (err) {
+    console.error("notification: query providers", { storeId, eventType, err });
+    return;
+  }
+
+  for (const provider of providers) {
+    if (provider.type === "webhook") {
+      await deliverWebhook(pool, storeId, provider, eventType, body, out);
+    } else if (provider.type === "email") {
+      await deliverEmail(provider, eventType, out);
+    }
+    // sms/whatsapp: not implemented in this pass — console fallback
+    else {
+      console.info("notification: unhandled provider type", { type: provider.type, event: eventType });
+    }
+  }
+}
+
+/** POST to webhook URL with HMAC-SHA256 signature + retries. */
+async function deliverWebhook(
+  pool: ReturnType<typeof getPool>,
+  storeId: string,
+  provider: ProviderRecord,
+  eventType: string,
+  body: string,
+  payload: Record<string, unknown>
+): Promise<void> {
+  const { id: providerId, webhook_url, config } = provider;
+  if (!webhook_url) {
+    console.warn("notification: webhook provider missing url", { providerId });
+    return;
+  }
+
+  const secret = typeof config["webhook_secret"] === "string" ? config["webhook_secret"] : "";
+
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    const start = Date.now();
+    let statusCode: number | null = null;
+    let responseBody: string | null = null;
+    let errorMessage: string | null = null;
+
+    try {
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        "X-Cartcrft-Event": eventType,
+        "X-Cartcrft-Store-ID": storeId,
+      };
+
+      if (secret) {
+        const mac = createHmac("sha256", secret);
+        mac.update(Buffer.from(body, "utf8"));
+        headers["X-Cartcrft-Signature"] = mac.digest("hex");
+      }
+
+      const resp = await fetch(webhook_url, {
+        method: "POST",
+        headers,
+        body,
+        signal: AbortSignal.timeout(15_000),
+      });
+      statusCode = resp.status;
+      try {
+        responseBody = await resp.text();
+      } catch {
+        responseBody = null;
+      }
+
+      const durationMs = Date.now() - start;
+
+      await logDelivery(pool, {
+        providerId,
+        storeId,
+        event: eventType,
+        payload,
+        attempt,
+        statusCode,
+        responseBody,
+        errorMessage: null,
+        durationMs,
+      });
+
+      if (resp.ok) {
+        console.info("notification: delivered", { providerId, eventType, statusCode });
+        return;
+      }
+      // Non-2xx — retry
+      errorMessage = `HTTP ${statusCode}`;
+      console.warn("notification: non-ok response", { providerId, eventType, statusCode, attempt });
+
+    } catch (err) {
+      const durationMs = Date.now() - start;
+      errorMessage = err instanceof Error ? err.message : String(err);
+      console.warn("notification: delivery error", { providerId, eventType, attempt, err });
+
+      await logDelivery(pool, {
+        providerId,
+        storeId,
+        event: eventType,
+        payload,
+        attempt,
+        statusCode: null,
+        responseBody: null,
+        errorMessage,
+        durationMs,
+      });
+    }
+
+    // Wait before next retry (except on last attempt)
+    if (attempt < MAX_RETRIES) {
+      const delay = RETRY_DELAYS_MS[attempt - 1] ?? 1_000;
+      await sleep(delay);
+    }
+  }
+}
+
+/** Email delivery via Mailer if available, else console fallback.
+ *
+ * DISCOVERED: Mailer wiring for notification email delivery deferred to
+ * integration pass. The Mailer interface (lib/mailer/index.ts) exists but
+ * there is no module-level singleton exposed yet for notification dispatch.
+ * To wire: export a setNotificationMailer(m: Mailer) in this file and call
+ * it from main.ts, then use it here.
+ */
+async function deliverEmail(
+  provider: ProviderRecord,
+  eventType: string,
+  payload: Record<string, unknown>
+): Promise<void> {
+  // Console fallback — email dispatch via Mailer is a follow-up integration task
+  console.info("notification: email event (mailer wiring deferred)", {
+    providerId: provider.id,
+    eventType,
+    to: typeof payload["email"] === "string" ? payload["email"] : "(no email in payload)",
+  });
+}
+
+/** Log a delivery attempt to notification_delivery_log. */
+async function logDelivery(
+  pool: ReturnType<typeof getPool>,
+  opts: {
+    providerId: string;
+    storeId: string;
+    event: string;
+    payload: Record<string, unknown>;
+    attempt: number;
+    statusCode: number | null;
+    responseBody: string | null;
+    errorMessage: string | null;
+    durationMs: number;
+  }
+): Promise<void> {
+  try {
+    await pool.query(
+      `INSERT INTO notification_delivery_log
+         (provider_id, store_id, event, payload, attempt_number, status_code,
+          response_body, error_message, duration_ms)
+       VALUES ($1::uuid, $2::uuid, $3, $4::jsonb, $5, $6, $7, $8, $9)`,
+      [
+        opts.providerId,
+        opts.storeId,
+        opts.event,
+        JSON.stringify(opts.payload),
+        opts.attempt,
+        opts.statusCode,
+        opts.responseBody,
+        opts.errorMessage,
+        opts.durationMs,
+      ]
+    );
+  } catch (err) {
+    // Swallow — delivery log must not crash dispatch
+    console.warn("notification: failed to write delivery log", err);
+  }
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
