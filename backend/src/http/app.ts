@@ -17,6 +17,13 @@ import { getPool } from "../db/pool.js";
 import { authPlugin, rateLimitHook } from "../lib/auth/middleware.js";
 import { storesPlugin } from "../modules/stores/routes.js";
 import { apiKeysPlugin } from "../modules/apikeys/routes.js";
+import { ordersPlugin } from "../modules/orders/routes.js";
+import { paymentsPlugin } from "../modules/payments/routes.js";
+import { cartsPlugin } from "../modules/carts/routes.js";
+import { checkoutPlugin } from "../modules/checkout/routes.js";
+import { discountsPlugin } from "../modules/discounts/routes.js";
+import { walletPlugin } from "../modules/wallet/routes.js";
+import { catalogPlugin } from "../modules/catalog/routes.js";
 
 const VERSION = process.env["npm_package_version"] ?? "0.0.0";
 
@@ -92,6 +99,13 @@ export async function buildApp(): Promise<FastifyInstance> {
   // ── Commerce modules ───────────────────────────────────────────────────────
   await app.register(storesPlugin);
   await app.register(apiKeysPlugin);
+  await app.register(ordersPlugin);
+  await app.register(paymentsPlugin);
+  await app.register(cartsPlugin);
+  await app.register(checkoutPlugin);
+  await app.register(discountsPlugin);
+  await app.register(walletPlugin);
+  await app.register(catalogPlugin);
 
   // ── GET /healthz ────────────────────────────────────────────────────────
   app.get("/healthz", async (_request, reply) => {
