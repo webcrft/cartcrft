@@ -436,41 +436,32 @@ describe("PATCH store_id = null clears store restriction", () => {
 
 describe("IP rate limiting", () => {
   it("Exceeding IP_RATE_LIMIT_PER_MINUTE returns 429", async () => {
-    // Override the rate limit to a tiny value for testing.
-    // We'll use a dedicated base URL path that's easy to hammer.
-    // The default IP_RATE_LIMIT_PER_MINUTE is 60 — too many requests to spam in CI.
-    // Instead, check the rate-limit bucket map resets (white-box test via DB).
-    // We hit /healthz which is unauthenticated and fast.
-    const ipRateLimit = parseInt(
-      process.env["IP_RATE_LIMIT_PER_MINUTE"] ?? "60",
-      10
-    );
-
-    if (ipRateLimit > 200) {
-      // If the limit is very high, skip the hammer test to avoid slow CI.
-      console.log(`skip: IP_RATE_LIMIT_PER_MINUTE=${ipRateLimit} too high to trigger 429 quickly`);
-      return;
-    }
-
-    // Send 2×limit + 1 requests rapidly (all from the same process → same IP).
-    // Prior tests in this suite may have started the 60s window, so it can
-    // roll over (resetting the bucket) mid-hammer; 2N+1 requests guarantee a
-    // full window's worth lands on one side of at most one rollover.
-    let saw429 = false;
-    for (let i = 0; i <= ipRateLimit * 2; i++) {
-      const res = await get(ctx, "/healthz");
-      if (res.status === 429) {
-        saw429 = true;
-        const body = res.json;
-        expect(body["error"]).toBeDefined();
-        const err = body["error"] as Record<string, unknown>;
-        expect(err["code"]).toBe("RATE_LIMIT_EXCEEDED");
-        break;
+    // The app under test shares this process's config singleton, so lower the
+    // limit for this test instead of hammering hundreds of real requests
+    // (/healthz does a DB round-trip; a full hammer blows the test timeout,
+    // and the 60s window can roll over mid-hammer making it flaky).
+    const { config } = await import("../../src/config/config.js");
+    const original = config.IP_RATE_LIMIT_PER_MINUTE;
+    (config as { IP_RATE_LIMIT_PER_MINUTE: number }).IP_RATE_LIMIT_PER_MINUTE = 5;
+    try {
+      let saw429 = false;
+      // Prior tests already counted against this window; ≤ 11 requests
+      // guarantees a breach even on a fresh bucket.
+      for (let i = 0; i <= 10; i++) {
+        const res = await get(ctx, "/healthz");
+        if (res.status === 429) {
+          saw429 = true;
+          const body = res.json;
+          expect(body["error"]).toBeDefined();
+          const err = body["error"] as Record<string, unknown>;
+          expect(err["code"]).toBe("RATE_LIMIT_EXCEEDED");
+          break;
+        }
       }
-    }
-
-    if (ipRateLimit <= 200) {
       expect(saw429).toBe(true);
+    } finally {
+      (config as { IP_RATE_LIMIT_PER_MINUTE: number }).IP_RATE_LIMIT_PER_MINUTE =
+        original;
     }
   });
 });
