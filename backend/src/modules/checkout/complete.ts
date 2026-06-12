@@ -42,6 +42,7 @@
 import type pg from "pg";
 import { withTx } from "../../db/pool.js";
 import { round2 } from "../../lib/money.js";
+import type { AgentHeaderCtx } from "../agents/types.js";
 
 // ── Result type ───────────────────────────────────────────────────────────────
 
@@ -168,16 +169,24 @@ async function burnCheckoutDiscount(
  * Opens its own withTx wrapper. Both the discount burn and the
  * cart→order conversion happen in the single transaction.
  *
+ * @param agentCtx Optional agent attribution context from the request layer.
+ *                 When present, verifyAgentCheckout() is called after the
+ *                 FOR UPDATE checkout row lock (inside the transaction) to
+ *                 enforce spend limits and mandate chain requirements.
+ *
  * Returns CompleteResult on success.
  * Throws CheckoutError with code:
- *   NOT_FOUND            — checkout not pending / not found
- *   DISCOUNT_EXHAUSTED   — cap reached between checkout and completion
- *   DISCOUNT_ALREADY_USED — once_per_customer race lost
- *   INSUFFICIENT_INVENTORY — variant out of stock
+ *   NOT_FOUND                   — checkout not pending / not found
+ *   DISCOUNT_EXHAUSTED          — cap reached between checkout and completion
+ *   DISCOUNT_ALREADY_USED       — once_per_customer race lost
+ *   INSUFFICIENT_INVENTORY      — variant out of stock
+ *   MANDATE_SPEND_LIMIT_EXCEEDED — agent spend window exceeded
+ *   MANDATE_REQUIRED            — mandate required but absent or invalid
  */
 export async function completeCheckout(
   storeId: string,
-  checkoutId: string
+  checkoutId: string,
+  agentCtx?: AgentHeaderCtx | undefined
 ): Promise<CompleteResult> {
   return withTx(async (client) => {
     // ── Step 1: Burn discount atomically (before conversion) ─────────────
@@ -220,6 +229,41 @@ export async function completeCheckout(
         "checkout not found or already completed",
         "NOT_FOUND"
       );
+    }
+
+    // ── Step 2b: Agent spend + mandate enforcement (after FOR UPDATE lock) ──
+    // Only runs when the request carries agent attribution (agentCtx present).
+    // Placed inside the transaction after the row lock so the spend-window
+    // sum is serialised: no concurrent agent checkout can slip through between
+    // the sum query and the eventual order INSERT.
+    if (agentCtx) {
+      const checkoutTotal = parseFloat(chRows[0]!.total);
+
+      // Fetch the store's agents_require_mandate flag.
+      const { rows: storeRows } = await client.query<{ agents_require_mandate: boolean }>(
+        `SELECT agents_require_mandate FROM stores WHERE id = $1::uuid`,
+        [storeId]
+      );
+      const storeRequiresMandate = storeRows[0]?.agents_require_mandate ?? false;
+
+      // Dynamic import keeps the agents module tree-shaken on non-agent code paths
+      // (avoids circular-import risk; also reads naturally as "optional feature").
+      const { verifyAgentCheckout } = await import("../agents/service.js");
+      try {
+        await verifyAgentCheckout(
+          agentCtx.agentId,
+          storeId,
+          checkoutId,
+          checkoutTotal,
+          storeRequiresMandate
+        );
+      } catch (err: unknown) {
+        const code = (err as NodeJS.ErrnoException).code;
+        if (code === "MANDATE_SPEND_LIMIT_EXCEEDED" || code === "MANDATE_REQUIRED") {
+          throw new CheckoutError((err as Error).message, code);
+        }
+        throw err;
+      }
     }
 
     const ch = chRows[0]!;
@@ -282,6 +326,13 @@ export async function completeCheckout(
     }
 
     // ── Step 5: Create order row (Invariant 5) ────────────────────────────
+    // Stamp metadata.agent_id when request is agent-attributed so the
+    // spend-window aggregation query in verifyAgentCheckout can count this order.
+    const orderMetadata: Record<string, unknown> = {};
+    if (agentCtx) {
+      orderMetadata["agent_id"] = agentCtx.agentId;
+    }
+
     const { rows: orderRows } = await client.query<{ id: string }>(
       `INSERT INTO orders
          (store_id, customer_id, company_id, checkout_id, order_number,
@@ -289,13 +340,13 @@ export async function completeCheckout(
           currency, subtotal, shipping_total, tax_total, discount_total, total,
           shipping_address, billing_address,
           tax_lines, shipping_lines, discount_lines,
-          source_name)
+          source_name, metadata)
        VALUES ($1::uuid, $2, $3, $4::uuid, $5,
                'open', 'pending', 'unfulfilled',
                $6, $7, $8, $9, $10, $11,
                COALESCE($12::jsonb, '{}'), COALESCE($13::jsonb, '{}'),
                COALESCE($14::jsonb, '[]'::jsonb), COALESCE($15::jsonb, 'null'::jsonb), COALESCE($16::jsonb, '[]'::jsonb),
-               'web')
+               'web', $17::jsonb)
        RETURNING id::text`,
       [
         storeId,
@@ -314,6 +365,7 @@ export async function completeCheckout(
         ch.tax_lines ?? null,
         ch.shipping_rate ?? null,
         ch.discount_lines ?? null,
+        JSON.stringify(orderMetadata),
       ]
     );
     const orderId = orderRows[0]!.id;

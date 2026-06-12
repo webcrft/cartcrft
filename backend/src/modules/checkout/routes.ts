@@ -180,7 +180,9 @@ export const checkoutPlugin: FastifyPluginAsync = async (app) => {
       }
 
       try {
-        const result = await completeCheckout(storeId, params.data.checkoutId);
+        // Pass agentCtx (set by agentAttributionHook in app.ts) so
+        // completeCheckout can enforce spend limits and mandate chains.
+        const result = await completeCheckout(storeId, params.data.checkoutId, request.agentCtx);
         return reply.send({
           order_id: result.orderId,
           order_number: result.orderNumber,
@@ -196,6 +198,10 @@ export const checkoutPlugin: FastifyPluginAsync = async (app) => {
               return reply.status(409).send({ error: { code: "DISCOUNT_ALREADY_USED", message: err.message } });
             case "INSUFFICIENT_INVENTORY":
               return reply.status(409).send({ error: { code: "INSUFFICIENT_INVENTORY", message: err.message } });
+            case "MANDATE_SPEND_LIMIT_EXCEEDED":
+              return reply.status(402).send({ error: { code: "MANDATE_SPEND_LIMIT_EXCEEDED", message: err.message } });
+            case "MANDATE_REQUIRED":
+              return reply.status(402).send({ error: { code: "MANDATE_REQUIRED", message: err.message } });
           }
         }
         throw err;

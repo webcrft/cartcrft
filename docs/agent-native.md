@@ -250,6 +250,37 @@ curl -s \
 
 ---
 
+## Per-store mandate enforcement flag
+
+The `agents_require_mandate` boolean on a store controls whether agent-attributed
+checkout completions must present a valid mandate chain.
+
+| Value | Behaviour |
+|-------|-----------|
+| `false` (default) | If a payment mandate exists for the checkout, the chain is verified. If none exists, only spend limits are enforced. |
+| `true` | A valid payment mandate chain (intent → cart → payment) is required for every agent-attributed checkout. Absence returns `MANDATE_REQUIRED`. |
+
+### Enable via the stores API
+
+```bash
+curl -s -X PUT \
+  -H "Authorization: Bearer <cc_prv_>" \
+  -H "Content-Type: application/json" \
+  -d '{ "agents_require_mandate": true }' \
+  "http://localhost:3000/commerce/stores/<STORE_ID>"
+```
+
+### Checkout error codes
+
+When agent-attributed checkout completion fails, the route returns HTTP 402:
+
+| Code | Cause |
+|------|-------|
+| `MANDATE_SPEND_LIMIT_EXCEEDED` | The agent's cumulative spend within `spend_window` would exceed `spend_limit`. |
+| `MANDATE_REQUIRED` | `agents_require_mandate=true` and no valid payment mandate was found for the checkout, **or** a mandate exists but its chain is invalid. |
+
+---
+
 ## Further reading
 
 - MCP client config + all 9 tools: [mcp/README.md](../mcp/README.md)

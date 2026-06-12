@@ -60,6 +60,8 @@ const UpdateStoreBody = z.object({
   enable_currency_conversion: z.boolean().optional(),
   domain: z.string().max(253).optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
+  /** When true, agent-attributed checkouts require a valid mandate chain. */
+  agents_require_mandate: z.boolean().optional(),
 });
 
 const StoreIdParams = z.object({
@@ -227,6 +229,8 @@ export const storesPlugin: FastifyPluginAsync = async (app) => {
           updateInput.enable_currency_conversion = d.enable_currency_conversion;
         if (d.domain !== undefined) updateInput.domain = d.domain;
         if (d.metadata !== undefined) updateInput.metadata = d.metadata;
+        if (d.agents_require_mandate !== undefined)
+          updateInput.agents_require_mandate = d.agents_require_mandate;
 
         const updated = await updateStore(params.data.storeId, updateInput);
         if (!updated) {

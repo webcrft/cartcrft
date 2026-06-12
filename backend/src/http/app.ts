@@ -52,6 +52,9 @@ import { returnsPlugin } from "../modules/returns/routes.js";
 import { digitalPlugin } from "../modules/digital/routes.js";
 import { engagementPlugin } from "../modules/engagement/routes.js";
 import { staticPlugin } from "./static.js";
+import { recoveryPlugin } from "../modules/recovery/routes.js";
+import { catalogCsvPlugin } from "../modules/catalog/csv-routes.js";
+import { bookingsPlugin } from "../modules/bookings/index.js";
 
 const VERSION = process.env["npm_package_version"] ?? "0.0.0";
 const OPENAPI_VERSION = "2026-06-12";
@@ -255,6 +258,29 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
   await app.register(returnsPlugin);
   await app.register(digitalPlugin);
   await app.register(engagementPlugin);
+
+  // ── Cloud billing webhook (CARTCRFT_CLOUD=1 only) ────────────────────────────
+  // Dynamic import so the OSS build never eagerly imports @cartcrft/cloud-billing.
+  // The backend typechecks and builds cleanly without the cloud package present.
+  if (process.env["CARTCRFT_CLOUD"]) {
+    // The `any` casts below are intentional: @cartcrft/cloud-billing is an optional
+    // workspace dep (cloud-license boundary). TypeScript cannot statically verify
+    // the import target when the package may be absent. The plugin function is
+    // duck-typed by Fastify's register() call — safe at runtime. /* any: optional cloud dep */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const cloudBilling = await import("@cartcrft/cloud-billing" as any) as { billingWebhookPlugin: (instance: unknown, opts: Record<string, unknown>) => Promise<void> };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (app as any).register(cloudBilling.billingWebhookPlugin, { prefix: "/webhooks/billing" });
+  }
+
+  // ── T6.5 — Abandoned-cart recovery emails (routes) ───────────────────────────
+  await app.register(recoveryPlugin);
+
+  // ── T6.6 — CSV product import/export ─────────────────────────────────────────
+  await app.register(catalogCsvPlugin);
+
+  // ── T6.1 — Bookings, resources, availability, price rules, iCal, OTA ─────────
+  await app.register(bookingsPlugin);
 
   // ── Static: drop-in storefront.js bundle ───────────────────────────────────
   await app.register(staticPlugin);

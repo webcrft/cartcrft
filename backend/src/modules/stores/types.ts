@@ -36,6 +36,8 @@ export interface Store {
   auth_social_providers: Record<string, unknown>;
   auth_require_email_verify: boolean;
   auth_max_sessions: number;
+  // agent settings (from 0013_store_agent_settings.sql)
+  agents_require_mandate: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -69,4 +71,5 @@ export interface UpdateStoreInput {
   enable_currency_conversion?: boolean | undefined;
   domain?: string | undefined;
   metadata?: Record<string, unknown> | undefined;
+  agents_require_mandate?: boolean | undefined;
 }

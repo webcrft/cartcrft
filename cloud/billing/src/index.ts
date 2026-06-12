@@ -75,11 +75,12 @@ export {
   type WorkerRunResult,
 } from './worker.js';
 
-// ── Webhook handler ───────────────────────────────────────────────────────────
+// ── Webhook handler + Fastify plugin ─────────────────────────────────────────
 export {
   verifyBillingWebhookSignature,
   handleBillingWebhookEvent,
   processBillingWebhook,
+  billingWebhookPlugin,
   type WebhookHandlerDeps,
   type BillingWebhookPluginOptions,
 } from './webhook.js';

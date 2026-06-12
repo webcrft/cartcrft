@@ -54,6 +54,7 @@ const STORE_COLS = `
   auth_social_providers,
   auth_require_email_verify,
   auth_max_sessions,
+  agents_require_mandate,
   created_at,
   updated_at
 `;
@@ -223,6 +224,7 @@ export async function updateStore(
        enable_currency_conversion = COALESCE($11, enable_currency_conversion),
        domain                     = COALESCE($12, domain),
        metadata                   = COALESCE($13, metadata),
+       agents_require_mandate     = COALESCE($14, agents_require_mandate),
        updated_at                 = now()
      WHERE id = $1::uuid`,
     [
@@ -239,6 +241,7 @@ export async function updateStore(
       input.enable_currency_conversion ?? null,
       input.domain ?? null,
       input.metadata !== undefined ? JSON.stringify(input.metadata) : null,
+      input.agents_require_mandate ?? null,
     ]
   );
   return (rowCount ?? 0) > 0;

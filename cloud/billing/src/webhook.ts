@@ -271,8 +271,7 @@ async function persistAuthorizationFromCharge(
 // ── Fastify plugin export ─────────────────────────────────────────────────────
 
 /**
- * Minimal type for the Fastify plugin interface.
- * Using unknown to avoid importing @types/fastify here (cloud package has no such dep).
+ * Options for the billingWebhookPlugin.
  */
 export type BillingWebhookPluginOptions = {
   pool: pg.Pool;
@@ -281,23 +280,77 @@ export type BillingWebhookPluginOptions = {
 };
 
 /**
- * Export the raw handler — the actual Fastify plugin registration is done
- * in the backend when CARTCRFT_CLOUD=1, because the cloud package does not
- * depend on Fastify.
+ * billingWebhookPlugin — Fastify-compatible plugin that registers the Paystack
+ * billing webhook route at `POST /paystack`.
  *
- * One-line mount (for tasks.md Discovered note):
+ * The cloud package does not depend on Fastify directly, so the instance
+ * parameter is typed as `unknown` and cast internally (quarantined any).
+ * Fastify's duck-typed plugin system accepts any `(instance, opts) =>
+ * Promise<void>` function for `app.register()`.
+ *
+ * Mount in backend/src/http/app.ts (cloud gate — see tasks.md Discovered):
  *
  * ```ts
- * // backend/src/http/app.ts (cloud gate):
- * app.post('/billing/webhook/paystack', { config: { rawBody: true } }, async (req, reply) => {
- *   const raw = (req as any).rawBody as Buffer;
- *   try {
- *     verifyBillingWebhookSignature(raw, req.headers['x-paystack-signature'] as string, PAYSTACK_SECRET_KEY);
- *   } catch { return reply.status(401).send({ error: 'invalid signature' }); }
- *   const body = JSON.parse(raw.toString()) as { event: string; data: Record<string,unknown> };
- *   await handleBillingWebhookEvent({ pool, clock, paystackSecretKey: PAYSTACK_SECRET_KEY }, body);
- *   reply.send({ status: 'ok' });
- * });
+ * if (process.env.CARTCRFT_CLOUD) {
+ *   const { billingWebhookPlugin } = await import('@cartcrft/cloud-billing');
+ *   await app.register(billingWebhookPlugin, { prefix: '/webhooks/billing' });
+ * }
  * ```
+ *
+ * The plugin reads PAYSTACK_SECRET_KEY from the environment at request time.
+ * The pool is resolved via the `pool` option if provided, else falls back to
+ * a new pg.Pool from DATABASE_URL (useful in standalone worker contexts).
  */
+export async function billingWebhookPlugin(
+  // any: Fastify instance — cloud package has no Fastify dep; quarantined here.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  instance: any,
+  opts: BillingWebhookPluginOptions & Record<string, unknown>
+): Promise<void> {
+  // Resolve pool from options or fall back to DATABASE_URL.
+  const pool: pg.Pool = opts.pool ?? (() => {
+    const { Pool } = require('pg') as typeof import('pg'); // eslint-disable-line @typescript-eslint/no-require-imports
+    return new Pool({ connectionString: process.env['DATABASE_URL'] });
+  })();
+
+  const clock: Clock = opts.clock ?? { now: () => new Date() };
+
+  // POST /paystack  (mounted under the prefix provided at register time)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  instance.post('/paystack', async (req: any, reply: any) => {
+    const secretKey: string = opts.paystackSecretKey ?? process.env['PAYSTACK_SECRET_KEY'] ?? '';
+    const sigHeader: string = (req.headers['x-paystack-signature'] as string) ?? '';
+
+    // Prefer rawBody (if content-parser pre-populated it), else serialise body.
+    let rawBody: Buffer;
+    if (Buffer.isBuffer(req.rawBody)) {
+      rawBody = req.rawBody as Buffer;
+    } else if (typeof req.body === 'string') {
+      rawBody = Buffer.from(req.body as string, 'utf8');
+    } else {
+      rawBody = Buffer.from(JSON.stringify(req.body ?? {}), 'utf8');
+    }
+
+    try {
+      verifyBillingWebhookSignature(rawBody, sigHeader, secretKey);
+    } catch {
+      return reply.status(401).send({
+        error: { code: 'UNAUTHORIZED', message: 'invalid billing webhook signature' },
+      });
+    }
+
+    let event: { event: string; data: Record<string, unknown> };
+    try {
+      event = JSON.parse(rawBody.toString()) as typeof event;
+    } catch {
+      return reply.status(400).send({
+        error: { code: 'BAD_REQUEST', message: 'invalid JSON body' },
+      });
+    }
+
+    await handleBillingWebhookEvent({ pool, clock, paystackSecretKey: secretKey }, event);
+    return reply.send({ status: 'ok' });
+  });
+}
+
 export { handleBillingWebhookEvent as processBillingWebhook };

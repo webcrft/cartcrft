@@ -25,6 +25,9 @@
     "pg": "^8.13.3",
     "zod": "^4.4.3"
   },
+  "optionalDependencies": {
+    "@cartcrft/cloud-billing": "workspace:*"
+  },
   "devDependencies": {
     "@types/node": "^22.15.30",
     "@types/pg": "^8.11.14",

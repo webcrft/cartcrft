@@ -1041,31 +1041,33 @@ export async function listAuditLog(
 // ── Spend enforcement ─────────────────────────────────────────────────────────
 
 /**
- * Verify that an agent checkout is within the agent's spend limit.
- *
- * Design choice for mandate requirement:
- *   We require a valid payment mandate when ANY payment mandates exist for the
- *   checkout_id AND the agent has a spend_limit set. This is pragmatic: if no
- *   mandates exist yet in the system, the check is a simple spend-ceiling guard.
- *   Document: full mandate requirement enforcement can be toggled via store
- *   settings `require_agent_mandate` (see Discovered in tasks.md).
+ * Verify that an agent checkout is within the agent's spend limit and, when the
+ * store flag `agents_require_mandate` is set, that a valid mandate chain exists.
  *
  * Algorithm:
  *  1. Load agent (must be active)
  *  2. If agent has spend_limit + spend_window:
  *     - Sum order totals for orders attributed to this agent within the window
  *     - If sum + checkoutTotal > spend_limit → reject with MANDATE_SPEND_LIMIT_EXCEEDED
- *  3. If a payment mandate exists for checkout_id → verify the mandate chain
+ *  3a. If storeRequiresMandate = true:
+ *      - Must find an active payment mandate for checkout_id, and the chain
+ *        must verify. Absence or invalidity → MANDATE_REQUIRED.
+ *  3b. If storeRequiresMandate = false (default):
+ *      - If a payment mandate exists for checkout_id → verify the chain.
+ *        Invalidity → MANDATE_REQUIRED. Absence → OK (spend-limit-only mode).
+ *
+ * @param storeRequiresMandate  Pass the store's agents_require_mandate flag.
  *
  * @throws Error with code MANDATE_SPEND_LIMIT_EXCEEDED if limit exceeded
  * @throws Error with code AGENT_INACTIVE if agent is disabled
- * @throws Error with code MANDATE_REQUIRED if mandate required but invalid
+ * @throws Error with code MANDATE_REQUIRED if mandate required but missing/invalid
  */
 export async function verifyAgentCheckout(
   agentId: string,
   storeId: string,
   checkoutId: string,
-  checkoutTotal: number
+  checkoutTotal: number,
+  storeRequiresMandate = false
 ): Promise<void> {
   const pool = getPool();
 
@@ -1106,7 +1108,7 @@ export async function verifyAgentCheckout(
     }
   }
 
-  // 3. Payment mandate check: if a payment mandate references this checkout_id, verify it
+  // 3. Payment mandate check
   const { rows: mandateRows } = await pool.query<{ id: string }>(
     `SELECT id::text FROM mandates
      WHERE store_id = $1::uuid
@@ -1121,6 +1123,7 @@ export async function verifyAgentCheckout(
   );
 
   if (mandateRows.length > 0) {
+    // Mandate exists — verify the full chain regardless of store flag.
     const result = await verifyMandate(storeId, mandateRows[0]!.id);
     if (!result.valid) {
       const err = new Error(
@@ -1129,5 +1132,12 @@ export async function verifyAgentCheckout(
       err.code = "MANDATE_REQUIRED";
       throw err;
     }
+  } else if (storeRequiresMandate) {
+    // Store requires a mandate but none was found for this checkout.
+    const err = new Error(
+      `store requires a valid payment mandate for agent checkout, but none found for checkout ${checkoutId}`
+    ) as NodeJS.ErrnoException;
+    err.code = "MANDATE_REQUIRED";
+    throw err;
   }
 }
