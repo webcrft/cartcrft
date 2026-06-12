@@ -20,6 +20,11 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { randomUUID } from "node:crypto";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
+
+// SDK's sessionId typing predates exactOptionalPropertyTypes; safe to widen.
+const asTransport = (t: StreamableHTTPClientTransport): Transport =>
+  t as unknown as Transport;
 
 import { createCtx, type TestCtx } from "../shared/ctx.js";
 import {
@@ -56,7 +61,7 @@ async function mcpClient(storeId: string, apiKey: string): Promise<Client> {
     { name: "cartcrft-test-client", version: "0.1.0" },
     { capabilities: {} }
   );
-  await client.connect(transport);
+  await client.connect(asTransport(transport));
   return client;
 }
 
@@ -215,7 +220,7 @@ describe("MCP auth rejection", () => {
       { name: "no-auth-client", version: "0.1.0" },
       { capabilities: {} }
     );
-    await expect(client.connect(transport)).rejects.toThrow();
+    await expect(client.connect(asTransport(transport))).rejects.toThrow();
   });
 
   it("returns 401 for an invalid key", async () => {
@@ -228,7 +233,7 @@ describe("MCP auth rejection", () => {
       { name: "bad-key-client", version: "0.1.0" },
       { capabilities: {} }
     );
-    await expect(client.connect(transport)).rejects.toThrow();
+    await expect(client.connect(asTransport(transport))).rejects.toThrow();
   });
 
   it("returns 403 when key is for a different store", async () => {
@@ -245,7 +250,7 @@ describe("MCP auth rejection", () => {
       { name: "wrong-store-client", version: "0.1.0" },
       { capabilities: {} }
     );
-    await expect(client.connect(transport)).rejects.toThrow();
+    await expect(client.connect(asTransport(transport))).rejects.toThrow();
   });
 });
 
@@ -492,7 +497,7 @@ describe("MCP ?key= query param auth", () => {
       { name: "query-param-auth-client", version: "0.1.0" },
       { capabilities: {} }
     );
-    await client.connect(transport);
+    await client.connect(asTransport(transport));
     try {
       const { tools } = await client.listTools();
       expect(tools).toHaveLength(9);

@@ -19,6 +19,11 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
+
+// SDK's sessionId typing predates exactOptionalPropertyTypes; safe to widen.
+const asTransport = (t: StreamableHTTPClientTransport): Transport =>
+  t as unknown as Transport;
 
 import { createCtx, type TestCtx } from "../shared/ctx.js";
 import { post } from "../shared/helpers.js";
@@ -50,7 +55,7 @@ async function mcpClient(apiKey: string): Promise<Client> {
     { name: "seed-test-client", version: "0.1.0" },
     { capabilities: {} }
   );
-  await client.connect(transport);
+  await client.connect(asTransport(transport));
   return client;
 }
 

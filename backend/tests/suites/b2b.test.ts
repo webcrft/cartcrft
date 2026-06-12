@@ -67,8 +67,8 @@ describe("companies", () => {
     });
     expect(res.status).toBe(201);
     const body = res.json as Record<string, string>;
-    expect(typeof body.id).toBe("string");
-    companyId = body.id;
+    expect(typeof body["id"]).toBe("string");
+    companyId = body["id"] as string;
   });
 
   it("lists companies", async () => {
