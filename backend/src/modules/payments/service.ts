@@ -10,7 +10,7 @@
 
 import { getPool, withTx } from "../../db/pool.js";
 import { config } from "../../config/config.js";
-import { encodeSecretValue, decodeSecretValue } from "../../lib/secrets.js";
+import { encodeSecretValue } from "../../lib/secrets.js";
 import { StripeClient } from "../../providers/payments/stripe.js";
 import { PaystackClient } from "../../providers/payments/paystack.js";
 import { RazorpayClient } from "../../providers/payments/razorpay.js";
@@ -368,25 +368,31 @@ export async function createRefund(
       if (!refundId) throw new Error("createRefund: no id returned");
 
       // Update total_refunded on order
-      const { rowCount: updateRowCount, rows: updateRows } = await client.query<{ id: string; total_refunded: string }>(
-        `UPDATE orders SET total_refunded = total_refunded + $2, updated_at = now()
-         WHERE id = $1::uuid
-         RETURNING id::text, total_refunded::text`,
+      const { rowCount: updateRowCount } = await client.query(
+        `UPDATE orders SET total_refunded = total_refunded + $2::numeric, updated_at = now()
+         WHERE id = $1::uuid`,
         [orderId, amount]
       );
-      // eslint-disable-next-line no-console -- debug
-      console.error(`[createRefund] UPDATE orders rowCount=${updateRowCount} orderId=${orderId} amount=${amount} returning=${JSON.stringify(updateRows)}`);
+      if ((updateRowCount ?? 0) === 0) {
+        const e = new Error("createRefund: order not found when updating total_refunded");
+        (e as NodeJS.ErrnoException).code = "NOT_FOUND";
+        throw e;
+      }
 
-      // Insert event
-      await client
-        .query(
+      // Insert event (best-effort, use savepoint to avoid aborting the transaction)
+      try {
+        await client.query("SAVEPOINT refund_event");
+        await client.query(
           `INSERT INTO order_events (order_id, type, data, created_by)
            VALUES ($1::uuid, 'refund_created',
-                   jsonb_build_object('refund_id', $2::text, 'amount', $3),
+                   jsonb_build_object('refund_id', $2::text, 'amount', $3::numeric),
                    $4)`,
           [orderId, refundId, amount, userId ?? null]
-        )
-        .catch(() => undefined);
+        );
+        await client.query("RELEASE SAVEPOINT refund_event");
+      } catch {
+        await client.query("ROLLBACK TO SAVEPOINT refund_event");
+      }
 
       return { id: refundId };
     } catch (err: unknown) {
@@ -426,17 +432,20 @@ export async function listProviders(
     [storeId]
   );
 
-  // Decrypt config before returning
+  // Config is stored as plain JSON in the jsonb column — redact secret fields
   return rows.map((row) => {
-    let cfg: Record<string, unknown> = {};
-    try {
-      const raw = typeof row.config === "string" ? row.config : JSON.stringify(row.config);
-      const decrypted = decodeSecretValue(raw, secretsKey);
-      cfg = JSON.parse(decrypted) as Record<string, unknown>;
-    } catch {
-      // If decryption fails (e.g. config is '{}'), leave as empty
+    const cfg = (typeof row.config === "object" && row.config !== null)
+      ? (row.config as Record<string, unknown>)
+      : {};
+    const redacted: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(cfg)) {
+      if (/secret|key|token|password/i.test(k)) {
+        redacted[k] = typeof v === "string" && v.length > 0 ? "[redacted]" : v;
+      } else {
+        redacted[k] = v;
+      }
     }
-    return { ...row, config: cfg };
+    return { ...row, config: redacted };
   });
 }
 
@@ -446,9 +455,12 @@ export async function upsertProvider(
 ): Promise<string> {
   const pool = getPool();
 
-  // Encrypt config
-  const configStr = JSON.stringify(input.config);
-  const encryptedConfig = encodeSecretValue(configStr, secretsKey) ?? "{}";
+  // Config is stored as plain JSON in the jsonb column.
+  // Only webhook_secret (text column) is encrypted.
+  const configJson = JSON.stringify(input.config ?? {});
+  const webhookSecretEnc = input.webhook_secret
+    ? (encodeSecretValue(input.webhook_secret, secretsKey) ?? null)
+    : null;
 
   const providerType = input.type ?? input.slug;
 
@@ -470,9 +482,9 @@ export async function upsertProvider(
       input.slug,
       input.name ?? input.slug,
       providerType,
-      encryptedConfig,
+      configJson,
       input.is_active ?? true,
-      input.webhook_secret ?? null,
+      webhookSecretEnc,
     ]
   );
 
@@ -614,14 +626,15 @@ async function getProviderConfig(
     throw e;
   }
 
-  const raw =
-    typeof rows[0].config === "string"
-      ? rows[0].config
-      : JSON.stringify(rows[0].config);
-
-  // Decrypt
-  const decrypted = decodeSecretValue(raw, secretsKey);
-  return JSON.parse(decrypted) as Record<string, unknown>;
+  // Config is stored as plain JSON in the jsonb column (pg driver parses jsonb to JS objects)
+  const cfg = rows[0].config;
+  if (typeof cfg === "object" && cfg !== null) {
+    return cfg as Record<string, unknown>;
+  }
+  if (typeof cfg === "string") {
+    return JSON.parse(cfg) as Record<string, unknown>;
+  }
+  return {};
 }
 
 export async function createStripeSession(
