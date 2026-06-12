@@ -1,0 +1,590 @@
+/**
+ * b2b/service.ts — SQL-backed B2B commerce service.
+ *
+ * Covers: companies CRUD, company_customers, customer groups, quotes lifecycle,
+ * purchase orders.
+ *
+ * Money: prices stored as numeric(15,2) in DB; returned as strings in API.
+ * Quote→order conversion uses next_order_number() and mirrors checkout complete.
+ */
+
+import { getPool, withTx } from "../../db/pool.js";
+import type {
+  Company,
+  CreateCompanyInput,
+  UpdateCompanyInput,
+  CompanyCustomer,
+  CustomerGroup,
+  CreateCustomerGroupInput,
+  UpdateCustomerGroupInput,
+  QuoteWithLines,
+  CreateQuoteInput,
+  UpdateQuoteInput,
+  AcceptQuoteResult,
+  PurchaseOrder,
+  AttachPurchaseOrderInput,
+  UpdatePurchaseOrderInput,
+} from "./types.js";
+
+// ── Companies ──────────────────────────────────────────────────────────────────
+
+const COMPANY_COLS = `
+  id::text, store_id::text, name,
+  tax_number AS tax_id, notes,
+  credit_limit::text, credit_used::text, payment_terms_days,
+  price_list_id::text, billing_address, metadata, created_at, updated_at
+`;
+
+export async function listCompanies(storeId: string): Promise<Company[]> {
+  const pool = getPool();
+  const { rows } = await pool.query<Company>(
+    `SELECT ${COMPANY_COLS} FROM companies WHERE store_id = $1::uuid ORDER BY name`,
+    [storeId]
+  );
+  return rows;
+}
+
+export async function getCompany(
+  storeId: string,
+  companyId: string
+): Promise<Company | null> {
+  const pool = getPool();
+  const { rows } = await pool.query<Company>(
+    `SELECT ${COMPANY_COLS} FROM companies WHERE id = $1::uuid AND store_id = $2::uuid`,
+    [companyId, storeId]
+  );
+  return rows[0] ?? null;
+}
+
+export async function createCompany(
+  storeId: string,
+  input: CreateCompanyInput
+): Promise<string> {
+  const pool = getPool();
+  const { rows } = await pool.query<{ id: string }>(
+    `INSERT INTO companies
+       (store_id, name, tax_number, credit_limit, payment_terms_days, price_list_id, metadata)
+     VALUES ($1::uuid, $2, $3, $4::numeric, COALESCE($5, 0), $6::uuid, COALESCE($7::jsonb, '{}'))
+     RETURNING id::text`,
+    [
+      storeId,
+      input.name,
+      input.tax_id ?? null,
+      input.credit_limit ?? null,
+      input.payment_terms_days ?? null,
+      input.price_list_id ?? null,
+      input.metadata ? JSON.stringify(input.metadata) : null,
+    ]
+  );
+  if (!rows[0]) throw new Error("createCompany: no row returned");
+  return rows[0].id;
+}
+
+export async function updateCompany(
+  storeId: string,
+  companyId: string,
+  input: UpdateCompanyInput
+): Promise<boolean> {
+  const pool = getPool();
+  const { rowCount } = await pool.query(
+    `UPDATE companies SET
+       name               = COALESCE($3, name),
+       tax_number         = COALESCE($4, tax_number),
+       credit_limit       = COALESCE($5::numeric, credit_limit),
+       payment_terms_days = COALESCE($6, payment_terms_days),
+       price_list_id      = COALESCE($7::uuid, price_list_id),
+       updated_at         = now()
+     WHERE id = $1::uuid AND store_id = $2::uuid`,
+    [
+      companyId,
+      storeId,
+      input.name ?? null,
+      input.tax_id ?? null,
+      input.credit_limit ?? null,
+      input.payment_terms_days ?? null,
+      input.price_list_id ?? null,
+    ]
+  );
+  return (rowCount ?? 0) > 0;
+}
+
+export async function deleteCompany(
+  storeId: string,
+  companyId: string
+): Promise<boolean> {
+  const pool = getPool();
+  const { rowCount } = await pool.query(
+    `DELETE FROM companies WHERE id = $1::uuid AND store_id = $2::uuid`,
+    [companyId, storeId]
+  );
+  return (rowCount ?? 0) > 0;
+}
+
+// ── Company customers ──────────────────────────────────────────────────────────
+
+export async function listCompanyCustomers(
+  storeId: string,
+  companyId: string
+): Promise<CompanyCustomer[]> {
+  const pool = getPool();
+  const { rows } = await pool.query<CompanyCustomer>(
+    `SELECT cc.company_id::text AS id, cc.company_id::text, cc.customer_id::text, cc.role, cc.created_at
+     FROM company_customers cc
+     JOIN companies c ON c.id = cc.company_id
+     WHERE cc.company_id = $1::uuid AND c.store_id = $2::uuid`,
+    [companyId, storeId]
+  );
+  return rows;
+}
+
+export async function addCompanyCustomer(
+  storeId: string,
+  companyId: string,
+  customerId: string,
+  role: string
+): Promise<boolean> {
+  const pool = getPool();
+  // Check store ownership, then upsert
+  const { rows: check } = await pool.query<{ id: string }>(
+    `SELECT id::text FROM companies WHERE id = $1::uuid AND store_id = $2::uuid`,
+    [companyId, storeId]
+  );
+  if (!check[0]) {
+    const e = new Error("company not found");
+    (e as NodeJS.ErrnoException).code = "NOT_FOUND";
+    throw e;
+  }
+  await pool.query(
+    `INSERT INTO company_customers (company_id, customer_id, role)
+     VALUES ($1::uuid, $2::uuid, $3)
+     ON CONFLICT (company_id, customer_id) DO UPDATE SET role = EXCLUDED.role`,
+    [companyId, customerId, role]
+  );
+  return true;
+}
+
+export async function removeCompanyCustomer(
+  storeId: string,
+  companyId: string,
+  customerId: string
+): Promise<boolean> {
+  const pool = getPool();
+  const { rowCount } = await pool.query(
+    `DELETE FROM company_customers cc
+     USING companies c
+     WHERE cc.company_id = $1::uuid AND cc.customer_id = $2::uuid
+       AND c.id = cc.company_id AND c.store_id = $3::uuid`,
+    [companyId, customerId, storeId]
+  );
+  return (rowCount ?? 0) > 0;
+}
+
+// ── Customer groups ────────────────────────────────────────────────────────────
+
+export async function listCustomerGroups(storeId: string): Promise<CustomerGroup[]> {
+  const pool = getPool();
+  const { rows } = await pool.query<CustomerGroup>(
+    `SELECT id::text, store_id::text, name, description, price_list_id::text, created_at
+     FROM customer_groups WHERE store_id = $1::uuid ORDER BY name`,
+    [storeId]
+  );
+  return rows;
+}
+
+export async function createCustomerGroup(
+  storeId: string,
+  input: CreateCustomerGroupInput
+): Promise<string> {
+  const pool = getPool();
+  const { rows } = await pool.query<{ id: string }>(
+    `INSERT INTO customer_groups (store_id, name, description, price_list_id)
+     VALUES ($1::uuid, $2, $3, $4::uuid) RETURNING id::text`,
+    [storeId, input.name, input.description ?? null, input.price_list_id ?? null]
+  );
+  if (!rows[0]) throw new Error("createCustomerGroup: no row returned");
+  return rows[0].id;
+}
+
+export async function updateCustomerGroup(
+  storeId: string,
+  groupId: string,
+  input: UpdateCustomerGroupInput
+): Promise<boolean> {
+  const pool = getPool();
+  const { rowCount } = await pool.query(
+    `UPDATE customer_groups SET
+       name          = COALESCE($3, name),
+       description   = COALESCE($4, description),
+       price_list_id = COALESCE($5::uuid, price_list_id)
+     WHERE id = $1::uuid AND store_id = $2::uuid`,
+    [groupId, storeId, input.name ?? null, input.description ?? null, input.price_list_id ?? null]
+  );
+  return (rowCount ?? 0) > 0;
+}
+
+export async function deleteCustomerGroup(
+  storeId: string,
+  groupId: string
+): Promise<boolean> {
+  const pool = getPool();
+  const { rowCount } = await pool.query(
+    `DELETE FROM customer_groups WHERE id = $1::uuid AND store_id = $2::uuid`,
+    [groupId, storeId]
+  );
+  return (rowCount ?? 0) > 0;
+}
+
+export async function addGroupMember(
+  storeId: string,
+  groupId: string,
+  customerId: string
+): Promise<void> {
+  const pool = getPool();
+  await pool.query(
+    `INSERT INTO customer_group_members (group_id, customer_id)
+     SELECT $1::uuid, $2::uuid
+     WHERE EXISTS (SELECT 1 FROM customer_groups WHERE id = $1::uuid AND store_id = $3::uuid)
+     ON CONFLICT DO NOTHING`,
+    [groupId, customerId, storeId]
+  );
+}
+
+export async function removeGroupMember(
+  storeId: string,
+  groupId: string,
+  customerId: string
+): Promise<boolean> {
+  const pool = getPool();
+  const { rowCount } = await pool.query(
+    `DELETE FROM customer_group_members
+     WHERE group_id = $1::uuid AND customer_id = $2::uuid
+       AND EXISTS (SELECT 1 FROM customer_groups WHERE id = $1::uuid AND store_id = $3::uuid)`,
+    [groupId, customerId, storeId]
+  );
+  return (rowCount ?? 0) > 0;
+}
+
+// ── Quotes ─────────────────────────────────────────────────────────────────────
+
+export async function listQuotes(
+  storeId: string,
+  opts: {
+    status?: string | undefined;
+    company_id?: string | undefined;
+    limit?: number | undefined;
+    offset?: number | undefined;
+  } = {}
+): Promise<{ quotes: unknown[]; total: number }> {
+  const pool = getPool();
+  const limit = Math.min(opts.limit ?? 50, 200);
+  const offset = opts.offset ?? 0;
+
+  const conditions: string[] = ["store_id = $1::uuid"];
+  const args: unknown[] = [storeId];
+  let argN = 2;
+
+  if (opts.status) {
+    conditions.push(`status = $${argN++}`);
+    args.push(opts.status);
+  }
+  if (opts.company_id) {
+    conditions.push(`company_id = $${argN++}::uuid`);
+    args.push(opts.company_id);
+  }
+
+  const where = conditions.join(" AND ");
+  const { rows: countRows } = await pool.query<{ count: string }>(
+    `SELECT COUNT(*)::text AS count FROM quotes WHERE ${where}`,
+    args
+  );
+  const total = parseInt(countRows[0]?.count ?? "0", 10);
+
+  const { rows } = await pool.query(
+    `SELECT id::text, store_id::text, company_id::text, customer_id::text,
+            status, expires_at, notes, converted_order_id::text,
+            created_by::text, created_at, updated_at
+     FROM quotes WHERE ${where}
+     ORDER BY created_at DESC LIMIT $${argN} OFFSET $${argN + 1}`,
+    [...args, limit, offset]
+  );
+  return { quotes: rows, total };
+}
+
+export async function getQuote(
+  storeId: string,
+  quoteId: string
+): Promise<QuoteWithLines | null> {
+  const pool = getPool();
+  const { rows } = await pool.query(
+    `SELECT id::text, store_id::text, company_id::text, customer_id::text,
+            status, expires_at, notes, converted_order_id::text,
+            created_by::text, created_at, updated_at
+     FROM quotes WHERE id = $1::uuid AND store_id = $2::uuid`,
+    [quoteId, storeId]
+  );
+  if (!rows[0]) return null;
+  const quote = rows[0] as QuoteWithLines;
+
+  const { rows: lineRows } = await pool.query(
+    `SELECT id::text, quote_id::text, variant_id::text, title, quantity, price::text, notes, created_at
+     FROM quote_lines WHERE quote_id = $1::uuid ORDER BY created_at`,
+    [quoteId]
+  );
+  quote.lines = lineRows as QuoteWithLines["lines"];
+  return quote;
+}
+
+export async function createQuote(
+  storeId: string,
+  input: CreateQuoteInput,
+  createdBy: string
+): Promise<string> {
+  return withTx(async (client) => {
+    const { rows } = await client.query<{ id: string }>(
+      `INSERT INTO quotes (store_id, company_id, customer_id, status, expires_at, notes, created_by)
+       VALUES ($1::uuid, $2::uuid, $3::uuid, 'draft', $4::timestamptz, $5, $6::uuid) RETURNING id::text`,
+      [
+        storeId,
+        input.company_id ?? null,
+        input.customer_id ?? null,
+        input.expires_at ?? null,
+        input.notes ?? null,
+        createdBy,
+      ]
+    );
+    if (!rows[0]) throw new Error("createQuote: no row returned");
+    const quoteId = rows[0].id;
+
+    if (input.lines && input.lines.length > 0) {
+      for (const line of input.lines) {
+        const title = (line.title ?? "Item").trim() || "Item";
+        const qty = Math.max(1, line.quantity ?? 1);
+        await client.query(
+          `INSERT INTO quote_lines (quote_id, variant_id, title, quantity, price, notes)
+           VALUES ($1::uuid, $2::uuid, $3, $4, $5::numeric, $6)`,
+          [quoteId, line.variant_id ?? null, title, qty, line.price, line.notes ?? null]
+        );
+      }
+    }
+    return quoteId;
+  });
+}
+
+export async function updateQuote(
+  storeId: string,
+  quoteId: string,
+  input: UpdateQuoteInput
+): Promise<boolean> {
+  const pool = getPool();
+  const { rowCount } = await pool.query(
+    `UPDATE quotes SET
+       status     = COALESCE($3, status),
+       expires_at = COALESCE($4::timestamptz, expires_at),
+       notes      = COALESCE($5, notes),
+       updated_at = now()
+     WHERE id = $1::uuid AND store_id = $2::uuid`,
+    [quoteId, storeId, input.status ?? null, input.expires_at ?? null, input.notes ?? null]
+  );
+  return (rowCount ?? 0) > 0;
+}
+
+export async function sendQuote(
+  storeId: string,
+  quoteId: string
+): Promise<boolean> {
+  const pool = getPool();
+  const { rowCount } = await pool.query(
+    `UPDATE quotes SET status = 'sent', updated_at = now()
+     WHERE id = $1::uuid AND store_id = $2::uuid AND status = 'draft'`,
+    [quoteId, storeId]
+  );
+  return (rowCount ?? 0) > 0;
+}
+
+export async function acceptQuote(
+  storeId: string,
+  quoteId: string
+): Promise<AcceptQuoteResult> {
+  return withTx(async (client) => {
+    // Load quote with row lock
+    const { rows: qRows } = await client.query<{
+      company_id: string | null;
+      customer_id: string | null;
+      status: string;
+      expires_at: Date | null;
+    }>(
+      `SELECT company_id::text, customer_id::text, status, expires_at
+       FROM quotes WHERE id = $1::uuid AND store_id = $2::uuid FOR UPDATE`,
+      [quoteId, storeId]
+    );
+    if (!qRows[0]) {
+      const e = new Error("quote not found");
+      (e as NodeJS.ErrnoException).code = "NOT_FOUND";
+      throw e;
+    }
+    const q = qRows[0];
+    if (q.status === "expired" || q.status === "converted" || q.status === "rejected") {
+      const e = new Error(`quote cannot be accepted in status "${q.status}"`);
+      (e as NodeJS.ErrnoException).code = "INVALID_TRANSITION";
+      throw e;
+    }
+    if (q.expires_at && new Date() > q.expires_at) {
+      const e = new Error("quote has expired");
+      (e as NodeJS.ErrnoException).code = "QUOTE_EXPIRED";
+      throw e;
+    }
+
+    // Sum quote lines for subtotal
+    const { rows: sumRows } = await client.query<{ subtotal: string }>(
+      `SELECT COALESCE(SUM(price * quantity), 0)::text AS subtotal
+       FROM quote_lines WHERE quote_id = $1::uuid`,
+      [quoteId]
+    );
+    const subtotal = sumRows[0]?.subtotal ?? "0";
+
+    // Get store currency
+    const { rows: storeRows } = await client.query<{ currency: string }>(
+      `SELECT currency FROM stores WHERE id = $1::uuid`,
+      [storeId]
+    );
+    const currency = storeRows[0]?.currency ?? "USD";
+
+    // Next order number
+    const { rows: numRows } = await client.query<{ next_order_number: string }>(
+      `SELECT next_order_number($1::uuid)`,
+      [storeId]
+    );
+    const orderNumber = numRows[0]?.next_order_number ?? "ORDER-1";
+
+    // Create order from quote
+    const { rows: orderRows } = await client.query<{ id: string }>(
+      `INSERT INTO orders
+         (store_id, customer_id, company_id, order_number,
+          status, financial_status, fulfillment_status,
+          currency, subtotal, total, source_name)
+       VALUES ($1::uuid, $2::uuid, $3::uuid, $4, 'open', 'pending', 'unfulfilled', $5, $6::numeric, $6::numeric, 'quote')
+       RETURNING id::text`,
+      [storeId, q.customer_id, q.company_id, orderNumber, currency, subtotal]
+    );
+    if (!orderRows[0]) throw new Error("acceptQuote: failed to create order");
+    const orderId = orderRows[0].id;
+
+    // Copy quote lines → order lines
+    await client.query(
+      `INSERT INTO order_lines (order_id, variant_id, title, quantity, price, total)
+       SELECT $1::uuid, variant_id, title, quantity, price, price * quantity
+       FROM quote_lines WHERE quote_id = $2::uuid`,
+      [orderId, quoteId]
+    );
+
+    // Mark quote converted
+    await client.query(
+      `UPDATE quotes SET status = 'converted', converted_order_id = $2::uuid, updated_at = now()
+       WHERE id = $1::uuid`,
+      [quoteId, orderId]
+    );
+
+    return { order_id: orderId, order_number: orderNumber };
+  });
+}
+
+export async function rejectQuote(
+  storeId: string,
+  quoteId: string
+): Promise<boolean> {
+  const pool = getPool();
+  const { rowCount } = await pool.query(
+    `UPDATE quotes SET status = 'rejected', updated_at = now()
+     WHERE id = $1::uuid AND store_id = $2::uuid AND status NOT IN ('converted', 'rejected')`,
+    [quoteId, storeId]
+  );
+  return (rowCount ?? 0) > 0;
+}
+
+// ── Purchase orders ────────────────────────────────────────────────────────────
+
+export async function listPurchaseOrders(storeId: string): Promise<PurchaseOrder[]> {
+  const pool = getPool();
+  const { rows } = await pool.query<PurchaseOrder>(
+    `SELECT id::text, store_id::text, company_id::text, order_id::text,
+            po_number, status, notes, created_at, updated_at
+     FROM purchase_orders WHERE store_id = $1::uuid ORDER BY created_at DESC`,
+    [storeId]
+  );
+  return rows;
+}
+
+export async function getPurchaseOrder(
+  storeId: string,
+  poId: string
+): Promise<PurchaseOrder | null> {
+  const pool = getPool();
+  const { rows } = await pool.query<PurchaseOrder>(
+    `SELECT id::text, store_id::text, company_id::text, order_id::text,
+            po_number, status, notes, created_at, updated_at
+     FROM purchase_orders WHERE id = $1::uuid AND store_id = $2::uuid`,
+    [poId, storeId]
+  );
+  return rows[0] ?? null;
+}
+
+export async function attachPurchaseOrder(
+  storeId: string,
+  orderId: string,
+  input: AttachPurchaseOrderInput
+): Promise<string> {
+  const pool = getPool();
+
+  // Verify order belongs to store and get company_id
+  const { rows: orderRows } = await pool.query<{ company_id: string | null }>(
+    `SELECT company_id::text FROM orders WHERE id = $1::uuid AND store_id = $2::uuid`,
+    [orderId, storeId]
+  );
+  if (!orderRows[0]) {
+    const e = new Error("order not found");
+    (e as NodeJS.ErrnoException).code = "NOT_FOUND";
+    throw e;
+  }
+  const companyId = orderRows[0].company_id;
+
+  try {
+    const { rows } = await pool.query<{ id: string }>(
+      `INSERT INTO purchase_orders (store_id, company_id, order_id, po_number, status, notes)
+       VALUES ($1::uuid, $2::uuid, $3::uuid, $4, 'pending', $5) RETURNING id::text`,
+      [storeId, companyId, orderId, input.po_number, input.notes ?? null]
+    );
+    if (!rows[0]) throw new Error("attachPurchaseOrder: no row returned");
+
+    // Update po_number on the order
+    await pool.query(
+      `UPDATE orders SET po_number = $2, updated_at = now() WHERE id = $1::uuid`,
+      [orderId, input.po_number]
+    );
+
+    return rows[0].id;
+  } catch (err) {
+    if (err instanceof Error && err.message.includes("unique")) {
+      const e = new Error("a purchase order with that number already exists");
+      (e as NodeJS.ErrnoException).code = "DUPLICATE_PO";
+      throw e;
+    }
+    throw err;
+  }
+}
+
+export async function updatePurchaseOrder(
+  storeId: string,
+  poId: string,
+  input: UpdatePurchaseOrderInput
+): Promise<boolean> {
+  const pool = getPool();
+  const { rowCount } = await pool.query(
+    `UPDATE purchase_orders SET
+       status     = COALESCE($3, status),
+       notes      = COALESCE($4, notes),
+       updated_at = now()
+     WHERE id = $1::uuid AND store_id = $2::uuid`,
+    [poId, storeId, input.status ?? null, input.notes ?? null]
+  );
+  return (rowCount ?? 0) > 0;
+}
