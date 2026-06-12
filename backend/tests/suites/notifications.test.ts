@@ -392,11 +392,12 @@ describe("GET /webhook-url + /webhook-log", () => {
     auth = s.auth;
   });
 
-  it("GET /webhook-url → returns store webhook URL", async () => {
+  it("GET /webhook-url → returns store webhook URL (T6.3 shape)", async () => {
     const res = await get(ctx, `/commerce/stores/${storeId}/webhook-url`, auth);
     expect(res.status).toBe(200);
-    expect(typeof res.json["webhook_url"]).toBe("string");
-    expect((res.json["webhook_url"] as string).length).toBeGreaterThan(0);
+    expect(typeof res.json["path_url"]).toBe("string");
+    expect((res.json["path_url"] as string).length).toBeGreaterThan(0);
+    expect(typeof res.json["subdomain_routing_enabled"]).toBe("boolean");
   });
 
   it("GET /webhook-log → returns list (empty for new store)", async () => {
