@@ -2,6 +2,7 @@ packages:
   - backend
   - admin
   - sdk
+  - sdk/storefront
   - cloud/billing
 
 onlyBuiltDependencies: []

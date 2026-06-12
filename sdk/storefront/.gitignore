@@ -1,0 +1,4 @@
+# Allow committing the pre-built IIFE bundle so storefronts can load it
+# directly from the repo without a separate build step.
+!dist/
+!dist/storefront.js

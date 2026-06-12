@@ -7,11 +7,18 @@
  *  - request-id on every response
  *  - GET /healthz → { status: "ok"|"degraded", version, db: "ok"|"error" }
  *    Server keeps serving /healthz even when the DB is unreachable.
+ *
+ * OpenAPI generation:
+ *  - Pass `{ openapi: true }` or set CARTCRFT_OPENAPI=1 to register
+ *    @fastify/swagger with the jsonSchemaTransform from fastify-type-provider-zod.
+ *    This is off by default in production to avoid the overhead.
+ *    The generate-openapi.ts script uses this to produce docs/openapi.json.
  */
 import Fastify, { type FastifyInstance, type FastifyError } from "fastify";
 import {
   serializerCompiler,
   validatorCompiler,
+  jsonSchemaTransform,
 } from "fastify-type-provider-zod";
 import { getPool } from "../db/pool.js";
 import { authPlugin, rateLimitHook } from "../lib/auth/middleware.js";
@@ -46,9 +53,18 @@ import { digitalPlugin } from "../modules/digital/routes.js";
 import { engagementPlugin } from "../modules/engagement/routes.js";
 
 const VERSION = process.env["npm_package_version"] ?? "0.0.0";
+const OPENAPI_VERSION = "2026-06-12";
+
+export interface BuildAppOptions {
+  /** Enable @fastify/swagger OpenAPI 3.1 registration. Defaults to CARTCRFT_OPENAPI=1 env. */
+  openapi?: boolean;
+}
 
 /** Build and configure the Fastify app. Returns the instance (not started). */
-export async function buildApp(): Promise<FastifyInstance> {
+export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInstance> {
+  const enableOpenApi =
+    opts.openapi ?? process.env["CARTCRFT_OPENAPI"] === "1";
+
   const app = Fastify({
     logger: {
       level: process.env["APP_ENV"] === "production" ? "info" : "debug",
@@ -62,6 +78,81 @@ export async function buildApp(): Promise<FastifyInstance> {
   // ── Zod type provider ───────────────────────────────────────────────────
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
+
+  // ── OpenAPI 3.1 (opt-in via CARTCRFT_OPENAPI=1 or buildApp({ openapi: true })) ─
+  if (enableOpenApi) {
+    // Dynamic import so @fastify/swagger is only required when generating specs.
+    const { default: fastifySwagger } = await import("@fastify/swagger") as {
+      default: (typeof import("@fastify/swagger"))["default"];
+    };
+    await app.register(fastifySwagger, {
+      openapi: {
+        openapi: "3.1.0",
+        info: {
+          title: "Cartcrft API",
+          description:
+            "Open-source headless commerce API — agent-native, REST, date-versioned.",
+          version: OPENAPI_VERSION,
+          contact: { name: "Cartcrft", url: "https://cartcrft.dev" },
+          license: { name: "MIT", url: "https://github.com/cartcrft/cartcrft/blob/main/LICENSE" },
+        },
+        servers: [
+          { url: "https://api.cartcrft.dev", description: "Cartcrft Cloud" },
+          { url: "http://localhost:3000", description: "Local dev" },
+        ],
+        components: {
+          securitySchemes: {
+            BearerJWT: {
+              type: "http",
+              scheme: "bearer",
+              bearerFormat: "JWT",
+              description: "Staff/admin JWT obtained from the platform login flow.",
+            },
+            ApiKey: {
+              type: "http",
+              scheme: "bearer",
+              description:
+                "Cartcrft API key — `cc_pub_*` (storefront, read-only) or `cc_prv_*` (server-side, read-write).",
+            },
+          },
+        },
+        security: [{ BearerJWT: [] }, { ApiKey: [] }],
+        tags: [
+          { name: "stores", description: "Store management" },
+          { name: "api-keys", description: "API key issuance" },
+          { name: "catalog", description: "Products, variants, collections, price lists" },
+          { name: "carts", description: "Shopping carts" },
+          { name: "checkout", description: "Checkout sessions" },
+          { name: "orders", description: "Orders and fulfillment" },
+          { name: "payments", description: "Payment intents, capture, refunds" },
+          { name: "customers", description: "Customer accounts" },
+          { name: "customer-auth", description: "Storefront authentication" },
+          { name: "inventory", description: "Warehouses, levels, lots, serials" },
+          { name: "shipping", description: "Shipping zones, rates, shipments" },
+          { name: "tax", description: "Tax categories, zones, rates" },
+          { name: "discounts", description: "Discount codes, auto-discounts" },
+          { name: "wallet", description: "Store credits" },
+          { name: "gift-cards", description: "Gift cards" },
+          { name: "b2b", description: "B2B companies, quotes, purchase orders" },
+          { name: "subscriptions", description: "Subscription plans and billing" },
+          { name: "returns", description: "Returns / RMA" },
+          { name: "digital", description: "Digital product downloads" },
+          { name: "engagement", description: "Wishlists, abandoned carts" },
+          { name: "feeds", description: "Shopping feeds (Google, Facebook)" },
+          { name: "integrations", description: "Store integrations, pixels, providers" },
+          { name: "notifications", description: "Outbound notification providers" },
+          { name: "analytics", description: "Ecommerce analytics" },
+          { name: "search", description: "Semantic + full-text catalog search" },
+          { name: "agents", description: "Agent registry + mandates" },
+          { name: "mcp", description: "Model Context Protocol endpoints" },
+          { name: "acp", description: "Agentic Commerce Protocol adapter" },
+          { name: "webhooks", description: "Inbound payment webhooks" },
+          { name: "healthz", description: "Health check" },
+        ],
+      },
+      transform: jsonSchemaTransform,
+    });
+  }
 
   // ── Request-id on every response ────────────────────────────────────────
   app.addHook("onSend", async (request, reply) => {
