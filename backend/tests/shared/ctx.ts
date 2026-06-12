@@ -147,10 +147,25 @@ async function runMigrationsForTest(
   for (const filename of pending) {
     const raw = fs.readFileSync(path.join(migrationsDir, filename), "utf-8");
 
-    // Rewrite `public.identifier` → `"<schemaName>".identifier` so that
-    // explicitly-qualified DDL lands in the test schema.
-    // Covers `public.foo`, `public."foo"`, and `public.set_updated_at()` etc.
-    const sql = raw.replace(/\bpublic\./gi, `"${schemaName}".`);
+    // ── SQL transformations for test-schema isolation ────────────────────
+
+    // 1. Rewrite `public.identifier` → `"<schemaName>".identifier` so that
+    //    explicitly-qualified DDL lands in the test schema.
+    //    Covers `public.foo`, `public."foo"`, `public.set_updated_at()` etc.
+    let sql = raw.replace(/\bpublic\./gi, `"${schemaName}".`);
+
+    // 2. Ensure extensions are created in public schema, not in the test
+    //    schema.  `CREATE EXTENSION IF NOT EXISTS <name>` without a SCHEMA
+    //    clause installs into search_path's first schema (our test schema),
+    //    which causes the extension to be dropped at teardown, breaking
+    //    subsequent test runs.  We add `SCHEMA public` to pin them.
+    //
+    //    Pattern: CREATE EXTENSION IF NOT EXISTS name (no SCHEMA clause)
+    //    We match inside DO-blocks too (case-insensitive, single-line).
+    sql = sql.replace(
+      /\bcreate\s+extension\s+if\s+not\s+exists\s+(\w+)(?!\s+SCHEMA)/gi,
+      "CREATE EXTENSION IF NOT EXISTS $1 SCHEMA public"
+    );
 
     const client = await pool.connect();
     try {
