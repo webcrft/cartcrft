@@ -1,0 +1,21 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "noEmit": true,
+    "composite": false,
+    "skipLibCheck": true
+  },
+  "include": [
+    "tests/**/*.ts",
+    "vitest.config.ts",
+    "src/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "src/lib/auth/middleware.ts",
+    "src/modules/stores/routes.ts",
+    "src/modules/apikeys/routes.ts"
+  ]
+}

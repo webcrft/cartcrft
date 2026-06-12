@@ -7,7 +7,7 @@
     "build": "pnpm -r build",
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",
-    "suite": "pnpm --filter backend suite",
+    "suite": "pnpm --filter backend suite --",
     "migrate": "pnpm --filter backend migrate"
   },
   "engines": {

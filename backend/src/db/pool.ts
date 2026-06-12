@@ -33,6 +33,17 @@ export function getPool(): pg.Pool {
   return _pool;
 }
 
+/**
+ * Override the singleton pool — **test use only**.
+ *
+ * The test harness (backend/tests/shared/ctx.ts) calls this to inject a
+ * search_path-scoped pool before the migration runner and app boot.
+ * Never call this in production code.
+ */
+export function setPoolForTesting(pool: pg.Pool): void {
+  _pool = pool;
+}
+
 /** Close the pool (call on graceful shutdown). */
 export async function closePool(): Promise<void> {
   if (_pool) {

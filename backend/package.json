@@ -9,7 +9,7 @@
     "start": "node dist/main.js serve",
     "typecheck": "tsc --project tsconfig.json --noEmit",
     "test": "vitest run",
-    "suite": "vitest run",
+    "suite": "node scripts/suite.mjs",
     "migrate": "tsx src/main.ts migrate"
   },
   "dependencies": {
