@@ -392,12 +392,16 @@ describe("GET /webhook-url + /webhook-log", () => {
     auth = s.auth;
   });
 
-  it("GET /webhook-url → returns store webhook URL (T6.3 shape)", async () => {
+  it("GET /webhook-url → returns per-provider webhook URLs (T6.3 shape)", async () => {
     const res = await get(ctx, `/commerce/stores/${storeId}/webhook-url`, auth);
     expect(res.status).toBe(200);
-    expect(typeof res.json["path_url"]).toBe("string");
-    expect((res.json["path_url"] as string).length).toBeGreaterThan(0);
+    expect(Array.isArray(res.json["webhooks"])).toBe(true);
     expect(typeof res.json["subdomain_routing_enabled"]).toBe("boolean");
+    // This suite creates notification providers above; each entry carries a path_url.
+    const entries = res.json["webhooks"] as Array<Record<string, unknown>>;
+    for (const entry of entries) {
+      expect(typeof entry["path_url"]).toBe("string");
+    }
   });
 
   it("GET /webhook-log → returns list (empty for new store)", async () => {
