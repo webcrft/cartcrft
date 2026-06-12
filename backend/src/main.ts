@@ -14,6 +14,7 @@ import { config, mask } from "./config/config.js";
 import { closePool } from "./db/pool.js";
 import { runMigrations } from "./db/migrate.js";
 import { buildApp } from "./http/app.js";
+import { startEmbeddingWorkerJob } from "./agent/search/indexer.js";
 
 // ── Subcommand dispatch ───────────────────────────────────────────────────
 const subcommand = process.argv[2] ?? "serve";
@@ -75,14 +76,15 @@ async function runServe(): Promise<void> {
 // ── worker ────────────────────────────────────────────────────────────────
 async function runWorker(): Promise<void> {
   console.log("[worker] starting background job runner…");
-  // TODO Wave 2+: register interval-based jobs (exchange rate refresh,
-  // subscription renewals, abandoned-cart capture, etc.)
-  console.log("[worker] no jobs registered yet — idling");
+  // T3.2 — semantic catalog embedding worker job.
+  const stopEmbedding = startEmbeddingWorkerJob();
+  console.log("[worker] embedding job registered (30s poll interval)");
 
   // Keep alive.
   await new Promise<void>((resolve) => {
     const shutdown = () => {
       console.log("[worker] shutdown");
+      stopEmbedding();
       void closePool().then(resolve);
     };
     process.on("SIGINT", shutdown);
