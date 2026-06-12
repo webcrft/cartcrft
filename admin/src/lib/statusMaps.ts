@@ -32,6 +32,30 @@ export const PRODUCT_STATUS_MAP: StatusMap = {
   archived: { color: 'slate', label: 'Archived' },
 }
 
+export const RETURN_STATUS_MAP: StatusMap = {
+  requested: { color: 'amber', label: 'Requested' },
+  approved: { color: 'blue', label: 'Approved' },
+  received: { color: 'violet', label: 'Received' },
+  resolved: { color: 'emerald', label: 'Resolved' },
+  rejected: { color: 'red', label: 'Rejected' },
+  cancelled: { color: 'slate', label: 'Cancelled' },
+}
+
+export const SUBSCRIPTION_STATUS_MAP: StatusMap = {
+  active: { color: 'emerald', label: 'Active' },
+  paused: { color: 'amber', label: 'Paused' },
+  cancelled: { color: 'red', label: 'Cancelled' },
+  trialing: { color: 'blue', label: 'Trial' },
+  past_due: { color: 'red', label: 'Past Due' },
+}
+
+export const MANDATE_STATUS_MAP: StatusMap = {
+  active: { color: 'emerald', label: 'Active' },
+  revoked: { color: 'red', label: 'Revoked' },
+  expired: { color: 'amber', label: 'Expired' },
+  fulfilled: { color: 'blue', label: 'Fulfilled' },
+}
+
 export function statusBadgeProps(status: string, map: StatusMap): { color: BadgeColor; label: string } {
   return map[status] ?? { color: 'slate', label: status.replace(/_/g, ' ') }
 }
