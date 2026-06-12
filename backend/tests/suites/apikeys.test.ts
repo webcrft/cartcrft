@@ -452,9 +452,12 @@ describe("IP rate limiting", () => {
       return;
     }
 
-    // Send limit + 1 requests rapidly (all from the same process → same IP).
+    // Send 2×limit + 1 requests rapidly (all from the same process → same IP).
+    // Prior tests in this suite may have started the 60s window, so it can
+    // roll over (resetting the bucket) mid-hammer; 2N+1 requests guarantee a
+    // full window's worth lands on one side of at most one rollover.
     let saw429 = false;
-    for (let i = 0; i <= ipRateLimit; i++) {
+    for (let i = 0; i <= ipRateLimit * 2; i++) {
       const res = await get(ctx, "/healthz");
       if (res.status === 429) {
         saw429 = true;

@@ -8,20 +8,23 @@
 -- ============================================================================
 
 -- set_updated_at() is expected to already exist (created by backend migrations).
--- If running this schema standalone, create it here:
+-- If running in a non-public schema (e.g. test scratch schemas), create a local copy.
 do $$
 begin
   if not exists (
     select 1 from pg_proc p
     join pg_namespace n on n.oid = p.pronamespace
-    where n.nspname = 'public' and p.proname = 'set_updated_at'
+    where n.nspname = current_schema() and p.proname = 'set_updated_at'
   ) then
-    execute $fn$
-      create or replace function public.set_updated_at()
-      returns trigger language plpgsql as $body$
-      begin new.updated_at = now(); return new; end;
-      $body$;
-    $fn$;
+    execute format(
+      $fn$
+        create or replace function %I.set_updated_at()
+        returns trigger language plpgsql as $body$
+        begin new.updated_at = now(); return new; end;
+        $body$;
+      $fn$,
+      current_schema()
+    );
   end if;
 end;
 $$;
@@ -113,7 +116,12 @@ create unique index if not exists uq_billing_auth_single_default
 -- ============================================================================
 
 do $$ begin
-  if not exists (select 1 from pg_type where typname = 'subscription_status') then
+  if not exists (
+    select 1 from pg_type t
+    join pg_namespace n on n.oid = t.typnamespace
+    where t.typname = 'subscription_status'
+      and n.nspname = current_schema()
+  ) then
     create type public.subscription_status as enum ('active', 'past_due', 'cancelled');
   end if;
 end $$;
@@ -166,7 +174,12 @@ create index if not exists idx_billing_sub_period on public.billing_subscription
 -- ============================================================================
 
 do $$ begin
-  if not exists (select 1 from pg_type where typname = 'invoice_status') then
+  if not exists (
+    select 1 from pg_type t
+    join pg_namespace n on n.oid = t.typnamespace
+    where t.typname = 'invoice_status'
+      and n.nspname = current_schema()
+  ) then
     create type public.invoice_status as enum ('issued', 'paid', 'overdue', 'void');
   end if;
 end $$;
@@ -252,7 +265,12 @@ create index if not exists idx_billing_invoice_items_invoice on public.billing_i
 -- ============================================================================
 
 do $$ begin
-  if not exists (select 1 from pg_type where typname = 'transaction_status') then
+  if not exists (
+    select 1 from pg_type t
+    join pg_namespace n on n.oid = t.typnamespace
+    where t.typname = 'transaction_status'
+      and n.nspname = current_schema()
+  ) then
     create type public.transaction_status as enum ('success', 'failed', 'pending');
   end if;
 end $$;
@@ -510,7 +528,11 @@ $$;
 do $$
 begin
   if not exists (
-    select 1 from pg_trigger where tgname = 'billing_auth_default_toggle'
+    select 1 from pg_trigger t
+    join pg_class c on c.oid = t.tgrelid
+    join pg_namespace n on n.oid = c.relnamespace
+    where t.tgname = 'billing_auth_default_toggle'
+      and n.nspname = current_schema()
   ) then
     create trigger billing_auth_default_toggle
       after insert or update of is_default on public.billing_authorizations
@@ -519,7 +541,12 @@ begin
 end $$;
 
 do $$ begin
-  if not exists (select 1 from pg_trigger where tgname = 'billing_tiers_updated_at') then
+  if not exists (
+    select 1 from pg_trigger t
+    join pg_class c on c.oid = t.tgrelid
+    join pg_namespace n on n.oid = c.relnamespace
+    where t.tgname = 'billing_tiers_updated_at' and n.nspname = current_schema()
+  ) then
     create trigger billing_tiers_updated_at
       before update on public.billing_tiers
       for each row execute function public.set_updated_at();
@@ -527,7 +554,12 @@ do $$ begin
 end $$;
 
 do $$ begin
-  if not exists (select 1 from pg_trigger where tgname = 'billing_authorizations_updated_at') then
+  if not exists (
+    select 1 from pg_trigger t
+    join pg_class c on c.oid = t.tgrelid
+    join pg_namespace n on n.oid = c.relnamespace
+    where t.tgname = 'billing_authorizations_updated_at' and n.nspname = current_schema()
+  ) then
     create trigger billing_authorizations_updated_at
       before update on public.billing_authorizations
       for each row execute function public.set_updated_at();
@@ -535,7 +567,12 @@ do $$ begin
 end $$;
 
 do $$ begin
-  if not exists (select 1 from pg_trigger where tgname = 'billing_subscriptions_updated_at') then
+  if not exists (
+    select 1 from pg_trigger t
+    join pg_class c on c.oid = t.tgrelid
+    join pg_namespace n on n.oid = c.relnamespace
+    where t.tgname = 'billing_subscriptions_updated_at' and n.nspname = current_schema()
+  ) then
     create trigger billing_subscriptions_updated_at
       before update on public.billing_subscriptions
       for each row execute function public.set_updated_at();
@@ -543,7 +580,12 @@ do $$ begin
 end $$;
 
 do $$ begin
-  if not exists (select 1 from pg_trigger where tgname = 'billing_transactions_updated_at') then
+  if not exists (
+    select 1 from pg_trigger t
+    join pg_class c on c.oid = t.tgrelid
+    join pg_namespace n on n.oid = c.relnamespace
+    where t.tgname = 'billing_transactions_updated_at' and n.nspname = current_schema()
+  ) then
     create trigger billing_transactions_updated_at
       before update on public.billing_transactions
       for each row execute function public.set_updated_at();
@@ -551,7 +593,12 @@ do $$ begin
 end $$;
 
 do $$ begin
-  if not exists (select 1 from pg_trigger where tgname = 'billing_invoices_updated_at') then
+  if not exists (
+    select 1 from pg_trigger t
+    join pg_class c on c.oid = t.tgrelid
+    join pg_namespace n on n.oid = c.relnamespace
+    where t.tgname = 'billing_invoices_updated_at' and n.nspname = current_schema()
+  ) then
     create trigger billing_invoices_updated_at
       before update on public.billing_invoices
       for each row execute function public.set_updated_at();
@@ -559,7 +606,12 @@ do $$ begin
 end $$;
 
 do $$ begin
-  if not exists (select 1 from pg_trigger where tgname = 'billing_wallets_updated_at') then
+  if not exists (
+    select 1 from pg_trigger t
+    join pg_class c on c.oid = t.tgrelid
+    join pg_namespace n on n.oid = c.relnamespace
+    where t.tgname = 'billing_wallets_updated_at' and n.nspname = current_schema()
+  ) then
     create trigger billing_wallets_updated_at
       before update on public.billing_wallets
       for each row execute function public.set_updated_at();
@@ -567,7 +619,12 @@ do $$ begin
 end $$;
 
 do $$ begin
-  if not exists (select 1 from pg_trigger where tgname = 'billing_vouchers_updated_at') then
+  if not exists (
+    select 1 from pg_trigger t
+    join pg_class c on c.oid = t.tgrelid
+    join pg_namespace n on n.oid = c.relnamespace
+    where t.tgname = 'billing_vouchers_updated_at' and n.nspname = current_schema()
+  ) then
     create trigger billing_vouchers_updated_at
       before update on public.billing_vouchers
       for each row execute function public.set_updated_at();
@@ -575,7 +632,12 @@ do $$ begin
 end $$;
 
 do $$ begin
-  if not exists (select 1 from pg_trigger where tgname = 'billing_refunds_updated_at') then
+  if not exists (
+    select 1 from pg_trigger t
+    join pg_class c on c.oid = t.tgrelid
+    join pg_namespace n on n.oid = c.relnamespace
+    where t.tgname = 'billing_refunds_updated_at' and n.nspname = current_schema()
+  ) then
     create trigger billing_refunds_updated_at
       before update on public.billing_refunds
       for each row execute function public.set_updated_at();
