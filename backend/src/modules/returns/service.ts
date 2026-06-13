@@ -12,8 +12,10 @@
  * Resolution actions (on resolved transition):
  *   refund      — creates a refund row via direct SQL (mirrors payments service semantics)
  *   store_credit — adjusts store credit balance via wallet service (issueStoreCredit)
- *   exchange    — (order line creation — best-effort, placeholder)
- *   restock     — inventory adjustment for restock=true lines
+ *   exchange    — creates a replacement order for each exchange_variant_id × quantity at
+ *                 current variant price; links back via return_requests.replacement_order_id.
+ *                 Restock applied per-line when restock=true.
+ *   restock     — inventory adjustment for restock=true lines (applies to all resolution types)
  *
  * RMA number: uses sequence next_rma_number() or falls back to timestamp-based generation.
  *
@@ -110,6 +112,7 @@ export async function getReturn(
   const { rows } = await pool.query(
     `SELECT rr.id::text, rr.store_id::text, rr.order_id::text, rr.customer_id::text,
             rr.rma_number, rr.status, rr.return_type, rr.notes, rr.metadata,
+            rr.replacement_order_id::text,
             rr.created_at, rr.updated_at
      FROM return_requests rr
      WHERE rr.id = $1::uuid AND rr.store_id = $2::uuid`,
@@ -252,7 +255,12 @@ async function handleResolution(
     [returnId]
   );
   if (!retRows[0]) return;
-  const { customer_id: customerId, order_id: orderId, return_type: returnType, currency } = retRows[0];
+  const { customer_id: customerId, order_id: orderId, return_type: returnType, currency } = retRows[0] as {
+    customer_id: string | null;
+    order_id: string;
+    return_type: string;
+    currency: string;
+  };
 
   // Determine effective return type
   const effectiveType = (input.return_type ?? returnType) as string;
@@ -284,10 +292,10 @@ async function handleResolution(
       );
       if (payRows[0]) {
         await pool.query(
-          `INSERT INTO refunds (payment_id, order_id, store_id, amount, status, reason, notes, created_by)
-           VALUES ($1::uuid, $2::uuid, $3::uuid, $4::numeric, 'pending', 'customer_request', 'RMA refund', $5::uuid)
+          `INSERT INTO refunds (payment_id, order_id, amount, status, reason, notes, created_by)
+           VALUES ($1::uuid, $2::uuid, $3::numeric, 'pending', 'customer_request', 'RMA refund', $4::uuid)
            ON CONFLICT DO NOTHING`,
-          [payRows[0].id, orderId, storeId, input.credit_amount, updatedBy]
+          [payRows[0].id, orderId, input.credit_amount, updatedBy]
         );
       }
     } catch (err) {
@@ -296,20 +304,171 @@ async function handleResolution(
     }
   }
 
-  // Restock: adjust inventory for lines with restock=true
+  // Exchange: create a replacement order for lines with action='exchange' and exchange_variant_id set.
+  // One new order is created per return (all exchange lines are collected into it).
+  // Runs inside its own transaction via withTx — isolated from the caller's pool.query path.
+  if (effectiveType === "exchange") {
+    try {
+      // Collect exchange lines
+      const { rows: exchangeLines } = await pool.query(
+        `SELECT rrl.id::text AS line_id,
+                rrl.exchange_variant_id::text AS exchange_variant_id,
+                rrl.quantity,
+                rrl.order_line_id::text,
+                rrl.restock
+         FROM return_request_lines rrl
+         WHERE rrl.return_id = $1::uuid
+           AND rrl.action = 'exchange'
+           AND rrl.exchange_variant_id IS NOT NULL`,
+        [returnId]
+      ) as { rows: Array<{ line_id: string; exchange_variant_id: string; quantity: number; order_line_id: string; restock: boolean }> };
+
+      if (exchangeLines.length > 0) {
+        const replacementOrderId = await withTx(async (client) => {
+          // Resolve store currency
+          const { rows: storeRows } = await client.query<{ currency: string }>(
+            `SELECT currency FROM stores WHERE id = $1::uuid`,
+            [storeId]
+          );
+          const orderCurrency = storeRows[0]?.currency ?? currency;
+
+          // Get atomic order number
+          const { rows: seqRows } = await client.query<{ next_order_number: string }>(
+            `SELECT next_order_number($1::uuid)`,
+            [storeId]
+          );
+          const orderNumber = seqRows[0]?.next_order_number;
+          if (!orderNumber) throw new Error("exchange: failed to generate order number");
+
+          // Resolve original order's customer and shipping address for the replacement order
+          const { rows: origOrderRows } = await client.query<{
+            customer_id: string | null;
+            shipping_address: unknown;
+          }>(
+            `SELECT customer_id::text, shipping_address FROM orders WHERE id = $1::uuid`,
+            [orderId]
+          );
+          const origOrder = origOrderRows[0];
+
+          // Insert replacement order (zero totals; recomputed after lines)
+          const { rows: orderRows } = await client.query<{ id: string }>(
+            `INSERT INTO orders
+               (store_id, customer_id, order_number, status, financial_status,
+                fulfillment_status, currency, subtotal, shipping_total, tax_total,
+                discount_total, total, shipping_address, billing_address,
+                source_name, notes, is_test)
+             VALUES
+               ($1::uuid, $2, $3, 'open', 'pending',
+                'unfulfilled', $4, 0, 0, 0,
+                0, 0, $5::jsonb, '{}'::jsonb,
+                'exchange', $6, false)
+             RETURNING id::text`,
+            [
+              storeId,
+              origOrder?.customer_id ?? null,
+              orderNumber,
+              orderCurrency,
+              JSON.stringify(origOrder?.shipping_address ?? {}),
+              `Replacement order for RMA ${returnId}`,
+            ]
+          );
+          const newOrderId = orderRows[0]?.id;
+          if (!newOrderId) throw new Error("exchange: no order id returned");
+
+          // Insert order lines — look up current variant price
+          let computedSubtotal = 0;
+          for (const eLine of exchangeLines) {
+            const { rows: variantRows } = await client.query<{
+              price: string;
+              title: string;
+              sku: string | null;
+            }>(
+              `SELECT pv.price::text, COALESCE(p.title, 'Exchange Item') AS title, pv.sku
+               FROM product_variants pv
+               JOIN products p ON p.id = pv.product_id
+               WHERE pv.id = $1::uuid AND p.store_id = $2::uuid`,
+              [eLine.exchange_variant_id, storeId]
+            );
+            if (!variantRows[0]) {
+              // Variant not found in this store — skip this line (best-effort)
+              console.warn(
+                `[exchange] exchange_variant_id ${eLine.exchange_variant_id} not found in store ${storeId} — skipped`
+              );
+              continue;
+            }
+            const price = parseFloat(variantRows[0].price);
+            const qty = Math.max(eLine.quantity, 1);
+            const lineTotal = price * qty;
+            computedSubtotal += lineTotal;
+
+            await client.query(
+              `INSERT INTO order_lines
+                 (order_id, variant_id, title, sku, quantity, price, total)
+               VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6, $7)`,
+              [
+                newOrderId,
+                eLine.exchange_variant_id,
+                variantRows[0].title,
+                variantRows[0].sku ?? null,
+                qty,
+                price,
+                lineTotal,
+              ]
+            );
+          }
+
+          // Update replacement order totals
+          const computedTotal = Math.max(computedSubtotal, 0);
+          await client.query(
+            `UPDATE orders SET subtotal = $2, total = $3 WHERE id = $1::uuid`,
+            [newOrderId, computedSubtotal, computedTotal]
+          );
+
+          // Record order_created event
+          await client.query(
+            `INSERT INTO order_events (order_id, type, data, created_by)
+             VALUES ($1::uuid, 'order_created',
+                     jsonb_build_object('rma_return_id', $2::text),
+                     $3)`,
+            [newOrderId, returnId, updatedBy]
+          );
+
+          // Link replacement order back to the return request
+          await client.query(
+            `UPDATE return_requests SET replacement_order_id = $2::uuid WHERE id = $1::uuid`,
+            [returnId, newOrderId]
+          );
+
+          return newOrderId;
+        });
+
+        console.info(
+          `[exchange] replacement order ${replacementOrderId} created for return ${returnId}`
+        );
+      }
+    } catch (err) {
+      // Best-effort: log but don't fail the status update
+      console.error("handleResolution: exchange order creation failed", err);
+    }
+  }
+
+  // Restock: adjust inventory for lines with restock=true (applies to all resolution types).
+  // For exchange lines the returned item is restocked when restock=true; the replacement order
+  // ships the new variant separately.
   try {
     const { rows: lineRows } = await pool.query(
       `SELECT rrl.order_line_id::text, rrl.quantity
        FROM return_request_lines rrl
        WHERE rrl.return_id = $1::uuid AND rrl.restock = true`,
       [returnId]
-    );
+    ) as { rows: Array<{ order_line_id: string; quantity: number }> };
+
     for (const line of lineRows) {
       // Get variant_id from order_line
       const { rows: olRows } = await pool.query(
         `SELECT variant_id::text FROM order_lines WHERE id = $1::uuid`,
         [line.order_line_id]
-      );
+      ) as { rows: Array<{ variant_id: string }> };
       if (!olRows[0]) continue;
       const variantId = olRows[0].variant_id;
 
@@ -317,7 +476,7 @@ async function handleResolution(
       const { rows: whRows } = await pool.query(
         `SELECT id::text FROM warehouses WHERE store_id = $1::uuid AND is_default = true LIMIT 1`,
         [storeId]
-      );
+      ) as { rows: Array<{ id: string }> };
       if (!whRows[0]) continue;
       const warehouseId = whRows[0].id;
 

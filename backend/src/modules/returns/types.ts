@@ -25,6 +25,8 @@ export interface ReturnRequest {
   return_type: ReturnType;
   notes: string | null;
   metadata: unknown;
+  /** Set when resolved as exchange — the replacement order created for the exchanged variant(s). */
+  replacement_order_id: string | null;
   created_at: Date;
   updated_at: Date;
   order_number?: string;
