@@ -25,8 +25,8 @@ Cartcrft is designed from the data model up for agent-native commerce:
   isolated so spec churn never touches your core data.
 - **Signed agent mandates** — verifiable consent chain: agent intent → cart → payment,
   ed25519-signed and audit-logged. Trust, not just access.
-- **BYO keys** — your Stripe, Paystack, Razorpay, or Xendit credentials; your OpenAI or
-  Anthropic key for semantic search. Zero percent take rate. Flat cloud fee if you use ours.
+- **BYO keys** — your Stripe, Paystack, Razorpay, or Xendit credentials; your OpenAI-compatible
+  embeddings key for semantic search. Zero percent take rate. Flat cloud fee if you use ours.
 - **Fully headless** — the core renders nothing. REST API + webhooks + generated TS SDK +
   agent surfaces. Admin dashboard is a separate SPA speaking the same public API.
 
@@ -41,8 +41,8 @@ Cartcrft is designed from the data model up for agent-native commerce:
 | **Carts & Checkout** | Carts with price snapshots, checkout sessions, atomic `CompleteByID` (price re-validation, inventory decrement, discount burn — all in one transaction), abandoned cart recovery | shipped |
 | **Orders** | Order lifecycle, financial + fulfillment state machines, cancel, notes, test-mode orders | shipped |
 | **Payments** | Provider abstraction, BYO keys: **Stripe** (PaymentIntent), **Paystack**, **Razorpay**, **Xendit**, custom webhook provider. AES-256-GCM secret encryption. Inbound webhook router with replay protection | shipped |
-| **Shipping** | Zones / regions / rates, live rates (BobGo), collection points (PUDO), shipments + tracking events, split fulfillment | shipped |
-| **Tax** | Categories, zones, rates (inclusive / exclusive), webhook tax provider | shipped |
+| **Shipping** | Zones / regions / rates, live rates (BobGo), collection points (PUDO), shipments + tracking events, split fulfillment (inventory decrement across warehouses; fulfillment_orders created manually — no auto-split on checkout) | shipped |
+| **Tax** | Categories, zones, rates (inclusive / exclusive) — static rate tables (zones / categories / rates); no external/webhook tax provider | shipped |
 | **Discounts** | Codes (percentage / fixed / free-shipping / BOGO / buy-X-get-Y), automatic discounts, usage limits, once-per-customer atomicity | shipped |
 | **B2B** | Companies, credit limits, net terms, quotes / RFQ lifecycle, purchase orders, customer group pricing | shipped |
 | **Subscriptions** | Plans (interval / trial), subscription lifecycle (pause / resume / cancel / bill), generated orders | shipped |
@@ -51,9 +51,12 @@ Cartcrft is designed from the data model up for agent-native commerce:
 | **Customer auth** | Register / login / sessions / password reset / email verify / magic link / invites, Google / Microsoft / Discord OAuth PKCE | shipped |
 | **Feeds** | Google Shopping XML, Facebook Catalog feeds | shipped |
 | **MCP server** | `search_products`, `get_product`, `create_cart`, `add_to_cart`, `complete_checkout`, `get_order_status` and more, per-store config, `cc_pub_` auth | shipped |
-| **Semantic search** | pgvector embeddings, BYO LLM key (OpenAI / Anthropic), pg full-text fallback, natural-language `/search` endpoint | shipped |
+| **Semantic search** | pgvector embeddings, BYO OpenAI-compatible embeddings key (any `/v1/embeddings` endpoint — OpenAI, compatible providers), pg full-text fallback, natural-language `/search` endpoint | shipped |
 | **Signed agent mandates** | Agent registry (scopes, spend limits), mandate chain (intent → cart → payment), ed25519 signatures, audit log | shipped |
-| **ACP adapter** | Agentic checkout sessions + product feed at ACP spec, date-versioned isolation | shipped |
+| **ACP adapter** | Agentic checkout sessions + product feed at ACP spec, date-versioned isolation. Test-mode checkout works end-to-end; live delegated payment returns 501 (H5.1) | shipped (test mode) |
+| **UCP adapter** | Universal Commerce Protocol (Google surfaces / NRF 2026-01 baseline): catalog entities, checkout create/update/submit. Test-mode submit works; live payment token passthrough returns 501 (H5.1) | shipped (test mode) |
+| **GA4 server-side** | Measurement Protocol `purchase` event fired on payment capture when a `google_analytics_4` pixel is configured for the store | shipped |
+| **Outbound webhooks + notifications** | `dispatchStoreEvent` wired into order/payment/shipment transitions; webhook delivery + signed payloads; transactional email via AWS SES or console mailer. Customer-auth emails (verify, reset, magic link) use HTML templates; store-event notification emails use plain-text JSON payload (HTML templates planned H6) | shipped |
 | **Platform API keys** | `cc_pub_` (read / storefront) and `cc_prv_` (write / admin) key scheme | shipped |
 
 ---
@@ -74,6 +77,11 @@ The admin dashboard (`admin/`) is a React SPA that speaks the same public API wi
 Self-hosting requires nothing from `cloud/`. The cloud layer (`cloud/`) is metering +
 billing + tenant provisioning for cartcrft.com only.
 
+**Security posture** — multi-tenant isolation is enforced at two layers: (1) the app-layer
+auth middleware verifies org ownership on every request; (2) PostgreSQL RLS is enforced via
+`SET LOCAL ROLE cartcrft_app` (NOBYPASSRLS) inside every database transaction (H1.1).
+A comprehensive IDOR sweep covers 14 module groups. See [docs/security.md](./docs/security.md).
+
 ---
 
 ## Monorepo layout
@@ -87,7 +95,7 @@ cartcrft/
 ├── package.json               # pnpm workspace root
 ├── backend/                   # TypeScript headless commerce core (MIT)
 │   ├── src/                   # one entrypoint: serve | worker | migrate (Fastify + zod + pg)
-│   ├── migrations/            # Postgres schema (plain SQL, numbered — 12 migration files)
+│   ├── migrations/            # Postgres schema (plain SQL, numbered — 18 migration files, 0001–0018)
 │   └── tests/                 # vitest suites: pnpm suite <name>
 ├── mcp/                       # MCP usage docs + conformance examples (MIT)
 ├── sdk/                       # @cartcrft/sdk (generated from OpenAPI) + storefront.js (MIT)
@@ -116,7 +124,7 @@ echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/cartcrft
 JWT_SECRET=change-me
 APP_ENV=development" > .env
 
-pnpm migrate   # applies all 12 SQL migrations
+pnpm migrate   # applies all 18 SQL migrations (0001–0018)
 pnpm seed      # creates demo store + 12 products; prints cc_pub_ / cc_prv_ keys
 pnpm dev       # Fastify on :3000
 ```
@@ -148,6 +156,8 @@ Or run the whole stack with Docker: `docker compose up` (see [docs/self-host.md]
 | [docs/testing.md](./docs/testing.md) | Test harness, writing suites, billingsim |
 | [docs/parity-endpoints.md](./docs/parity-endpoints.md) | Full endpoint table with auth tiers |
 | [docs/acp.md](./docs/acp.md) | ACP adapter spec, field mapping, divergences |
+| [docs/ucp.md](./docs/ucp.md) | UCP adapter spec (Google surfaces / NRF 2026-01), field mapping, divergences |
+| [docs/security.md](./docs/security.md) | Tenant isolation posture, RLS, IDOR sweep, auth secrets |
 | [mcp/README.md](./mcp/README.md) | MCP tools reference, client config examples |
 
 ---

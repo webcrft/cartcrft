@@ -70,12 +70,6 @@ Authorization: Bearer cc_pub_<key>
 Authorization: Bearer cc_prv_<key>
 ```
 
-**Query parameter (MCP convenience):**
-
-```
-GET /mcp/<storeId>?key=cc_pub_<key>
-```
-
 **Scope enforcement** — the middleware enforces:
 - `storeAuthRead` — accepts `cc_pub_`, `cc_prv_`, or JWT
 - `storeAuthWrite` — accepts `cc_prv_` (any scope) or JWT

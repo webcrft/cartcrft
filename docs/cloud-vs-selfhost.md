@@ -87,7 +87,7 @@ package entirely.
 7. Optional: configure LLM key for semantic search
 8. Optional: run `pnpm start worker` for embedding indexing
 
-Docker Compose (T5.5) will wrap steps 1–4 in a single `docker compose up`.
+`docker compose up` wraps steps 1–4 in a single command (see [docs/self-host.md](./self-host.md)).
 
 ---
 

@@ -176,15 +176,19 @@ over the limit receive `429 RATE_LIMIT_EXCEEDED`.
 
 ---
 
-## Known posture limitations (H1 scope)
-
-These items are tracked in `tasks.md` for subsequent hardening waves:
+## Known posture limitations
 
 - **Direct reads bypass RLS** — `getPool().query()` calls (auth lookups, route
   handlers that read without a transaction) still run as `neondb_owner` (BYPASSRLS).
   Mitigated by the app-layer org checks which run before any data access.
-- **CORS + security headers** — `@fastify/cors` and `@fastify/helmet` not yet
-  registered (H1.2).
-- **MCP key hygiene** — `?key=` query-param auth fallback not yet removed (H1.3).
-- **Super-admin timing** — super token comparison is not yet `timingSafeEqual` (H1.4).
-- **Refund idempotency** — `POST .../refunds` not yet idempotency-keyed (H1.5).
+
+The following items from the H1 scope are now resolved:
+
+- **CORS + security headers** — `@fastify/cors` (scoped to `FRONTEND_URL`) and
+  `@fastify/helmet` are registered in `app.ts` (H1.2, 2026-06-13).
+- **MCP key hygiene** — `?key=` query-param auth fallback has been removed; only
+  the `Authorization` header is accepted (H1.3, 2026-06-13).
+- **Super-admin timing** — super token comparison uses `crypto.timingSafeEqual`
+  via the shared `lib/auth/super-token.ts` helper (H1.4, 2026-06-13).
+- **Refund idempotency** — `POST .../refunds` honors `Idempotency-Key`; migration
+  `0015_refund_idempotency_key.sql` adds the dedup column (H1.5, 2026-06-13).

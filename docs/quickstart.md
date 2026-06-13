@@ -90,8 +90,8 @@ pnpm migrate
 ```
 
 Applies all `backend/migrations/*.sql` files in order. Re-running is a no-op
-(files already in `schema_migrations` are skipped). Current migration count: 12
-files (0001–0012), covering 105+ tables.
+(files already in `schema_migrations` are skipped). Current migration count: 18
+files (0001–0018), covering 105+ tables.
 
 ---
 
@@ -222,8 +222,7 @@ key configured), search uses hybrid pgvector + full-text ranking. See
 
 - **Agent flow** — follow [quickstart-mcp.md](./quickstart-mcp.md) to buy from
   the store with an AI agent in 10 minutes.
-- **Docker compose** — coming in T5.5; will run postgres + server + worker with
-  one command.
+- **Docker compose** — `docker compose up` (see [docs/self-host.md](./self-host.md)) runs postgres + server + worker.
 - **API reference** — see [api-overview.md](./api-overview.md) and the full
   endpoint table in [parity-endpoints.md](./parity-endpoints.md).
 - **BYO payment provider** — see [byo-keys.md](./byo-keys.md).
