@@ -18,7 +18,7 @@
  * Note: product reviews are in catalog module (T2.2).
  */
 
-import type { FastifyPluginAsync } from "fastify";
+import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { z } from "zod";
 import { storeAuthRead, storeAuthAdmin, storeAuthWrite } from "../../lib/auth/middleware.js";
 import {
@@ -37,50 +37,58 @@ const UUID = z.string().uuid();
 function notFound(msg: string) {
   return { error: { code: "NOT_FOUND", message: msg } };
 }
-function badRequest(msg: string, code = "VALIDATION_ERROR") {
-  return { error: { code, message: msg } };
-}
 
-export const engagementPlugin: FastifyPluginAsync = async (app) => {
-  const storeParams = z.object({ storeId: UUID });
+// ── Shared param schemas ──────────────────────────────────────────────────────
+
+const StoreParams = z.object({ storeId: UUID });
+const WishlistParams = z.object({ storeId: UUID, wishlistId: UUID });
+const WishlistItemParams = z.object({ storeId: UUID, wishlistId: UUID, itemId: UUID });
+const ShareTokenParams = z.object({ storeId: UUID, shareToken: z.string().min(1) });
+const AbandonedCartParams = z.object({ storeId: UUID, cartId: UUID });
+
+// ── Shared body / querystring schemas ─────────────────────────────────────────
+
+const ListWishlistsQuerystring = z.object({ customer_id: UUID.optional() });
+
+const CreateWishlistBody = z.object({
+  customer_id: UUID.optional().nullable(),
+  session_id: z.string().optional().nullable(),
+  name: z.string().optional().nullable(),
+});
+
+const AddWishlistItemBody = z.object({
+  product_id: UUID,
+  variant_id: UUID.optional().nullable(),
+  note: z.string().optional().nullable(),
+});
+
+const RecoverCartBody = z.object({ order_id: UUID.optional().nullable() });
+
+// ── Plugin ────────────────────────────────────────────────────────────────────
+
+export const engagementPlugin: FastifyPluginAsyncZod = async (app) => {
 
   // ── Wishlists (admin-scoped) ───────────────────────────────────────────────
 
   app.get(
     "/commerce/stores/:storeId/wishlists",
-    { preHandler: storeAuthRead },
+    { preHandler: storeAuthRead, schema: { params: StoreParams, querystring: ListWishlistsQuerystring } },
     async (request, reply) => {
-      const params = storeParams.safeParse(request.params);
-      if (!params.success) return reply.status(400).send(badRequest("invalid storeId"));
-      const query = z
-        .object({ customer_id: UUID.optional() })
-        .safeParse(request.query);
-      const customerId = query.success ? query.data.customer_id : undefined;
-      const wishlists = await listWishlists(params.data.storeId, customerId);
+      const customerId = request.query.customer_id;
+      const wishlists = await listWishlists(request.params.storeId, customerId);
       return reply.send({ wishlists });
     }
   );
 
   app.post(
     "/commerce/stores/:storeId/wishlists",
-    { preHandler: storeAuthRead },
+    { preHandler: storeAuthRead, schema: { params: StoreParams, body: CreateWishlistBody } },
     async (request, reply) => {
-      const params = storeParams.safeParse(request.params);
-      if (!params.success) return reply.status(400).send(badRequest("invalid storeId"));
-      const body = z
-        .object({
-          customer_id: UUID.optional().nullable(),
-          session_id: z.string().optional().nullable(),
-          name: z.string().optional().nullable(),
-        })
-        .safeParse(request.body);
-      if (!body.success) return reply.status(400).send(badRequest("validation failed"));
-
-      if (!body.data.customer_id && !body.data.session_id) {
-        return reply.status(400).send(badRequest("customer_id or session_id required"));
+      if (!request.body.customer_id && !request.body.session_id) {
+        return reply.status(400).send({ error: { code: "VALIDATION_ERROR", message: "customer_id or session_id required" } });
       }
 
-      const wl = await createWishlist(params.data.storeId, body.data);
+      const wl = await createWishlist(request.params.storeId, request.body);
       if (!wl) return reply.status(500).send({ error: { code: "INTERNAL_ERROR", message: "failed to create wishlist" } });
       return reply.status(201).send(wl);
     }
@@ -88,11 +96,9 @@ export const engagementPlugin: FastifyPluginAsync = async (app) => {
 
   app.get(
     "/commerce/stores/:storeId/wishlists/:wishlistId",
-    { preHandler: storeAuthRead },
+    { preHandler: storeAuthRead, schema: { params: WishlistParams } },
     async (request, reply) => {
-      const params = z.object({ storeId: UUID, wishlistId: UUID }).safeParse(request.params);
-      if (!params.success) return reply.status(400).send(badRequest("invalid params"));
-      const wl = await getWishlist(params.data.storeId, params.data.wishlistId);
+      const wl = await getWishlist(request.params.storeId, request.params.wishlistId);
       if (!wl) return reply.status(404).send(notFound("wishlist not found"));
       return reply.send(wl);
     }
@@ -100,11 +106,9 @@ export const engagementPlugin: FastifyPluginAsync = async (app) => {
 
   app.delete(
     "/commerce/stores/:storeId/wishlists/:wishlistId",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite, schema: { params: WishlistParams } },
     async (request, reply) => {
-      const params = z.object({ storeId: UUID, wishlistId: UUID }).safeParse(request.params);
-      if (!params.success) return reply.status(400).send(badRequest("invalid params"));
-      const ok = await deleteWishlist(params.data.storeId, params.data.wishlistId);
+      const ok = await deleteWishlist(request.params.storeId, request.params.wishlistId);
       if (!ok) return reply.status(404).send(notFound("wishlist not found"));
       return reply.send({ ok: true });
     }
@@ -112,23 +116,12 @@ export const engagementPlugin: FastifyPluginAsync = async (app) => {
 
   app.post(
     "/commerce/stores/:storeId/wishlists/:wishlistId/items",
-    { preHandler: storeAuthRead },
+    { preHandler: storeAuthRead, schema: { params: WishlistParams, body: AddWishlistItemBody } },
     async (request, reply) => {
-      const params = z.object({ storeId: UUID, wishlistId: UUID }).safeParse(request.params);
-      if (!params.success) return reply.status(400).send(badRequest("invalid params"));
-      const body = z
-        .object({
-          product_id: UUID,
-          variant_id: UUID.optional().nullable(),
-          note: z.string().optional().nullable(),
-        })
-        .safeParse(request.body);
-      if (!body.success) return reply.status(400).send(badRequest("product_id required"));
-
       const item = await addWishlistItem(
-        params.data.storeId,
-        params.data.wishlistId,
-        body.data
+        request.params.storeId,
+        request.params.wishlistId,
+        request.body
       );
       if (!item) return reply.status(404).send(notFound("wishlist not found"));
       return reply.status(201).send(item);
@@ -137,16 +130,12 @@ export const engagementPlugin: FastifyPluginAsync = async (app) => {
 
   app.delete(
     "/commerce/stores/:storeId/wishlists/:wishlistId/items/:itemId",
-    { preHandler: storeAuthRead },
+    { preHandler: storeAuthRead, schema: { params: WishlistItemParams } },
     async (request, reply) => {
-      const params = z
-        .object({ storeId: UUID, wishlistId: UUID, itemId: UUID })
-        .safeParse(request.params);
-      if (!params.success) return reply.status(400).send(badRequest("invalid params"));
       const ok = await removeWishlistItem(
-        params.data.storeId,
-        params.data.wishlistId,
-        params.data.itemId
+        request.params.storeId,
+        request.params.wishlistId,
+        request.params.itemId
       );
       if (!ok) return reply.status(404).send(notFound("item not found"));
       return reply.send({ ok: true });
@@ -157,15 +146,11 @@ export const engagementPlugin: FastifyPluginAsync = async (app) => {
 
   app.get(
     "/storefront/:storeId/wishlists/:shareToken",
+    { schema: { params: ShareTokenParams } },
     async (request, reply) => {
-      const params = z
-        .object({ storeId: UUID, shareToken: z.string().min(1) })
-        .safeParse(request.params);
-      if (!params.success) return reply.status(400).send(badRequest("invalid params"));
-
       const wl = await getWishlistByShareToken(
-        params.data.storeId,
-        params.data.shareToken
+        request.params.storeId,
+        request.params.shareToken
       );
       if (!wl) return reply.status(404).send(notFound("wishlist not found"));
       return reply.send(wl);
@@ -178,18 +163,15 @@ export const engagementPlugin: FastifyPluginAsync = async (app) => {
 
   app.post(
     "/commerce/stores/:storeId/abandoned-carts/:cartId/recover",
-    { preHandler: storeAuthAdmin },
+    // Body is optional (order_id only); thin safeParse to handle missing body gracefully
+    { preHandler: storeAuthAdmin, schema: { params: AbandonedCartParams } },
     async (request, reply) => {
-      const params = z.object({ storeId: UUID, cartId: UUID }).safeParse(request.params);
-      if (!params.success) return reply.status(400).send(badRequest("invalid params"));
-      const body = z
-        .object({ order_id: UUID.optional().nullable() })
-        .safeParse(request.body ?? {});
-      const orderId = body.success ? body.data.order_id : undefined;
+      const body = RecoverCartBody.safeParse(request.body ?? {});
+      const orderId = body.success ? (body.data.order_id ?? undefined) : undefined;
       const result = await markCartRecovered(
-        params.data.storeId,
-        params.data.cartId,
-        orderId ?? undefined
+        request.params.storeId,
+        request.params.cartId,
+        orderId
       );
       if (!result) return reply.status(404).send(notFound("abandoned cart not found or already recovered"));
       return reply.send({ ok: true, recovered_at: result.recovered_at, recovery_order_id: result.recovery_order_id });

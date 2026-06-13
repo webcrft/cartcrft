@@ -161,7 +161,7 @@ describe("RMA full state machine", () => {
       method: "PUT",
       path: `${base()}/returns/${returnId}`,
       headers: authHeader,
-      body: { status: "resolved", return_type: "store_credit", credit_amount: 99.0 },
+      body: { status: "resolved", return_type: "store_credit", credit_amount: "99.00" },
     });
     expect(res.status).toBe(200);
 

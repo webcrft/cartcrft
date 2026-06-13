@@ -261,8 +261,8 @@ describe("quotes lifecycle", () => {
         company_id: companyId,
         notes: "Please review this quote",
         lines: [
-          { variant_id: variant.id, title: "Widget Pro", quantity: 10, price: 135.0 },
-          { title: "Setup Fee", quantity: 1, price: 200.0 },
+          { variant_id: variant.id, title: "Widget Pro", quantity: 10, price: "135.00" },
+          { title: "Setup Fee", quantity: 1, price: "200.00" },
         ],
       },
     });
@@ -374,7 +374,7 @@ describe("quotes lifecycle", () => {
       headers: authHeader,
       body: {
         company_id: companyId,
-        lines: [{ title: "Product X", quantity: 1, price: 100.0 }],
+        lines: [{ title: "Product X", quantity: 1, price: "100.00" }],
       },
     });
     const qid = (createRes.json as { id: string }).id;

@@ -12,7 +12,7 @@
  * Auth: all routes require admin-tier (JWT or cc_prv_ commerce:admin).
  */
 
-import type { FastifyPluginAsync } from "fastify";
+import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { z } from "zod";
 import { storeAuthAdmin, storeAuthWrite } from "../../lib/auth/middleware.js";
 import {
@@ -44,65 +44,140 @@ import {
 } from "./service.js";
 
 const UUID = z.string().uuid();
+// H3.2: money fields are decimal strings, never floats
 const MoneyStr = z.string().regex(/^\d+(\.\d{1,2})?$/);
 
 function notFound(msg: string) {
   return { error: { code: "NOT_FOUND", message: msg } };
 }
-function badRequest(msg: string, code = "VALIDATION_ERROR") {
-  return { error: { code, message: msg } };
-}
 function unprocessable(msg: string, code = "INVALID_TRANSITION") {
   return { error: { code, message: msg } };
 }
 
-export const b2bPlugin: FastifyPluginAsync = async (app) => {
-  const storeParams = z.object({ storeId: UUID });
+// ── Shared param schemas ──────────────────────────────────────────────────────
+
+const StoreParams = z.object({ storeId: UUID });
+const CompanyParams = z.object({ storeId: UUID, companyId: UUID });
+const CompanyCustomerParams = z.object({ storeId: UUID, companyId: UUID, customerId: UUID });
+const GroupParams = z.object({ storeId: UUID, groupId: UUID });
+const GroupMemberParams = z.object({ storeId: UUID, groupId: UUID, customerId: UUID });
+const QuoteParams = z.object({ storeId: UUID, quoteId: UUID });
+const PoParams = z.object({ storeId: UUID, poId: UUID });
+const OrderParams = z.object({ storeId: UUID, orderId: UUID });
+
+// ── Shared body schemas ───────────────────────────────────────────────────────
+
+const CreateCompanyBody = z.object({
+  name: z.string().min(1),
+  email: z.string().email().optional().nullable(),
+  phone: z.string().optional().nullable(),
+  tax_id: z.string().optional().nullable(),
+  credit_limit: MoneyStr.optional().nullable(),
+  payment_terms_days: z.number().int().min(0).optional().nullable(),
+  price_list_id: UUID.optional().nullable(),
+  metadata: z.record(z.string(), z.unknown()).optional().nullable(),
+});
+
+const UpdateCompanyBody = z.object({
+  name: z.string().min(1).optional().nullable(),
+  email: z.string().email().optional().nullable(),
+  phone: z.string().optional().nullable(),
+  tax_id: z.string().optional().nullable(),
+  credit_limit: MoneyStr.optional().nullable(),
+  payment_terms_days: z.number().int().min(0).optional().nullable(),
+  price_list_id: UUID.optional().nullable(),
+});
+
+const AddCompanyCustomerBody = z.object({
+  customer_id: UUID,
+  role: z.string().default("member"),
+});
+
+const CreateGroupBody = z.object({
+  name: z.string().min(1),
+  description: z.string().optional().nullable(),
+  price_list_id: UUID.optional().nullable(),
+});
+
+const UpdateGroupBody = z.object({
+  name: z.string().min(1).optional().nullable(),
+  description: z.string().optional().nullable(),
+  price_list_id: UUID.optional().nullable(),
+});
+
+const AddGroupMemberBody = z.object({ customer_id: UUID });
+
+const QuotesQuerystring = z.object({
+  status: z.string().optional(),
+  company_id: UUID.optional(),
+  limit: z.coerce.number().int().min(1).max(200).optional(),
+  offset: z.coerce.number().int().min(0).optional(),
+});
+
+const CreateQuoteBody = z.object({
+  company_id: UUID.optional().nullable(),
+  customer_id: UUID.optional().nullable(),
+  expires_at: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  lines: z
+    .array(
+      z.object({
+        variant_id: UUID.optional().nullable(),
+        title: z.string().optional().nullable(),
+        quantity: z.number().int().min(1).optional(),
+        // H3.2: quote line prices are money strings
+        price: MoneyStr,
+        notes: z.string().optional().nullable(),
+      })
+    )
+    .optional(),
+});
+
+const UpdateQuoteBody = z.object({
+  status: z.string().optional().nullable(),
+  expires_at: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+});
+
+const UpdatePoBody = z.object({
+  status: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+});
+
+const AttachPoBody = z.object({
+  po_number: z.string().min(1),
+  notes: z.string().optional().nullable(),
+});
+
+// ── Plugin ────────────────────────────────────────────────────────────────────
+
+export const b2bPlugin: FastifyPluginAsyncZod = async (app) => {
 
   // ── Companies ────────────────────────────────────────────────────────────────
 
   app.get(
     "/commerce/stores/:storeId/companies",
-    { preHandler: storeAuthAdmin },
+    { preHandler: storeAuthAdmin, schema: { params: StoreParams } },
     async (request, reply) => {
-      const params = storeParams.safeParse(request.params);
-      if (!params.success) return reply.status(400).send(badRequest("invalid storeId"));
-      const companies = await listCompanies(params.data.storeId);
+      const companies = await listCompanies(request.params.storeId);
       return reply.send({ companies });
     }
   );
 
   app.post(
     "/commerce/stores/:storeId/companies",
-    { preHandler: storeAuthAdmin },
+    { preHandler: storeAuthAdmin, schema: { params: StoreParams, body: CreateCompanyBody } },
     async (request, reply) => {
-      const params = storeParams.safeParse(request.params);
-      if (!params.success) return reply.status(400).send(badRequest("invalid storeId"));
-      const body = z
-        .object({
-          name: z.string().min(1),
-          email: z.string().email().optional().nullable(),
-          phone: z.string().optional().nullable(),
-          tax_id: z.string().optional().nullable(),
-          credit_limit: MoneyStr.optional().nullable(),
-          payment_terms_days: z.number().int().min(0).optional().nullable(),
-          price_list_id: UUID.optional().nullable(),
-          metadata: z.record(z.string(), z.unknown()).optional().nullable(),
-        })
-        .safeParse(request.body);
-      if (!body.success) return reply.status(400).send(badRequest("validation failed"));
-      const id = await createCompany(params.data.storeId, body.data);
+      const id = await createCompany(request.params.storeId, request.body);
       return reply.status(201).send({ id });
     }
   );
 
   app.get(
     "/commerce/stores/:storeId/companies/:companyId",
-    { preHandler: storeAuthAdmin },
+    { preHandler: storeAuthAdmin, schema: { params: CompanyParams } },
     async (request, reply) => {
-      const params = z.object({ storeId: UUID, companyId: UUID }).safeParse(request.params);
-      if (!params.success) return reply.status(400).send(badRequest("invalid params"));
-      const company = await getCompany(params.data.storeId, params.data.companyId);
+      const company = await getCompany(request.params.storeId, request.params.companyId);
       if (!company) return reply.status(404).send(notFound("company not found"));
       return reply.send(company);
     }
@@ -110,23 +185,9 @@ export const b2bPlugin: FastifyPluginAsync = async (app) => {
 
   app.put(
     "/commerce/stores/:storeId/companies/:companyId",
-    { preHandler: storeAuthAdmin },
+    { preHandler: storeAuthAdmin, schema: { params: CompanyParams, body: UpdateCompanyBody } },
     async (request, reply) => {
-      const params = z.object({ storeId: UUID, companyId: UUID }).safeParse(request.params);
-      if (!params.success) return reply.status(400).send(badRequest("invalid params"));
-      const body = z
-        .object({
-          name: z.string().min(1).optional().nullable(),
-          email: z.string().email().optional().nullable(),
-          phone: z.string().optional().nullable(),
-          tax_id: z.string().optional().nullable(),
-          credit_limit: MoneyStr.optional().nullable(),
-          payment_terms_days: z.number().int().min(0).optional().nullable(),
-          price_list_id: UUID.optional().nullable(),
-        })
-        .safeParse(request.body);
-      if (!body.success) return reply.status(400).send(badRequest("validation failed"));
-      const ok = await updateCompany(params.data.storeId, params.data.companyId, body.data);
+      const ok = await updateCompany(request.params.storeId, request.params.companyId, request.body);
       if (!ok) return reply.status(404).send(notFound("company not found"));
       return reply.send({ ok: true });
     }
@@ -134,11 +195,9 @@ export const b2bPlugin: FastifyPluginAsync = async (app) => {
 
   app.delete(
     "/commerce/stores/:storeId/companies/:companyId",
-    { preHandler: storeAuthAdmin },
+    { preHandler: storeAuthAdmin, schema: { params: CompanyParams } },
     async (request, reply) => {
-      const params = z.object({ storeId: UUID, companyId: UUID }).safeParse(request.params);
-      if (!params.success) return reply.status(400).send(badRequest("invalid params"));
-      const ok = await deleteCompany(params.data.storeId, params.data.companyId);
+      const ok = await deleteCompany(request.params.storeId, request.params.companyId);
       if (!ok) return reply.status(404).send(notFound("company not found"));
       return reply.send({ ok: true });
     }
@@ -148,34 +207,23 @@ export const b2bPlugin: FastifyPluginAsync = async (app) => {
 
   app.get(
     "/commerce/stores/:storeId/companies/:companyId/customers",
-    { preHandler: storeAuthAdmin },
+    { preHandler: storeAuthAdmin, schema: { params: CompanyParams } },
     async (request, reply) => {
-      const params = z.object({ storeId: UUID, companyId: UUID }).safeParse(request.params);
-      if (!params.success) return reply.status(400).send(badRequest("invalid params"));
-      const customers = await listCompanyCustomers(params.data.storeId, params.data.companyId);
+      const customers = await listCompanyCustomers(request.params.storeId, request.params.companyId);
       return reply.send({ customers });
     }
   );
 
   app.post(
     "/commerce/stores/:storeId/companies/:companyId/customers",
-    { preHandler: storeAuthAdmin },
+    { preHandler: storeAuthAdmin, schema: { params: CompanyParams, body: AddCompanyCustomerBody } },
     async (request, reply) => {
-      const params = z.object({ storeId: UUID, companyId: UUID }).safeParse(request.params);
-      if (!params.success) return reply.status(400).send(badRequest("invalid params"));
-      const body = z
-        .object({
-          customer_id: UUID,
-          role: z.string().default("member"),
-        })
-        .safeParse(request.body);
-      if (!body.success) return reply.status(400).send(badRequest("validation failed"));
       try {
         await addCompanyCustomer(
-          params.data.storeId,
-          params.data.companyId,
-          body.data.customer_id,
-          body.data.role
+          request.params.storeId,
+          request.params.companyId,
+          request.body.customer_id,
+          request.body.role
         );
         return reply.status(201).send({ ok: true });
       } catch (err) {
@@ -189,16 +237,12 @@ export const b2bPlugin: FastifyPluginAsync = async (app) => {
 
   app.delete(
     "/commerce/stores/:storeId/companies/:companyId/customers/:customerId",
-    { preHandler: storeAuthAdmin },
+    { preHandler: storeAuthAdmin, schema: { params: CompanyCustomerParams } },
     async (request, reply) => {
-      const params = z
-        .object({ storeId: UUID, companyId: UUID, customerId: UUID })
-        .safeParse(request.params);
-      if (!params.success) return reply.status(400).send(badRequest("invalid params"));
       await removeCompanyCustomer(
-        params.data.storeId,
-        params.data.companyId,
-        params.data.customerId
+        request.params.storeId,
+        request.params.companyId,
+        request.params.customerId
       );
       return reply.send({ ok: true });
     }
@@ -208,52 +252,30 @@ export const b2bPlugin: FastifyPluginAsync = async (app) => {
 
   app.get(
     "/commerce/stores/:storeId/customer-groups",
-    { preHandler: storeAuthAdmin },
+    { preHandler: storeAuthAdmin, schema: { params: StoreParams } },
     async (request, reply) => {
-      const params = storeParams.safeParse(request.params);
-      if (!params.success) return reply.status(400).send(badRequest("invalid storeId"));
-      const groups = await listCustomerGroups(params.data.storeId);
+      const groups = await listCustomerGroups(request.params.storeId);
       return reply.send({ groups });
     }
   );
 
   app.post(
     "/commerce/stores/:storeId/customer-groups",
-    { preHandler: storeAuthAdmin },
+    { preHandler: storeAuthAdmin, schema: { params: StoreParams, body: CreateGroupBody } },
     async (request, reply) => {
-      const params = storeParams.safeParse(request.params);
-      if (!params.success) return reply.status(400).send(badRequest("invalid storeId"));
-      const body = z
-        .object({
-          name: z.string().min(1),
-          description: z.string().optional().nullable(),
-          price_list_id: UUID.optional().nullable(),
-        })
-        .safeParse(request.body);
-      if (!body.success) return reply.status(400).send(badRequest("validation failed"));
-      const id = await createCustomerGroup(params.data.storeId, body.data);
+      const id = await createCustomerGroup(request.params.storeId, request.body);
       return reply.status(201).send({ id });
     }
   );
 
   app.put(
     "/commerce/stores/:storeId/customer-groups/:groupId",
-    { preHandler: storeAuthAdmin },
+    { preHandler: storeAuthAdmin, schema: { params: GroupParams, body: UpdateGroupBody } },
     async (request, reply) => {
-      const params = z.object({ storeId: UUID, groupId: UUID }).safeParse(request.params);
-      if (!params.success) return reply.status(400).send(badRequest("invalid params"));
-      const body = z
-        .object({
-          name: z.string().min(1).optional().nullable(),
-          description: z.string().optional().nullable(),
-          price_list_id: UUID.optional().nullable(),
-        })
-        .safeParse(request.body);
-      if (!body.success) return reply.status(400).send(badRequest("validation failed"));
       const ok = await updateCustomerGroup(
-        params.data.storeId,
-        params.data.groupId,
-        body.data
+        request.params.storeId,
+        request.params.groupId,
+        request.body
       );
       if (!ok) return reply.status(404).send(notFound("customer group not found"));
       return reply.send({ ok: true });
@@ -262,40 +284,30 @@ export const b2bPlugin: FastifyPluginAsync = async (app) => {
 
   app.delete(
     "/commerce/stores/:storeId/customer-groups/:groupId",
-    { preHandler: storeAuthAdmin },
+    { preHandler: storeAuthAdmin, schema: { params: GroupParams } },
     async (request, reply) => {
-      const params = z.object({ storeId: UUID, groupId: UUID }).safeParse(request.params);
-      if (!params.success) return reply.status(400).send(badRequest("invalid params"));
-      await deleteCustomerGroup(params.data.storeId, params.data.groupId);
+      await deleteCustomerGroup(request.params.storeId, request.params.groupId);
       return reply.send({ ok: true });
     }
   );
 
   app.post(
     "/commerce/stores/:storeId/customer-groups/:groupId/members",
-    { preHandler: storeAuthAdmin },
+    { preHandler: storeAuthAdmin, schema: { params: GroupParams, body: AddGroupMemberBody } },
     async (request, reply) => {
-      const params = z.object({ storeId: UUID, groupId: UUID }).safeParse(request.params);
-      if (!params.success) return reply.status(400).send(badRequest("invalid params"));
-      const body = z.object({ customer_id: UUID }).safeParse(request.body);
-      if (!body.success) return reply.status(400).send(badRequest("customer_id required"));
-      await addGroupMember(params.data.storeId, params.data.groupId, body.data.customer_id);
+      await addGroupMember(request.params.storeId, request.params.groupId, request.body.customer_id);
       return reply.send({ ok: true });
     }
   );
 
   app.delete(
     "/commerce/stores/:storeId/customer-groups/:groupId/members/:customerId",
-    { preHandler: storeAuthAdmin },
+    { preHandler: storeAuthAdmin, schema: { params: GroupMemberParams } },
     async (request, reply) => {
-      const params = z
-        .object({ storeId: UUID, groupId: UUID, customerId: UUID })
-        .safeParse(request.params);
-      if (!params.success) return reply.status(400).send(badRequest("invalid params"));
       await removeGroupMember(
-        params.data.storeId,
-        params.data.groupId,
-        params.data.customerId
+        request.params.storeId,
+        request.params.groupId,
+        request.params.customerId
       );
       return reply.send({ ok: true });
     }
@@ -305,31 +317,18 @@ export const b2bPlugin: FastifyPluginAsync = async (app) => {
 
   app.get(
     "/commerce/stores/:storeId/quotes",
-    { preHandler: storeAuthAdmin },
+    { preHandler: storeAuthAdmin, schema: { params: StoreParams, querystring: QuotesQuerystring } },
     async (request, reply) => {
-      const params = storeParams.safeParse(request.params);
-      if (!params.success) return reply.status(400).send(badRequest("invalid storeId"));
-      const query = z
-        .object({
-          status: z.string().optional(),
-          company_id: UUID.optional(),
-          limit: z.coerce.number().int().min(1).max(200).optional(),
-          offset: z.coerce.number().int().min(0).optional(),
-        })
-        .safeParse(request.query);
-      if (!query.success) return reply.status(400).send(badRequest("invalid query"));
-      const { quotes, total } = await listQuotes(params.data.storeId, query.data);
+      const { quotes, total } = await listQuotes(request.params.storeId, request.query);
       return reply.send({ quotes, total });
     }
   );
 
   app.get(
     "/commerce/stores/:storeId/quotes/:quoteId",
-    { preHandler: storeAuthAdmin },
+    { preHandler: storeAuthAdmin, schema: { params: QuoteParams } },
     async (request, reply) => {
-      const params = z.object({ storeId: UUID, quoteId: UUID }).safeParse(request.params);
-      if (!params.success) return reply.status(400).send(badRequest("invalid params"));
-      const quote = await getQuote(params.data.storeId, params.data.quoteId);
+      const quote = await getQuote(request.params.storeId, request.params.quoteId);
       if (!quote) return reply.status(404).send(notFound("quote not found"));
       return reply.send(quote);
     }
@@ -337,51 +336,19 @@ export const b2bPlugin: FastifyPluginAsync = async (app) => {
 
   app.post(
     "/commerce/stores/:storeId/quotes",
-    { preHandler: storeAuthAdmin },
+    { preHandler: storeAuthAdmin, schema: { params: StoreParams, body: CreateQuoteBody } },
     async (request, reply) => {
-      const params = storeParams.safeParse(request.params);
-      if (!params.success) return reply.status(400).send(badRequest("invalid storeId"));
-      const body = z
-        .object({
-          company_id: UUID.optional().nullable(),
-          customer_id: UUID.optional().nullable(),
-          expires_at: z.string().optional().nullable(),
-          notes: z.string().optional().nullable(),
-          lines: z
-            .array(
-              z.object({
-                variant_id: UUID.optional().nullable(),
-                title: z.string().optional().nullable(),
-                quantity: z.number().int().min(1).optional(),
-                price: z.number().min(0),
-                notes: z.string().optional().nullable(),
-              })
-            )
-            .optional(),
-        })
-        .safeParse(request.body);
-      if (!body.success) return reply.status(400).send(badRequest("validation failed"));
       const userId = (request as { auth?: { userId?: string } }).auth?.userId ?? "00000000-0000-0000-0000-000000000000";
-      const id = await createQuote(params.data.storeId, body.data, userId);
+      const id = await createQuote(request.params.storeId, request.body, userId);
       return reply.status(201).send({ id });
     }
   );
 
   app.put(
     "/commerce/stores/:storeId/quotes/:quoteId",
-    { preHandler: storeAuthAdmin },
+    { preHandler: storeAuthAdmin, schema: { params: QuoteParams, body: UpdateQuoteBody } },
     async (request, reply) => {
-      const params = z.object({ storeId: UUID, quoteId: UUID }).safeParse(request.params);
-      if (!params.success) return reply.status(400).send(badRequest("invalid params"));
-      const body = z
-        .object({
-          status: z.string().optional().nullable(),
-          expires_at: z.string().optional().nullable(),
-          notes: z.string().optional().nullable(),
-        })
-        .safeParse(request.body);
-      if (!body.success) return reply.status(400).send(badRequest("validation failed"));
-      const ok = await updateQuote(params.data.storeId, params.data.quoteId, body.data);
+      const ok = await updateQuote(request.params.storeId, request.params.quoteId, request.body);
       if (!ok) return reply.status(404).send(notFound("quote not found"));
       return reply.send({ ok: true });
     }
@@ -389,11 +356,9 @@ export const b2bPlugin: FastifyPluginAsync = async (app) => {
 
   app.post(
     "/commerce/stores/:storeId/quotes/:quoteId/send",
-    { preHandler: storeAuthAdmin },
+    { preHandler: storeAuthAdmin, schema: { params: QuoteParams } },
     async (request, reply) => {
-      const params = z.object({ storeId: UUID, quoteId: UUID }).safeParse(request.params);
-      if (!params.success) return reply.status(400).send(badRequest("invalid params"));
-      const ok = await sendQuote(params.data.storeId, params.data.quoteId);
+      const ok = await sendQuote(request.params.storeId, request.params.quoteId);
       if (!ok) return reply.status(422).send(unprocessable("quote not found or not in draft status"));
       return reply.send({ ok: true });
     }
@@ -401,12 +366,10 @@ export const b2bPlugin: FastifyPluginAsync = async (app) => {
 
   app.post(
     "/commerce/stores/:storeId/quotes/:quoteId/accept",
-    { preHandler: storeAuthAdmin },
+    { preHandler: storeAuthAdmin, schema: { params: QuoteParams } },
     async (request, reply) => {
-      const params = z.object({ storeId: UUID, quoteId: UUID }).safeParse(request.params);
-      if (!params.success) return reply.status(400).send(badRequest("invalid params"));
       try {
-        const result = await acceptQuote(params.data.storeId, params.data.quoteId);
+        const result = await acceptQuote(request.params.storeId, request.params.quoteId);
         return reply.send(result);
       } catch (err) {
         if (err instanceof Error) {
@@ -423,11 +386,9 @@ export const b2bPlugin: FastifyPluginAsync = async (app) => {
 
   app.post(
     "/commerce/stores/:storeId/quotes/:quoteId/reject",
-    { preHandler: storeAuthAdmin },
+    { preHandler: storeAuthAdmin, schema: { params: QuoteParams } },
     async (request, reply) => {
-      const params = z.object({ storeId: UUID, quoteId: UUID }).safeParse(request.params);
-      if (!params.success) return reply.status(400).send(badRequest("invalid params"));
-      const ok = await rejectQuote(params.data.storeId, params.data.quoteId);
+      const ok = await rejectQuote(request.params.storeId, request.params.quoteId);
       if (!ok) return reply.status(422).send(unprocessable("quote not found or already finalized"));
       return reply.send({ ok: true });
     }
@@ -437,22 +398,18 @@ export const b2bPlugin: FastifyPluginAsync = async (app) => {
 
   app.get(
     "/commerce/stores/:storeId/purchase-orders",
-    { preHandler: storeAuthAdmin },
+    { preHandler: storeAuthAdmin, schema: { params: StoreParams } },
     async (request, reply) => {
-      const params = storeParams.safeParse(request.params);
-      if (!params.success) return reply.status(400).send(badRequest("invalid storeId"));
-      const pos = await listPurchaseOrders(params.data.storeId);
+      const pos = await listPurchaseOrders(request.params.storeId);
       return reply.send({ purchase_orders: pos });
     }
   );
 
   app.get(
     "/commerce/stores/:storeId/purchase-orders/:poId",
-    { preHandler: storeAuthAdmin },
+    { preHandler: storeAuthAdmin, schema: { params: PoParams } },
     async (request, reply) => {
-      const params = z.object({ storeId: UUID, poId: UUID }).safeParse(request.params);
-      if (!params.success) return reply.status(400).send(badRequest("invalid params"));
-      const po = await getPurchaseOrder(params.data.storeId, params.data.poId);
+      const po = await getPurchaseOrder(request.params.storeId, request.params.poId);
       if (!po) return reply.status(404).send(notFound("purchase order not found"));
       return reply.send(po);
     }
@@ -460,18 +417,9 @@ export const b2bPlugin: FastifyPluginAsync = async (app) => {
 
   app.put(
     "/commerce/stores/:storeId/purchase-orders/:poId",
-    { preHandler: storeAuthAdmin },
+    { preHandler: storeAuthAdmin, schema: { params: PoParams, body: UpdatePoBody } },
     async (request, reply) => {
-      const params = z.object({ storeId: UUID, poId: UUID }).safeParse(request.params);
-      if (!params.success) return reply.status(400).send(badRequest("invalid params"));
-      const body = z
-        .object({
-          status: z.string().optional().nullable(),
-          notes: z.string().optional().nullable(),
-        })
-        .safeParse(request.body);
-      if (!body.success) return reply.status(400).send(badRequest("validation failed"));
-      const ok = await updatePurchaseOrder(params.data.storeId, params.data.poId, body.data);
+      const ok = await updatePurchaseOrder(request.params.storeId, request.params.poId, request.body);
       if (!ok) return reply.status(404).send(notFound("purchase order not found"));
       return reply.send({ ok: true });
     }
@@ -480,22 +428,13 @@ export const b2bPlugin: FastifyPluginAsync = async (app) => {
   // Attach PO to an order
   app.post(
     "/commerce/stores/:storeId/orders/:orderId/purchase-order",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite, schema: { params: OrderParams, body: AttachPoBody } },
     async (request, reply) => {
-      const params = z.object({ storeId: UUID, orderId: UUID }).safeParse(request.params);
-      if (!params.success) return reply.status(400).send(badRequest("invalid params"));
-      const body = z
-        .object({
-          po_number: z.string().min(1),
-          notes: z.string().optional().nullable(),
-        })
-        .safeParse(request.body);
-      if (!body.success) return reply.status(400).send(badRequest("po_number is required"));
       try {
         const id = await attachPurchaseOrder(
-          params.data.storeId,
-          params.data.orderId,
-          body.data
+          request.params.storeId,
+          request.params.orderId,
+          request.body
         );
         return reply.status(201).send({ id });
       } catch (err) {

@@ -74,7 +74,8 @@ export interface CreateSubscriptionInput {
   items?: Array<{
     variant_id: string;
     quantity?: number | undefined;
-    price: number;
+    /** H3.2: decimal string e.g. "10.50" — PostgreSQL numeric accepts string input */
+    price: string;
   }> | undefined;
 }
 

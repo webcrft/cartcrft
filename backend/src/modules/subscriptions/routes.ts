@@ -11,7 +11,7 @@
  * override via `setClock()` exported below.
  */
 
-import type { FastifyPluginAsync } from "fastify";
+import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { z } from "zod";
 import { storeAuthAdmin, storeAuthWrite } from "../../lib/auth/middleware.js";
 import type { Clock } from "../../clock.js";
@@ -48,42 +48,82 @@ export function setClock(c: Clock): void {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const UUID = z.string().uuid();
+// H3.2: money fields are decimal strings, never floats
+const MoneyStr = z.string().regex(/^\d+(\.\d{1,2})?$/);
 
 function notFound(msg: string) {
   return { error: { code: "NOT_FOUND", message: msg } };
-}
-function badRequest(msg: string, code = "VALIDATION_ERROR") {
-  return { error: { code, message: msg } };
 }
 function unprocessable(msg: string, code = "INVALID_TRANSITION") {
   return { error: { code, message: msg } };
 }
 
+// ── Shared param schemas ──────────────────────────────────────────────────────
+
+const StoreParams = z.object({ storeId: UUID });
+const PlanParams = z.object({ storeId: UUID, planId: UUID });
+const SubParams = z.object({ storeId: UUID, subId: UUID });
+
+// ── Shared body / querystring schemas ─────────────────────────────────────────
+
+const CreatePlanBody = z.object({
+  name: z.string().min(1),
+  interval: z.enum(["day", "week", "month", "year"]),
+  interval_count: z.number().int().min(1).optional(),
+  trial_days: z.number().int().min(0).optional(),
+  is_active: z.boolean().optional(),
+});
+
+const UpdatePlanBody = z.object({
+  name: z.string().min(1).optional().nullable(),
+  trial_days: z.number().int().min(0).optional().nullable(),
+  is_active: z.boolean().optional().nullable(),
+});
+
+const ListSubsQuerystring = z.object({
+  status: z.string().optional(),
+  customer_id: UUID.optional(),
+  limit: z.coerce.number().int().min(1).max(200).optional(),
+  offset: z.coerce.number().int().min(0).optional(),
+});
+
+const CreateSubBody = z.object({
+  customer_id: UUID,
+  plan_id: UUID,
+  items: z
+    .array(
+      z.object({
+        variant_id: UUID,
+        quantity: z.number().int().min(1).optional(),
+        // H3.2: subscription item prices are money strings
+        price: MoneyStr,
+      })
+    )
+    .optional(),
+});
+
+const CancelSubBody = z.object({ cancel_reason: z.string().optional() });
+
 // ── Plugin ────────────────────────────────────────────────────────────────────
 
-export const subscriptionsPlugin: FastifyPluginAsync = async (app) => {
-  const storeParams = z.object({ storeId: UUID });
+export const subscriptionsPlugin: FastifyPluginAsyncZod = async (app) => {
 
   // ── Subscription Plans ─────────────────────────────────────────────────────
 
   app.get(
     "/commerce/stores/:storeId/subscription-plans",
-    { preHandler: storeAuthAdmin },
+    { preHandler: storeAuthAdmin, schema: { params: StoreParams } },
     async (request, reply) => {
-      const params = storeParams.safeParse(request.params);
-      if (!params.success) return reply.status(400).send(badRequest("invalid storeId"));
-      const plans = await listSubscriptionPlans(params.data.storeId);
+      const plans = await listSubscriptionPlans(request.params.storeId);
       return reply.send({ plans });
     }
   );
 
   app.get(
     "/commerce/stores/:storeId/subscription-plans/:planId",
-    { preHandler: storeAuthAdmin },
+    { preHandler: storeAuthAdmin, schema: { params: PlanParams } },
     async (request, reply) => {
-      const params = z.object({ storeId: UUID, planId: UUID }).safeParse(request.params);
-      if (!params.success) return reply.status(400).send(badRequest("invalid params"));
-      const plan = await getSubscriptionPlan(params.data.storeId, params.data.planId);
+      const plan = await getSubscriptionPlan(request.params.storeId, request.params.planId);
       if (!plan) return reply.status(404).send(notFound("subscription plan not found"));
       return reply.send(plan);
     }
@@ -91,51 +131,27 @@ export const subscriptionsPlugin: FastifyPluginAsync = async (app) => {
 
   app.post(
     "/commerce/stores/:storeId/subscription-plans",
-    { preHandler: storeAuthAdmin },
+    { preHandler: storeAuthAdmin, schema: { params: StoreParams, body: CreatePlanBody } },
     async (request, reply) => {
-      const params = storeParams.safeParse(request.params);
-      if (!params.success) return reply.status(400).send(badRequest("invalid storeId"));
-      const body = z
-        .object({
-          name: z.string().min(1),
-          interval: z.enum(["day", "week", "month", "year"]),
-          interval_count: z.number().int().min(1).optional(),
-          trial_days: z.number().int().min(0).optional(),
-          is_active: z.boolean().optional(),
-        })
-        .safeParse(request.body);
-      if (!body.success) return reply.status(400).send(badRequest("name and interval are required"));
-      const id = await createSubscriptionPlan(params.data.storeId, body.data);
+      const id = await createSubscriptionPlan(request.params.storeId, request.body);
       return reply.status(201).send({ id });
     }
   );
 
   app.put(
     "/commerce/stores/:storeId/subscription-plans/:planId",
-    { preHandler: storeAuthAdmin },
+    { preHandler: storeAuthAdmin, schema: { params: PlanParams, body: UpdatePlanBody } },
     async (request, reply) => {
-      const params = z.object({ storeId: UUID, planId: UUID }).safeParse(request.params);
-      if (!params.success) return reply.status(400).send(badRequest("invalid params"));
-      const body = z
-        .object({
-          name: z.string().min(1).optional().nullable(),
-          trial_days: z.number().int().min(0).optional().nullable(),
-          is_active: z.boolean().optional().nullable(),
-        })
-        .safeParse(request.body);
-      if (!body.success) return reply.status(400).send(badRequest("validation failed"));
-      await updateSubscriptionPlan(params.data.storeId, params.data.planId, body.data);
+      await updateSubscriptionPlan(request.params.storeId, request.params.planId, request.body);
       return reply.send({ ok: true });
     }
   );
 
   app.delete(
     "/commerce/stores/:storeId/subscription-plans/:planId",
-    { preHandler: storeAuthAdmin },
+    { preHandler: storeAuthAdmin, schema: { params: PlanParams } },
     async (request, reply) => {
-      const params = z.object({ storeId: UUID, planId: UUID }).safeParse(request.params);
-      if (!params.success) return reply.status(400).send(badRequest("invalid params"));
-      await deleteSubscriptionPlan(params.data.storeId, params.data.planId);
+      await deleteSubscriptionPlan(request.params.storeId, request.params.planId);
       return reply.send({ ok: true });
     }
   );
@@ -144,31 +160,18 @@ export const subscriptionsPlugin: FastifyPluginAsync = async (app) => {
 
   app.get(
     "/commerce/stores/:storeId/subscriptions",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite, schema: { params: StoreParams, querystring: ListSubsQuerystring } },
     async (request, reply) => {
-      const params = storeParams.safeParse(request.params);
-      if (!params.success) return reply.status(400).send(badRequest("invalid storeId"));
-      const query = z
-        .object({
-          status: z.string().optional(),
-          customer_id: UUID.optional(),
-          limit: z.coerce.number().int().min(1).max(200).optional(),
-          offset: z.coerce.number().int().min(0).optional(),
-        })
-        .safeParse(request.query);
-      if (!query.success) return reply.status(400).send(badRequest("invalid query"));
-      const { subscriptions, total } = await listSubscriptions(params.data.storeId, query.data);
+      const { subscriptions, total } = await listSubscriptions(request.params.storeId, request.query);
       return reply.send({ subscriptions, total });
     }
   );
 
   app.get(
     "/commerce/stores/:storeId/subscriptions/:subId",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite, schema: { params: SubParams } },
     async (request, reply) => {
-      const params = z.object({ storeId: UUID, subId: UUID }).safeParse(request.params);
-      if (!params.success) return reply.status(400).send(badRequest("invalid params"));
-      const sub = await getSubscription(params.data.storeId, params.data.subId);
+      const sub = await getSubscription(request.params.storeId, request.params.subId);
       if (!sub) return reply.status(404).send(notFound("subscription not found"));
       return reply.send(sub);
     }
@@ -176,32 +179,12 @@ export const subscriptionsPlugin: FastifyPluginAsync = async (app) => {
 
   app.post(
     "/commerce/stores/:storeId/subscriptions",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite, schema: { params: StoreParams, body: CreateSubBody } },
     async (request, reply) => {
-      const params = storeParams.safeParse(request.params);
-      if (!params.success) return reply.status(400).send(badRequest("invalid storeId"));
-      const body = z
-        .object({
-          customer_id: UUID,
-          plan_id: UUID,
-          items: z
-            .array(
-              z.object({
-                variant_id: UUID,
-                quantity: z.number().int().min(1).optional(),
-                price: z.number().min(0),
-              })
-            )
-            .optional(),
-        })
-        .safeParse(request.body);
-      if (!body.success) {
-        return reply.status(400).send(badRequest("customer_id and plan_id are required"));
-      }
       try {
         const result = await createSubscription(
-          params.data.storeId,
-          body.data,
+          request.params.storeId,
+          request.body,
           getClock()
         );
         return reply.status(201).send(result);
@@ -216,11 +199,9 @@ export const subscriptionsPlugin: FastifyPluginAsync = async (app) => {
 
   app.post(
     "/commerce/stores/:storeId/subscriptions/:subId/pause",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite, schema: { params: SubParams } },
     async (request, reply) => {
-      const params = z.object({ storeId: UUID, subId: UUID }).safeParse(request.params);
-      if (!params.success) return reply.status(400).send(badRequest("invalid params"));
-      const ok = await pauseSubscription(params.data.storeId, params.data.subId);
+      const ok = await pauseSubscription(request.params.storeId, request.params.subId);
       if (!ok) return reply.status(422).send(unprocessable("subscription not found or not in an allowed state for paused"));
       return reply.send({ ok: true });
     }
@@ -228,13 +209,11 @@ export const subscriptionsPlugin: FastifyPluginAsync = async (app) => {
 
   app.post(
     "/commerce/stores/:storeId/subscriptions/:subId/resume",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite, schema: { params: SubParams } },
     async (request, reply) => {
-      const params = z.object({ storeId: UUID, subId: UUID }).safeParse(request.params);
-      if (!params.success) return reply.status(400).send(badRequest("invalid params"));
       const result = await resumeSubscription(
-        params.data.storeId,
-        params.data.subId,
+        request.params.storeId,
+        request.params.subId,
         getClock()
       );
       if (!result) return reply.status(422).send(unprocessable("subscription not found or not paused"));
@@ -244,15 +223,12 @@ export const subscriptionsPlugin: FastifyPluginAsync = async (app) => {
 
   app.post(
     "/commerce/stores/:storeId/subscriptions/:subId/cancel",
-    { preHandler: storeAuthWrite },
+    // Body is optional (cancel_reason only); thin safeParse to handle missing body gracefully
+    { preHandler: storeAuthWrite, schema: { params: SubParams } },
     async (request, reply) => {
-      const params = z.object({ storeId: UUID, subId: UUID }).safeParse(request.params);
-      if (!params.success) return reply.status(400).send(badRequest("invalid params"));
-      const body = z
-        .object({ cancel_reason: z.string().optional() })
-        .safeParse(request.body ?? {});
+      const body = CancelSubBody.safeParse(request.body ?? {});
       const reason = body.success ? body.data.cancel_reason : undefined;
-      const ok = await cancelSubscription(params.data.storeId, params.data.subId, reason);
+      const ok = await cancelSubscription(request.params.storeId, request.params.subId, reason);
       if (!ok) return reply.status(422).send(unprocessable("subscription not found or already cancelled"));
       return reply.send({ ok: true });
     }
@@ -260,14 +236,12 @@ export const subscriptionsPlugin: FastifyPluginAsync = async (app) => {
 
   app.post(
     "/commerce/stores/:storeId/subscriptions/:subId/bill",
-    { preHandler: storeAuthAdmin },
+    { preHandler: storeAuthAdmin, schema: { params: SubParams } },
     async (request, reply) => {
-      const params = z.object({ storeId: UUID, subId: UUID }).safeParse(request.params);
-      if (!params.success) return reply.status(400).send(badRequest("invalid params"));
       try {
         const result = await billSubscription(
-          params.data.storeId,
-          params.data.subId,
+          request.params.storeId,
+          request.params.subId,
           getClock()
         );
         return reply.send(result);

@@ -13,7 +13,7 @@
  * was removed to prevent FastifyError on startup.
  */
 
-import type { FastifyPluginAsync } from "fastify";
+import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { z } from "zod";
 import { storeAuthAdmin } from "../../lib/auth/middleware.js";
 import {
@@ -52,18 +52,14 @@ const UpdateProviderBody = z.object({
 
 // ── Plugin ─────────────────────────────────────────────────────────────────────
 
-export const notificationsPlugin: FastifyPluginAsync = async (app) => {
+export const notificationsPlugin: FastifyPluginAsyncZod = async (app) => {
 
   // ── GET /commerce/stores/:storeId/notification-providers ──────────────────
   app.get(
     "/commerce/stores/:storeId/notification-providers",
-    { preHandler: [storeAuthAdmin] },
+    { preHandler: [storeAuthAdmin], schema: { params: StoreIdParams } },
     async (request, reply) => {
-      const params = StoreIdParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({ error: { code: "VALIDATION_ERROR", message: "Invalid storeId" } });
-      }
-      const providers = await listNotificationProviders(params.data.storeId);
+      const providers = await listNotificationProviders(request.params.storeId);
       return reply.send({ providers });
     }
   );
@@ -71,20 +67,10 @@ export const notificationsPlugin: FastifyPluginAsync = async (app) => {
   // ── POST /commerce/stores/:storeId/notification-providers ─────────────────
   app.post(
     "/commerce/stores/:storeId/notification-providers",
-    { preHandler: [storeAuthAdmin] },
+    { preHandler: [storeAuthAdmin], schema: { params: StoreIdParams, body: CreateProviderBody } },
     async (request, reply) => {
-      const params = StoreIdParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({ error: { code: "VALIDATION_ERROR", message: "Invalid storeId" } });
-      }
-      const parsed = CreateProviderBody.safeParse(request.body);
-      if (!parsed.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Request validation failed", details: parsed.error.issues },
-        });
-      }
       try {
-        const id = await createNotificationProvider(params.data.storeId, parsed.data);
+        const id = await createNotificationProvider(request.params.storeId, request.body);
         return reply.status(201).send({ id });
       } catch (err) {
         if (err instanceof Error && (err as NodeJS.ErrnoException).code === "VALIDATION_ERROR") {
@@ -98,23 +84,13 @@ export const notificationsPlugin: FastifyPluginAsync = async (app) => {
   // ── PUT /commerce/stores/:storeId/notification-providers/:providerId ──────
   app.put(
     "/commerce/stores/:storeId/notification-providers/:providerId",
-    { preHandler: [storeAuthAdmin] },
+    { preHandler: [storeAuthAdmin], schema: { params: ProviderIdParams, body: UpdateProviderBody } },
     async (request, reply) => {
-      const params = ProviderIdParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({ error: { code: "VALIDATION_ERROR", message: "Invalid params" } });
-      }
-      const parsed = UpdateProviderBody.safeParse(request.body);
-      if (!parsed.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Request validation failed", details: parsed.error.issues },
-        });
-      }
       try {
         const updated = await updateNotificationProvider(
-          params.data.providerId,
-          params.data.storeId,
-          parsed.data
+          request.params.providerId,
+          request.params.storeId,
+          request.body
         );
         if (!updated) {
           return reply.status(404).send({ error: { code: "NOT_FOUND", message: "notification provider not found" } });
@@ -132,13 +108,9 @@ export const notificationsPlugin: FastifyPluginAsync = async (app) => {
   // ── DELETE /commerce/stores/:storeId/notification-providers/:providerId ───
   app.delete(
     "/commerce/stores/:storeId/notification-providers/:providerId",
-    { preHandler: [storeAuthAdmin] },
+    { preHandler: [storeAuthAdmin], schema: { params: ProviderIdParams } },
     async (request, reply) => {
-      const params = ProviderIdParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({ error: { code: "VALIDATION_ERROR", message: "Invalid params" } });
-      }
-      const deleted = await deleteNotificationProvider(params.data.providerId, params.data.storeId);
+      const deleted = await deleteNotificationProvider(request.params.providerId, request.params.storeId);
       if (!deleted) {
         return reply.status(404).send({ error: { code: "NOT_FOUND", message: "notification provider not found" } });
       }
@@ -149,13 +121,9 @@ export const notificationsPlugin: FastifyPluginAsync = async (app) => {
   // ── GET /commerce/stores/:storeId/webhook-log ─────────────────────────────
   app.get(
     "/commerce/stores/:storeId/webhook-log",
-    { preHandler: [storeAuthAdmin] },
+    { preHandler: [storeAuthAdmin], schema: { params: StoreIdParams } },
     async (request, reply) => {
-      const params = StoreIdParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({ error: { code: "VALIDATION_ERROR", message: "Invalid storeId" } });
-      }
-      const log = await getWebhookLog(params.data.storeId);
+      const log = await getWebhookLog(request.params.storeId);
       return reply.send({ log });
     }
   );

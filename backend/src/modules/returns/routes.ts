@@ -9,7 +9,7 @@
  * Auth: admin tier for all return operations.
  */
 
-import type { FastifyPluginAsync } from "fastify";
+import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { z } from "zod";
 import { storeAuthAdmin } from "../../lib/auth/middleware.js";
 import {
@@ -22,46 +22,91 @@ import {
 } from "./service.js";
 
 const UUID = z.string().uuid();
+// H3.2: money fields are decimal strings, never floats
+const MoneyStr = z.string().regex(/^\d+(\.\d{1,2})?$/);
 
 function notFound(msg: string) {
   return { error: { code: "NOT_FOUND", message: msg } };
 }
-function badRequest(msg: string, code = "VALIDATION_ERROR") {
-  return { error: { code, message: msg } };
-}
 
-export const returnsPlugin: FastifyPluginAsync = async (app) => {
-  const storeParams = z.object({ storeId: UUID });
+// ── Shared param schemas ──────────────────────────────────────────────────────
+
+const StoreParams = z.object({ storeId: UUID });
+const ReturnParams = z.object({ storeId: UUID, returnId: UUID });
+const OrderParams = z.object({ storeId: UUID, orderId: UUID });
+
+// ── Shared body / querystring schemas ─────────────────────────────────────────
+
+const ListReturnsQuerystring = z.object({
+  status: z.string().optional(),
+  order_id: UUID.optional(),
+  limit: z.coerce.number().int().min(1).max(200).optional(),
+  offset: z.coerce.number().int().min(0).optional(),
+});
+
+const CreateReturnBody = z.object({
+  return_type: z.enum(["refund", "exchange", "store_credit", "repair"]).optional(),
+  notes: z.string().optional().nullable(),
+  lines: z
+    .array(
+      z.object({
+        order_line_id: UUID,
+        quantity: z.number().int().min(1).optional(),
+        reason: z.string().optional().nullable(),
+        condition: z.string().optional().nullable(),
+        action: z.enum(["refund", "exchange", "store_credit", "repair"]).optional(),
+        exchange_variant_id: UUID.optional().nullable(),
+        restock: z.boolean().optional(),
+      })
+    )
+    .optional(),
+});
+
+const UpdateReturnBody = z.object({
+  status: z
+    .enum([
+      "requested",
+      "approved",
+      "rejected",
+      "in_transit",
+      "received",
+      "inspected",
+      "resolved",
+      "closed",
+    ])
+    .optional()
+    .nullable(),
+  notes: z.string().optional().nullable(),
+  return_type: z.enum(["refund", "exchange", "store_credit", "repair"]).optional().nullable(),
+  // H3.2: credit_amount as decimal string; parsed to number before service call
+  credit_amount: MoneyStr.optional().nullable(),
+});
+
+const AddReturnEventBody = z.object({
+  type: z.string().optional(),
+  data: z.record(z.string(), z.unknown()).optional(),
+});
+
+// ── Plugin ────────────────────────────────────────────────────────────────────
+
+export const returnsPlugin: FastifyPluginAsyncZod = async (app) => {
 
   // ── List / Get returns ─────────────────────────────────────────────────────
 
   app.get(
     "/commerce/stores/:storeId/returns",
-    { preHandler: storeAuthAdmin },
+    { preHandler: storeAuthAdmin, schema: { params: StoreParams, querystring: ListReturnsQuerystring } },
     async (request, reply) => {
-      const params = storeParams.safeParse(request.params);
-      if (!params.success) return reply.status(400).send(badRequest("invalid storeId"));
-      const query = z
-        .object({
-          status: z.string().optional(),
-          order_id: UUID.optional(),
-          limit: z.coerce.number().int().min(1).max(200).optional(),
-          offset: z.coerce.number().int().min(0).optional(),
-        })
-        .safeParse(request.query);
-      if (!query.success) return reply.status(400).send(badRequest("invalid query"));
-      const { returns, total } = await listReturns(params.data.storeId, query.data);
+      const { returns, total } = await listReturns(request.params.storeId, request.query);
       return reply.send({ returns, total });
     }
   );
 
   app.get(
     "/commerce/stores/:storeId/returns/:returnId",
-    { preHandler: storeAuthAdmin },
+    { preHandler: storeAuthAdmin, schema: { params: ReturnParams } },
     async (request, reply) => {
-      const params = z.object({ storeId: UUID, returnId: UUID }).safeParse(request.params);
-      if (!params.success) return reply.status(400).send(badRequest("invalid params"));
-      const ret = await getReturn(params.data.storeId, params.data.returnId);
+      const ret = await getReturn(request.params.storeId, request.params.returnId);
       if (!ret) return reply.status(404).send(notFound("return not found"));
       return reply.send(ret);
     }
@@ -71,42 +116,17 @@ export const returnsPlugin: FastifyPluginAsync = async (app) => {
 
   app.post(
     "/commerce/stores/:storeId/orders/:orderId/returns",
-    { preHandler: storeAuthAdmin },
+    { preHandler: storeAuthAdmin, schema: { params: OrderParams, body: CreateReturnBody } },
     async (request, reply) => {
-      const params = z.object({ storeId: UUID, orderId: UUID }).safeParse(request.params);
-      if (!params.success) return reply.status(400).send(badRequest("invalid params"));
-      const body = z
-        .object({
-          return_type: z.enum(["refund", "exchange", "store_credit", "repair"]).optional(),
-          notes: z.string().optional().nullable(),
-          lines: z
-            .array(
-              z.object({
-                order_line_id: UUID,
-                quantity: z.number().int().min(1).optional(),
-                reason: z.string().optional().nullable(),
-                condition: z.string().optional().nullable(),
-                action: z
-                  .enum(["refund", "exchange", "store_credit", "repair"])
-                  .optional(),
-                exchange_variant_id: UUID.optional().nullable(),
-                restock: z.boolean().optional(),
-              })
-            )
-            .optional(),
-        })
-        .safeParse(request.body);
-      if (!body.success) return reply.status(400).send(badRequest("validation failed"));
-
       const userId =
         (request as { auth?: { userId?: string } }).auth?.userId ??
         "00000000-0000-0000-0000-000000000000";
 
       try {
         const id = await createReturn(
-          params.data.storeId,
-          params.data.orderId,
-          body.data,
+          request.params.storeId,
+          request.params.orderId,
+          request.body,
           userId
         );
         return reply.status(201).send({ id });
@@ -123,43 +143,20 @@ export const returnsPlugin: FastifyPluginAsync = async (app) => {
 
   app.put(
     "/commerce/stores/:storeId/returns/:returnId",
-    { preHandler: storeAuthAdmin },
+    { preHandler: storeAuthAdmin, schema: { params: ReturnParams, body: UpdateReturnBody } },
     async (request, reply) => {
-      const params = z.object({ storeId: UUID, returnId: UUID }).safeParse(request.params);
-      if (!params.success) return reply.status(400).send(badRequest("invalid params"));
-      const body = z
-        .object({
-          status: z
-            .enum([
-              "requested",
-              "approved",
-              "rejected",
-              "in_transit",
-              "received",
-              "inspected",
-              "resolved",
-              "closed",
-            ])
-            .optional()
-            .nullable(),
-          notes: z.string().optional().nullable(),
-          return_type: z
-            .enum(["refund", "exchange", "store_credit", "repair"])
-            .optional()
-            .nullable(),
-          credit_amount: z.number().min(0).optional().nullable(),
-        })
-        .safeParse(request.body);
-      if (!body.success) return reply.status(400).send(badRequest("validation failed"));
-
       const userId =
         (request as { auth?: { userId?: string } }).auth?.userId ??
         "00000000-0000-0000-0000-000000000000";
 
+      // H3.2: parse decimal-string credit_amount to number for service layer
+      const { credit_amount: creditAmountStr, ...rest } = request.body;
+      const creditAmount = creditAmountStr != null ? parseFloat(creditAmountStr) : undefined;
+
       const ok = await updateReturn(
-        params.data.storeId,
-        params.data.returnId,
-        body.data,
+        request.params.storeId,
+        request.params.returnId,
+        { ...rest, credit_amount: creditAmount },
         userId
       );
       if (!ok) return reply.status(404).send(notFound("return not found"));
@@ -171,38 +168,26 @@ export const returnsPlugin: FastifyPluginAsync = async (app) => {
 
   app.get(
     "/commerce/stores/:storeId/returns/:returnId/events",
-    { preHandler: storeAuthAdmin },
+    { preHandler: storeAuthAdmin, schema: { params: ReturnParams } },
     async (request, reply) => {
-      const params = z.object({ storeId: UUID, returnId: UUID }).safeParse(request.params);
-      if (!params.success) return reply.status(400).send(badRequest("invalid params"));
-      const events = await listReturnEvents(params.data.storeId, params.data.returnId);
+      const events = await listReturnEvents(request.params.storeId, request.params.returnId);
       return reply.send({ events });
     }
   );
 
   app.post(
     "/commerce/stores/:storeId/returns/:returnId/events",
-    { preHandler: storeAuthAdmin },
+    { preHandler: storeAuthAdmin, schema: { params: ReturnParams, body: AddReturnEventBody } },
     async (request, reply) => {
-      const params = z.object({ storeId: UUID, returnId: UUID }).safeParse(request.params);
-      if (!params.success) return reply.status(400).send(badRequest("invalid params"));
-      const body = z
-        .object({
-          type: z.string().optional(),
-          data: z.record(z.string(), z.unknown()).optional(),
-        })
-        .safeParse(request.body);
-      if (!body.success) return reply.status(400).send(badRequest("validation failed"));
-
       const userId =
         (request as { auth?: { userId?: string } }).auth?.userId ??
         "00000000-0000-0000-0000-000000000000";
 
       try {
         const id = await addReturnEvent(
-          params.data.storeId,
-          params.data.returnId,
-          { type: body.data.type, data: body.data.data },
+          request.params.storeId,
+          request.params.returnId,
+          { type: request.body.type, data: request.body.data },
           userId
         );
         return reply.status(201).send({ id });

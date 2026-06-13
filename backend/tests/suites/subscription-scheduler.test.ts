@@ -99,7 +99,7 @@ async function createDueSubscription(opts: {
     body: {
       customer_id: customerId,
       plan_id: planId,
-      items: [{ variant_id: variantId, quantity: 1, price: 19.99 }],
+      items: [{ variant_id: variantId, quantity: 1, price: "19.99" }],
     },
   });
   expect(res.status).toBe(201);

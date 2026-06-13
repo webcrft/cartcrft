@@ -21,7 +21,7 @@
  *   GET    /audit-log                       — all audit events for store
  */
 
-import type { FastifyPluginAsync } from "fastify";
+import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { z } from "zod";
 import { storeAuthAdmin } from "../../lib/auth/middleware.js";
 import {
@@ -35,7 +35,6 @@ import {
   verifyMandate,
   revokeMandate,
   listAuditLog,
-  insertAuditLog,
 } from "./service.js";
 
 // ── Zod schemas ───────────────────────────────────────────────────────────────
@@ -124,22 +123,16 @@ const RevokeBody = z.object({
 
 // ── Plugin ────────────────────────────────────────────────────────────────────
 
-export const agentsPlugin: FastifyPluginAsync = async (app) => {
+export const agentsPlugin: FastifyPluginAsyncZod = async (app) => {
 
   // ── POST /commerce/stores/:storeId/agents — create agent ─────────────────
   app.post(
     "/commerce/stores/:storeId/agents",
-    { preHandler: [storeAuthAdmin] },
+    { preHandler: [storeAuthAdmin], schema: { params: StoreParams, body: CreateAgentBody } },
     async (request, reply) => {
       const storeId = request.auth!.storeId;
-      const parsed = CreateAgentBody.safeParse(request.body);
-      if (!parsed.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Request validation failed", details: parsed.error.issues },
-        });
-      }
       try {
-        const agent = await createAgent(storeId, parsed.data as import("./types.js").CreateAgentInput);
+        const agent = await createAgent(storeId, request.body as import("./types.js").CreateAgentInput);
         // private_key_pem is included in the response only on creation
         return reply.status(201).send({ agent });
       } catch (err: unknown) {
@@ -155,13 +148,12 @@ export const agentsPlugin: FastifyPluginAsync = async (app) => {
   // ── GET /commerce/stores/:storeId/agents — list agents ───────────────────
   app.get(
     "/commerce/stores/:storeId/agents",
-    { preHandler: [storeAuthAdmin] },
+    { preHandler: [storeAuthAdmin], schema: { params: StoreParams, querystring: ListQuerystring } },
     async (request, reply) => {
       const storeId = request.auth!.storeId;
-      const q = ListQuerystring.safeParse(request.query);
       const listOpts: { limit?: number; offset?: number } = {};
-      if (q.success && q.data.limit !== undefined) listOpts.limit = q.data.limit;
-      if (q.success && q.data.offset !== undefined) listOpts.offset = q.data.offset;
+      if (request.query.limit !== undefined) listOpts.limit = request.query.limit;
+      if (request.query.offset !== undefined) listOpts.offset = request.query.offset;
       const agents = await listAgents(storeId, listOpts);
       return reply.send({ agents });
     }
@@ -170,14 +162,10 @@ export const agentsPlugin: FastifyPluginAsync = async (app) => {
   // ── GET /commerce/stores/:storeId/agents/:agentId — get agent ────────────
   app.get(
     "/commerce/stores/:storeId/agents/:agentId",
-    { preHandler: [storeAuthAdmin] },
+    { preHandler: [storeAuthAdmin], schema: { params: StoreAgentParams } },
     async (request, reply) => {
       const storeId = request.auth!.storeId;
-      const params = StoreAgentParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({ error: { code: "VALIDATION_ERROR", message: "Invalid params" } });
-      }
-      const agent = await getAgent(storeId, params.data.agentId);
+      const agent = await getAgent(storeId, request.params.agentId);
       if (!agent) {
         return reply.status(404).send({ error: { code: "NOT_FOUND", message: "agent not found" } });
       }
@@ -188,20 +176,10 @@ export const agentsPlugin: FastifyPluginAsync = async (app) => {
   // ── PUT /commerce/stores/:storeId/agents/:agentId — update agent ─────────
   app.put(
     "/commerce/stores/:storeId/agents/:agentId",
-    { preHandler: [storeAuthAdmin] },
+    { preHandler: [storeAuthAdmin], schema: { params: StoreAgentParams, body: UpdateAgentBody } },
     async (request, reply) => {
       const storeId = request.auth!.storeId;
-      const params = StoreAgentParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({ error: { code: "VALIDATION_ERROR", message: "Invalid params" } });
-      }
-      const parsed = UpdateAgentBody.safeParse(request.body);
-      if (!parsed.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Request validation failed", details: parsed.error.issues },
-        });
-      }
-      const updated = await updateAgent(storeId, params.data.agentId, parsed.data as import("./types.js").UpdateAgentInput);
+      const updated = await updateAgent(storeId, request.params.agentId, request.body as import("./types.js").UpdateAgentInput);
       if (!updated) {
         return reply.status(404).send({ error: { code: "NOT_FOUND", message: "agent not found" } });
       }
@@ -212,14 +190,10 @@ export const agentsPlugin: FastifyPluginAsync = async (app) => {
   // ── DELETE /commerce/stores/:storeId/agents/:agentId — revoke agent ──────
   app.delete(
     "/commerce/stores/:storeId/agents/:agentId",
-    { preHandler: [storeAuthAdmin] },
+    { preHandler: [storeAuthAdmin], schema: { params: StoreAgentParams } },
     async (request, reply) => {
       const storeId = request.auth!.storeId;
-      const params = StoreAgentParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({ error: { code: "VALIDATION_ERROR", message: "Invalid params" } });
-      }
-      const revoked = await revokeAgent(storeId, params.data.agentId);
+      const revoked = await revokeAgent(storeId, request.params.agentId);
       if (!revoked) {
         return reply.status(404).send({ error: { code: "NOT_FOUND", message: "agent not found" } });
       }
@@ -230,20 +204,15 @@ export const agentsPlugin: FastifyPluginAsync = async (app) => {
   // ── GET /commerce/stores/:storeId/agents/:agentId/audit-log ──────────────
   app.get(
     "/commerce/stores/:storeId/agents/:agentId/audit-log",
-    { preHandler: [storeAuthAdmin] },
+    { preHandler: [storeAuthAdmin], schema: { params: StoreAgentParams, querystring: ListQuerystring } },
     async (request, reply) => {
       const storeId = request.auth!.storeId;
-      const params = StoreAgentParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({ error: { code: "VALIDATION_ERROR", message: "Invalid params" } });
-      }
-      const q = ListQuerystring.safeParse(request.query);
       const auditOpts: { agentId?: string; limit?: number; offset?: number; status?: string } = {
-        agentId: params.data.agentId,
+        agentId: request.params.agentId,
       };
-      if (q.success && q.data.limit !== undefined) auditOpts.limit = q.data.limit;
-      if (q.success && q.data.offset !== undefined) auditOpts.offset = q.data.offset;
-      if (q.success && q.data.status !== undefined) auditOpts.status = q.data.status;
+      if (request.query.limit !== undefined) auditOpts.limit = request.query.limit;
+      if (request.query.offset !== undefined) auditOpts.offset = request.query.offset;
+      if (request.query.status !== undefined) auditOpts.status = request.query.status;
       const logs = await listAuditLog(storeId, auditOpts);
       return reply.send({ audit_log: logs });
     }
@@ -252,24 +221,14 @@ export const agentsPlugin: FastifyPluginAsync = async (app) => {
   // ── POST /commerce/stores/:storeId/agents/:agentId/mandates — create ──────
   app.post(
     "/commerce/stores/:storeId/agents/:agentId/mandates",
-    { preHandler: [storeAuthAdmin] },
+    { preHandler: [storeAuthAdmin], schema: { params: StoreAgentParams, body: CreateMandateBody } },
     async (request, reply) => {
       const storeId = request.auth!.storeId;
-      const params = StoreAgentParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({ error: { code: "VALIDATION_ERROR", message: "Invalid params" } });
-      }
-      const parsed = CreateMandateBody.safeParse(request.body);
-      if (!parsed.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Request validation failed", details: parsed.error.issues },
-        });
-      }
       try {
         const mandate = await createMandate(storeId, {
-          agent_id: params.data.agentId,
-          ...parsed.data,
-          payload: parsed.data.payload as import("./types.js").MandatePayload,
+          agent_id: request.params.agentId,
+          ...request.body,
+          payload: request.body.payload as import("./types.js").MandatePayload,
         } as import("./types.js").CreateMandateInput);
         return reply.status(201).send({ mandate });
       } catch (err: unknown) {
@@ -294,20 +253,15 @@ export const agentsPlugin: FastifyPluginAsync = async (app) => {
   // ── GET /commerce/stores/:storeId/agents/:agentId/mandates — list ─────────
   app.get(
     "/commerce/stores/:storeId/agents/:agentId/mandates",
-    { preHandler: [storeAuthAdmin] },
+    { preHandler: [storeAuthAdmin], schema: { params: StoreAgentParams, querystring: ListQuerystring } },
     async (request, reply) => {
       const storeId = request.auth!.storeId;
-      const params = StoreAgentParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({ error: { code: "VALIDATION_ERROR", message: "Invalid params" } });
-      }
-      const q = ListQuerystring.safeParse(request.query);
       const mandOpts: { limit?: number; offset?: number; type?: string; active?: boolean } = {};
-      if (q.success && q.data.limit !== undefined) mandOpts.limit = q.data.limit;
-      if (q.success && q.data.offset !== undefined) mandOpts.offset = q.data.offset;
-      if (q.success && q.data.type !== undefined) mandOpts.type = q.data.type;
-      if (q.success && q.data.active !== undefined) mandOpts.active = q.data.active;
-      const mandates = await listMandates(storeId, params.data.agentId, mandOpts);
+      if (request.query.limit !== undefined) mandOpts.limit = request.query.limit;
+      if (request.query.offset !== undefined) mandOpts.offset = request.query.offset;
+      if (request.query.type !== undefined) mandOpts.type = request.query.type;
+      if (request.query.active !== undefined) mandOpts.active = request.query.active;
+      const mandates = await listMandates(storeId, request.params.agentId, mandOpts);
       return reply.send({ mandates });
     }
   );
@@ -315,14 +269,10 @@ export const agentsPlugin: FastifyPluginAsync = async (app) => {
   // ── GET /commerce/stores/:storeId/agents/:agentId/mandates/:mandateId/verify
   app.get(
     "/commerce/stores/:storeId/agents/:agentId/mandates/:mandateId/verify",
-    { preHandler: [storeAuthAdmin] },
+    { preHandler: [storeAuthAdmin], schema: { params: MandateParams } },
     async (request, reply) => {
       const storeId = request.auth!.storeId;
-      const params = MandateParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({ error: { code: "VALIDATION_ERROR", message: "Invalid params" } });
-      }
-      const result = await verifyMandate(storeId, params.data.mandateId);
+      const result = await verifyMandate(storeId, request.params.mandateId);
       const status = result.valid ? 200 : 422;
       return reply.status(status).send(result);
     }
@@ -331,18 +281,15 @@ export const agentsPlugin: FastifyPluginAsync = async (app) => {
   // ── DELETE /commerce/stores/:storeId/agents/:agentId/mandates/:mandateId
   app.delete(
     "/commerce/stores/:storeId/agents/:agentId/mandates/:mandateId",
-    { preHandler: [storeAuthAdmin] },
+    // Body is optional (reason only); thin safeParse to handle missing body gracefully
+    { preHandler: [storeAuthAdmin], schema: { params: MandateParams } },
     async (request, reply) => {
       const storeId = request.auth!.storeId;
-      const params = MandateParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({ error: { code: "VALIDATION_ERROR", message: "Invalid params" } });
-      }
-      const parsed = RevokeBody.safeParse(request.body);
+      const body = RevokeBody.safeParse(request.body ?? {});
       const revoked = await revokeMandate(
         storeId,
-        params.data.mandateId,
-        parsed.success ? parsed.data.reason : undefined
+        request.params.mandateId,
+        body.success ? body.data.reason : undefined
       );
       if (!revoked) {
         return reply.status(404).send({ error: { code: "NOT_FOUND", message: "mandate not found" } });
@@ -354,15 +301,14 @@ export const agentsPlugin: FastifyPluginAsync = async (app) => {
   // ── GET /commerce/stores/:storeId/agents/audit-log — store-level agent audit log ─
   app.get(
     "/commerce/stores/:storeId/agents/audit-log",
-    { preHandler: [storeAuthAdmin] },
+    { preHandler: [storeAuthAdmin], schema: { params: StoreParams, querystring: ListQuerystring } },
     async (request, reply) => {
       const storeId = request.auth!.storeId;
-      const q = ListQuerystring.safeParse(request.query);
       const storeAuditOpts: { agentId?: string; limit?: number; offset?: number; status?: string } = {};
-      if (q.success && q.data.agent_id !== undefined) storeAuditOpts.agentId = q.data.agent_id;
-      if (q.success && q.data.limit !== undefined) storeAuditOpts.limit = q.data.limit;
-      if (q.success && q.data.offset !== undefined) storeAuditOpts.offset = q.data.offset;
-      if (q.success && q.data.status !== undefined) storeAuditOpts.status = q.data.status;
+      if (request.query.agent_id !== undefined) storeAuditOpts.agentId = request.query.agent_id;
+      if (request.query.limit !== undefined) storeAuditOpts.limit = request.query.limit;
+      if (request.query.offset !== undefined) storeAuditOpts.offset = request.query.offset;
+      if (request.query.status !== undefined) storeAuditOpts.status = request.query.status;
       const logs = await listAuditLog(storeId, storeAuditOpts);
       return reply.send({ audit_log: logs });
     }

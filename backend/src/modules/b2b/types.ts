@@ -128,7 +128,8 @@ export interface CreateQuoteInput {
     variant_id?: string | null | undefined;
     title?: string | null | undefined;
     quantity?: number | undefined;
-    price: number;
+    /** H3.2: decimal string e.g. "10.50" — PostgreSQL numeric accepts string input */
+    price: string;
     notes?: string | null | undefined;
   }> | undefined;
 }

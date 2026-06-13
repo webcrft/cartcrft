@@ -13,7 +13,7 @@
  *   GET  /storefront/:storeId/pixels             none (public)
  */
 
-import type { FastifyPluginAsync } from "fastify";
+import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { z } from "zod";
 import {
   requireJwt,
@@ -77,15 +77,14 @@ const UpsertPixelBody = z.object({
 
 // ── Plugin ─────────────────────────────────────────────────────────────────────
 
-export const integrationsPlugin: FastifyPluginAsync = async (app) => {
+export const integrationsPlugin: FastifyPluginAsyncZod = async (app) => {
 
   // ── GET /commerce/integration-definitions ────────────────────────────────
   app.get(
     "/commerce/integration-definitions",
-    { preHandler: [requireJwt] },
+    { preHandler: [requireJwt], schema: { querystring: IntegrationDefsQuery } },
     async (request, reply) => {
-      const q = IntegrationDefsQuery.safeParse(request.query);
-      const category = q.success ? q.data.category : undefined;
+      const category = request.query.category;
       const integrations = await listIntegrationDefinitions(category);
       return reply.send({ integrations });
     }
@@ -94,13 +93,9 @@ export const integrationsPlugin: FastifyPluginAsync = async (app) => {
   // ── GET /commerce/stores/:storeId/integrations ───────────────────────────
   app.get(
     "/commerce/stores/:storeId/integrations",
-    { preHandler: [storeAuthAdmin] },
+    { preHandler: [storeAuthAdmin], schema: { params: StoreIdParams } },
     async (request, reply) => {
-      const params = StoreIdParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({ error: { code: "VALIDATION_ERROR", message: "Invalid storeId" } });
-      }
-      const integrations = await listStoreIntegrations(params.data.storeId);
+      const integrations = await listStoreIntegrations(request.params.storeId);
       return reply.send({ integrations });
     }
   );
@@ -108,20 +103,10 @@ export const integrationsPlugin: FastifyPluginAsync = async (app) => {
   // ── POST /commerce/stores/:storeId/integrations ──────────────────────────
   app.post(
     "/commerce/stores/:storeId/integrations",
-    { preHandler: [storeAuthAdmin] },
+    { preHandler: [storeAuthAdmin], schema: { params: StoreIdParams, body: UpsertIntegrationBody } },
     async (request, reply) => {
-      const params = StoreIdParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({ error: { code: "VALIDATION_ERROR", message: "Invalid storeId" } });
-      }
-      const parsed = UpsertIntegrationBody.safeParse(request.body);
-      if (!parsed.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Request validation failed", details: parsed.error.issues },
-        });
-      }
       try {
-        const result = await upsertStoreIntegration(params.data.storeId, parsed.data);
+        const result = await upsertStoreIntegration(request.params.storeId, request.body);
         return reply.status(201).send(result);
       } catch (err) {
         if (err instanceof Error) {
@@ -145,13 +130,9 @@ export const integrationsPlugin: FastifyPluginAsync = async (app) => {
   // ── DELETE /commerce/stores/:storeId/integrations/:integrationId ─────────
   app.delete(
     "/commerce/stores/:storeId/integrations/:integrationId",
-    { preHandler: [storeAuthAdmin] },
+    { preHandler: [storeAuthAdmin], schema: { params: IntegrationIdParams } },
     async (request, reply) => {
-      const params = IntegrationIdParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({ error: { code: "VALIDATION_ERROR", message: "Invalid params" } });
-      }
-      await deleteStoreIntegration(params.data.integrationId, params.data.storeId);
+      await deleteStoreIntegration(request.params.integrationId, request.params.storeId);
       return reply.send({ ok: true });
     }
   );
@@ -159,13 +140,9 @@ export const integrationsPlugin: FastifyPluginAsync = async (app) => {
   // ── GET /commerce/stores/:storeId/tracking-pixels ────────────────────────
   app.get(
     "/commerce/stores/:storeId/tracking-pixels",
-    { preHandler: [storeAuthAdmin] },
+    { preHandler: [storeAuthAdmin], schema: { params: StoreIdParams } },
     async (request, reply) => {
-      const params = StoreIdParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({ error: { code: "VALIDATION_ERROR", message: "Invalid storeId" } });
-      }
-      const pixels = await listTrackingPixels(params.data.storeId);
+      const pixels = await listTrackingPixels(request.params.storeId);
       return reply.send({ pixels });
     }
   );
@@ -173,20 +150,10 @@ export const integrationsPlugin: FastifyPluginAsync = async (app) => {
   // ── POST /commerce/stores/:storeId/tracking-pixels ───────────────────────
   app.post(
     "/commerce/stores/:storeId/tracking-pixels",
-    { preHandler: [storeAuthAdmin] },
+    { preHandler: [storeAuthAdmin], schema: { params: StoreIdParams, body: UpsertPixelBody } },
     async (request, reply) => {
-      const params = StoreIdParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({ error: { code: "VALIDATION_ERROR", message: "Invalid storeId" } });
-      }
-      const parsed = UpsertPixelBody.safeParse(request.body);
-      if (!parsed.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Request validation failed", details: parsed.error.issues },
-        });
-      }
       try {
-        const id = await upsertTrackingPixel(params.data.storeId, parsed.data);
+        const id = await upsertTrackingPixel(request.params.storeId, request.body);
         return reply.status(201).send({ id });
       } catch (err) {
         if (err instanceof Error && (err as NodeJS.ErrnoException).code === "VALIDATION_ERROR") {
@@ -200,24 +167,20 @@ export const integrationsPlugin: FastifyPluginAsync = async (app) => {
   // ── DELETE /commerce/stores/:storeId/tracking-pixels/:pixelId ────────────
   app.delete(
     "/commerce/stores/:storeId/tracking-pixels/:pixelId",
-    { preHandler: [storeAuthAdmin] },
+    { preHandler: [storeAuthAdmin], schema: { params: PixelIdParams } },
     async (request, reply) => {
-      const params = PixelIdParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({ error: { code: "VALIDATION_ERROR", message: "Invalid params" } });
-      }
-      await deleteTrackingPixel(params.data.pixelId, params.data.storeId);
+      await deleteTrackingPixel(request.params.pixelId, request.params.storeId);
       return reply.send({ ok: true });
     }
   );
 
   // ── GET /storefront/:storeId/pixels (public) ─────────────────────────────
-  app.get("/storefront/:storeId/pixels", async (request, reply) => {
-    const params = StoreIdParams.safeParse(request.params);
-    if (!params.success) {
-      return reply.status(400).send({ error: { code: "VALIDATION_ERROR", message: "Invalid storeId" } });
+  app.get(
+    "/storefront/:storeId/pixels",
+    { schema: { params: StoreIdParams } },
+    async (request, reply) => {
+      const pixels = await getPublicPixels(request.params.storeId);
+      return reply.send({ pixels });
     }
-    const pixels = await getPublicPixels(params.data.storeId);
-    return reply.send({ pixels });
-  });
+  );
 };

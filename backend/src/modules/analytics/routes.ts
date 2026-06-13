@@ -17,7 +17,7 @@
  * — Cartcrft has no sites table).
  */
 
-import type { FastifyPluginAsync } from "fastify";
+import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { z } from "zod";
 import { requireJwt } from "../../lib/auth/middleware.js";
 import { getPool } from "../../db/pool.js";
@@ -57,20 +57,14 @@ const AnalyticsQuerystring = z.object({
 
 // ── Plugin ─────────────────────────────────────────────────────────────────────
 
-export const analyticsPlugin: FastifyPluginAsync = async (app) => {
+export const analyticsPlugin: FastifyPluginAsyncZod = async (app) => {
 
   // ── GET /analytics/ecommerce/overview ─────────────────────────────────────
   app.get(
     "/analytics/ecommerce/overview",
-    { preHandler: [requireJwt] },
+    { preHandler: [requireJwt], schema: { querystring: AnalyticsQuerystring } },
     async (request, reply) => {
-      const q = AnalyticsQuerystring.safeParse(request.query);
-      if (!q.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "store_id is required", details: q.error.issues },
-        });
-      }
-      const { store_id, start, end } = q.data;
+      const { store_id, start, end } = request.query;
       const { start: startDate, end: endDate } = parseDateRange(start, end);
 
       // Verify the store belongs to the JWT's org
@@ -136,15 +130,9 @@ export const analyticsPlugin: FastifyPluginAsync = async (app) => {
   // ── GET /analytics/ecommerce/products ────────────────────────────────────
   app.get(
     "/analytics/ecommerce/products",
-    { preHandler: [requireJwt] },
+    { preHandler: [requireJwt], schema: { querystring: AnalyticsQuerystring } },
     async (request, reply) => {
-      const q = AnalyticsQuerystring.safeParse(request.query);
-      if (!q.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "store_id is required", details: q.error.issues },
-        });
-      }
-      const { store_id, start, end } = q.data;
+      const { store_id, start, end } = request.query;
       const { start: startDate, end: endDate } = parseDateRange(start, end);
 
       const { orgId } = request.auth!;
@@ -206,15 +194,9 @@ export const analyticsPlugin: FastifyPluginAsync = async (app) => {
   // ── GET /analytics/ecommerce/funnel ───────────────────────────────────────
   app.get(
     "/analytics/ecommerce/funnel",
-    { preHandler: [requireJwt] },
+    { preHandler: [requireJwt], schema: { querystring: AnalyticsQuerystring } },
     async (request, reply) => {
-      const q = AnalyticsQuerystring.safeParse(request.query);
-      if (!q.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "store_id is required", details: q.error.issues },
-        });
-      }
-      const { store_id, start, end } = q.data;
+      const { store_id, start, end } = request.query;
       const { start: startDate, end: endDate } = parseDateRange(start, end);
 
       const { orgId } = request.auth!;
@@ -281,15 +263,9 @@ export const analyticsPlugin: FastifyPluginAsync = async (app) => {
   // ── GET /analytics/ecommerce/revenue ──────────────────────────────────────
   app.get(
     "/analytics/ecommerce/revenue",
-    { preHandler: [requireJwt] },
+    { preHandler: [requireJwt], schema: { querystring: AnalyticsQuerystring } },
     async (request, reply) => {
-      const q = AnalyticsQuerystring.safeParse(request.query);
-      if (!q.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "store_id is required", details: q.error.issues },
-        });
-      }
-      const { store_id, start, end } = q.data;
+      const { store_id, start, end } = request.query;
       const { start: startDate, end: endDate } = parseDateRange(start, end);
 
       const { orgId } = request.auth!;

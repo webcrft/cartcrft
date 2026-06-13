@@ -152,7 +152,7 @@ describe("subscription lifecycle", () => {
       body: {
         customer_id: customerId,
         plan_id: planId,
-        items: [{ variant_id: variant.id, quantity: 1, price: 29.99 }],
+        items: [{ variant_id: variant.id, quantity: 1, price: "29.99" }],
       },
     });
     expect(res.status).toBe(201);
