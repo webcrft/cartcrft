@@ -7,6 +7,7 @@
 
 import type pg from "pg";
 import { getPool, withTx } from "../../db/pool.js";
+import { encodeSecretValue } from "../../lib/secrets.js";
 import type {
   StorePublic,
   CreateStoreInput,
@@ -132,10 +133,14 @@ export async function createStore(
   const metadata = input.metadata ?? {};
 
   // Generate a per-store JWT secret (random 32-byte hex).
-  // In a later task (T2.8) this gets AES-256-GCM encrypted.
-  // For now it's stored as plaintext (AUTH_SECRETS_KEY encryption handled in T2.4).
+  // Encrypt with AUTH_SECRETS_KEY (AES-256-GCM) so the decode path in
+  // customer-auth/service.ts (decodeSecretValue) round-trips correctly in
+  // production.  When AUTH_SECRETS_KEY is unset (local dev), encodeSecretValue
+  // passes the value through as plaintext — matching the decode passthrough.
   const { randomBytes } = await import("node:crypto");
   const jwtSecret = randomBytes(32).toString("hex");
+  const secretsKey = process.env["AUTH_SECRETS_KEY"] ?? "";
+  const encodedJwtSecret = encodeSecretValue(jwtSecret, secretsKey) ?? jwtSecret;
 
   try {
     const { rows } = await pool.query<{ id: string }>(
@@ -158,7 +163,7 @@ export async function createStore(
         weightUnit,
         enableConversion,
         JSON.stringify(metadata),
-        jwtSecret,
+        encodedJwtSecret,
       ]
     );
     const row = rows[0];
