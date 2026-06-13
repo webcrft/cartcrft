@@ -13,7 +13,10 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    limit?: number;
+                    offset?: number;
+                };
                 header?: never;
                 path?: never;
                 cookie?: never;
@@ -37,7 +40,25 @@ export interface paths {
                 path?: never;
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name: string;
+                        slug?: string;
+                        currency?: string;
+                        timezone?: string;
+                        country_code?: string;
+                        email?: string | "";
+                        phone?: string;
+                        /** @enum {string} */
+                        weight_unit?: "g" | "kg" | "lb" | "oz";
+                        enable_currency_conversion?: boolean;
+                        metadata?: {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -90,7 +111,28 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name?: string;
+                        slug?: string;
+                        currency?: string;
+                        timezone?: string;
+                        country_code?: string;
+                        email?: string | "";
+                        phone?: string;
+                        /** @enum {string} */
+                        weight_unit?: "g" | "kg" | "lb" | "oz";
+                        is_active?: boolean;
+                        enable_currency_conversion?: boolean;
+                        domain?: string;
+                        metadata?: {
+                            [key: string]: unknown;
+                        };
+                        agents_require_mandate?: boolean;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -145,7 +187,13 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        reason: string;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -230,7 +278,18 @@ export interface paths {
                 path?: never;
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name: string;
+                        /** @enum {string} */
+                        key_type?: "public" | "private";
+                        scopes?: string[];
+                        store_id?: string | null;
+                        expires_at?: string | null;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -310,7 +369,13 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    status?: string;
+                    financial_status?: string;
+                    fulfillment_status?: string;
+                    limit?: number;
+                    offset?: number;
+                };
                 header?: never;
                 path: {
                     storeId: string;
@@ -338,7 +403,37 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        currency?: string;
+                        /** Format: uuid */
+                        customer_id?: string;
+                        shipping_address?: {
+                            [key: string]: unknown;
+                        };
+                        billing_address?: {
+                            [key: string]: unknown;
+                        };
+                        po_number?: string;
+                        payment_terms_days?: number;
+                        source_name?: string;
+                        notes?: string;
+                        shipping_total?: string;
+                        tax_total?: string;
+                        discount_total?: string;
+                        /** @enum {string} */
+                        mode?: "live" | "dev";
+                        lines: {
+                            /** Format: uuid */
+                            variant_id?: string;
+                            title?: string;
+                            sku?: string;
+                            quantity?: number;
+                        }[];
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -393,7 +488,17 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        notes?: string;
+                        tags?: string[];
+                        status?: unknown;
+                        financial_status?: unknown;
+                        fulfillment_status?: unknown;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -430,7 +535,13 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        reason?: string;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -466,7 +577,13 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        note: string;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -558,7 +675,22 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        amount: string;
+                        currency?: string;
+                        /** Format: uuid */
+                        provider_id?: string;
+                        provider_reference?: string;
+                        /** @enum {string} */
+                        mode?: "live" | "dev";
+                        metadata?: {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -632,7 +764,18 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        amount: string;
+                        /** @enum {string} */
+                        reason?: "customer_request" | "defective" | "not_received" | "other";
+                        notes?: string;
+                        restock?: boolean;
+                        provider_reference?: string;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -686,7 +829,21 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        slug: string;
+                        name?: string;
+                        /** @enum {string} */
+                        type?: "webhook" | "stripe" | "paystack" | "razorpay" | "xendit";
+                        config: {
+                            [key: string]: unknown;
+                        };
+                        is_active?: boolean;
+                        webhook_secret?: string;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -772,7 +929,20 @@ export interface paths {
                 path?: never;
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name: string;
+                        /** @enum {string} */
+                        type: "paystack" | "stripe" | "razorpay" | "xendit" | "flutterwave";
+                        secret_key_enc: string;
+                        public_key_enc?: string;
+                        webhook_secret_enc?: string;
+                        webhook_secret_secondary_enc?: string;
+                        is_active?: boolean;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -806,7 +976,14 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        dev_secret_key_enc: string;
+                        dev_public_key_enc?: string;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -875,7 +1052,18 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        currency?: string;
+                        /** Format: uuid */
+                        customer_id?: string;
+                        metadata?: {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -947,7 +1135,18 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        variant_id: string;
+                        quantity: number;
+                        metadata?: {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -1009,7 +1208,13 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        quantity: number;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -1031,7 +1236,10 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    limit?: number;
+                    offset?: number;
+                };
                 header?: never;
                 path: {
                     storeId: string;
@@ -1059,7 +1267,14 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        cart_id: string;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -1094,7 +1309,53 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        cart_id: string;
+                        /** Format: uuid */
+                        customer_id?: string;
+                        /** Format: uuid */
+                        company_id?: string;
+                        /** Format: email */
+                        email?: string;
+                        shipping_address?: {
+                            name?: string;
+                            phone?: string;
+                            email?: string;
+                            address1?: string;
+                            address2?: string;
+                            city?: string;
+                            province_code?: string;
+                            zip?: string;
+                            country_code?: string;
+                        } & {
+                            [key: string]: unknown;
+                        };
+                        billing_address?: {
+                            name?: string;
+                            phone?: string;
+                            email?: string;
+                            address1?: string;
+                            address2?: string;
+                            city?: string;
+                            province_code?: string;
+                            zip?: string;
+                            country_code?: string;
+                        } & {
+                            [key: string]: unknown;
+                        };
+                        shipping_rate?: {
+                            /** Format: uuid */
+                            id?: string;
+                        } & {
+                            [key: string]: unknown;
+                        };
+                        discount_code?: string;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -1149,7 +1410,47 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: email */
+                        email?: string;
+                        shipping_address?: {
+                            name?: string;
+                            phone?: string;
+                            email?: string;
+                            address1?: string;
+                            address2?: string;
+                            city?: string;
+                            province_code?: string;
+                            zip?: string;
+                            country_code?: string;
+                        } & {
+                            [key: string]: unknown;
+                        };
+                        billing_address?: {
+                            name?: string;
+                            phone?: string;
+                            email?: string;
+                            address1?: string;
+                            address2?: string;
+                            city?: string;
+                            province_code?: string;
+                            zip?: string;
+                            country_code?: string;
+                        } & {
+                            [key: string]: unknown;
+                        };
+                        shipping_rate?: {
+                            /** Format: uuid */
+                            id?: string;
+                        } & {
+                            [key: string]: unknown;
+                        };
+                        discount_code?: string;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -1248,7 +1549,10 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    limit?: number;
+                    offset?: number;
+                };
                 header?: never;
                 path: {
                     storeId: string;
@@ -1276,7 +1580,31 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        code: string;
+                        /** @enum {string} */
+                        type: "percentage" | "fixed_amount" | "free_shipping" | "bogo" | "buy_x_get_y";
+                        value?: string;
+                        min_order_total?: string;
+                        min_qty?: number;
+                        max_discount?: string;
+                        max_uses?: number;
+                        once_per_customer?: boolean;
+                        /** @enum {string} */
+                        applies_to?: "order" | "specific_products" | "specific_collections" | "specific_customers" | "customer_group";
+                        applies_to_ids?: string[];
+                        metadata?: {
+                            [key: string]: unknown;
+                        };
+                        starts_at?: string | null;
+                        ends_at?: string | null;
+                        is_active?: boolean;
+                        created_by?: string | null;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -1302,7 +1630,11 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query: {
+                    code: string;
+                    customer_id?: string;
+                    order_total?: string;
+                };
                 header?: never;
                 path: {
                     storeId: string;
@@ -1366,7 +1698,30 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        code?: string;
+                        /** @enum {string} */
+                        type?: "percentage" | "fixed_amount" | "free_shipping" | "bogo" | "buy_x_get_y";
+                        value?: string | null;
+                        min_order_total?: string | null;
+                        min_qty?: number | null;
+                        max_discount?: string | null;
+                        max_uses?: number | null;
+                        once_per_customer?: boolean;
+                        /** @enum {string} */
+                        applies_to?: "order" | "specific_products" | "specific_collections" | "specific_customers" | "customer_group";
+                        applies_to_ids?: string[];
+                        metadata?: {
+                            [key: string]: unknown;
+                        };
+                        starts_at?: string | null;
+                        ends_at?: string | null;
+                        is_active?: boolean;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -1413,7 +1768,10 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    limit?: number;
+                    offset?: number;
+                };
                 header?: never;
                 path: {
                     storeId: string;
@@ -1441,7 +1799,36 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        title: string;
+                        /** @enum {string} */
+                        type: "percentage" | "fixed_amount" | "free_shipping" | "bogo" | "buy_x_get_y";
+                        value?: string;
+                        min_order_total?: string;
+                        min_qty?: number;
+                        max_discount?: string;
+                        max_uses?: number;
+                        once_per_customer?: boolean;
+                        /** @enum {string} */
+                        applies_to?: "order" | "specific_products" | "specific_collections" | "customer_group";
+                        applies_to_ids?: string[];
+                        /** @enum {string} */
+                        customer_eligibility?: "all" | "specific_customers" | "customer_groups";
+                        eligible_ids?: string[];
+                        allow_stacking?: boolean;
+                        priority?: number;
+                        metadata?: {
+                            [key: string]: unknown;
+                        };
+                        starts_at?: string | null;
+                        ends_at?: string | null;
+                        is_active?: boolean;
+                        created_by?: string | null;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -1496,7 +1883,35 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        title?: string;
+                        /** @enum {string} */
+                        type?: "percentage" | "fixed_amount" | "free_shipping" | "bogo" | "buy_x_get_y";
+                        value?: string | null;
+                        min_order_total?: string | null;
+                        min_qty?: number | null;
+                        max_discount?: string | null;
+                        max_uses?: number | null;
+                        once_per_customer?: boolean;
+                        /** @enum {string} */
+                        applies_to?: "order" | "specific_products" | "specific_collections" | "customer_group";
+                        applies_to_ids?: string[];
+                        /** @enum {string} */
+                        customer_eligibility?: "all" | "specific_customers" | "customer_groups";
+                        eligible_ids?: string[];
+                        allow_stacking?: boolean;
+                        priority?: number;
+                        metadata?: {
+                            [key: string]: unknown;
+                        };
+                        starts_at?: string | null;
+                        ends_at?: string | null;
+                        is_active?: boolean;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -1543,7 +1958,11 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    limit?: number;
+                    offset?: number;
+                    currency?: string;
+                };
                 header?: never;
                 path: {
                     storeId: string;
@@ -1589,7 +2008,18 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        currency: string;
+                        amount: string;
+                        notes?: string;
+                        created_by?: string | null;
+                        expires_at?: string | null;
+                        order_id?: string | null;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -1625,7 +2055,17 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        currency: string;
+                        delta: string;
+                        notes?: string;
+                        created_by?: string | null;
+                        order_id?: string | null;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -1651,7 +2091,11 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    limit?: number;
+                    offset?: number;
+                    currency?: string;
+                };
                 header?: never;
                 path: {
                     storeId: string;
@@ -1687,7 +2131,11 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    limit?: number;
+                    offset?: number;
+                    currency?: string;
+                };
                 header?: never;
                 path: {
                     storeId: string;
@@ -1715,7 +2163,19 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        code: string;
+                        initial_value: string;
+                        currency: string;
+                        issued_to?: string | null;
+                        issued_by_order_id?: string | null;
+                        expires_at?: string | null;
+                        is_active?: boolean;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -1741,7 +2201,9 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query: {
+                    code: string;
+                };
                 header?: never;
                 path: {
                     storeId: string;
@@ -1848,7 +2310,11 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    status?: string;
+                    limit?: number;
+                    offset?: number;
+                };
                 header?: never;
                 path: {
                     storeId: string;
@@ -1876,7 +2342,27 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        title: string;
+                        slug?: string;
+                        description?: string;
+                        /** @enum {string} */
+                        type?: "simple" | "bundle" | "configurable" | "digital" | "service" | "subscription" | "rental";
+                        /** @enum {string} */
+                        status?: "draft" | "active" | "archived";
+                        vendor?: string;
+                        seo_title?: string;
+                        seo_desc?: string;
+                        metadata?: {
+                            [key: string]: unknown;
+                        };
+                        price?: string;
+                        images?: string[];
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -1931,7 +2417,25 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        title?: string;
+                        slug?: string;
+                        description?: string;
+                        /** @enum {string} */
+                        type?: "simple" | "bundle" | "configurable" | "digital" | "service" | "subscription" | "rental";
+                        /** @enum {string} */
+                        status?: "draft" | "active" | "archived";
+                        vendor?: string;
+                        seo_title?: string;
+                        seo_desc?: string;
+                        metadata?: {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -2008,7 +2512,29 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        sku?: string;
+                        barcode?: string;
+                        title?: string;
+                        price: string;
+                        compare_at_price?: string;
+                        cost_price?: string;
+                        weight_g?: number;
+                        requires_shipping?: boolean;
+                        is_taxable?: boolean;
+                        track_inventory?: boolean;
+                        allow_backorder?: boolean;
+                        position?: number;
+                        is_active?: boolean;
+                        metadata?: {
+                            [key: string]: unknown;
+                        };
+                        inventory_quantity?: number;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -2044,7 +2570,28 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        sku?: string;
+                        barcode?: string;
+                        title?: string;
+                        price?: string;
+                        compare_at_price?: string;
+                        cost_price?: string;
+                        weight_g?: number;
+                        requires_shipping?: boolean;
+                        is_taxable?: boolean;
+                        track_inventory?: boolean;
+                        allow_backorder?: boolean;
+                        position?: number;
+                        is_active?: boolean;
+                        metadata?: {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -2122,7 +2669,15 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name: string;
+                        values?: string[];
+                        position?: number;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -2195,7 +2750,20 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: uri */
+                        url: string;
+                        /** @enum {string} */
+                        type?: "image" | "video" | "model_3d";
+                        /** Format: uuid */
+                        variant_id?: string;
+                        alt_text?: string;
+                        position?: number;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -2288,7 +2856,17 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        variant_id: string;
+                        quantity?: number;
+                        is_optional?: boolean;
+                        position?: number;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -2324,7 +2902,15 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        quantity?: number;
+                        is_optional?: boolean;
+                        position?: number;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -2402,7 +2988,22 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name: string;
+                        /** Format: uri */
+                        file_url: string;
+                        /** Format: uuid */
+                        variant_id?: string;
+                        file_size?: number;
+                        mime_type?: string;
+                        version?: string;
+                        download_limit?: number;
+                        is_active?: boolean;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -2465,7 +3066,11 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    status?: string;
+                    limit?: number;
+                    offset?: number;
+                };
                 header?: never;
                 path: {
                     storeId: string;
@@ -2495,7 +3100,23 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        rating: number;
+                        title?: string;
+                        body?: string;
+                        reviewer_name?: string;
+                        /** Format: email */
+                        reviewer_email?: string;
+                        /** Format: uuid */
+                        customer_id?: string;
+                        /** Format: uuid */
+                        order_id?: string;
+                        media_urls?: unknown;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -2530,7 +3151,15 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        status?: "pending" | "approved" | "rejected";
+                        reply?: string;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -2586,7 +3215,13 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        tags: string[];
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -2613,7 +3248,10 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    limit?: number;
+                    offset?: number;
+                };
                 header?: never;
                 path: {
                     storeId: string;
@@ -2641,7 +3279,26 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        title: string;
+                        slug?: string;
+                        description?: string;
+                        /** Format: uuid */
+                        parent_id?: string;
+                        /** Format: uri */
+                        image_url?: string;
+                        seo_title?: string;
+                        seo_desc?: string;
+                        sort_order?: string;
+                        is_active?: boolean;
+                        metadata?: {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -2696,7 +3353,26 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        title?: string;
+                        slug?: string;
+                        description?: string;
+                        /** Format: uuid */
+                        parent_id?: string;
+                        /** Format: uri */
+                        image_url?: string;
+                        seo_title?: string;
+                        seo_desc?: string;
+                        sort_order?: string;
+                        is_active?: boolean;
+                        metadata?: {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -2743,7 +3419,10 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    limit?: number;
+                    offset?: number;
+                };
                 header?: never;
                 path: {
                     storeId: string;
@@ -2773,7 +3452,14 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        product_id: string;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -2866,7 +3552,18 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        field: "title" | "vendor" | "status" | "type" | "tag";
+                        /** @enum {string} */
+                        relation: "equals" | "not_equals" | "contains" | "not_contains" | "starts_with" | "ends_with" | "greater_than" | "less_than";
+                        value: string;
+                        position?: number;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -2929,7 +3626,10 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    limit?: number;
+                    offset?: number;
+                };
                 header?: never;
                 path: {
                     storeId: string;
@@ -2957,7 +3657,20 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name: string;
+                        currency: string;
+                        /** @enum {string} */
+                        type?: "retail" | "wholesale" | "vip" | "staff" | "custom";
+                        is_default?: boolean;
+                        metadata?: {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -3012,7 +3725,20 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name?: string;
+                        currency?: string;
+                        /** @enum {string} */
+                        type?: "retail" | "wholesale" | "vip" | "staff" | "custom";
+                        is_default?: boolean;
+                        metadata?: {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -3059,7 +3785,10 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    limit?: number;
+                    offset?: number;
+                };
                 header?: never;
                 path: {
                     storeId: string;
@@ -3089,7 +3818,17 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        variant_id: string;
+                        price: string;
+                        min_qty?: number;
+                        max_qty?: number;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -3125,7 +3864,15 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        price?: string;
+                        min_qty?: number;
+                        max_qty?: number;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -3173,7 +3920,13 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    owner_resource?: string;
+                    owner_id?: string;
+                    namespace?: string;
+                    limit?: number;
+                    offset?: number;
+                };
                 header?: never;
                 path: {
                     storeId: string;
@@ -3201,7 +3954,20 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        owner_resource: string;
+                        /** Format: uuid */
+                        owner_id: string;
+                        namespace: string;
+                        key: string;
+                        value?: string;
+                        /** @enum {string} */
+                        type?: "string" | "integer" | "boolean" | "json" | "date" | "url";
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -3236,7 +4002,15 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        value?: string;
+                        /** @enum {string} */
+                        type?: "string" | "integer" | "boolean" | "json" | "date" | "url";
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -3283,7 +4057,10 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    limit?: number;
+                    offset?: number;
+                };
                 header?: never;
                 path: {
                     storeId: string;
@@ -3311,7 +4088,21 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name: string;
+                        namespace: string;
+                        key: string;
+                        owner_resource: string;
+                        description?: string;
+                        /** @enum {string} */
+                        type?: "string" | "integer" | "boolean" | "json" | "date" | "url";
+                        validations?: unknown;
+                        is_required?: boolean;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -3346,7 +4137,18 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name?: string;
+                        description?: string;
+                        /** @enum {string} */
+                        type?: "string" | "integer" | "boolean" | "json" | "date" | "url";
+                        validations?: unknown;
+                        is_required?: boolean;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -3397,7 +4199,7 @@ export interface paths {
                 header?: never;
                 path: {
                     storeId: string;
-                    resourceType: string;
+                    resourceType: "product" | "variant" | "option" | "option_value" | "collection";
                     resourceId: string;
                 };
                 cookie?: never;
@@ -3435,13 +4237,21 @@ export interface paths {
                 header?: never;
                 path: {
                     storeId: string;
-                    resourceType: string;
+                    resourceType: "product" | "variant" | "option" | "option_value" | "collection";
                     resourceId: string;
                     locale: string;
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        fields: {
+                            [key: string]: string | null;
+                        };
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -3459,7 +4269,7 @@ export interface paths {
                 header?: never;
                 path: {
                     storeId: string;
-                    resourceType: string;
+                    resourceType: "product" | "variant" | "option" | "option_value" | "collection";
                     resourceId: string;
                     locale: string;
                 };
@@ -3490,7 +4300,11 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    limit?: number;
+                    offset?: number;
+                    q?: string;
+                };
                 header?: never;
                 path: {
                     storeId: string;
@@ -3518,7 +4332,22 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: email */
+                        email: string;
+                        first_name?: string;
+                        last_name?: string;
+                        display_name?: string;
+                        phone?: string;
+                        is_admin?: boolean;
+                        metadata?: {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -3553,7 +4382,14 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: email */
+                        email: string;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -3608,7 +4444,23 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: email */
+                        email?: string;
+                        first_name?: string;
+                        last_name?: string;
+                        display_name?: string;
+                        phone?: string;
+                        is_admin?: boolean;
+                        is_active?: boolean;
+                        metadata?: {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -3665,7 +4517,13 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        reason?: string;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -3737,7 +4595,23 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        first_name?: string;
+                        last_name?: string;
+                        company?: string;
+                        address1?: string;
+                        address2?: string;
+                        city?: string;
+                        province?: string;
+                        zip?: string;
+                        country_code?: string;
+                        phone?: string;
+                        is_default?: boolean;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -3829,7 +4703,13 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        tags: string[];
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -3856,7 +4736,11 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    customer_id?: string;
+                    event?: string;
+                    limit?: number;
+                };
                 header?: never;
                 path: {
                     storeId: string;
@@ -3918,7 +4802,38 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        auth_enabled?: boolean;
+                        auth_email_password_enabled?: boolean;
+                        auth_magic_link_enabled?: boolean;
+                        auth_otp_enabled?: boolean;
+                        auth_google_enabled?: boolean;
+                        auth_google_client_id?: string;
+                        auth_google_client_secret?: string;
+                        auth_microsoft_enabled?: boolean;
+                        auth_ms_client_id?: string;
+                        auth_ms_client_secret?: string;
+                        auth_discord_enabled?: boolean;
+                        auth_discord_client_id?: string;
+                        auth_discord_client_secret?: string;
+                        auth_allow_self_registration?: boolean;
+                        auth_require_email_verification?: boolean;
+                        auth_jwt_secret?: string;
+                        auth_jwt_expiry_mins?: number;
+                        auth_session_duration_days?: number;
+                        auth_max_sessions?: number;
+                        auth_logo_url?: string;
+                        auth_brand_color?: string;
+                        auth_redirect_url?: string;
+                        auth_allowed_origins?: string[];
+                        auth_email_templates?: {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -3989,7 +4904,14 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: email */
+                        email: string;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -4094,7 +5016,17 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: email */
+                        email: string;
+                        password: string;
+                        first_name?: string;
+                        last_name?: string;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -4129,7 +5061,15 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: email */
+                        email: string;
+                        password: string;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -4164,7 +5104,13 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        refresh_token: string;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -4199,7 +5145,13 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        refresh_token?: string;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -4234,7 +5186,13 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        token: string;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -4269,7 +5227,14 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: email */
+                        email: string;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -4304,7 +5269,14 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: email */
+                        email: string;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -4339,7 +5311,14 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        token: string;
+                        password: string;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -4374,7 +5353,14 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: email */
+                        email: string;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -4409,7 +5395,13 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        token: string;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -4444,7 +5436,16 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        token: string;
+                        password: string;
+                        first_name?: string;
+                        last_name?: string;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -4470,7 +5471,9 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    redirect_uri?: string;
+                };
                 header?: never;
                 path: {
                     storeId: string;
@@ -4505,7 +5508,9 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    redirect_uri?: string;
+                };
                 header?: never;
                 path: {
                     storeId: string;
@@ -4540,7 +5545,9 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    redirect_uri?: string;
+                };
                 header?: never;
                 path: {
                     storeId: string;
@@ -4584,7 +5591,14 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        code: string;
+                        state: string;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -4619,7 +5633,14 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        code: string;
+                        state: string;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -4654,7 +5675,14 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        code: string;
+                        state: string;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -4707,7 +5735,16 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        first_name?: string;
+                        last_name?: string;
+                        display_name?: string;
+                        phone?: string;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -4742,7 +5779,14 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        current_password: string;
+                        new_password: string;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -4849,7 +5893,17 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        provider: "google" | "microsoft" | "discord";
+                        /** Format: email */
+                        email: string;
+                        name?: string;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -4903,7 +5957,23 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name: string;
+                        code?: string | null;
+                        is_active?: boolean;
+                        is_default?: boolean;
+                        fulfills_online?: boolean;
+                        address?: {
+                            [key: string]: unknown;
+                        } | null;
+                        metadata?: {
+                            [key: string]: unknown;
+                        } | null;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -4938,7 +6008,23 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name?: string;
+                        code?: string | null;
+                        is_active?: boolean;
+                        is_default?: boolean;
+                        fulfills_online?: boolean;
+                        address?: {
+                            [key: string]: unknown;
+                        } | null;
+                        metadata?: {
+                            [key: string]: unknown;
+                        } | null;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -4985,7 +6071,12 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    variant_id?: string;
+                    warehouse_id?: string;
+                    limit?: number;
+                    offset?: number;
+                };
                 header?: never;
                 path: {
                     storeId: string;
@@ -5029,7 +6120,17 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        variant_id: string;
+                        /** Format: uuid */
+                        warehouse_id: string;
+                        quantity: number;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -5064,7 +6165,20 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        variant_id: string;
+                        /** Format: uuid */
+                        warehouse_id: string;
+                        quantity_delta: number;
+                        /** @enum {string} */
+                        reason: "initial_count" | "recount" | "received" | "sold" | "returned" | "damaged" | "theft" | "correction" | "other";
+                        notes?: string;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -5090,7 +6204,12 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    variant_id?: string;
+                    warehouse_id?: string;
+                    limit?: number;
+                    offset?: number;
+                };
                 header?: never;
                 path: {
                     storeId: string;
@@ -5125,7 +6244,10 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    variant_id?: string;
+                    warehouse_id?: string;
+                };
                 header?: never;
                 path: {
                     storeId: string;
@@ -5153,7 +6275,21 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        variant_id: string;
+                        /** Format: uuid */
+                        warehouse_id: string;
+                        lot_number: string;
+                        quantity: number;
+                        expiry_date?: string | null;
+                        cost_price?: string | null;
+                        received_at?: string | null;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -5188,7 +6324,15 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        expiry_date?: string | null;
+                        quantity?: number;
+                        cost_price?: string | null;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -5235,7 +6379,12 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    variant_id?: string;
+                    status?: string;
+                    limit?: number;
+                    offset?: number;
+                };
                 header?: never;
                 path: {
                     storeId: string;
@@ -5263,7 +6412,17 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        variant_id: string;
+                        /** Format: uuid */
+                        warehouse_id?: string;
+                        serial_numbers: string[];
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -5318,7 +6477,14 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        status?: "available" | "sold" | "reserved" | "damaged" | "returned";
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -5373,7 +6539,21 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name: string;
+                        email?: string | null;
+                        phone?: string | null;
+                        address?: {
+                            [key: string]: unknown;
+                        } | null;
+                        currency?: string | null;
+                        notes?: string | null;
+                        is_active?: boolean;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -5408,7 +6588,21 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name?: string;
+                        email?: string | null;
+                        phone?: string | null;
+                        address?: {
+                            [key: string]: unknown;
+                        } | null;
+                        currency?: string | null;
+                        notes?: string | null;
+                        is_active?: boolean;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -5483,7 +6677,17 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name: string;
+                        regions?: {
+                            country_code: string;
+                            province_code?: string | null;
+                        }[];
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -5518,7 +6722,17 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name?: string;
+                        regions?: {
+                            country_code: string;
+                            province_code?: string | null;
+                        }[];
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -5595,7 +6809,21 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name: string;
+                        price?: string;
+                        min_weight_g?: number | null;
+                        max_weight_g?: number | null;
+                        min_order_total?: string | null;
+                        max_order_total?: string | null;
+                        estimated_days_min?: number | null;
+                        estimated_days_max?: number | null;
+                        is_active?: boolean;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -5631,7 +6859,21 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name?: string;
+                        price?: string;
+                        min_weight_g?: number | null;
+                        max_weight_g?: number | null;
+                        min_order_total?: string | null;
+                        max_order_total?: string | null;
+                        estimated_days_min?: number | null;
+                        estimated_days_max?: number | null;
+                        is_active?: boolean;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -5679,7 +6921,14 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query: {
+                    country_code: string;
+                    province_code?: string;
+                    weight_g?: number;
+                    order_total?: string;
+                    city?: string;
+                    postal_code?: string;
+                };
                 header?: never;
                 path: {
                     storeId: string;
@@ -5742,7 +6991,20 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name: string;
+                        type: string;
+                        webhook_url?: string | null;
+                        config?: {
+                            [key: string]: unknown;
+                        } | null;
+                        is_active?: boolean;
+                        position?: number;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -5832,7 +7094,26 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name: string;
+                        address?: {
+                            [key: string]: unknown;
+                        };
+                        country_code?: string;
+                        provider_id?: string | null;
+                        provider_ref?: string | null;
+                        coordinates?: {
+                            [key: string]: unknown;
+                        } | null;
+                        operating_hours?: {
+                            [key: string]: unknown;
+                        } | null;
+                        is_active?: boolean;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -5867,7 +7148,23 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name?: string | null;
+                        address?: {
+                            [key: string]: unknown;
+                        } | null;
+                        coordinates?: {
+                            [key: string]: unknown;
+                        } | null;
+                        operating_hours?: {
+                            [key: string]: unknown;
+                        } | null;
+                        is_active?: boolean | null;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -5944,7 +7241,32 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        provider_id?: string | null;
+                        warehouse_id?: string | null;
+                        collection_point_id?: string | null;
+                        status?: string;
+                        tracking_number?: string | null;
+                        tracking_url?: string | null;
+                        carrier?: string | null;
+                        service_level?: string | null;
+                        shipped_at?: string | null;
+                        estimated_delivery?: string | null;
+                        metadata?: {
+                            [key: string]: unknown;
+                        } | null;
+                        lines?: {
+                            /** Format: uuid */
+                            order_line_id: string;
+                            quantity: number;
+                            lot_id?: string | null;
+                            serial_id?: string | null;
+                        }[];
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -5980,7 +7302,23 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        status?: string;
+                        tracking_number?: string | null;
+                        tracking_url?: string | null;
+                        carrier?: string | null;
+                        service_level?: string | null;
+                        shipped_at?: string | null;
+                        estimated_delivery?: string | null;
+                        delivered_at?: string | null;
+                        metadata?: {
+                            [key: string]: unknown;
+                        } | null;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -6074,7 +7412,20 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        warehouse_id?: string | null;
+                        status?: string;
+                        notes?: string | null;
+                        lines?: {
+                            /** Format: uuid */
+                            order_line_id: string;
+                            quantity: number;
+                        }[];
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -6109,7 +7460,15 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        status?: string;
+                        notes?: string | null;
+                        warehouse_id?: string | null;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -6146,7 +7505,19 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        status: string;
+                        location?: string | null;
+                        description?: string | null;
+                        occurred_at?: string | null;
+                        raw_data?: {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -6200,7 +7571,14 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name: string;
+                        code: string;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -6290,7 +7668,17 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name: string;
+                        regions?: {
+                            country_code: string;
+                            province_code?: string | null;
+                        }[];
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -6325,7 +7713,17 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name?: string;
+                        regions?: {
+                            country_code: string;
+                            province_code?: string | null;
+                        }[];
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -6402,7 +7800,17 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name: string;
+                        rate_pct: number;
+                        category_id?: string | null;
+                        is_inclusive?: boolean;
+                        is_active?: boolean;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -6438,7 +7846,17 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name?: string | null;
+                        rate_pct?: number | null;
+                        is_inclusive?: boolean | null;
+                        is_active?: boolean | null;
+                        category_id?: string | null;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -6486,7 +7904,11 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    locale?: string;
+                    country_code?: string;
+                    currency?: string;
+                };
                 header?: never;
                 path: {
                     storeId: string;
@@ -6521,7 +7943,11 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    locale?: string;
+                    country_code?: string;
+                    currency?: string;
+                };
                 header?: never;
                 path: {
                     storeId: string;
@@ -6584,7 +8010,25 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        channel?: string;
+                        name?: string;
+                        locale?: string;
+                        country_code?: string;
+                        currency?: string;
+                        format?: string;
+                        include_out_of_stock?: boolean;
+                        generation_interval_minutes?: number;
+                        /** Format: uuid */
+                        store_integration_id?: string;
+                        config?: {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -6619,7 +8063,19 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name?: string;
+                        include_out_of_stock?: boolean;
+                        generation_interval_minutes?: number;
+                        status?: string;
+                        config?: {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -6695,7 +8151,32 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        gtin?: string;
+                        mpn?: string;
+                        brand?: string;
+                        google_product_category?: string;
+                        condition?: string;
+                        age_group?: string;
+                        gender?: string;
+                        size_type?: string;
+                        size_system?: string;
+                        material?: string;
+                        pattern?: string;
+                        multipack?: number;
+                        is_bundle?: boolean;
+                        custom_label_0?: string;
+                        custom_label_1?: string;
+                        custom_label_2?: string;
+                        custom_label_3?: string;
+                        custom_label_4?: string;
+                        image_url?: string;
+                        ads_redirect?: string;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -6722,7 +8203,9 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    category?: string;
+                };
                 header?: never;
                 path?: never;
                 cookie?: never;
@@ -6783,7 +8266,26 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        integration_slug: string;
+                        name: string;
+                        api_key?: string;
+                        api_secret?: string;
+                        access_token?: string;
+                        refresh_token?: string;
+                        webhook_secret?: string;
+                        oauth_account_id?: string;
+                        oauth_account_name?: string;
+                        config?: {
+                            [key: string]: unknown;
+                        };
+                        status?: string;
+                        scopes?: string[];
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -6873,7 +8375,25 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        pixel_type: string;
+                        name?: string;
+                        tracking_id: string;
+                        api_secret?: string;
+                        access_token?: string;
+                        fire_on?: string;
+                        url_pattern?: string;
+                        event_mapping?: {
+                            [key: string]: unknown;
+                        };
+                        script_content?: string;
+                        inject_location?: string;
+                        is_active?: boolean;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -6998,7 +8518,21 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name: string;
+                        /** Format: uri */
+                        webhook_url: string;
+                        events: string[];
+                        webhook_secret?: string;
+                        config?: {
+                            [key: string]: unknown;
+                        };
+                        type?: string;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -7033,7 +8567,21 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name?: string;
+                        /** Format: uri */
+                        webhook_url?: string;
+                        is_active?: boolean;
+                        events?: string[];
+                        webhook_secret?: string;
+                        config?: {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -7066,41 +8614,6 @@ export interface paths {
                 };
             };
         };
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/commerce/stores/{storeId}/webhook-url": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    storeId: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Default Response */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -7150,7 +8663,11 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query: {
+                    store_id: string;
+                    start?: string;
+                    end?: string;
+                };
                 header?: never;
                 path?: never;
                 cookie?: never;
@@ -7183,7 +8700,11 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query: {
+                    store_id: string;
+                    start?: string;
+                    end?: string;
+                };
                 header?: never;
                 path?: never;
                 cookie?: never;
@@ -7216,7 +8737,11 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query: {
+                    store_id: string;
+                    start?: string;
+                    end?: string;
+                };
                 header?: never;
                 path?: never;
                 cookie?: never;
@@ -7249,7 +8774,11 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query: {
+                    store_id: string;
+                    start?: string;
+                    end?: string;
+                };
                 header?: never;
                 path?: never;
                 cookie?: never;
@@ -7405,7 +8934,14 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    limit?: number;
+                    offset?: number;
+                    agent_id?: string;
+                    status?: string;
+                    type?: string;
+                    active?: boolean;
+                };
                 header?: never;
                 path: {
                     storeId: string;
@@ -7433,7 +8969,35 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name: string;
+                        slug?: string;
+                        description?: string;
+                        /** @enum {string} */
+                        agent_type?: "webhook" | "internal" | "mcp" | "scheduled" | "event_driven";
+                        /** Format: uri */
+                        endpoint_url?: string;
+                        /** @enum {string} */
+                        auth_type?: "bearer" | "hmac" | "api_key" | "none";
+                        timeout_ms?: number;
+                        max_retries?: number;
+                        retry_backoff_ms?: number;
+                        cron_expression?: string;
+                        event_triggers?: string[];
+                        scopes?: string[];
+                        spend_limit?: string;
+                        spend_window?: string;
+                        config?: {
+                            [key: string]: unknown;
+                        };
+                        metadata?: {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -7488,7 +9052,33 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name?: string;
+                        description?: string;
+                        endpoint_url?: string | null;
+                        /** @enum {string} */
+                        auth_type?: "bearer" | "hmac" | "api_key" | "none";
+                        timeout_ms?: number;
+                        max_retries?: number;
+                        retry_backoff_ms?: number;
+                        cron_expression?: string | null;
+                        event_triggers?: string[];
+                        /** @enum {string} */
+                        status?: "active" | "paused" | "error" | "disabled";
+                        scopes?: string[];
+                        spend_limit?: string | null;
+                        spend_window?: string | null;
+                        config?: {
+                            [key: string]: unknown;
+                        };
+                        metadata?: {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -7535,7 +9125,14 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    limit?: number;
+                    offset?: number;
+                    agent_id?: string;
+                    status?: string;
+                    type?: string;
+                    active?: boolean;
+                };
                 header?: never;
                 path: {
                     storeId: string;
@@ -7571,7 +9168,14 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    limit?: number;
+                    offset?: number;
+                    agent_id?: string;
+                    status?: string;
+                    type?: string;
+                    active?: boolean;
+                };
                 header?: never;
                 path: {
                     storeId: string;
@@ -7601,7 +9205,30 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        mandate_type: "intent" | "cart" | "payment";
+                        payload: {
+                            [key: string]: unknown;
+                        };
+                        /** Format: uuid */
+                        parent_mandate_id?: string;
+                        signature?: string;
+                        name?: string;
+                        scopes?: string[];
+                        resource_type?: string;
+                        resource_ids?: string[];
+                        rate_limit_rpm?: number;
+                        /** Format: date-time */
+                        expires_at?: string;
+                        metadata?: {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -7701,7 +9328,14 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    limit?: number;
+                    offset?: number;
+                    agent_id?: string;
+                    status?: string;
+                    type?: string;
+                    active?: boolean;
+                };
                 header?: never;
                 path: {
                     storeId: string;
@@ -8235,6 +9869,654 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ucp/{storeId}/catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    page?: number;
+                    page_size?: number;
+                };
+                header?: never;
+                path: {
+                    storeId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ucp/{storeId}/catalog/{productId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                    productId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ucp/{storeId}/checkout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        line_items: {
+                            /** Format: uuid */
+                            variant_id: string;
+                            quantity: number;
+                            unit_price?: string;
+                        }[];
+                        buyer?: {
+                            /** Format: email */
+                            email?: string;
+                            shipping_address?: {
+                                name?: string;
+                                phone?: string;
+                                email?: string;
+                                address1?: string;
+                                address2?: string;
+                                city?: string;
+                                state_or_province?: string;
+                                postal_code?: string;
+                                country_code?: string;
+                            } & {
+                                [key: string]: unknown;
+                            };
+                            billing_address?: {
+                                name?: string;
+                                phone?: string;
+                                email?: string;
+                                address1?: string;
+                                address2?: string;
+                                city?: string;
+                                state_or_province?: string;
+                                postal_code?: string;
+                                country_code?: string;
+                            } & {
+                                [key: string]: unknown;
+                            };
+                        };
+                        /** Format: uuid */
+                        selected_fulfillment_id?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ucp/{storeId}/checkout/{checkoutId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                    checkoutId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        buyer?: {
+                            /** Format: email */
+                            email?: string;
+                            shipping_address?: {
+                                name?: string;
+                                phone?: string;
+                                email?: string;
+                                address1?: string;
+                                address2?: string;
+                                city?: string;
+                                state_or_province?: string;
+                                postal_code?: string;
+                                country_code?: string;
+                            } & {
+                                [key: string]: unknown;
+                            };
+                            billing_address?: {
+                                name?: string;
+                                phone?: string;
+                                email?: string;
+                                address1?: string;
+                                address2?: string;
+                                city?: string;
+                                state_or_province?: string;
+                                postal_code?: string;
+                                country_code?: string;
+                            } & {
+                                [key: string]: unknown;
+                            };
+                        };
+                        /** Format: uuid */
+                        selected_fulfillment_id?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/ucp/{storeId}/checkout/{checkoutId}/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                    checkoutId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        payment_token?: string;
+                        /** @enum {string} */
+                        mode?: "test" | "live";
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ucp/v2026-01/{storeId}/catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    page?: number;
+                    page_size?: number;
+                };
+                header?: never;
+                path: {
+                    storeId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ucp/v2026-01/{storeId}/catalog/{productId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                    productId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ucp/v2026-01/{storeId}/checkout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        line_items: {
+                            /** Format: uuid */
+                            variant_id: string;
+                            quantity: number;
+                            unit_price?: string;
+                        }[];
+                        buyer?: {
+                            /** Format: email */
+                            email?: string;
+                            shipping_address?: {
+                                name?: string;
+                                phone?: string;
+                                email?: string;
+                                address1?: string;
+                                address2?: string;
+                                city?: string;
+                                state_or_province?: string;
+                                postal_code?: string;
+                                country_code?: string;
+                            } & {
+                                [key: string]: unknown;
+                            };
+                            billing_address?: {
+                                name?: string;
+                                phone?: string;
+                                email?: string;
+                                address1?: string;
+                                address2?: string;
+                                city?: string;
+                                state_or_province?: string;
+                                postal_code?: string;
+                                country_code?: string;
+                            } & {
+                                [key: string]: unknown;
+                            };
+                        };
+                        /** Format: uuid */
+                        selected_fulfillment_id?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ucp/v2026-01/{storeId}/checkout/{checkoutId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                    checkoutId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        buyer?: {
+                            /** Format: email */
+                            email?: string;
+                            shipping_address?: {
+                                name?: string;
+                                phone?: string;
+                                email?: string;
+                                address1?: string;
+                                address2?: string;
+                                city?: string;
+                                state_or_province?: string;
+                                postal_code?: string;
+                                country_code?: string;
+                            } & {
+                                [key: string]: unknown;
+                            };
+                            billing_address?: {
+                                name?: string;
+                                phone?: string;
+                                email?: string;
+                                address1?: string;
+                                address2?: string;
+                                city?: string;
+                                state_or_province?: string;
+                                postal_code?: string;
+                                country_code?: string;
+                            } & {
+                                [key: string]: unknown;
+                            };
+                        };
+                        /** Format: uuid */
+                        selected_fulfillment_id?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/ucp/v2026-01/{storeId}/checkout/{checkoutId}/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                    checkoutId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        payment_token?: string;
+                        /** @enum {string} */
+                        mode?: "test" | "live";
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/{providerType}/{providerRef}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    providerType: string;
+                    providerRef: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    providerType: string;
+                    providerRef: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/{providerType}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    providerType: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    providerType: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/webhooks/{storeId}/payment/{providerRef}": {
         parameters: {
             query?: never;
@@ -8345,6 +10627,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/commerce/stores/{storeId}/webhook-url": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/commerce/stores/{storeId}/companies": {
         parameters: {
             query?: never;
@@ -8382,7 +10699,22 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name: string;
+                        email?: string | null;
+                        phone?: string | null;
+                        tax_id?: string | null;
+                        credit_limit?: string | null;
+                        payment_terms_days?: number | null;
+                        price_list_id?: string | null;
+                        metadata?: {
+                            [key: string]: unknown;
+                        } | null;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -8437,7 +10769,19 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name?: string | null;
+                        email?: string | null;
+                        phone?: string | null;
+                        tax_id?: string | null;
+                        credit_limit?: string | null;
+                        payment_terms_days?: number | null;
+                        price_list_id?: string | null;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -8514,7 +10858,16 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        customer_id: string;
+                        /** @default member */
+                        role?: string;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -8605,7 +10958,15 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name: string;
+                        description?: string | null;
+                        price_list_id?: string | null;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -8640,7 +11001,15 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name?: string | null;
+                        description?: string | null;
+                        price_list_id?: string | null;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -8697,7 +11066,14 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        customer_id: string;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -8760,7 +11136,12 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    status?: string;
+                    company_id?: string;
+                    limit?: number;
+                    offset?: number;
+                };
                 header?: never;
                 path: {
                     storeId: string;
@@ -8788,7 +11169,23 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        company_id?: string | null;
+                        customer_id?: string | null;
+                        expires_at?: string | null;
+                        notes?: string | null;
+                        lines?: {
+                            variant_id?: string | null;
+                            title?: string | null;
+                            quantity?: number;
+                            price: string;
+                            notes?: string | null;
+                        }[];
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -8843,7 +11240,15 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        status?: string | null;
+                        expires_at?: string | null;
+                        notes?: string | null;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -9042,7 +11447,14 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        status?: string | null;
+                        notes?: string | null;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -9079,7 +11491,14 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        po_number: string;
+                        notes?: string | null;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -9133,7 +11552,18 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name: string;
+                        /** @enum {string} */
+                        interval: "day" | "week" | "month" | "year";
+                        interval_count?: number;
+                        trial_days?: number;
+                        is_active?: boolean;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -9188,7 +11618,15 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name?: string | null;
+                        trial_days?: number | null;
+                        is_active?: boolean | null;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -9235,7 +11673,12 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    status?: string;
+                    customer_id?: string;
+                    limit?: number;
+                    offset?: number;
+                };
                 header?: never;
                 path: {
                     storeId: string;
@@ -9263,7 +11706,22 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        customer_id: string;
+                        /** Format: uuid */
+                        plan_id: string;
+                        items?: {
+                            /** Format: uuid */
+                            variant_id: string;
+                            quantity?: number;
+                            price: string;
+                        }[];
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -9469,7 +11927,12 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    status?: string;
+                    order_id?: string;
+                    limit?: number;
+                    offset?: number;
+                };
                 header?: never;
                 path: {
                     storeId: string;
@@ -9533,7 +11996,16 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        status?: ("requested" | "approved" | "rejected" | "in_transit" | "received" | "inspected" | "resolved" | "closed") | null;
+                        notes?: string | null;
+                        return_type?: ("refund" | "exchange" | "store_credit" | "repair") | null;
+                        credit_amount?: string | null;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -9570,7 +12042,26 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        return_type?: "refund" | "exchange" | "store_credit" | "repair";
+                        notes?: string | null;
+                        lines?: {
+                            /** Format: uuid */
+                            order_line_id: string;
+                            quantity?: number;
+                            reason?: string | null;
+                            condition?: string | null;
+                            /** @enum {string} */
+                            action?: "refund" | "exchange" | "store_credit" | "repair";
+                            exchange_variant_id?: string | null;
+                            restock?: boolean;
+                        }[];
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -9626,7 +12117,16 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        type?: string;
+                        data?: {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -9682,7 +12182,14 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        max_downloads?: number | null;
+                        expires_at?: string | null;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -9744,7 +12251,9 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    customer_id?: string;
+                };
                 header?: never;
                 path: {
                     storeId: string;
@@ -9772,7 +12281,15 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        customer_id?: string | null;
+                        session_id?: string | null;
+                        name?: string | null;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -9864,7 +12381,16 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        product_id: string;
+                        variant_id?: string | null;
+                        note?: string | null;
+                    };
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {
@@ -9984,6 +12510,1858 @@ export interface paths {
                 };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/storefront/{storeId}/cart/recover/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                    token: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/commerce/stores/{storeId}/abandoned-carts/{abandonedCartId}/resend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                    abandonedCartId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/commerce/stores/{storeId}/products/export.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/commerce/stores/{storeId}/products/import/template": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/commerce/stores/{storeId}/products/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/commerce/stores/{storeId}/booking-policies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/commerce/stores/{storeId}/booking-policies/{policyId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                    policyId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                    policyId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                    policyId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/commerce/stores/{storeId}/booking-policies/{policyId}/translations/{locale}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                    policyId: string;
+                    locale: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/commerce/stores/{storeId}/booking-resources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/commerce/stores/{storeId}/booking-resources/{resourceId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                    resourceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                    resourceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                    resourceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/commerce/stores/{storeId}/booking-resources/{resourceId}/translations/{locale}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                    resourceId: string;
+                    locale: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/commerce/stores/{storeId}/booking-resources/{resourceId}/availability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                    resourceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                    resourceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/commerce/stores/{storeId}/booking-resources/{resourceId}/price-rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                    resourceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                    resourceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/commerce/stores/{storeId}/booking-resources/{resourceId}/price-rules/{ruleId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                    resourceId: string;
+                    ruleId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                    resourceId: string;
+                    ruleId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/commerce/stores/{storeId}/bookings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/commerce/stores/{storeId}/bookings/{bookingId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                    bookingId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/commerce/stores/{storeId}/bookings/{bookingId}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                    bookingId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/commerce/stores/{storeId}/bookings/{bookingId}/check-in": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                    bookingId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/commerce/stores/{storeId}/bookings/{bookingId}/check-out": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                    bookingId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/commerce/stores/{storeId}/bookings/{bookingId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                    bookingId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/commerce/stores/{storeId}/bookings/{bookingId}/no-show": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                    bookingId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/commerce/stores/{storeId}/bookings/{bookingId}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                    bookingId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/commerce/stores/{storeId}/bookings/{bookingId}/modifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                    bookingId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/commerce/stores/{storeId}/bookings/{bookingId}/modifications/{modId}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                    bookingId: string;
+                    modId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/commerce/stores/{storeId}/bookings/{bookingId}/modifications/{modId}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                    bookingId: string;
+                    modId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/commerce/stores/{storeId}/bookings/{bookingId}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                    bookingId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                    bookingId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/commerce/stores/{storeId}/bookings/{bookingId}/check-in-tokens": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                    bookingId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/commerce/stores/{storeId}/bookings/{bookingId}/damage-claims": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                    bookingId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                    bookingId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/commerce/stores/{storeId}/bookings/{bookingId}/damage-claims/{claimId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                    bookingId: string;
+                    claimId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/commerce/stores/{storeId}/booking-resources/{resourceId}/ical-feeds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                    resourceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                    resourceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/commerce/stores/{storeId}/booking-resources/{resourceId}/ical-feeds/{feedId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                    resourceId: string;
+                    feedId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                    resourceId: string;
+                    feedId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/storefront/{storeId}/booking-resources/{resourceId}/ical.ics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                    resourceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/commerce/stores/{storeId}/booking-resources/{resourceId}/ical-feeds/{feedId}/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                    resourceId: string;
+                    feedId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/commerce/stores/{storeId}/booking-channel-providers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/commerce/stores/{storeId}/booking-channel-providers/{providerId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                    providerId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                    providerId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/commerce/stores/{storeId}/booking-resources/{resourceId}/channel-listings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                    resourceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                    resourceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/commerce/stores/{storeId}/booking-resources/{resourceId}/channel-listings/{listingId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                    resourceId: string;
+                    listingId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                    resourceId: string;
+                    listingId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/commerce/stores/{storeId}/booking-resources/{resourceId}/channel-listings/{listingId}/push": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                    resourceId: string;
+                    listingId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/commerce/stores/{storeId}/booking-channel-sync-jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    storeId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/webhooks/booking-channels/{channel}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    channel: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/storefront.js": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
