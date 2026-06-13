@@ -24,7 +24,7 @@
  *   DELETE /commerce/stores/:storeId/suppliers/:supplierId
  */
 
-import type { FastifyPluginAsync } from "fastify";
+import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { z } from "zod";
 import { storeAuthAdmin, storeAuthWrite } from "../../lib/auth/middleware.js";
 import {
@@ -97,20 +97,23 @@ const LotQuery = z.object({
   warehouse_id: z.string().uuid().optional(),
 });
 
+// H3.2: cost_price is a money field — stored as numeric(15,2) — use decimal-string input.
+const MoneyString = z.string().regex(/^\d+(\.\d{1,2})?$/, "must be a decimal string (e.g. \"9.99\")");
+
 const CreateLotBody = z.object({
   variant_id: z.string().uuid(),
   warehouse_id: z.string().uuid(),
   lot_number: z.string().min(1).max(100),
   quantity: z.number().int().min(0),
   expiry_date: z.string().nullish(),
-  cost_price: z.number().positive().nullish(),
+  cost_price: MoneyString.nullish(),
   received_at: z.string().nullish(),
 });
 
 const UpdateLotBody = z.object({
   expiry_date: z.string().nullish(),
   quantity: z.number().int().min(0).optional(),
-  cost_price: z.number().positive().nullish(),
+  cost_price: MoneyString.nullish(),
 });
 
 const SerialQuery = z.object({
@@ -144,187 +147,211 @@ const UpdateSupplierBody = CreateSupplierBody.partial();
 
 // ── Plugin ────────────────────────────────────────────────────────────────────
 
-export const inventoryPlugin: FastifyPluginAsync = async (app) => {
+export const inventoryPlugin: FastifyPluginAsyncZod = async (app) => {
   const base = "/commerce/stores/:storeId";
 
   // ── Warehouses ─────────────────────────────────────────────────────────────
 
-  app.get(`${base}/warehouses`, { preHandler: [storeAuthAdmin] }, async (request, reply) => {
-    const { storeId } = StoreParams.parse(request.params);
+  app.get(`${base}/warehouses`, {
+    schema: { params: StoreParams },
+    preHandler: [storeAuthAdmin],
+  }, async (request, reply) => {
+    const { storeId } = request.params;
     const warehouses = await listWarehouses(storeId);
     return reply.send({ warehouses });
   });
 
-  app.post(`${base}/warehouses`, { preHandler: [storeAuthAdmin] }, async (request, reply) => {
-    const { storeId } = StoreParams.parse(request.params);
-    const body = CreateWarehouseBody.safeParse(request.body);
-    if (!body.success) {
-      return reply.status(400).send({ error: { code: "VALIDATION_ERROR", message: "validation failed", details: body.error.issues } });
-    }
-    const id = await createWarehouse(storeId, body.data);
+  app.post(`${base}/warehouses`, {
+    schema: { params: StoreParams, body: CreateWarehouseBody },
+    preHandler: [storeAuthAdmin],
+  }, async (request, reply) => {
+    const { storeId } = request.params;
+    const id = await createWarehouse(storeId, request.body);
     return reply.status(201).send({ id });
   });
 
-  app.put(`${base}/warehouses/:warehouseId`, { preHandler: [storeAuthAdmin] }, async (request, reply) => {
-    const { storeId, warehouseId } = WarehouseParams.parse(request.params);
-    const body = UpdateWarehouseBody.safeParse(request.body);
-    if (!body.success) {
-      return reply.status(400).send({ error: { code: "VALIDATION_ERROR", message: "validation failed", details: body.error.issues } });
-    }
-    const ok = await updateWarehouse(storeId, warehouseId, body.data);
+  app.put(`${base}/warehouses/:warehouseId`, {
+    schema: { params: WarehouseParams, body: UpdateWarehouseBody },
+    preHandler: [storeAuthAdmin],
+  }, async (request, reply) => {
+    const { storeId, warehouseId } = request.params;
+    const ok = await updateWarehouse(storeId, warehouseId, request.body);
     if (!ok) return reply.status(404).send({ error: { code: "NOT_FOUND", message: "warehouse not found" } });
     return reply.send({ ok: true });
   });
 
-  app.delete(`${base}/warehouses/:warehouseId`, { preHandler: [storeAuthAdmin] }, async (request, reply) => {
-    const { storeId, warehouseId } = WarehouseParams.parse(request.params);
+  app.delete(`${base}/warehouses/:warehouseId`, {
+    schema: { params: WarehouseParams },
+    preHandler: [storeAuthAdmin],
+  }, async (request, reply) => {
+    const { storeId, warehouseId } = request.params;
     await deleteWarehouse(storeId, warehouseId);
     return reply.send({ ok: true });
   });
 
   // ── Inventory levels ────────────────────────────────────────────────────────
 
-  app.get(`${base}/inventory`, { preHandler: [storeAuthAdmin] }, async (request, reply) => {
-    const { storeId } = StoreParams.parse(request.params);
-    const q = InventoryQuery.safeParse(request.query);
-    const levels = await listInventoryLevels(storeId, q.success ? q.data : {});
+  app.get(`${base}/inventory`, {
+    schema: { params: StoreParams, querystring: InventoryQuery },
+    preHandler: [storeAuthAdmin],
+  }, async (request, reply) => {
+    const { storeId } = request.params;
+    const levels = await listInventoryLevels(storeId, request.query);
     return reply.send({ levels });
   });
 
-  app.post(`${base}/inventory/set`, { preHandler: [storeAuthAdmin] }, async (request, reply) => {
-    const { storeId } = StoreParams.parse(request.params);
-    const body = SetInventoryBody.safeParse(request.body);
-    if (!body.success) {
-      return reply.status(400).send({ error: { code: "VALIDATION_ERROR", message: "validation failed", details: body.error.issues } });
-    }
+  app.post(`${base}/inventory/set`, {
+    schema: { params: StoreParams, body: SetInventoryBody },
+    preHandler: [storeAuthAdmin],
+  }, async (request, reply) => {
+    const { storeId } = request.params;
     const userId = request.auth!.userId;
-    const adjustmentId = await setInventoryLevel(storeId, { ...body.data, created_by: userId });
+    const adjustmentId = await setInventoryLevel(storeId, { ...request.body, created_by: userId });
     return reply.send({ ok: true, adjustment_id: adjustmentId });
   });
 
-  app.post(`${base}/inventory/adjust`, { preHandler: [storeAuthAdmin] }, async (request, reply) => {
-    const { storeId } = StoreParams.parse(request.params);
-    const body = AdjustInventoryBody.safeParse(request.body);
-    if (!body.success) {
-      return reply.status(400).send({ error: { code: "VALIDATION_ERROR", message: "validation failed", details: body.error.issues } });
-    }
+  app.post(`${base}/inventory/adjust`, {
+    schema: { params: StoreParams, body: AdjustInventoryBody },
+    preHandler: [storeAuthAdmin],
+  }, async (request, reply) => {
+    const { storeId } = request.params;
     const userId = request.auth!.userId;
-    const result = await adjustInventory(storeId, { ...body.data, created_by: userId });
+    const result = await adjustInventory(storeId, { ...request.body, created_by: userId });
     return reply.send({ id: result.id, quantity_available: result.quantity_available, reorder_point: result.reorder_point });
   });
 
-  app.get(`${base}/inventory/adjustments`, { preHandler: [storeAuthAdmin] }, async (request, reply) => {
-    const { storeId } = StoreParams.parse(request.params);
-    const q = InventoryQuery.safeParse(request.query);
-    const adjustments = await listInventoryAdjustments(storeId, q.success ? q.data : {});
+  app.get(`${base}/inventory/adjustments`, {
+    schema: { params: StoreParams, querystring: InventoryQuery },
+    preHandler: [storeAuthAdmin],
+  }, async (request, reply) => {
+    const { storeId } = request.params;
+    const adjustments = await listInventoryAdjustments(storeId, request.query);
     return reply.send({ adjustments });
   });
 
   // ── Lots ───────────────────────────────────────────────────────────────────
 
-  app.get(`${base}/inventory/lots`, { preHandler: [storeAuthAdmin] }, async (request, reply) => {
-    const { storeId } = StoreParams.parse(request.params);
-    const q = LotQuery.safeParse(request.query);
-    const lots = await listInventoryLots(storeId, q.success ? q.data : {});
+  app.get(`${base}/inventory/lots`, {
+    schema: { params: StoreParams, querystring: LotQuery },
+    preHandler: [storeAuthAdmin],
+  }, async (request, reply) => {
+    const { storeId } = request.params;
+    const lots = await listInventoryLots(storeId, request.query);
     return reply.send({ lots });
   });
 
-  app.post(`${base}/inventory/lots`, { preHandler: [storeAuthAdmin] }, async (request, reply) => {
-    const { storeId } = StoreParams.parse(request.params);
-    const body = CreateLotBody.safeParse(request.body);
-    if (!body.success) {
-      return reply.status(400).send({ error: { code: "VALIDATION_ERROR", message: "validation failed", details: body.error.issues } });
-    }
-    const id = await createInventoryLot(storeId, body.data);
+  app.post(`${base}/inventory/lots`, {
+    schema: { params: StoreParams, body: CreateLotBody },
+    preHandler: [storeAuthAdmin],
+  }, async (request, reply) => {
+    const { storeId } = request.params;
+    // H3.2: parse decimal-string money fields to numbers for the service layer
+    const id = await createInventoryLot(storeId, {
+      ...request.body,
+      cost_price: request.body.cost_price != null ? parseFloat(request.body.cost_price) : undefined,
+    });
     if (!id) return reply.status(404).send({ error: { code: "NOT_FOUND", message: "warehouse not found in this store" } });
     return reply.status(201).send({ id });
   });
 
-  app.put(`${base}/inventory/lots/:lotId`, { preHandler: [storeAuthAdmin] }, async (request, reply) => {
-    const { storeId, lotId } = LotParams.parse(request.params);
-    const body = UpdateLotBody.safeParse(request.body);
-    if (!body.success) {
-      return reply.status(400).send({ error: { code: "VALIDATION_ERROR", message: "validation failed", details: body.error.issues } });
-    }
-    const ok = await updateInventoryLot(storeId, lotId, body.data);
+  app.put(`${base}/inventory/lots/:lotId`, {
+    schema: { params: LotParams, body: UpdateLotBody },
+    preHandler: [storeAuthAdmin],
+  }, async (request, reply) => {
+    const { storeId, lotId } = request.params;
+    // H3.2: parse decimal-string money fields to numbers for the service layer
+    const ok = await updateInventoryLot(storeId, lotId, {
+      ...request.body,
+      cost_price: request.body.cost_price != null ? parseFloat(request.body.cost_price) : undefined,
+    });
     if (!ok) return reply.status(404).send({ error: { code: "NOT_FOUND", message: "lot not found" } });
     return reply.send({ ok: true });
   });
 
-  app.delete(`${base}/inventory/lots/:lotId`, { preHandler: [storeAuthAdmin] }, async (request, reply) => {
-    const { storeId, lotId } = LotParams.parse(request.params);
+  app.delete(`${base}/inventory/lots/:lotId`, {
+    schema: { params: LotParams },
+    preHandler: [storeAuthAdmin],
+  }, async (request, reply) => {
+    const { storeId, lotId } = request.params;
     await deleteInventoryLot(storeId, lotId);
     return reply.send({ ok: true });
   });
 
   // ── Serial numbers ──────────────────────────────────────────────────────────
 
-  app.get(`${base}/inventory/serials`, { preHandler: [storeAuthAdmin] }, async (request, reply) => {
-    const { storeId } = StoreParams.parse(request.params);
-    const q = SerialQuery.safeParse(request.query);
-    const serials = await listSerialNumbers(storeId, q.success ? q.data : {});
+  app.get(`${base}/inventory/serials`, {
+    schema: { params: StoreParams, querystring: SerialQuery },
+    preHandler: [storeAuthAdmin],
+  }, async (request, reply) => {
+    const { storeId } = request.params;
+    const serials = await listSerialNumbers(storeId, request.query);
     return reply.send({ serials });
   });
 
-  app.post(`${base}/inventory/serials`, { preHandler: [storeAuthAdmin] }, async (request, reply) => {
-    const { storeId } = StoreParams.parse(request.params);
-    const body = BulkCreateSerialsBody.safeParse(request.body);
-    if (!body.success) {
-      return reply.status(400).send({ error: { code: "VALIDATION_ERROR", message: "validation failed", details: body.error.issues } });
-    }
-    const count = await bulkCreateSerialNumbers(storeId, body.data);
+  app.post(`${base}/inventory/serials`, {
+    schema: { params: StoreParams, body: BulkCreateSerialsBody },
+    preHandler: [storeAuthAdmin],
+  }, async (request, reply) => {
+    const { storeId } = request.params;
+    const count = await bulkCreateSerialNumbers(storeId, request.body);
     return reply.status(201).send({ count });
   });
 
-  app.get(`${base}/inventory/serials/:serialId`, { preHandler: [storeAuthAdmin] }, async (request, reply) => {
-    const { storeId, serialId } = SerialParams.parse(request.params);
+  app.get(`${base}/inventory/serials/:serialId`, {
+    schema: { params: SerialParams },
+    preHandler: [storeAuthAdmin],
+  }, async (request, reply) => {
+    const { storeId, serialId } = request.params;
     const sn = await getSerialNumber(storeId, serialId);
     if (!sn) return reply.status(404).send({ error: { code: "NOT_FOUND", message: "serial number not found" } });
     return reply.send(sn);
   });
 
-  app.put(`${base}/inventory/serials/:serialId`, { preHandler: [storeAuthAdmin] }, async (request, reply) => {
-    const { storeId, serialId } = SerialParams.parse(request.params);
-    const body = UpdateSerialBody.safeParse(request.body);
-    if (!body.success) {
-      return reply.status(400).send({ error: { code: "VALIDATION_ERROR", message: "validation failed", details: body.error.issues } });
-    }
-    const ok = await updateSerialNumber(storeId, serialId, body.data);
+  app.put(`${base}/inventory/serials/:serialId`, {
+    schema: { params: SerialParams, body: UpdateSerialBody },
+    preHandler: [storeAuthAdmin],
+  }, async (request, reply) => {
+    const { storeId, serialId } = request.params;
+    const ok = await updateSerialNumber(storeId, serialId, request.body);
     if (!ok) return reply.status(404).send({ error: { code: "NOT_FOUND", message: "serial number not found" } });
     return reply.send({ ok: true });
   });
 
   // ── Suppliers ──────────────────────────────────────────────────────────────
 
-  app.get(`${base}/suppliers`, { preHandler: [storeAuthAdmin] }, async (request, reply) => {
-    const { storeId } = StoreParams.parse(request.params);
+  app.get(`${base}/suppliers`, {
+    schema: { params: StoreParams },
+    preHandler: [storeAuthAdmin],
+  }, async (request, reply) => {
+    const { storeId } = request.params;
     const suppliers = await listSuppliers(storeId);
     return reply.send({ suppliers });
   });
 
-  app.post(`${base}/suppliers`, { preHandler: [storeAuthAdmin] }, async (request, reply) => {
-    const { storeId } = StoreParams.parse(request.params);
-    const body = CreateSupplierBody.safeParse(request.body);
-    if (!body.success) {
-      return reply.status(400).send({ error: { code: "VALIDATION_ERROR", message: "validation failed", details: body.error.issues } });
-    }
-    const id = await createSupplier(storeId, body.data);
+  app.post(`${base}/suppliers`, {
+    schema: { params: StoreParams, body: CreateSupplierBody },
+    preHandler: [storeAuthAdmin],
+  }, async (request, reply) => {
+    const { storeId } = request.params;
+    const id = await createSupplier(storeId, request.body);
     return reply.status(201).send({ id });
   });
 
-  app.put(`${base}/suppliers/:supplierId`, { preHandler: [storeAuthAdmin] }, async (request, reply) => {
-    const { storeId, supplierId } = SupplierParams.parse(request.params);
-    const body = UpdateSupplierBody.safeParse(request.body);
-    if (!body.success) {
-      return reply.status(400).send({ error: { code: "VALIDATION_ERROR", message: "validation failed", details: body.error.issues } });
-    }
-    const ok = await updateSupplier(storeId, supplierId, body.data);
+  app.put(`${base}/suppliers/:supplierId`, {
+    schema: { params: SupplierParams, body: UpdateSupplierBody },
+    preHandler: [storeAuthAdmin],
+  }, async (request, reply) => {
+    const { storeId, supplierId } = request.params;
+    const ok = await updateSupplier(storeId, supplierId, request.body);
     if (!ok) return reply.status(404).send({ error: { code: "NOT_FOUND", message: "supplier not found" } });
     return reply.send({ ok: true });
   });
 
-  app.delete(`${base}/suppliers/:supplierId`, { preHandler: [storeAuthAdmin] }, async (request, reply) => {
-    const { storeId, supplierId } = SupplierParams.parse(request.params);
+  app.delete(`${base}/suppliers/:supplierId`, {
+    schema: { params: SupplierParams },
+    preHandler: [storeAuthAdmin],
+  }, async (request, reply) => {
+    const { storeId, supplierId } = request.params;
     const ok = await deleteSupplier(storeId, supplierId);
     if (!ok) return reply.status(404).send({ error: { code: "NOT_FOUND", message: "supplier not found" } });
     return reply.send({ ok: true });

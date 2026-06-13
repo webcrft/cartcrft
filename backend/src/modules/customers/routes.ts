@@ -5,7 +5,7 @@
  * storeAuthAdmin or storeAuthWrite tier.
  */
 
-import type { FastifyPluginAsync } from "fastify";
+import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { z } from "zod";
 import {
   storeAuthAdmin,
@@ -106,16 +106,19 @@ const AuditLogQuery = z.object({
 
 // ── Plugin ────────────────────────────────────────────────────────────────────
 
-export const customersPlugin: FastifyPluginAsync = async (app) => {
+export const customersPlugin: FastifyPluginAsyncZod = async (app) => {
   const base = "/commerce/stores/:storeId";
 
   // GET /commerce/stores/:storeId/customers
   app.get(
     `${base}/customers`,
-    { preHandler: [storeAuthAdmin] },
+    {
+      schema: { params: StoreIdParams, querystring: ListQuery },
+      preHandler: [storeAuthAdmin],
+    },
     async (request, reply) => {
-      const { storeId } = StoreIdParams.parse(request.params);
-      const q = ListQuery.parse(request.query);
+      const { storeId } = request.params;
+      const q = request.query;
       const pool = getPool();
       const result = await listCustomers(pool, storeId, q as { limit?: number; offset?: number; q?: string });
       return reply.send(result);
@@ -125,12 +128,14 @@ export const customersPlugin: FastifyPluginAsync = async (app) => {
   // POST /commerce/stores/:storeId/customers
   app.post(
     `${base}/customers`,
-    { preHandler: [storeAuthAdmin] },
+    {
+      schema: { params: StoreIdParams, body: CreateCustomerBody },
+      preHandler: [storeAuthAdmin],
+    },
     async (request, reply) => {
-      const { storeId } = StoreIdParams.parse(request.params);
-      const body = CreateCustomerBody.parse(request.body);
+      const { storeId } = request.params;
       const pool = getPool();
-      const id = await createCustomer(pool, storeId, body as import("./service.js").CreateCustomerInput);
+      const id = await createCustomer(pool, storeId, request.body as import("./service.js").CreateCustomerInput);
       return reply.status(201).send({ id });
     }
   );
@@ -138,12 +143,14 @@ export const customersPlugin: FastifyPluginAsync = async (app) => {
   // POST /commerce/stores/:storeId/customers/invite
   app.post(
     `${base}/customers/invite`,
-    { preHandler: [storeAuthAdmin] },
+    {
+      schema: { params: StoreIdParams, body: InviteBody },
+      preHandler: [storeAuthAdmin],
+    },
     async (request, reply) => {
-      const { storeId } = StoreIdParams.parse(request.params);
-      const body = InviteBody.parse(request.body);
+      const { storeId } = request.params;
       const pool = getPool();
-      await createInvitation(pool, storeId, body.email);
+      await createInvitation(pool, storeId, request.body.email);
       return reply.status(200).send({ ok: true });
     }
   );
@@ -151,9 +158,12 @@ export const customersPlugin: FastifyPluginAsync = async (app) => {
   // GET /commerce/stores/:storeId/customers/:customerId
   app.get(
     `${base}/customers/:customerId`,
-    { preHandler: [storeAuthAdmin] },
+    {
+      schema: { params: CustomerIdParams },
+      preHandler: [storeAuthAdmin],
+    },
     async (request, reply) => {
-      const { storeId, customerId } = CustomerIdParams.parse(request.params);
+      const { storeId, customerId } = request.params;
       const pool = getPool();
       const customer = await getCustomer(pool, storeId, customerId);
       if (!customer) {
@@ -166,12 +176,14 @@ export const customersPlugin: FastifyPluginAsync = async (app) => {
   // PUT /commerce/stores/:storeId/customers/:customerId
   app.put(
     `${base}/customers/:customerId`,
-    { preHandler: [storeAuthAdmin] },
+    {
+      schema: { params: CustomerIdParams, body: UpdateCustomerBody },
+      preHandler: [storeAuthAdmin],
+    },
     async (request, reply) => {
-      const { storeId, customerId } = CustomerIdParams.parse(request.params);
-      const body = UpdateCustomerBody.parse(request.body);
+      const { storeId, customerId } = request.params;
       const pool = getPool();
-      const ok = await updateCustomer(pool, storeId, customerId, body as import("./service.js").UpdateCustomerInput);
+      const ok = await updateCustomer(pool, storeId, customerId, request.body as import("./service.js").UpdateCustomerInput);
       if (!ok) {
         return reply.status(404).send({ error: { code: "NOT_FOUND", message: "customer not found" } });
       }
@@ -182,12 +194,14 @@ export const customersPlugin: FastifyPluginAsync = async (app) => {
   // POST /commerce/stores/:storeId/customers/:customerId/block
   app.post(
     `${base}/customers/:customerId/block`,
-    { preHandler: [storeAuthAdmin] },
+    {
+      schema: { params: CustomerIdParams, body: BlockBody },
+      preHandler: [storeAuthAdmin],
+    },
     async (request, reply) => {
-      const { storeId, customerId } = CustomerIdParams.parse(request.params);
-      const body = BlockBody.parse(request.body);
+      const { storeId, customerId } = request.params;
       const pool = getPool();
-      const ok = await blockCustomer(pool, storeId, customerId, body.reason ?? "");
+      const ok = await blockCustomer(pool, storeId, customerId, request.body.reason ?? "");
       if (!ok) {
         return reply.status(404).send({ error: { code: "NOT_FOUND", message: "customer not found" } });
       }
@@ -198,9 +212,12 @@ export const customersPlugin: FastifyPluginAsync = async (app) => {
   // POST /commerce/stores/:storeId/customers/:customerId/unblock
   app.post(
     `${base}/customers/:customerId/unblock`,
-    { preHandler: [storeAuthAdmin] },
+    {
+      schema: { params: CustomerIdParams },
+      preHandler: [storeAuthAdmin],
+    },
     async (request, reply) => {
-      const { storeId, customerId } = CustomerIdParams.parse(request.params);
+      const { storeId, customerId } = request.params;
       const pool = getPool();
       const ok = await unblockCustomer(pool, storeId, customerId);
       if (!ok) {
@@ -213,9 +230,12 @@ export const customersPlugin: FastifyPluginAsync = async (app) => {
   // DELETE /commerce/stores/:storeId/customers/:customerId
   app.delete(
     `${base}/customers/:customerId`,
-    { preHandler: [storeAuthAdmin] },
+    {
+      schema: { params: CustomerIdParams },
+      preHandler: [storeAuthAdmin],
+    },
     async (request, reply) => {
-      const { storeId, customerId } = CustomerIdParams.parse(request.params);
+      const { storeId, customerId } = request.params;
       const pool = getPool();
       const ok = await deleteCustomer(pool, storeId, customerId);
       if (!ok) {
@@ -228,13 +248,15 @@ export const customersPlugin: FastifyPluginAsync = async (app) => {
   // POST /commerce/stores/:storeId/customers/:customerId/addresses
   app.post(
     `${base}/customers/:customerId/addresses`,
-    { preHandler: [storeAuthWrite] },
+    {
+      schema: { params: CustomerIdParams, body: AddressBody },
+      preHandler: [storeAuthWrite],
+    },
     async (request, reply) => {
-      const { storeId, customerId } = CustomerIdParams.parse(request.params);
-      const body = AddressBody.parse(request.body);
+      const { storeId, customerId } = request.params;
       const pool = getPool();
       try {
-        const id = await addCustomerAddress(pool, storeId, customerId, body as import("./service.js").AddressInput);
+        const id = await addCustomerAddress(pool, storeId, customerId, request.body as import("./service.js").AddressInput);
         return reply.status(201).send({ id });
       } catch (err) {
         if (err instanceof Error && err.message === "customer not found") {
@@ -248,9 +270,12 @@ export const customersPlugin: FastifyPluginAsync = async (app) => {
   // DELETE /commerce/stores/:storeId/customers/:customerId/addresses/:addressId
   app.delete(
     `${base}/customers/:customerId/addresses/:addressId`,
-    { preHandler: [storeAuthWrite] },
+    {
+      schema: { params: AddressIdParams },
+      preHandler: [storeAuthWrite],
+    },
     async (request, reply) => {
-      const { storeId, customerId, addressId } = AddressIdParams.parse(request.params);
+      const { storeId, customerId, addressId } = request.params;
       const pool = getPool();
       const ok = await deleteCustomerAddress(pool, storeId, customerId, addressId);
       if (!ok) {
@@ -263,9 +288,12 @@ export const customersPlugin: FastifyPluginAsync = async (app) => {
   // GET /commerce/stores/:storeId/customers/:customerId/tags
   app.get(
     `${base}/customers/:customerId/tags`,
-    { preHandler: [storeAuthAdmin] },
+    {
+      schema: { params: CustomerIdParams },
+      preHandler: [storeAuthAdmin],
+    },
     async (request, reply) => {
-      const { storeId, customerId } = CustomerIdParams.parse(request.params);
+      const { storeId, customerId } = request.params;
       const pool = getPool();
       const tags = await listCustomerTags(pool, storeId, customerId);
       return reply.send({ tags });
@@ -275,12 +303,14 @@ export const customersPlugin: FastifyPluginAsync = async (app) => {
   // PUT /commerce/stores/:storeId/customers/:customerId/tags
   app.put(
     `${base}/customers/:customerId/tags`,
-    { preHandler: [storeAuthAdmin] },
+    {
+      schema: { params: CustomerIdParams, body: TagsBody },
+      preHandler: [storeAuthAdmin],
+    },
     async (request, reply) => {
-      const { storeId, customerId } = CustomerIdParams.parse(request.params);
-      const body = TagsBody.parse(request.body);
+      const { storeId, customerId } = request.params;
       const pool = getPool();
-      const ok = await setCustomerTags(pool, storeId, customerId, body.tags);
+      const ok = await setCustomerTags(pool, storeId, customerId, request.body.tags);
       if (!ok) {
         return reply.status(404).send({ error: { code: "NOT_FOUND", message: "customer not found" } });
       }
@@ -291,10 +321,13 @@ export const customersPlugin: FastifyPluginAsync = async (app) => {
   // GET /commerce/stores/:storeId/audit-log
   app.get(
     `${base}/audit-log`,
-    { preHandler: [storeAuthAdmin] },
+    {
+      schema: { params: StoreIdParams, querystring: AuditLogQuery },
+      preHandler: [storeAuthAdmin],
+    },
     async (request, reply) => {
-      const { storeId } = StoreIdParams.parse(request.params);
-      const q = AuditLogQuery.parse(request.query);
+      const { storeId } = request.params;
+      const q = request.query;
       const pool = getPool();
       const entries = await listAuditLog(pool, storeId, {
         customerId: q.customer_id as string | undefined,

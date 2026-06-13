@@ -18,7 +18,7 @@
  * prevent Fastify from interpreting "lookup" as a giftCardId param.
  */
 
-import type { FastifyPluginAsync } from "fastify";
+import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { z } from "zod";
 import { storeAuthAdmin, storeAuthRead } from "../../lib/auth/middleware.js";
 import {
@@ -55,9 +55,14 @@ const ListQuerystring = z.object({
   currency: z.string().length(3).optional(),
 });
 
+// H3.2: amount/delta/initial_value are money fields — enforce decimal-string format.
+const MoneyString = z.string().regex(/^\d+(\.\d{1,2})?$/, "must be a decimal string (e.g. \"9.99\")");
+// delta can be negative (debit adjustments), so allow optional leading minus.
+const MoneyDeltaString = z.string().regex(/^-?\d+(\.\d{1,2})?$/, "must be a signed decimal string (e.g. \"-5.00\" or \"10.00\")");
+
 const IssueCreditBody = z.object({
   currency: z.string().length(3, "currency must be 3 characters"),
-  amount: z.string().min(1, "amount is required"),
+  amount: MoneyString,
   notes: z.string().max(500).optional(),
   created_by: z.string().uuid().nullable().optional(),
   expires_at: z.string().nullable().optional(),
@@ -66,7 +71,7 @@ const IssueCreditBody = z.object({
 
 const AdjustCreditBody = z.object({
   currency: z.string().length(3, "currency must be 3 characters"),
-  delta: z.string().min(1, "delta is required"),
+  delta: MoneyDeltaString,
   notes: z.string().max(500).optional(),
   created_by: z.string().uuid().nullable().optional(),
   order_id: z.string().uuid().nullable().optional(),
@@ -74,7 +79,7 @@ const AdjustCreditBody = z.object({
 
 const CreateGiftCardBody = z.object({
   code: z.string().min(1, "code is required").max(100),
-  initial_value: z.string().min(1, "initial_value is required"),
+  initial_value: MoneyString,
   currency: z.string().length(3, "currency must be 3 characters"),
   issued_to: z.string().uuid().nullable().optional(),
   issued_by_order_id: z.string().uuid().nullable().optional(),
@@ -88,27 +93,19 @@ const LookupQuerystring = z.object({
 
 // ── Plugin ─────────────────────────────────────────────────────────────────────
 
-export const walletPlugin: FastifyPluginAsync = async (app) => {
+export const walletPlugin: FastifyPluginAsyncZod = async (app) => {
 
   // ── GET /commerce/stores/:storeId/customers/:customerId/credits ───────────
   app.get(
     "/commerce/stores/:storeId/customers/:customerId/credits",
-    { preHandler: [storeAuthAdmin] },
+    {
+      schema: { params: StoreCustomerParams, querystring: ListQuerystring },
+      preHandler: [storeAuthAdmin],
+    },
     async (request, reply) => {
-      const params = StoreCustomerParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Invalid params" },
-        });
-      }
-      const query = ListQuerystring.safeParse(request.query);
-      const currency = query.success ? query.data.currency : undefined;
-
-      const credits = await getCustomerCredits(
-        params.data.storeId,
-        params.data.customerId,
-        currency
-      );
+      const { storeId, customerId } = request.params;
+      const currency = request.query.currency;
+      const credits = await getCustomerCredits(storeId, customerId, currency);
       return reply.send({ credits });
     }
   );
@@ -116,35 +113,21 @@ export const walletPlugin: FastifyPluginAsync = async (app) => {
   // ── POST /commerce/stores/:storeId/customers/:customerId/credits/issue ────
   app.post(
     "/commerce/stores/:storeId/customers/:customerId/credits/issue",
-    { preHandler: [storeAuthAdmin] },
+    {
+      schema: { params: StoreCustomerParams, body: IssueCreditBody },
+      preHandler: [storeAuthAdmin],
+    },
     async (request, reply) => {
-      const params = StoreCustomerParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Invalid params" },
-        });
-      }
-
-      const parsed = IssueCreditBody.safeParse(request.body);
-      if (!parsed.success) {
-        return reply.status(400).send({
-          error: {
-            code: "VALIDATION_ERROR",
-            message: "Request validation failed",
-            details: parsed.error.issues,
-          },
-        });
-      }
-
+      const { storeId, customerId } = request.params;
       try {
-        const result = await issueStoreCredit(params.data.storeId, {
-          customer_id: params.data.customerId,
-          currency: parsed.data.currency,
-          amount: parsed.data.amount,
-          notes: parsed.data.notes,
-          created_by: parsed.data.created_by,
-          expires_at: parsed.data.expires_at,
-          order_id: parsed.data.order_id,
+        const result = await issueStoreCredit(storeId, {
+          customer_id: customerId,
+          currency: request.body.currency,
+          amount: request.body.amount,
+          notes: request.body.notes,
+          created_by: request.body.created_by,
+          expires_at: request.body.expires_at,
+          order_id: request.body.order_id,
         });
         return reply.status(201).send(result);
       } catch (err: unknown) {
@@ -164,34 +147,20 @@ export const walletPlugin: FastifyPluginAsync = async (app) => {
   // ── POST /commerce/stores/:storeId/customers/:customerId/credits/adjust ───
   app.post(
     "/commerce/stores/:storeId/customers/:customerId/credits/adjust",
-    { preHandler: [storeAuthAdmin] },
+    {
+      schema: { params: StoreCustomerParams, body: AdjustCreditBody },
+      preHandler: [storeAuthAdmin],
+    },
     async (request, reply) => {
-      const params = StoreCustomerParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Invalid params" },
-        });
-      }
-
-      const parsed = AdjustCreditBody.safeParse(request.body);
-      if (!parsed.success) {
-        return reply.status(400).send({
-          error: {
-            code: "VALIDATION_ERROR",
-            message: "Request validation failed",
-            details: parsed.error.issues,
-          },
-        });
-      }
-
+      const { storeId, customerId } = request.params;
       try {
-        const result = await adjustStoreCredit(params.data.storeId, {
-          customer_id: params.data.customerId,
-          currency: parsed.data.currency,
-          delta: parsed.data.delta,
-          notes: parsed.data.notes,
-          created_by: parsed.data.created_by,
-          order_id: parsed.data.order_id,
+        const result = await adjustStoreCredit(storeId, {
+          customer_id: customerId,
+          currency: request.body.currency,
+          delta: request.body.delta,
+          notes: request.body.notes,
+          created_by: request.body.created_by,
+          order_id: request.body.order_id,
         });
         return reply.send(result);
       } catch (err: unknown) {
@@ -228,27 +197,18 @@ export const walletPlugin: FastifyPluginAsync = async (app) => {
   // ── GET /commerce/stores/:storeId/customers/:customerId/credits/transactions
   app.get(
     "/commerce/stores/:storeId/customers/:customerId/credits/transactions",
-    { preHandler: [storeAuthAdmin] },
+    {
+      schema: { params: StoreCustomerParams, querystring: ListQuerystring },
+      preHandler: [storeAuthAdmin],
+    },
     async (request, reply) => {
-      const params = StoreCustomerParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Invalid params" },
-        });
-      }
-      const query = ListQuerystring.safeParse(request.query);
+      const { storeId, customerId } = request.params;
+      const { limit, offset, currency } = request.query;
       const opts: { limit?: number; offset?: number; currency?: string } = {};
-      if (query.success) {
-        if (query.data.limit !== undefined) opts.limit = query.data.limit;
-        if (query.data.offset !== undefined) opts.offset = query.data.offset;
-        if (query.data.currency !== undefined) opts.currency = query.data.currency;
-      }
-
-      const transactions = await listStoreCreditTransactions(
-        params.data.storeId,
-        params.data.customerId,
-        opts
-      );
+      if (limit !== undefined) opts.limit = limit;
+      if (offset !== undefined) opts.offset = offset;
+      if (currency !== undefined) opts.currency = currency;
+      const transactions = await listStoreCreditTransactions(storeId, customerId, opts);
       return reply.send({ transactions });
     }
   );
@@ -258,21 +218,17 @@ export const walletPlugin: FastifyPluginAsync = async (app) => {
   // ── GET /commerce/stores/:storeId/gift-cards ────────────────────────────
   app.get(
     "/commerce/stores/:storeId/gift-cards",
-    { preHandler: [storeAuthAdmin] },
+    {
+      schema: { params: StoreParams, querystring: ListQuerystring },
+      preHandler: [storeAuthAdmin],
+    },
     async (request, reply) => {
-      const params = StoreParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Invalid storeId" },
-        });
-      }
-      const query = ListQuerystring.safeParse(request.query);
+      const { storeId } = request.params;
+      const { limit, offset } = request.query;
       const opts: { limit?: number; offset?: number } = {};
-      if (query.success) {
-        if (query.data.limit !== undefined) opts.limit = query.data.limit;
-        if (query.data.offset !== undefined) opts.offset = query.data.offset;
-      }
-      const giftCards = await listGiftCards(params.data.storeId, opts);
+      if (limit !== undefined) opts.limit = limit;
+      if (offset !== undefined) opts.offset = offset;
+      const giftCards = await listGiftCards(storeId, opts);
       return reply.send({ gift_cards: giftCards });
     }
   );
@@ -280,28 +236,14 @@ export const walletPlugin: FastifyPluginAsync = async (app) => {
   // ── POST /commerce/stores/:storeId/gift-cards ────────────────────────────
   app.post(
     "/commerce/stores/:storeId/gift-cards",
-    { preHandler: [storeAuthAdmin] },
+    {
+      schema: { params: StoreParams, body: CreateGiftCardBody },
+      preHandler: [storeAuthAdmin],
+    },
     async (request, reply) => {
-      const params = StoreParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Invalid storeId" },
-        });
-      }
-
-      const parsed = CreateGiftCardBody.safeParse(request.body);
-      if (!parsed.success) {
-        return reply.status(400).send({
-          error: {
-            code: "VALIDATION_ERROR",
-            message: "Request validation failed",
-            details: parsed.error.issues,
-          },
-        });
-      }
-
+      const { storeId } = request.params;
       try {
-        const id = await createGiftCard(params.data.storeId, parsed.data);
+        const id = await createGiftCard(storeId, request.body);
         return reply.status(201).send({ id });
       } catch (err: unknown) {
         if (
@@ -321,27 +263,13 @@ export const walletPlugin: FastifyPluginAsync = async (app) => {
   // Registered BEFORE /:giftCardId to avoid param conflict.
   app.get(
     "/commerce/stores/:storeId/gift-cards/lookup",
-    { preHandler: [storeAuthRead] },
+    {
+      schema: { params: StoreParams, querystring: LookupQuerystring },
+      preHandler: [storeAuthRead],
+    },
     async (request, reply) => {
-      const params = StoreParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Invalid storeId" },
-        });
-      }
-
-      const query = LookupQuerystring.safeParse(request.query);
-      if (!query.success) {
-        return reply.status(400).send({
-          error: {
-            code: "VALIDATION_ERROR",
-            message: "Request validation failed",
-            details: query.error.issues,
-          },
-        });
-      }
-
-      const outcome = await lookupGiftCard(params.data.storeId, query.data.code);
+      const { storeId } = request.params;
+      const outcome = await lookupGiftCard(storeId, request.query.code);
 
       if (outcome === null) {
         return reply.status(404).send({
@@ -368,15 +296,13 @@ export const walletPlugin: FastifyPluginAsync = async (app) => {
   // ── GET /commerce/stores/:storeId/gift-cards/:giftCardId ────────────────
   app.get(
     "/commerce/stores/:storeId/gift-cards/:giftCardId",
-    { preHandler: [storeAuthAdmin] },
+    {
+      schema: { params: GiftCardIdParams },
+      preHandler: [storeAuthAdmin],
+    },
     async (request, reply) => {
-      const params = GiftCardIdParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Invalid params" },
-        });
-      }
-      const card = await getGiftCard(params.data.storeId, params.data.giftCardId);
+      const { storeId, giftCardId } = request.params;
+      const card = await getGiftCard(storeId, giftCardId);
       if (!card) {
         return reply.status(404).send({
           error: { code: "NOT_FOUND", message: "gift card not found" },
@@ -389,18 +315,13 @@ export const walletPlugin: FastifyPluginAsync = async (app) => {
   // ── POST /commerce/stores/:storeId/gift-cards/:giftCardId/disable ────────
   app.post(
     "/commerce/stores/:storeId/gift-cards/:giftCardId/disable",
-    { preHandler: [storeAuthAdmin] },
+    {
+      schema: { params: GiftCardIdParams },
+      preHandler: [storeAuthAdmin],
+    },
     async (request, reply) => {
-      const params = GiftCardIdParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Invalid params" },
-        });
-      }
-      const disabled = await disableGiftCard(
-        params.data.storeId,
-        params.data.giftCardId
-      );
+      const { storeId, giftCardId } = request.params;
+      const disabled = await disableGiftCard(storeId, giftCardId);
       if (!disabled) {
         return reply.status(404).send({
           error: { code: "NOT_FOUND", message: "gift card not found" },

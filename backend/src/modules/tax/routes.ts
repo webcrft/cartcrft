@@ -13,7 +13,7 @@
  * Tax computation (calcTax) lives in lib/tax.ts and is consumed by checkout.
  */
 
-import type { FastifyPluginAsync } from "fastify";
+import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { z } from "zod";
 import { storeAuthAdmin } from "../../lib/auth/middleware.js";
 import {
@@ -75,31 +75,36 @@ const UpdateRateBody = z.object({
 
 // ── Plugin ────────────────────────────────────────────────────────────────────
 
-export const taxPlugin: FastifyPluginAsync = async (app) => {
+export const taxPlugin: FastifyPluginAsyncZod = async (app) => {
   const base = "/commerce/stores/:storeId";
 
   // ── Tax categories ──────────────────────────────────────────────────────────
 
-  app.get(`${base}/tax-categories`, { preHandler: [storeAuthAdmin] }, async (request, reply) => {
-    const { storeId } = StoreParams.parse(request.params);
+  app.get(`${base}/tax-categories`, {
+    schema: { params: StoreParams },
+    preHandler: [storeAuthAdmin],
+  }, async (request, reply) => {
+    const { storeId } = request.params;
     return reply.send({ categories: await listTaxCategories(storeId) });
   });
 
-  app.post(`${base}/tax-categories`, { preHandler: [storeAuthAdmin] }, async (request, reply) => {
-    const { storeId } = StoreParams.parse(request.params);
-    const body = CreateCategoryBody.safeParse(request.body);
-    if (!body.success) {
-      return reply.status(400).send({ error: { code: "VALIDATION_ERROR", message: "name and code are required", details: body.error.issues } });
-    }
-    const result = await createTaxCategory(storeId, body.data);
+  app.post(`${base}/tax-categories`, {
+    schema: { params: StoreParams, body: CreateCategoryBody },
+    preHandler: [storeAuthAdmin],
+  }, async (request, reply) => {
+    const { storeId } = request.params;
+    const result = await createTaxCategory(storeId, request.body);
     if (result.duplicate) {
       return reply.status(409).send({ error: { code: "CONFLICT", message: "a tax category with that code already exists" } });
     }
     return reply.status(201).send({ id: result.id });
   });
 
-  app.delete(`${base}/tax-categories/:categoryId`, { preHandler: [storeAuthAdmin] }, async (request, reply) => {
-    const { storeId, categoryId } = CategoryParams.parse(request.params);
+  app.delete(`${base}/tax-categories/:categoryId`, {
+    schema: { params: CategoryParams },
+    preHandler: [storeAuthAdmin],
+  }, async (request, reply) => {
+    const { storeId, categoryId } = request.params;
     const deleted = await deleteTaxCategory(storeId, categoryId);
     if (!deleted) return reply.status(404).send({ error: { code: "NOT_FOUND", message: "tax category not found" } });
     return reply.send({ ok: true });
@@ -107,68 +112,76 @@ export const taxPlugin: FastifyPluginAsync = async (app) => {
 
   // ── Tax zones ───────────────────────────────────────────────────────────────
 
-  app.get(`${base}/tax-zones`, { preHandler: [storeAuthAdmin] }, async (request, reply) => {
-    const { storeId } = StoreParams.parse(request.params);
+  app.get(`${base}/tax-zones`, {
+    schema: { params: StoreParams },
+    preHandler: [storeAuthAdmin],
+  }, async (request, reply) => {
+    const { storeId } = request.params;
     return reply.send({ zones: await listTaxZones(storeId) });
   });
 
-  app.post(`${base}/tax-zones`, { preHandler: [storeAuthAdmin] }, async (request, reply) => {
-    const { storeId } = StoreParams.parse(request.params);
-    const body = CreateZoneBody.safeParse(request.body);
-    if (!body.success) {
-      return reply.status(400).send({ error: { code: "VALIDATION_ERROR", message: "validation failed", details: body.error.issues } });
-    }
-    const id = await createTaxZone(storeId, body.data);
+  app.post(`${base}/tax-zones`, {
+    schema: { params: StoreParams, body: CreateZoneBody },
+    preHandler: [storeAuthAdmin],
+  }, async (request, reply) => {
+    const { storeId } = request.params;
+    const id = await createTaxZone(storeId, request.body);
     return reply.status(201).send({ id });
   });
 
-  app.put(`${base}/tax-zones/:zoneId`, { preHandler: [storeAuthAdmin] }, async (request, reply) => {
-    const { storeId, zoneId } = ZoneParams.parse(request.params);
-    const body = UpdateZoneBody.safeParse(request.body);
-    if (!body.success) {
-      return reply.status(400).send({ error: { code: "VALIDATION_ERROR", message: "validation failed", details: body.error.issues } });
-    }
-    await updateTaxZone(storeId, zoneId, body.data);
+  app.put(`${base}/tax-zones/:zoneId`, {
+    schema: { params: ZoneParams, body: UpdateZoneBody },
+    preHandler: [storeAuthAdmin],
+  }, async (request, reply) => {
+    const { storeId, zoneId } = request.params;
+    await updateTaxZone(storeId, zoneId, request.body);
     return reply.send({ ok: true });
   });
 
-  app.delete(`${base}/tax-zones/:zoneId`, { preHandler: [storeAuthAdmin] }, async (request, reply) => {
-    const { storeId, zoneId } = ZoneParams.parse(request.params);
+  app.delete(`${base}/tax-zones/:zoneId`, {
+    schema: { params: ZoneParams },
+    preHandler: [storeAuthAdmin],
+  }, async (request, reply) => {
+    const { storeId, zoneId } = request.params;
     await deleteTaxZone(storeId, zoneId);
     return reply.send({ ok: true });
   });
 
   // ── Tax rates ───────────────────────────────────────────────────────────────
 
-  app.get(`${base}/tax-zones/:zoneId/rates`, { preHandler: [storeAuthAdmin] }, async (request, reply) => {
-    const { storeId, zoneId } = ZoneParams.parse(request.params);
+  app.get(`${base}/tax-zones/:zoneId/rates`, {
+    schema: { params: ZoneParams },
+    preHandler: [storeAuthAdmin],
+  }, async (request, reply) => {
+    const { storeId, zoneId } = request.params;
     return reply.send({ rates: await listTaxRates(storeId, zoneId) });
   });
 
-  app.post(`${base}/tax-zones/:zoneId/rates`, { preHandler: [storeAuthAdmin] }, async (request, reply) => {
-    const { storeId, zoneId } = ZoneParams.parse(request.params);
-    const body = CreateRateBody.safeParse(request.body);
-    if (!body.success) {
-      return reply.status(400).send({ error: { code: "VALIDATION_ERROR", message: "validation failed", details: body.error.issues } });
-    }
-    const id = await createTaxRate(storeId, zoneId, body.data);
+  app.post(`${base}/tax-zones/:zoneId/rates`, {
+    schema: { params: ZoneParams, body: CreateRateBody },
+    preHandler: [storeAuthAdmin],
+  }, async (request, reply) => {
+    const { storeId, zoneId } = request.params;
+    const id = await createTaxRate(storeId, zoneId, request.body);
     if (!id) return reply.status(404).send({ error: { code: "NOT_FOUND", message: "tax zone not found" } });
     return reply.status(201).send({ id });
   });
 
-  app.put(`${base}/tax-zones/:zoneId/rates/:rateId`, { preHandler: [storeAuthAdmin] }, async (request, reply) => {
-    const { storeId, zoneId, rateId } = ZoneRateParams.parse(request.params);
-    const body = UpdateRateBody.safeParse(request.body);
-    if (!body.success) {
-      return reply.status(400).send({ error: { code: "VALIDATION_ERROR", message: "validation failed", details: body.error.issues } });
-    }
-    const ok = await updateTaxRate(storeId, zoneId, rateId, body.data);
+  app.put(`${base}/tax-zones/:zoneId/rates/:rateId`, {
+    schema: { params: ZoneRateParams, body: UpdateRateBody },
+    preHandler: [storeAuthAdmin],
+  }, async (request, reply) => {
+    const { storeId, zoneId, rateId } = request.params;
+    const ok = await updateTaxRate(storeId, zoneId, rateId, request.body);
     if (!ok) return reply.status(404).send({ error: { code: "NOT_FOUND", message: "tax rate not found" } });
     return reply.send({ ok: true });
   });
 
-  app.delete(`${base}/tax-zones/:zoneId/rates/:rateId`, { preHandler: [storeAuthAdmin] }, async (request, reply) => {
-    const { storeId, zoneId, rateId } = ZoneRateParams.parse(request.params);
+  app.delete(`${base}/tax-zones/:zoneId/rates/:rateId`, {
+    schema: { params: ZoneRateParams },
+    preHandler: [storeAuthAdmin],
+  }, async (request, reply) => {
+    const { storeId, zoneId, rateId } = request.params;
     await deleteTaxRate(storeId, zoneId, rateId);
     return reply.send({ ok: true });
   });

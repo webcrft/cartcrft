@@ -20,7 +20,7 @@
  *   DELETE /commerce/stores/:storeId/auto-discounts/:discountId         — DeleteAutoDiscount
  */
 
-import type { FastifyPluginAsync } from "fastify";
+import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { z } from "zod";
 import { storeAuthAdmin, storeAuthRead } from "../../lib/auth/middleware.js";
 import {
@@ -168,26 +168,22 @@ const UpdateAutoDiscountBody = z.object({
 
 // ── Plugin ─────────────────────────────────────────────────────────────────────
 
-export const discountsPlugin: FastifyPluginAsync = async (app) => {
+export const discountsPlugin: FastifyPluginAsyncZod = async (app) => {
 
   // ── GET /commerce/stores/:storeId/discounts ──────────────────────────────
   app.get(
     "/commerce/stores/:storeId/discounts",
-    { preHandler: [storeAuthAdmin] },
+    {
+      schema: { params: StoreDiscountParams, querystring: ListQuerystring },
+      preHandler: [storeAuthAdmin],
+    },
     async (request, reply) => {
-      const params = StoreDiscountParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Invalid storeId" },
-        });
-      }
-      const query = ListQuerystring.safeParse(request.query);
+      const { storeId } = request.params;
+      const { limit, offset } = request.query;
       const opts: { limit?: number; offset?: number } = {};
-      if (query.success) {
-        if (query.data.limit !== undefined) opts.limit = query.data.limit;
-        if (query.data.offset !== undefined) opts.offset = query.data.offset;
-      }
-      const discounts = await listDiscounts(params.data.storeId, opts);
+      if (limit !== undefined) opts.limit = limit;
+      if (offset !== undefined) opts.offset = offset;
+      const discounts = await listDiscounts(storeId, opts);
       return reply.send({ discounts });
     }
   );
@@ -195,28 +191,14 @@ export const discountsPlugin: FastifyPluginAsync = async (app) => {
   // ── POST /commerce/stores/:storeId/discounts ─────────────────────────────
   app.post(
     "/commerce/stores/:storeId/discounts",
-    { preHandler: [storeAuthAdmin] },
+    {
+      schema: { params: StoreDiscountParams, body: CreateDiscountBody },
+      preHandler: [storeAuthAdmin],
+    },
     async (request, reply) => {
-      const params = StoreDiscountParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Invalid storeId" },
-        });
-      }
-
-      const parsed = CreateDiscountBody.safeParse(request.body);
-      if (!parsed.success) {
-        return reply.status(400).send({
-          error: {
-            code: "VALIDATION_ERROR",
-            message: "Request validation failed",
-            details: parsed.error.issues,
-          },
-        });
-      }
-
+      const { storeId } = request.params;
       try {
-        const id = await createDiscount(params.data.storeId, parsed.data);
+        const id = await createDiscount(storeId, request.body);
         return reply.status(201).send({ id });
       } catch (err: unknown) {
         if (
@@ -236,30 +218,18 @@ export const discountsPlugin: FastifyPluginAsync = async (app) => {
   // MUST be registered before /:discountId to avoid param conflict.
   app.get(
     "/commerce/stores/:storeId/discounts/validate",
-    { preHandler: [storeAuthRead] },
+    {
+      schema: { params: StoreDiscountParams, querystring: ValidateQuerystring },
+      preHandler: [storeAuthRead],
+    },
     async (request, reply) => {
-      const params = StoreDiscountParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Invalid storeId" },
-        });
-      }
+      const { storeId } = request.params;
+      const { code, customer_id, order_total } = request.query;
 
-      const query = ValidateQuerystring.safeParse(request.query);
-      if (!query.success) {
-        return reply.status(400).send({
-          error: {
-            code: "VALIDATION_ERROR",
-            message: "Request validation failed",
-            details: query.error.issues,
-          },
-        });
-      }
-
-      const outcome = await validateDiscount(params.data.storeId, {
-        code: query.data.code,
-        customer_id: query.data.customer_id,
-        order_total: query.data.order_total,
+      const outcome = await validateDiscount(storeId, {
+        code,
+        customer_id,
+        order_total,
       });
 
       if (outcome === null) {
@@ -284,15 +254,13 @@ export const discountsPlugin: FastifyPluginAsync = async (app) => {
   // ── GET /commerce/stores/:storeId/discounts/:discountId ──────────────────
   app.get(
     "/commerce/stores/:storeId/discounts/:discountId",
-    { preHandler: [storeAuthAdmin] },
+    {
+      schema: { params: DiscountIdParams },
+      preHandler: [storeAuthAdmin],
+    },
     async (request, reply) => {
-      const params = DiscountIdParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Invalid params" },
-        });
-      }
-      const discount = await getDiscount(params.data.storeId, params.data.discountId);
+      const { storeId, discountId } = request.params;
+      const discount = await getDiscount(storeId, discountId);
       if (!discount) {
         return reply.status(404).send({
           error: { code: "NOT_FOUND", message: "discount not found" },
@@ -305,32 +273,14 @@ export const discountsPlugin: FastifyPluginAsync = async (app) => {
   // ── PUT /commerce/stores/:storeId/discounts/:discountId ──────────────────
   app.put(
     "/commerce/stores/:storeId/discounts/:discountId",
-    { preHandler: [storeAuthAdmin] },
+    {
+      schema: { params: DiscountIdParams, body: UpdateDiscountBody },
+      preHandler: [storeAuthAdmin],
+    },
     async (request, reply) => {
-      const params = DiscountIdParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Invalid params" },
-        });
-      }
-
-      const parsed = UpdateDiscountBody.safeParse(request.body);
-      if (!parsed.success) {
-        return reply.status(400).send({
-          error: {
-            code: "VALIDATION_ERROR",
-            message: "Request validation failed",
-            details: parsed.error.issues,
-          },
-        });
-      }
-
+      const { storeId, discountId } = request.params;
       try {
-        const updated = await updateDiscount(
-          params.data.storeId,
-          params.data.discountId,
-          parsed.data
-        );
+        const updated = await updateDiscount(storeId, discountId, request.body);
         if (!updated) {
           return reply.status(404).send({
             error: { code: "NOT_FOUND", message: "discount not found" },
@@ -354,15 +304,13 @@ export const discountsPlugin: FastifyPluginAsync = async (app) => {
   // ── DELETE /commerce/stores/:storeId/discounts/:discountId ───────────────
   app.delete(
     "/commerce/stores/:storeId/discounts/:discountId",
-    { preHandler: [storeAuthAdmin] },
+    {
+      schema: { params: DiscountIdParams },
+      preHandler: [storeAuthAdmin],
+    },
     async (request, reply) => {
-      const params = DiscountIdParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Invalid params" },
-        });
-      }
-      const deleted = await deleteDiscount(params.data.storeId, params.data.discountId);
+      const { storeId, discountId } = request.params;
+      const deleted = await deleteDiscount(storeId, discountId);
       if (!deleted) {
         return reply.status(404).send({
           error: { code: "NOT_FOUND", message: "discount not found" },
@@ -377,21 +325,17 @@ export const discountsPlugin: FastifyPluginAsync = async (app) => {
   // ── GET /commerce/stores/:storeId/auto-discounts ─────────────────────────
   app.get(
     "/commerce/stores/:storeId/auto-discounts",
-    { preHandler: [storeAuthAdmin] },
+    {
+      schema: { params: StoreDiscountParams, querystring: ListQuerystring },
+      preHandler: [storeAuthAdmin],
+    },
     async (request, reply) => {
-      const params = StoreDiscountParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Invalid storeId" },
-        });
-      }
-      const query = ListQuerystring.safeParse(request.query);
+      const { storeId } = request.params;
+      const { limit, offset } = request.query;
       const opts: { limit?: number; offset?: number } = {};
-      if (query.success) {
-        if (query.data.limit !== undefined) opts.limit = query.data.limit;
-        if (query.data.offset !== undefined) opts.offset = query.data.offset;
-      }
-      const discounts = await listAutoDiscounts(params.data.storeId, opts);
+      if (limit !== undefined) opts.limit = limit;
+      if (offset !== undefined) opts.offset = offset;
+      const discounts = await listAutoDiscounts(storeId, opts);
       return reply.send({ discounts });
     }
   );
@@ -399,27 +343,13 @@ export const discountsPlugin: FastifyPluginAsync = async (app) => {
   // ── POST /commerce/stores/:storeId/auto-discounts ────────────────────────
   app.post(
     "/commerce/stores/:storeId/auto-discounts",
-    { preHandler: [storeAuthAdmin] },
+    {
+      schema: { params: StoreDiscountParams, body: CreateAutoDiscountBody },
+      preHandler: [storeAuthAdmin],
+    },
     async (request, reply) => {
-      const params = StoreDiscountParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Invalid storeId" },
-        });
-      }
-
-      const parsed = CreateAutoDiscountBody.safeParse(request.body);
-      if (!parsed.success) {
-        return reply.status(400).send({
-          error: {
-            code: "VALIDATION_ERROR",
-            message: "Request validation failed",
-            details: parsed.error.issues,
-          },
-        });
-      }
-
-      const id = await createAutoDiscount(params.data.storeId, parsed.data);
+      const { storeId } = request.params;
+      const id = await createAutoDiscount(storeId, request.body);
       return reply.status(201).send({ id });
     }
   );
@@ -427,15 +357,13 @@ export const discountsPlugin: FastifyPluginAsync = async (app) => {
   // ── GET /commerce/stores/:storeId/auto-discounts/:discountId ────────────
   app.get(
     "/commerce/stores/:storeId/auto-discounts/:discountId",
-    { preHandler: [storeAuthAdmin] },
+    {
+      schema: { params: DiscountIdParams },
+      preHandler: [storeAuthAdmin],
+    },
     async (request, reply) => {
-      const params = DiscountIdParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Invalid params" },
-        });
-      }
-      const discount = await getAutoDiscount(params.data.storeId, params.data.discountId);
+      const { storeId, discountId } = request.params;
+      const discount = await getAutoDiscount(storeId, discountId);
       if (!discount) {
         return reply.status(404).send({
           error: { code: "NOT_FOUND", message: "auto-discount not found" },
@@ -448,31 +376,13 @@ export const discountsPlugin: FastifyPluginAsync = async (app) => {
   // ── PUT /commerce/stores/:storeId/auto-discounts/:discountId ────────────
   app.put(
     "/commerce/stores/:storeId/auto-discounts/:discountId",
-    { preHandler: [storeAuthAdmin] },
+    {
+      schema: { params: DiscountIdParams, body: UpdateAutoDiscountBody },
+      preHandler: [storeAuthAdmin],
+    },
     async (request, reply) => {
-      const params = DiscountIdParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Invalid params" },
-        });
-      }
-
-      const parsed = UpdateAutoDiscountBody.safeParse(request.body);
-      if (!parsed.success) {
-        return reply.status(400).send({
-          error: {
-            code: "VALIDATION_ERROR",
-            message: "Request validation failed",
-            details: parsed.error.issues,
-          },
-        });
-      }
-
-      const updated = await updateAutoDiscount(
-        params.data.storeId,
-        params.data.discountId,
-        parsed.data
-      );
+      const { storeId, discountId } = request.params;
+      const updated = await updateAutoDiscount(storeId, discountId, request.body);
       if (!updated) {
         return reply.status(404).send({
           error: { code: "NOT_FOUND", message: "auto-discount not found" },
@@ -485,18 +395,13 @@ export const discountsPlugin: FastifyPluginAsync = async (app) => {
   // ── DELETE /commerce/stores/:storeId/auto-discounts/:discountId ─────────
   app.delete(
     "/commerce/stores/:storeId/auto-discounts/:discountId",
-    { preHandler: [storeAuthAdmin] },
+    {
+      schema: { params: DiscountIdParams },
+      preHandler: [storeAuthAdmin],
+    },
     async (request, reply) => {
-      const params = DiscountIdParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Invalid params" },
-        });
-      }
-      const deleted = await deleteAutoDiscount(
-        params.data.storeId,
-        params.data.discountId
-      );
+      const { storeId, discountId } = request.params;
+      const deleted = await deleteAutoDiscount(storeId, discountId);
       if (!deleted) {
         return reply.status(404).send({
           error: { code: "NOT_FOUND", message: "auto-discount not found" },

@@ -193,7 +193,7 @@ describe("Static shipping rates CRUD", () => {
       `/commerce/stores/${storeId}/shipping-zones/${zoneId}/rates`,
       {
         name: "Standard Shipping",
-        price: 79,
+        price: "79.00",
         min_weight_g: 0,
         max_weight_g: 5000,
         is_active: true,
@@ -248,7 +248,7 @@ describe("Available rates — zone matching", () => {
     await post(
       ctx,
       `/commerce/stores/${storeId}/shipping-zones/${z1Id}/rates`,
-      { name: "National Standard", price: 80, is_active: true },
+      { name: "National Standard", price: "80.00", is_active: true },
       auth
     );
 
@@ -263,7 +263,7 @@ describe("Available rates — zone matching", () => {
     await post(
       ctx,
       `/commerce/stores/${storeId}/shipping-zones/${z2Id}/rates`,
-      { name: "Gauteng Express", price: 50, is_active: true },
+      { name: "Gauteng Express", price: "50.00", is_active: true },
       auth
     );
 
@@ -278,7 +278,7 @@ describe("Available rates — zone matching", () => {
     await post(
       ctx,
       `/commerce/stores/${storeId}/shipping-zones/${z3Id}/rates`,
-      { name: "UK Standard", price: 200, is_active: true },
+      { name: "UK Standard", price: "200.00", is_active: true },
       auth
     );
   });
@@ -357,21 +357,21 @@ describe("Available rates — weight and order-total bounds", () => {
     await post(
       ctx,
       `/commerce/stores/${storeId}/shipping-zones/${zId}/rates`,
-      { name: "Light", price: 30, min_weight_g: 0, max_weight_g: 1000, is_active: true },
+      { name: "Light", price: "30.00", min_weight_g: 0, max_weight_g: 1000, is_active: true },
       auth
     );
     // Heavy rate: 1kg–5kg
     await post(
       ctx,
       `/commerce/stores/${storeId}/shipping-zones/${zId}/rates`,
-      { name: "Heavy", price: 80, min_weight_g: 1001, max_weight_g: 5000, is_active: true },
+      { name: "Heavy", price: "80.00", min_weight_g: 1001, max_weight_g: 5000, is_active: true },
       auth
     );
     // Free shipping: min order total R500
     await post(
       ctx,
       `/commerce/stores/${storeId}/shipping-zones/${zId}/rates`,
-      { name: "Free Shipping", price: 0, min_order_total: 500, is_active: true },
+      { name: "Free Shipping", price: "0.00", min_order_total: "500.00", is_active: true },
       auth
     );
   });

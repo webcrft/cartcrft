@@ -9,7 +9,8 @@
  *  - Dev mock OAuth (APP_ENV != production)
  */
 
-import type { FastifyPluginAsync, preHandlerHookHandler } from "fastify";
+import type { preHandlerHookHandler } from "fastify";
+import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { z } from "zod";
 import {
   storeAuthAdmin,
@@ -195,7 +196,7 @@ function getUserAgent(request: Parameters<preHandlerHookHandler>[0]): string {
 
 // ── Plugin ────────────────────────────────────────────────────────────────────
 
-export const customerAuthPlugin: FastifyPluginAsync = async (app) => {
+export const customerAuthPlugin: FastifyPluginAsyncZod = async (app) => {
   // Decorate request with customer slot
   app.decorateRequest("customer", undefined);
 
@@ -203,48 +204,63 @@ export const customerAuthPlugin: FastifyPluginAsync = async (app) => {
 
   // ── Auth config management (storeAuthAdmin) ────────────────────────────────
 
-  app.get(`${base}/auth/config`, { preHandler: [storeAuthAdmin] }, async (request, reply) => {
-    const { storeId } = StoreIdParams.parse(request.params);
+  app.get(`${base}/auth/config`, {
+    schema: { params: StoreIdParams },
+    preHandler: [storeAuthAdmin],
+  }, async (request, reply) => {
+    const { storeId } = request.params;
     const pool = getPool();
     const cfg = await getAuthConfig(pool, storeId);
     return reply.send({ config: cfg });
   });
 
-  app.put(`${base}/auth/config`, { preHandler: [storeAuthAdmin] }, async (request, reply) => {
-    const { storeId } = StoreIdParams.parse(request.params);
-    const body = AuthConfigBody.parse(request.body);
+  app.put(`${base}/auth/config`, {
+    schema: { params: StoreIdParams, body: AuthConfigBody },
+    preHandler: [storeAuthAdmin],
+  }, async (request, reply) => {
+    const { storeId } = request.params;
     const pool = getPool();
     const secretsKey = config.AUTH_SECRETS_KEY ?? "";
-    await updateAuthConfig(pool, storeId, secretsKey, body as Record<string, unknown>);
+    await updateAuthConfig(pool, storeId, secretsKey, request.body as Record<string, unknown>);
     return reply.send({ ok: true });
   });
 
-  app.get(`${base}/auth/email/log`, { preHandler: [storeAuthAdmin] }, async (request, reply) => {
-    const { storeId } = StoreIdParams.parse(request.params);
+  app.get(`${base}/auth/email/log`, {
+    schema: { params: StoreIdParams },
+    preHandler: [storeAuthAdmin],
+  }, async (request, reply) => {
+    const { storeId } = request.params;
     const pool = getPool();
     const entries = await getEmailLog(pool, storeId);
     return reply.send({ entries });
   });
 
-  app.post(`${base}/auth/email/test`, { preHandler: [storeAuthAdmin] }, async (request, reply) => {
-    const { storeId } = StoreIdParams.parse(request.params);
-    const body = TestEmailBody.parse(request.body);
+  app.post(`${base}/auth/email/test`, {
+    schema: { params: StoreIdParams, body: TestEmailBody },
+    preHandler: [storeAuthAdmin],
+  }, async (request, reply) => {
+    const { storeId } = request.params;
     const pool = getPool();
     const secretsKey = config.AUTH_SECRETS_KEY ?? "";
     const cfg = await loadStoreConfig(pool, storeId, secretsKey);
-    await sendTestEmail(pool, storeId, cfg, body.email);
+    await sendTestEmail(pool, storeId, cfg, request.body.email);
     return reply.send({ ok: true });
   });
 
   // email/connect — stub for connecting custom SMTP (returns ok)
-  app.post(`${base}/auth/email/connect`, { preHandler: [storeAuthAdmin] }, async (_request, reply) => {
+  app.post(`${base}/auth/email/connect`, {
+    schema: { params: StoreIdParams },
+    preHandler: [storeAuthAdmin],
+  }, async (_request, reply) => {
     return reply.send({ ok: true });
   });
 
   // ── Public auth info ───────────────────────────────────────────────────────
 
-  app.get(`${base}/auth/info`, async (request, reply) => {
-    const { storeId } = StoreIdParams.parse(request.params);
+  app.get(`${base}/auth/info`, {
+    schema: { params: StoreIdParams },
+  }, async (request, reply) => {
+    const { storeId } = request.params;
     const pool = getPool();
     const secretsKey = config.AUTH_SECRETS_KEY ?? "";
     try {
@@ -267,16 +283,17 @@ export const customerAuthPlugin: FastifyPluginAsync = async (app) => {
 
   // ── Register ───────────────────────────────────────────────────────────────
 
-  app.post(`${base}/auth/register`, async (request, reply) => {
-    const { storeId } = StoreIdParams.parse(request.params);
-    const body = RegisterBody.parse(request.body);
+  app.post(`${base}/auth/register`, {
+    schema: { params: StoreIdParams, body: RegisterBody },
+  }, async (request, reply) => {
+    const { storeId } = request.params;
     const pool = getPool();
     const secretsKey = config.AUTH_SECRETS_KEY ?? "";
     const cfg = await loadStoreConfig(pool, storeId, secretsKey);
     const ip = getIp(request);
     const ua = getUserAgent(request);
 
-    const result = await registerCustomer(pool, storeId, body.email, body.password, cfg, ip, ua);
+    const result = await registerCustomer(pool, storeId, request.body.email, request.body.password, cfg, ip, ua);
 
     if (result.requiresVerification) {
       return reply.status(201).send({
@@ -300,16 +317,17 @@ export const customerAuthPlugin: FastifyPluginAsync = async (app) => {
 
   // ── Login ──────────────────────────────────────────────────────────────────
 
-  app.post(`${base}/auth/login`, async (request, reply) => {
-    const { storeId } = StoreIdParams.parse(request.params);
-    const body = LoginBody.parse(request.body);
+  app.post(`${base}/auth/login`, {
+    schema: { params: StoreIdParams, body: LoginBody },
+  }, async (request, reply) => {
+    const { storeId } = request.params;
     const pool = getPool();
     const secretsKey = config.AUTH_SECRETS_KEY ?? "";
     const cfg = await loadStoreConfig(pool, storeId, secretsKey);
     const ip = getIp(request);
     const ua = getUserAgent(request);
 
-    const session = await loginWithPassword(pool, storeId, body.email, body.password, cfg, ip, ua);
+    const session = await loginWithPassword(pool, storeId, request.body.email, request.body.password, cfg, ip, ua);
     return reply.send({
       session_token: session.sessionToken,
       access_token: session.accessToken,
@@ -318,16 +336,17 @@ export const customerAuthPlugin: FastifyPluginAsync = async (app) => {
 
   // ── Token refresh ──────────────────────────────────────────────────────────
 
-  app.post(`${base}/auth/token`, async (request, reply) => {
-    const { storeId } = StoreIdParams.parse(request.params);
-    const body = TokenBody.parse(request.body);
+  app.post(`${base}/auth/token`, {
+    schema: { params: StoreIdParams, body: TokenBody },
+  }, async (request, reply) => {
+    const { storeId } = request.params;
     const pool = getPool();
     const secretsKey = config.AUTH_SECRETS_KEY ?? "";
     const cfg = await loadStoreConfig(pool, storeId, secretsKey);
     const ip = getIp(request);
     const ua = getUserAgent(request);
 
-    const result = await rotateSession(pool, body.refresh_token, storeId, cfg, ip, ua);
+    const result = await rotateSession(pool, request.body.refresh_token, storeId, cfg, ip, ua);
     return reply.send({
       session_token: result.newSessionToken,
       access_token: result.accessToken,
@@ -336,14 +355,17 @@ export const customerAuthPlugin: FastifyPluginAsync = async (app) => {
 
   // ── Logout ─────────────────────────────────────────────────────────────────
 
-  app.post(`${base}/auth/logout`, async (request, reply) => {
-    const { storeId } = StoreIdParams.parse(request.params);
-    const body = z.object({ refresh_token: z.string().optional() }).parse(request.body ?? {});
+  const LogoutBody = z.object({ refresh_token: z.string().optional() });
+
+  app.post(`${base}/auth/logout`, {
+    schema: { params: StoreIdParams, body: LogoutBody },
+  }, async (request, reply) => {
+    const { storeId } = request.params;
     const pool = getPool();
 
-    if (body.refresh_token) {
+    if (request.body.refresh_token) {
       const { hashToken } = await import("./service.js");
-      const hash = hashToken(body.refresh_token);
+      const hash = hashToken(request.body.refresh_token);
       await pool.query(
         `UPDATE customer_sessions
          SET revoked_at = now(), is_revoked = true
@@ -356,52 +378,58 @@ export const customerAuthPlugin: FastifyPluginAsync = async (app) => {
 
   // ── Verify email ───────────────────────────────────────────────────────────
 
-  app.post(`${base}/auth/verify-email`, async (request, reply) => {
-    const { storeId } = StoreIdParams.parse(request.params);
-    const body = VerifyEmailBody.parse(request.body);
+  app.post(`${base}/auth/verify-email`, {
+    schema: { params: StoreIdParams, body: VerifyEmailBody },
+  }, async (request, reply) => {
+    const { storeId } = request.params;
     const pool = getPool();
-    const customerId = await verifyEmail(pool, storeId, body.token);
+    const customerId = await verifyEmail(pool, storeId, request.body.token);
     if (!customerId) {
       return reply.status(400).send({ error: { code: "BAD_REQUEST", message: "invalid or expired verification token" } });
     }
     return reply.send({ ok: true });
   });
 
-  app.post(`${base}/auth/verify-email/resend`, async (request, reply) => {
-    const { storeId } = StoreIdParams.parse(request.params);
-    const body = z.object({ email: z.string().email() }).parse(request.body);
+  const ResendVerifyBody = z.object({ email: z.string().email() });
+
+  app.post(`${base}/auth/verify-email/resend`, {
+    schema: { params: StoreIdParams, body: ResendVerifyBody },
+  }, async (request, reply) => {
+    const { storeId } = request.params;
     const pool = getPool();
     const secretsKey = config.AUTH_SECRETS_KEY ?? "";
     const cfg = await loadStoreConfig(pool, storeId, secretsKey);
 
     const { rows } = await pool.query<{ id: string; email_verified: boolean }>(
       `SELECT id::text, email_verified FROM customers WHERE store_id = $1::uuid AND email = $2`,
-      [storeId, body.email.toLowerCase().trim()]
+      [storeId, request.body.email.toLowerCase().trim()]
     );
     const customer = rows[0];
     if (customer && !customer.email_verified) {
-      await sendEmailVerification(pool, storeId, customer.id, body.email, cfg);
+      await sendEmailVerification(pool, storeId, customer.id, request.body.email, cfg);
     }
     return reply.send({ ok: true });
   });
 
   // ── Password reset ─────────────────────────────────────────────────────────
 
-  app.post(`${base}/auth/password-reset/request`, async (request, reply) => {
-    const { storeId } = StoreIdParams.parse(request.params);
-    const body = PasswordResetRequestBody.parse(request.body);
+  app.post(`${base}/auth/password-reset/request`, {
+    schema: { params: StoreIdParams, body: PasswordResetRequestBody },
+  }, async (request, reply) => {
+    const { storeId } = request.params;
     const pool = getPool();
     const secretsKey = config.AUTH_SECRETS_KEY ?? "";
     const cfg = await loadStoreConfig(pool, storeId, secretsKey);
-    await requestPasswordReset(pool, storeId, body.email, cfg, getIp(request), getUserAgent(request));
+    await requestPasswordReset(pool, storeId, request.body.email, cfg, getIp(request), getUserAgent(request));
     return reply.send({ ok: true });
   });
 
-  app.post(`${base}/auth/password-reset/complete`, async (request, reply) => {
-    const { storeId } = StoreIdParams.parse(request.params);
-    const body = PasswordResetCompleteBody.parse(request.body);
+  app.post(`${base}/auth/password-reset/complete`, {
+    schema: { params: StoreIdParams, body: PasswordResetCompleteBody },
+  }, async (request, reply) => {
+    const { storeId } = request.params;
     const pool = getPool();
-    const ok = await completePasswordReset(pool, storeId, body.token, body.password);
+    const ok = await completePasswordReset(pool, storeId, request.body.token, request.body.password);
     if (!ok) {
       return reply.status(400).send({ error: { code: "BAD_REQUEST", message: "invalid or expired reset token" } });
     }
@@ -410,36 +438,39 @@ export const customerAuthPlugin: FastifyPluginAsync = async (app) => {
 
   // ── Magic link ─────────────────────────────────────────────────────────────
 
-  app.post(`${base}/auth/magic-link`, async (request, reply) => {
-    const { storeId } = StoreIdParams.parse(request.params);
-    const body = MagicLinkBody.parse(request.body);
+  app.post(`${base}/auth/magic-link`, {
+    schema: { params: StoreIdParams, body: MagicLinkBody },
+  }, async (request, reply) => {
+    const { storeId } = request.params;
     const pool = getPool();
     const secretsKey = config.AUTH_SECRETS_KEY ?? "";
     const cfg = await loadStoreConfig(pool, storeId, secretsKey);
-    await sendMagicLink(pool, storeId, body.email, cfg, getIp(request), getUserAgent(request));
+    await sendMagicLink(pool, storeId, request.body.email, cfg, getIp(request), getUserAgent(request));
     return reply.send({ ok: true });
   });
 
-  app.post(`${base}/auth/magic-link/verify`, async (request, reply) => {
-    const { storeId } = StoreIdParams.parse(request.params);
-    const body = MagicLinkVerifyBody.parse(request.body);
+  app.post(`${base}/auth/magic-link/verify`, {
+    schema: { params: StoreIdParams, body: MagicLinkVerifyBody },
+  }, async (request, reply) => {
+    const { storeId } = request.params;
     const pool = getPool();
     const secretsKey = config.AUTH_SECRETS_KEY ?? "";
     const cfg = await loadStoreConfig(pool, storeId, secretsKey);
-    const session = await verifyMagicLink(pool, storeId, body.token, cfg, getIp(request), getUserAgent(request));
+    const session = await verifyMagicLink(pool, storeId, request.body.token, cfg, getIp(request), getUserAgent(request));
     return reply.send({ session_token: session.sessionToken, access_token: session.accessToken });
   });
 
   // ── Invite accept ──────────────────────────────────────────────────────────
 
-  app.post(`${base}/auth/invite/accept`, async (request, reply) => {
-    const { storeId } = StoreIdParams.parse(request.params);
-    const body = InviteAcceptBody.parse(request.body);
+  app.post(`${base}/auth/invite/accept`, {
+    schema: { params: StoreIdParams, body: InviteAcceptBody },
+  }, async (request, reply) => {
+    const { storeId } = request.params;
     const pool = getPool();
     const secretsKey = config.AUTH_SECRETS_KEY ?? "";
     const cfg = await loadStoreConfig(pool, storeId, secretsKey);
     const session = await acceptInvitation(
-      pool, storeId, body.token, body.password, cfg, getIp(request), getUserAgent(request)
+      pool, storeId, request.body.token, request.body.password, cfg, getIp(request), getUserAgent(request)
     );
     return reply.send({ session_token: session.sessionToken, access_token: session.accessToken });
   });
@@ -447,9 +478,11 @@ export const customerAuthPlugin: FastifyPluginAsync = async (app) => {
   // ── OAuth URL generators ────────────────────────────────────────────────────
 
   for (const provider of ["google", "microsoft", "discord"] as const) {
-    app.get(`${base}/auth/${provider}/url`, async (request, reply) => {
-      const { storeId } = StoreIdParams.parse(request.params);
-      const q = OAuthUrlQuery.parse(request.query);
+    app.get(`${base}/auth/${provider}/url`, {
+      schema: { params: StoreIdParams, querystring: OAuthUrlQuery },
+    }, async (request, reply) => {
+      const { storeId } = request.params;
+      const q = request.query;
       const pool = getPool();
       const secretsKey = config.AUTH_SECRETS_KEY ?? "";
       const cfg = await loadStoreConfig(pool, storeId, secretsKey);
@@ -476,13 +509,14 @@ export const customerAuthPlugin: FastifyPluginAsync = async (app) => {
   // ── OAuth callbacks ────────────────────────────────────────────────────────
 
   // For Google
-  app.post(`${base}/auth/google/callback`, async (request, reply) => {
-    const { storeId } = StoreIdParams.parse(request.params);
-    const body = OAuthCallbackBody.parse(request.body);
+  app.post(`${base}/auth/google/callback`, {
+    schema: { params: StoreIdParams, body: OAuthCallbackBody },
+  }, async (request, reply) => {
+    const { storeId } = request.params;
     const pool = getPool();
     const secretsKey = config.AUTH_SECRETS_KEY ?? "";
 
-    if (!loadOAuthState(body.state, storeId, "google")) {
+    if (!loadOAuthState(request.body.state, storeId, "google")) {
       return reply.status(400).send({ error: { code: "BAD_REQUEST", message: "invalid OAuth state" } });
     }
 
@@ -496,7 +530,7 @@ export const customerAuthPlugin: FastifyPluginAsync = async (app) => {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
-        code: body.code,
+        code: request.body.code,
         client_id: cfg.googleClientId,
         client_secret: cfg.googleClientSecret,
         grant_type: "authorization_code",
@@ -531,13 +565,14 @@ export const customerAuthPlugin: FastifyPluginAsync = async (app) => {
   });
 
   // For Microsoft
-  app.post(`${base}/auth/microsoft/callback`, async (request, reply) => {
-    const { storeId } = StoreIdParams.parse(request.params);
-    const body = OAuthCallbackBody.parse(request.body);
+  app.post(`${base}/auth/microsoft/callback`, {
+    schema: { params: StoreIdParams, body: OAuthCallbackBody },
+  }, async (request, reply) => {
+    const { storeId } = request.params;
     const pool = getPool();
     const secretsKey = config.AUTH_SECRETS_KEY ?? "";
 
-    if (!loadOAuthState(body.state, storeId, "microsoft")) {
+    if (!loadOAuthState(request.body.state, storeId, "microsoft")) {
       return reply.status(400).send({ error: { code: "BAD_REQUEST", message: "invalid OAuth state" } });
     }
 
@@ -550,7 +585,7 @@ export const customerAuthPlugin: FastifyPluginAsync = async (app) => {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
-        code: body.code,
+        code: request.body.code,
         client_id: cfg.msClientId,
         client_secret: cfg.msClientSecret,
         grant_type: "authorization_code",
@@ -582,13 +617,14 @@ export const customerAuthPlugin: FastifyPluginAsync = async (app) => {
   });
 
   // For Discord
-  app.post(`${base}/auth/discord/callback`, async (request, reply) => {
-    const { storeId } = StoreIdParams.parse(request.params);
-    const body = OAuthCallbackBody.parse(request.body);
+  app.post(`${base}/auth/discord/callback`, {
+    schema: { params: StoreIdParams, body: OAuthCallbackBody },
+  }, async (request, reply) => {
+    const { storeId } = request.params;
     const pool = getPool();
     const secretsKey = config.AUTH_SECRETS_KEY ?? "";
 
-    if (!loadOAuthState(body.state, storeId, "discord")) {
+    if (!loadOAuthState(request.body.state, storeId, "discord")) {
       return reply.status(400).send({ error: { code: "BAD_REQUEST", message: "invalid OAuth state" } });
     }
 
@@ -601,7 +637,7 @@ export const customerAuthPlugin: FastifyPluginAsync = async (app) => {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
-        code: body.code,
+        code: request.body.code,
         client_id: cfg.discordClientId,
         client_secret: cfg.discordClientSecret,
         grant_type: "authorization_code",
@@ -631,8 +667,11 @@ export const customerAuthPlugin: FastifyPluginAsync = async (app) => {
 
   // ── Bearer-auth customer routes ────────────────────────────────────────────
 
-  app.get(`${base}/auth/me`, { preHandler: [caBearerAuth] }, async (request, reply) => {
-    const { storeId } = StoreIdParams.parse(request.params);
+  app.get(`${base}/auth/me`, {
+    schema: { params: StoreIdParams },
+    preHandler: [caBearerAuth],
+  }, async (request, reply) => {
+    const { storeId } = request.params;
     const pool = getPool();
     const customerId = request.customer!.sub;
 
@@ -651,19 +690,21 @@ export const customerAuthPlugin: FastifyPluginAsync = async (app) => {
     return reply.send({ customer });
   });
 
-  app.put(`${base}/auth/me`, { preHandler: [caBearerAuth] }, async (request, reply) => {
-    const { storeId } = StoreIdParams.parse(request.params);
-    const body = UpdateMeBody.parse(request.body);
+  app.put(`${base}/auth/me`, {
+    schema: { params: StoreIdParams, body: UpdateMeBody },
+    preHandler: [caBearerAuth],
+  }, async (request, reply) => {
+    const { storeId } = request.params;
     const pool = getPool();
     const customerId = request.customer!.sub;
 
     const sets: string[] = ["updated_at = now()"];
     const params: unknown[] = [customerId, storeId];
 
-    if (body.first_name !== undefined) { params.push(body.first_name || null); sets.push(`first_name = $${params.length}`); }
-    if (body.last_name !== undefined) { params.push(body.last_name || null); sets.push(`last_name = $${params.length}`); }
-    if (body.display_name !== undefined) { params.push(body.display_name || null); sets.push(`display_name = $${params.length}`); }
-    if (body.phone !== undefined) { params.push(body.phone || null); sets.push(`phone = $${params.length}`); }
+    if (request.body.first_name !== undefined) { params.push(request.body.first_name || null); sets.push(`first_name = $${params.length}`); }
+    if (request.body.last_name !== undefined) { params.push(request.body.last_name || null); sets.push(`last_name = $${params.length}`); }
+    if (request.body.display_name !== undefined) { params.push(request.body.display_name || null); sets.push(`display_name = $${params.length}`); }
+    if (request.body.phone !== undefined) { params.push(request.body.phone || null); sets.push(`phone = $${params.length}`); }
 
     await pool.query(
       `UPDATE customers SET ${sets.join(", ")} WHERE id = $1::uuid AND store_id = $2::uuid`,
@@ -672,9 +713,11 @@ export const customerAuthPlugin: FastifyPluginAsync = async (app) => {
     return reply.send({ ok: true });
   });
 
-  app.put(`${base}/auth/me/password`, { preHandler: [caBearerAuth] }, async (request, reply) => {
-    const { storeId } = StoreIdParams.parse(request.params);
-    const body = ChangePasswordBody.parse(request.body);
+  app.put(`${base}/auth/me/password`, {
+    schema: { params: StoreIdParams, body: ChangePasswordBody },
+    preHandler: [caBearerAuth],
+  }, async (request, reply) => {
+    const { storeId } = request.params;
     const pool = getPool();
     const customerId = request.customer!.sub;
 
@@ -688,11 +731,11 @@ export const customerAuthPlugin: FastifyPluginAsync = async (app) => {
     }
 
     const { verifyPasswordSync: verify, hashPasswordSync: hashPw } = await import("./service.js");
-    if (!verify(body.current_password, stored)) {
+    if (!verify(request.body.current_password, stored)) {
       return reply.status(401).send({ error: { code: "UNAUTHORIZED", message: "current password is incorrect" } });
     }
 
-    const newHash = hashPw(body.new_password);
+    const newHash = hashPw(request.body.new_password);
     await pool.query(
       `UPDATE customers SET password_hash = $2, updated_at = now() WHERE id = $1::uuid`,
       [customerId, newHash]
@@ -702,8 +745,11 @@ export const customerAuthPlugin: FastifyPluginAsync = async (app) => {
     return reply.send({ ok: true });
   });
 
-  app.get(`${base}/auth/sessions`, { preHandler: [caBearerAuth] }, async (request, reply) => {
-    const { storeId } = StoreIdParams.parse(request.params);
+  app.get(`${base}/auth/sessions`, {
+    schema: { params: StoreIdParams },
+    preHandler: [caBearerAuth],
+  }, async (request, reply) => {
+    const { storeId } = request.params;
     const pool = getPool();
     const customerId = request.customer!.sub;
 
@@ -719,8 +765,11 @@ export const customerAuthPlugin: FastifyPluginAsync = async (app) => {
     return reply.send({ sessions: rows });
   });
 
-  app.delete(`${base}/auth/sessions/:sessionId`, { preHandler: [caBearerAuth] }, async (request, reply) => {
-    const { storeId, sessionId } = SessionIdParams.parse(request.params);
+  app.delete(`${base}/auth/sessions/:sessionId`, {
+    schema: { params: SessionIdParams },
+    preHandler: [caBearerAuth],
+  }, async (request, reply) => {
+    const { storeId, sessionId } = request.params;
     const pool = getPool();
     const customerId = request.customer!.sub;
 
@@ -739,25 +788,26 @@ export const customerAuthPlugin: FastifyPluginAsync = async (app) => {
   // ── Dev mock OAuth (non-production only) ──────────────────────────────────
 
   if (config.APP_ENV !== "production") {
-    app.post(`${base}/auth/mock-oauth`, async (request, reply) => {
-      const { storeId } = StoreIdParams.parse(request.params);
-      const body = MockOAuthBody.parse(request.body);
+    app.post(`${base}/auth/mock-oauth`, {
+      schema: { params: StoreIdParams, body: MockOAuthBody },
+    }, async (request, reply) => {
+      const { storeId } = request.params;
       const pool = getPool();
       const secretsKey = config.AUTH_SECRETS_KEY ?? "";
       const cfg = await loadStoreConfig(pool, storeId, secretsKey);
 
       const providerCol =
-        body.provider === "google" ? "google_id" as const
-          : body.provider === "microsoft" ? "microsoft_id" as const
+        request.body.provider === "google" ? "google_id" as const
+          : request.body.provider === "microsoft" ? "microsoft_id" as const
           : "discord_id" as const;
 
-      const providerId = `mock-${body.provider}-${body.email.replace(/[^a-z0-9]/gi, "-")}`;
+      const providerId = `mock-${request.body.provider}-${request.body.email.replace(/[^a-z0-9]/gi, "-")}`;
 
       const mockInfo: { providerId: string; email: string; name?: string | undefined } = {
         providerId,
-        email: body.email,
+        email: request.body.email,
       };
-      if (body.name) mockInfo.name = body.name;
+      if (request.body.name) mockInfo.name = request.body.name;
       const result = await oauthUpsertAndLogin(pool, storeId, providerCol, mockInfo, cfg, getIp(request), getUserAgent(request));
       return reply.send({
         session_token: result.sessionToken,

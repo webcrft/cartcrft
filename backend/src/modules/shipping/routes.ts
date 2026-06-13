@@ -18,7 +18,7 @@
  *   POST            /webhooks/:storeId/tracking/:shipmentId   (carrier push, no auth — HMAC sig)
  */
 
-import type { FastifyPluginAsync } from "fastify";
+import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { z } from "zod";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import {
@@ -82,13 +82,16 @@ const UpdateZoneBody = z.object({
   regions: z.array(RegionSchema).optional(),
 });
 
+// H3.2: price, min_order_total, max_order_total are money fields — use decimal-string input.
+const MoneyString = z.string().regex(/^\d+(\.\d{1,2})?$/, "must be a decimal string (e.g. \"9.99\")");
+
 const CreateRateBody = z.object({
   name: z.string().min(1).max(255),
-  price: z.number().min(0).optional(),
+  price: MoneyString.optional(),
   min_weight_g: z.number().int().min(0).nullish(),
   max_weight_g: z.number().int().min(0).nullish(),
-  min_order_total: z.number().min(0).nullish(),
-  max_order_total: z.number().min(0).nullish(),
+  min_order_total: MoneyString.nullish(),
+  max_order_total: MoneyString.nullish(),
   estimated_days_min: z.number().int().min(0).nullish(),
   estimated_days_max: z.number().int().min(0).nullish(),
   is_active: z.boolean().optional(),
@@ -197,104 +200,143 @@ const TrackingPushBody = z.object({
 
 // ── Plugin ────────────────────────────────────────────────────────────────────
 
-export const shippingPlugin: FastifyPluginAsync = async (app) => {
+export const shippingPlugin: FastifyPluginAsyncZod = async (app) => {
   const base = "/commerce/stores/:storeId";
 
   // ── Shipping zones ──────────────────────────────────────────────────────────
 
-  app.get(`${base}/shipping-zones`, { preHandler: [storeAuthAdmin] }, async (request, reply) => {
-    const { storeId } = StoreParams.parse(request.params);
+  app.get(`${base}/shipping-zones`, {
+    schema: { params: StoreParams },
+    preHandler: [storeAuthAdmin],
+  }, async (request, reply) => {
+    const { storeId } = request.params;
     return reply.send({ zones: await listShippingZones(storeId) });
   });
 
-  app.post(`${base}/shipping-zones`, { preHandler: [storeAuthAdmin] }, async (request, reply) => {
-    const { storeId } = StoreParams.parse(request.params);
-    const body = CreateZoneBody.safeParse(request.body);
-    if (!body.success) return reply.status(400).send({ error: { code: "VALIDATION_ERROR", message: "validation failed", details: body.error.issues } });
-    const id = await createShippingZone(storeId, body.data);
+  app.post(`${base}/shipping-zones`, {
+    schema: { params: StoreParams, body: CreateZoneBody },
+    preHandler: [storeAuthAdmin],
+  }, async (request, reply) => {
+    const { storeId } = request.params;
+    const id = await createShippingZone(storeId, request.body);
     return reply.status(201).send({ id });
   });
 
-  app.put(`${base}/shipping-zones/:zoneId`, { preHandler: [storeAuthAdmin] }, async (request, reply) => {
-    const { storeId, zoneId } = ZoneParams.parse(request.params);
-    const body = UpdateZoneBody.safeParse(request.body);
-    if (!body.success) return reply.status(400).send({ error: { code: "VALIDATION_ERROR", message: "validation failed", details: body.error.issues } });
-    await updateShippingZone(storeId, zoneId, body.data);
+  app.put(`${base}/shipping-zones/:zoneId`, {
+    schema: { params: ZoneParams, body: UpdateZoneBody },
+    preHandler: [storeAuthAdmin],
+  }, async (request, reply) => {
+    const { storeId, zoneId } = request.params;
+    await updateShippingZone(storeId, zoneId, request.body);
     return reply.send({ ok: true });
   });
 
-  app.delete(`${base}/shipping-zones/:zoneId`, { preHandler: [storeAuthAdmin] }, async (request, reply) => {
-    const { storeId, zoneId } = ZoneParams.parse(request.params);
+  app.delete(`${base}/shipping-zones/:zoneId`, {
+    schema: { params: ZoneParams },
+    preHandler: [storeAuthAdmin],
+  }, async (request, reply) => {
+    const { storeId, zoneId } = request.params;
     await deleteShippingZone(storeId, zoneId);
     return reply.send({ ok: true });
   });
 
   // ── Static shipping rates ───────────────────────────────────────────────────
 
-  app.get(`${base}/shipping-zones/:zoneId/rates`, { preHandler: [storeAuthAdmin] }, async (request, reply) => {
-    const { storeId, zoneId } = ZoneParams.parse(request.params);
+  app.get(`${base}/shipping-zones/:zoneId/rates`, {
+    schema: { params: ZoneParams },
+    preHandler: [storeAuthAdmin],
+  }, async (request, reply) => {
+    const { storeId, zoneId } = request.params;
     return reply.send({ shipping_rates: await listShippingRates(storeId, zoneId) });
   });
 
-  app.post(`${base}/shipping-zones/:zoneId/rates`, { preHandler: [storeAuthAdmin] }, async (request, reply) => {
-    const { storeId, zoneId } = ZoneParams.parse(request.params);
-    const body = CreateRateBody.safeParse(request.body);
-    if (!body.success) return reply.status(400).send({ error: { code: "VALIDATION_ERROR", message: "validation failed", details: body.error.issues } });
-    const id = await createShippingRate(storeId, zoneId, body.data);
+  app.post(`${base}/shipping-zones/:zoneId/rates`, {
+    schema: { params: ZoneParams, body: CreateRateBody },
+    preHandler: [storeAuthAdmin],
+  }, async (request, reply) => {
+    const { storeId, zoneId } = request.params;
+    // H3.2: parse decimal-string money fields to numbers for the service layer
+    const id = await createShippingRate(storeId, zoneId, {
+      ...request.body,
+      price: request.body.price != null ? parseFloat(request.body.price) : undefined,
+      min_order_total: request.body.min_order_total != null ? parseFloat(request.body.min_order_total) : undefined,
+      max_order_total: request.body.max_order_total != null ? parseFloat(request.body.max_order_total) : undefined,
+    });
     if (!id) return reply.status(404).send({ error: { code: "NOT_FOUND", message: "shipping zone not found" } });
     return reply.status(201).send({ id });
   });
 
-  app.put(`${base}/shipping-zones/:zoneId/rates/:rateId`, { preHandler: [storeAuthAdmin] }, async (request, reply) => {
-    const { storeId, zoneId, rateId } = ZoneRateParams.parse(request.params);
-    const body = UpdateRateBody.safeParse(request.body);
-    if (!body.success) return reply.status(400).send({ error: { code: "VALIDATION_ERROR", message: "validation failed", details: body.error.issues } });
-    const ok = await updateShippingRate(storeId, zoneId, rateId, body.data);
+  app.put(`${base}/shipping-zones/:zoneId/rates/:rateId`, {
+    schema: { params: ZoneRateParams, body: UpdateRateBody },
+    preHandler: [storeAuthAdmin],
+  }, async (request, reply) => {
+    const { storeId, zoneId, rateId } = request.params;
+    // H3.2: parse decimal-string money fields to numbers for the service layer
+    const ok = await updateShippingRate(storeId, zoneId, rateId, {
+      ...request.body,
+      price: request.body.price != null ? parseFloat(request.body.price) : undefined,
+      min_order_total: request.body.min_order_total != null ? parseFloat(request.body.min_order_total) : undefined,
+      max_order_total: request.body.max_order_total != null ? parseFloat(request.body.max_order_total) : undefined,
+    });
     if (!ok) return reply.status(404).send({ error: { code: "NOT_FOUND", message: "shipping rate not found" } });
     return reply.send({ ok: true });
   });
 
-  app.delete(`${base}/shipping-zones/:zoneId/rates/:rateId`, { preHandler: [storeAuthAdmin] }, async (request, reply) => {
-    const { storeId, zoneId, rateId } = ZoneRateParams.parse(request.params);
+  app.delete(`${base}/shipping-zones/:zoneId/rates/:rateId`, {
+    schema: { params: ZoneRateParams },
+    preHandler: [storeAuthAdmin],
+  }, async (request, reply) => {
+    const { storeId, zoneId, rateId } = request.params;
     await deleteShippingRate(storeId, zoneId, rateId);
     return reply.send({ ok: true });
   });
 
   // ── Available rates (public read) ───────────────────────────────────────────
 
-  app.get(`${base}/shipping-rates/available`, { preHandler: [storeAuthRead] }, async (request, reply) => {
-    const { storeId } = StoreParams.parse(request.params);
-    const q = AvailableRatesQuery.safeParse(request.query);
-    if (!q.success) return reply.status(400).send({ error: { code: "VALIDATION_ERROR", message: "country_code is required", details: q.error.issues } });
-    const rates = await getAvailableShippingRates(storeId, q.data);
+  app.get(`${base}/shipping-rates/available`, {
+    schema: { params: StoreParams, querystring: AvailableRatesQuery },
+    preHandler: [storeAuthRead],
+  }, async (request, reply) => {
+    const { storeId } = request.params;
+    const rates = await getAvailableShippingRates(storeId, request.query);
     return reply.send({ shipping_rates: rates });
   });
 
   // ── Shipping providers ──────────────────────────────────────────────────────
 
-  app.get(`${base}/shipping-providers`, { preHandler: [storeAuthAdmin] }, async (request, reply) => {
-    const { storeId } = StoreParams.parse(request.params);
+  app.get(`${base}/shipping-providers`, {
+    schema: { params: StoreParams },
+    preHandler: [storeAuthAdmin],
+  }, async (request, reply) => {
+    const { storeId } = request.params;
     return reply.send({ providers: await listShippingProviders(storeId) });
   });
 
-  app.post(`${base}/shipping-providers`, { preHandler: [storeAuthAdmin] }, async (request, reply) => {
-    const { storeId } = StoreParams.parse(request.params);
-    const body = CreateProviderBody.safeParse(request.body);
-    if (!body.success) return reply.status(400).send({ error: { code: "VALIDATION_ERROR", message: "validation failed", details: body.error.issues } });
-    const id = await upsertShippingProvider(storeId, body.data);
+  app.post(`${base}/shipping-providers`, {
+    schema: { params: StoreParams, body: CreateProviderBody },
+    preHandler: [storeAuthAdmin],
+  }, async (request, reply) => {
+    const { storeId } = request.params;
+    const id = await upsertShippingProvider(storeId, request.body);
     return reply.status(201).send({ id });
   });
 
-  app.delete(`${base}/shipping-providers/:providerId`, { preHandler: [storeAuthAdmin] }, async (request, reply) => {
-    const { storeId, providerId } = ProviderParams.parse(request.params);
+  app.delete(`${base}/shipping-providers/:providerId`, {
+    schema: { params: ProviderParams },
+    preHandler: [storeAuthAdmin],
+  }, async (request, reply) => {
+    const { storeId, providerId } = request.params;
     await deleteShippingProvider(storeId, providerId);
     return reply.send({ ok: true });
   });
 
   // ── Collection points ───────────────────────────────────────────────────────
 
-  app.get(`${base}/collection-points`, { preHandler: [storeAuthRead] }, async (request, reply) => {
-    const { storeId } = StoreParams.parse(request.params);
+  app.get(`${base}/collection-points`, {
+    schema: { params: StoreParams },
+    preHandler: [storeAuthRead],
+  }, async (request, reply) => {
+    const { storeId } = request.params;
     const q = request.query as { active?: string; provider_id?: string };
     const points = await listCollectionPoints(storeId, {
       active_only: q.active !== "false",
@@ -303,85 +345,103 @@ export const shippingPlugin: FastifyPluginAsync = async (app) => {
     return reply.send({ points });
   });
 
-  app.post(`${base}/collection-points`, { preHandler: [storeAuthAdmin] }, async (request, reply) => {
-    const { storeId } = StoreParams.parse(request.params);
-    const body = UpsertPointBody.safeParse(request.body);
-    if (!body.success) return reply.status(400).send({ error: { code: "VALIDATION_ERROR", message: "validation failed", details: body.error.issues } });
+  app.post(`${base}/collection-points`, {
+    schema: { params: StoreParams, body: UpsertPointBody },
+    preHandler: [storeAuthAdmin],
+  }, async (request, reply) => {
+    const { storeId } = request.params;
     // Build address: use provided address or construct from top-level country_code
-    const address: Record<string, unknown> = body.data.address ?? {};
-    if (body.data.country_code && !address["country_code"]) {
-      address["country_code"] = body.data.country_code;
+    const address: Record<string, unknown> = request.body.address ?? {};
+    if (request.body.country_code && !address["country_code"]) {
+      address["country_code"] = request.body.country_code;
     }
-    const id = await upsertCollectionPoint(storeId, { ...body.data, address });
+    const id = await upsertCollectionPoint(storeId, { ...request.body, address });
     return reply.status(201).send({ id });
   });
 
-  app.put(`${base}/collection-points/:pointId`, { preHandler: [storeAuthAdmin] }, async (request, reply) => {
-    const { storeId, pointId } = PointParams.parse(request.params);
-    const body = UpdatePointBody.safeParse(request.body);
-    if (!body.success) return reply.status(400).send({ error: { code: "VALIDATION_ERROR", message: "validation failed", details: body.error.issues } });
-    const ok = await updateCollectionPoint(storeId, pointId, body.data as Parameters<typeof updateCollectionPoint>[2]);
+  app.put(`${base}/collection-points/:pointId`, {
+    schema: { params: PointParams, body: UpdatePointBody },
+    preHandler: [storeAuthAdmin],
+  }, async (request, reply) => {
+    const { storeId, pointId } = request.params;
+    const ok = await updateCollectionPoint(storeId, pointId, request.body as Parameters<typeof updateCollectionPoint>[2]);
     if (!ok) return reply.status(404).send({ error: { code: "NOT_FOUND", message: "collection point not found" } });
     return reply.send({ ok: true });
   });
 
-  app.delete(`${base}/collection-points/:pointId`, { preHandler: [storeAuthAdmin] }, async (request, reply) => {
-    const { storeId, pointId } = PointParams.parse(request.params);
+  app.delete(`${base}/collection-points/:pointId`, {
+    schema: { params: PointParams },
+    preHandler: [storeAuthAdmin],
+  }, async (request, reply) => {
+    const { storeId, pointId } = request.params;
     await deleteCollectionPoint(storeId, pointId);
     return reply.send({ ok: true });
   });
 
   // ── Shipments ───────────────────────────────────────────────────────────────
 
-  app.get(`${base}/orders/:orderId/shipments`, { preHandler: [storeAuthWrite] }, async (request, reply) => {
-    const { storeId, orderId } = OrderParams.parse(request.params);
+  app.get(`${base}/orders/:orderId/shipments`, {
+    schema: { params: OrderParams },
+    preHandler: [storeAuthWrite],
+  }, async (request, reply) => {
+    const { storeId, orderId } = request.params;
     return reply.send({ shipments: await listShipments(storeId, orderId) });
   });
 
-  app.post(`${base}/orders/:orderId/shipments`, { preHandler: [storeAuthWrite] }, async (request, reply) => {
-    const { storeId, orderId } = OrderParams.parse(request.params);
-    const body = CreateShipmentBody.safeParse(request.body);
-    if (!body.success) return reply.status(400).send({ error: { code: "VALIDATION_ERROR", message: "validation failed", details: body.error.issues } });
-    const id = await createShipment(storeId, orderId, body.data);
+  app.post(`${base}/orders/:orderId/shipments`, {
+    schema: { params: OrderParams, body: CreateShipmentBody },
+    preHandler: [storeAuthWrite],
+  }, async (request, reply) => {
+    const { storeId, orderId } = request.params;
+    const id = await createShipment(storeId, orderId, request.body);
     if (!id) return reply.status(404).send({ error: { code: "NOT_FOUND", message: "order not found" } });
     return reply.status(201).send({ id });
   });
 
-  app.put(`${base}/orders/:orderId/shipments/:shipmentId`, { preHandler: [storeAuthWrite] }, async (request, reply) => {
-    const { storeId, orderId, shipmentId } = ShipmentParams.parse(request.params);
-    const body = UpdateShipmentBody.safeParse(request.body);
-    if (!body.success) return reply.status(400).send({ error: { code: "VALIDATION_ERROR", message: "validation failed", details: body.error.issues } });
-    const ok = await updateShipment(storeId, orderId, shipmentId, body.data);
+  app.put(`${base}/orders/:orderId/shipments/:shipmentId`, {
+    schema: { params: ShipmentParams, body: UpdateShipmentBody },
+    preHandler: [storeAuthWrite],
+  }, async (request, reply) => {
+    const { storeId, orderId, shipmentId } = request.params;
+    const ok = await updateShipment(storeId, orderId, shipmentId, request.body);
     if (!ok) return reply.status(404).send({ error: { code: "NOT_FOUND", message: "shipment not found" } });
     return reply.send({ ok: true });
   });
 
-  app.get(`${base}/orders/:orderId/shipments/:shipmentId/tracking`, { preHandler: [storeAuthWrite] }, async (request, reply) => {
-    const { storeId, orderId, shipmentId } = ShipmentParams.parse(request.params);
+  app.get(`${base}/orders/:orderId/shipments/:shipmentId/tracking`, {
+    schema: { params: ShipmentParams },
+    preHandler: [storeAuthWrite],
+  }, async (request, reply) => {
+    const { storeId, orderId, shipmentId } = request.params;
     return reply.send({ events: await listShipmentTracking(storeId, orderId, shipmentId) });
   });
 
   // ── Fulfillment orders ──────────────────────────────────────────────────────
 
-  app.get(`${base}/orders/:orderId/fulfillment-orders`, { preHandler: [storeAuthWrite] }, async (request, reply) => {
-    const { storeId, orderId } = OrderParams.parse(request.params);
+  app.get(`${base}/orders/:orderId/fulfillment-orders`, {
+    schema: { params: OrderParams },
+    preHandler: [storeAuthWrite],
+  }, async (request, reply) => {
+    const { storeId, orderId } = request.params;
     return reply.send({ fulfillment_orders: await listFulfillmentOrders(storeId, orderId) });
   });
 
-  app.post(`${base}/orders/:orderId/fulfillment-orders`, { preHandler: [storeAuthWrite] }, async (request, reply) => {
-    const { storeId, orderId } = OrderParams.parse(request.params);
-    const body = CreateFoBody.safeParse(request.body);
-    if (!body.success) return reply.status(400).send({ error: { code: "VALIDATION_ERROR", message: "validation failed", details: body.error.issues } });
-    const id = await createFulfillmentOrder(storeId, orderId, body.data);
+  app.post(`${base}/orders/:orderId/fulfillment-orders`, {
+    schema: { params: OrderParams, body: CreateFoBody },
+    preHandler: [storeAuthWrite],
+  }, async (request, reply) => {
+    const { storeId, orderId } = request.params;
+    const id = await createFulfillmentOrder(storeId, orderId, request.body);
     if (!id) return reply.status(404).send({ error: { code: "NOT_FOUND", message: "order not found" } });
     return reply.status(201).send({ id });
   });
 
-  app.put(`${base}/fulfillment-orders/:foId`, { preHandler: [storeAuthWrite] }, async (request, reply) => {
-    const { storeId, foId } = FoParams.parse(request.params);
-    const body = UpdateFoBody.safeParse(request.body);
-    if (!body.success) return reply.status(400).send({ error: { code: "VALIDATION_ERROR", message: "validation failed", details: body.error.issues } });
-    const ok = await updateFulfillmentOrder(storeId, foId, body.data);
+  app.put(`${base}/fulfillment-orders/:foId`, {
+    schema: { params: FoParams, body: UpdateFoBody },
+    preHandler: [storeAuthWrite],
+  }, async (request, reply) => {
+    const { storeId, foId } = request.params;
+    const ok = await updateFulfillmentOrder(storeId, foId, request.body);
     if (!ok) return reply.status(404).send({ error: { code: "NOT_FOUND", message: "fulfillment order not found" } });
     return reply.send({ ok: true });
   });
@@ -390,13 +450,18 @@ export const shippingPlugin: FastifyPluginAsync = async (app) => {
   // POST /webhooks/:storeId/tracking/:shipmentId
   // No auth — authenticated by HMAC-SHA256 of the request body using the
   // shipping provider's webhook_secret. Falls back to open if no secret configured.
+  //
+  // NOTE (H3.1): Body schema is registered for OpenAPI, but manual safeParse is kept
+  // below because the HMAC verification must happen before framework body validation
+  // would run. The framework validates params; the body is re-validated manually after
+  // HMAC so we keep the same error envelope. Follow-up: wire rawBody via a dedicated
+  // Fastify hook so schema validation and HMAC can co-exist cleanly.
 
   app.post("/webhooks/:storeId/tracking/:shipmentId", {
+    schema: { params: WebhookTrackingParams, body: TrackingPushBody },
     config: { rawBody: true },
   }, async (request, reply) => {
-    const params = WebhookTrackingParams.safeParse(request.params);
-    if (!params.success) return reply.status(400).send({ error: { code: "VALIDATION_ERROR", message: "invalid params" } });
-    const { storeId, shipmentId } = params.data;
+    const { storeId, shipmentId } = request.params;
 
     // Get stored (encrypted) webhook secret for this shipment's provider
     const storedSecret = await getShipmentWebhookSecret(storeId, shipmentId);
@@ -440,10 +505,8 @@ export const shippingPlugin: FastifyPluginAsync = async (app) => {
       }
     }
 
-    const body = TrackingPushBody.safeParse(request.body);
-    if (!body.success) return reply.status(400).send({ error: { code: "VALIDATION_ERROR", message: "status is required", details: body.error.issues } });
-
-    const result = await pushTrackingEvent(storeId, shipmentId, body.data);
+    // Body already validated by Fastify schema (TrackingPushBody); use directly.
+    const result = await pushTrackingEvent(storeId, shipmentId, request.body);
     if (!result) return reply.status(404).send({ error: { code: "NOT_FOUND", message: "shipment not found" } });
     return reply.send({ id: result.id });
   });
