@@ -5,7 +5,7 @@
  *  - Store config load/save (auth_jwt_secret decrypt, OAuth creds decrypt)
  *  - Session issuance, rotation, revocation (refresh token family pattern)
  *  - JWT issuance + verification (per-store HS256 secret)
- *  - Password hashing/verification (PBKDF2-SHA512 via node:crypto)
+ *  - Password hashing/verification (argon2id primary; PBKDF2-SHA512 legacy verify + rehash-on-login)
  *  - Email flows: register, verify, reset, magic-link, invite
  *  - OAuth: Google, Microsoft, Discord upsert-and-login
  *  - Audit log + email log helpers
@@ -13,6 +13,9 @@
  */
 
 import { randomBytes, createHash, pbkdf2Sync } from "node:crypto";
+import { hashSync as argon2HashSync, verifySync as argon2VerifySync } from "@node-rs/argon2";
+// @node-rs/argon2 Algorithm enum: 0=Argon2d, 1=Argon2i, 2=Argon2id
+const ARGON2ID_ALGORITHM = 2 as const;
 import { SignJWT, jwtVerify, type JWTPayload } from "jose";
 import type pg from "pg";
 import { decodeSecretValue, encodeSecretValue } from "../../lib/secrets.js";
@@ -125,26 +128,81 @@ export function generateToken(): { raw: string; hash: string } {
   return { raw, hash: hashToken(raw) };
 }
 
-// ── Password hashing (PBKDF2-SHA512, no external deps) ───────────────────────
+// ── Password hashing (argon2id primary; PBKDF2-SHA512 legacy) ────────────────
+//
+// New hashes use argon2id (prefix: "$argon2id$").
+// Legacy hashes use PBKDF2-SHA512 (prefix: "pbkdf2:").
+// On login: detect by prefix, verify with the correct algorithm.
+// If a legacy PBKDF2 hash verifies successfully, rehash to argon2id
+// transparently and update the stored hash (rehash-on-login migration).
 
 const PBKDF2_ITERS = 100_000;
 const PBKDF2_KEYLEN = 64;
 const PBKDF2_DIGEST = "sha512";
 
-export function hashPasswordSync(password: string): string {
-  const salt = randomBytes(16).toString("hex");
-  const dk = pbkdf2Sync(password, salt, PBKDF2_ITERS, PBKDF2_KEYLEN, PBKDF2_DIGEST);
-  return `pbkdf2:${salt}:${dk.toString("hex")}`;
+const ARGON2_OPTS = {
+  algorithm: ARGON2ID_ALGORITHM,
+  // defaults: memoryCost=19456 KiB (~19 MiB), timeCost=2, parallelism=1
+} as const;
+
+/** Returns true when the stored hash was produced by argon2id. */
+export function isArgon2Hash(stored: string): boolean {
+  return stored.startsWith("$argon2id$");
 }
 
+/** Hash a new password with argon2id (sync). */
+export function hashPasswordSync(password: string): string {
+  return argon2HashSync(password, ARGON2_OPTS);
+}
+
+/**
+ * Verify a password against a stored hash (either argon2id or legacy PBKDF2).
+ * Does NOT perform rehashing — call `verifyAndMaybeRehash` at login for that.
+ */
 export function verifyPasswordSync(password: string, stored: string): boolean {
   if (!stored) return false;
+  if (isArgon2Hash(stored)) {
+    return argon2VerifySync(stored, password);
+  }
+  // Legacy PBKDF2-SHA512 path
   const parts = stored.split(":");
   if (parts[0] !== "pbkdf2" || parts.length !== 3) return false;
   const salt = parts[1]!;
   const expected = parts[2]!;
   const dk = pbkdf2Sync(password, salt, PBKDF2_ITERS, PBKDF2_KEYLEN, PBKDF2_DIGEST);
   return dk.toString("hex") === expected;
+}
+
+/**
+ * Verify a password and, if the hash is a legacy PBKDF2 hash and the
+ * password matches, update the stored hash to argon2id in the DB
+ * (rehash-on-login migration). Returns the verification result.
+ */
+export async function verifyAndMaybeRehash(
+  pool: pg.Pool,
+  customerId: string,
+  password: string,
+  stored: string
+): Promise<boolean> {
+  if (!stored) return false;
+  if (isArgon2Hash(stored)) {
+    return argon2VerifySync(stored, password);
+  }
+  // Legacy PBKDF2 path
+  const valid = verifyPasswordSync(password, stored);
+  if (valid) {
+    // Transparently upgrade to argon2id
+    try {
+      const newHash = hashPasswordSync(password);
+      await pool.query(
+        `UPDATE customers SET password_hash = $2, updated_at = now() WHERE id = $1::uuid`,
+        [customerId, newHash]
+      );
+    } catch {
+      // Rehash failure must not block login — the user is authenticated
+    }
+  }
+  return valid;
 }
 
 // ── Store config ──────────────────────────────────────────────────────────────
@@ -932,7 +990,7 @@ export async function loginWithPassword(
     throw Object.assign(new Error("no password set — use social or magic-link login"), { statusCode: 400 });
   }
 
-  const valid = verifyPasswordSync(password, customer.password_hash);
+  const valid = await verifyAndMaybeRehash(pool, customer.id, password, customer.password_hash);
 
   if (!valid) {
     const attempts = customer.failed_login_attempts + 1;

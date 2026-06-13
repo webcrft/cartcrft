@@ -40,6 +40,7 @@ import {
   saveOAuthState,
   loadOAuthState,
   hashPasswordSync,
+  verifyAndMaybeRehash,
   invalidateCustomerTokens,
   type CustomerClaims,
 } from "./service.js";
@@ -730,12 +731,11 @@ export const customerAuthPlugin: FastifyPluginAsyncZod = async (app) => {
       return reply.status(400).send({ error: { code: "BAD_REQUEST", message: "no password set on this account" } });
     }
 
-    const { verifyPasswordSync: verify, hashPasswordSync: hashPw } = await import("./service.js");
-    if (!verify(request.body.current_password, stored)) {
+    if (!await verifyAndMaybeRehash(pool, customerId, request.body.current_password, stored)) {
       return reply.status(401).send({ error: { code: "UNAUTHORIZED", message: "current password is incorrect" } });
     }
 
-    const newHash = hashPw(request.body.new_password);
+    const newHash = hashPasswordSync(request.body.new_password);
     await pool.query(
       `UPDATE customers SET password_hash = $2, updated_at = now() WHERE id = $1::uuid`,
       [customerId, newHash]
