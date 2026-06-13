@@ -6,10 +6,13 @@
  *   GET   /checkouts/:checkoutId               — GetCheckout (storeAuthRead)
  *   PUT   /checkouts/:checkoutId               — UpdateCheckout (storeAuthRead)
  *   POST  /checkouts/:checkoutId/complete      — CompleteCheckout (storeAuthRead)
- *   POST  /checkouts/:checkoutId/payment-session — InitiatePayment STUB 501 (storeAuthRead)
+ *   POST  /checkouts/:checkoutId/payment-session — InitiatePayment (storeAuthRead)
  *
- * The payment-session endpoint is stubbed with 501 PROVIDER_NOT_CONFIGURED
- * until T2.4 implements provider clients.
+ * The payment-session endpoint resolves the store's active payment provider
+ * from payment_providers (first active by position), calls the matching
+ * session creator, persists the result in checkouts.payment_session, and
+ * returns the provider-shaped payload.  Returns 501 PROVIDER_NOT_CONFIGURED
+ * only when no active provider exists.
  */
 
 import type { FastifyPluginAsync } from "fastify";
@@ -17,6 +20,13 @@ import { z } from "zod";
 import { storeAuthRead } from "../../lib/auth/middleware.js";
 import { createCheckout, getCheckout, updateCheckout } from "./service.js";
 import { completeCheckout, CheckoutError } from "./complete.js";
+import { getPool } from "../../db/pool.js";
+import {
+  createStripeSession,
+  createPaystackSession,
+  createRazorpaySession,
+  createXenditSession,
+} from "../payments/service.js";
 
 // ── Zod schemas ───────────────────────────────────────────────────────────────
 
@@ -210,17 +220,167 @@ export const checkoutPlugin: FastifyPluginAsync = async (app) => {
   );
 
   // ── POST /commerce/stores/:storeId/checkouts/:checkoutId/payment-session ──
-  // STUB: returns 501 until T2.4 implements provider clients.
   app.post(
     "/commerce/stores/:storeId/checkouts/:checkoutId/payment-session",
     { preHandler: [storeAuthRead] },
-    async (_request, reply) => {
-      return reply.status(501).send({
-        error: {
-          code: "PROVIDER_NOT_CONFIGURED",
-          message: "Payment provider integration not yet configured. See T2.4.",
-        },
-      });
+    async (request, reply) => {
+      const storeId = request.auth!.storeId;
+      const params = StoreCheckoutParams.safeParse(request.params);
+      if (!params.success) {
+        return reply.status(400).send({
+          error: { code: "VALIDATION_ERROR", message: "Invalid params" },
+        });
+      }
+      const { checkoutId } = params.data;
+
+      // ── 1. Load the checkout ──────────────────────────────────────────────
+      const pool = getPool();
+      const { rows: coRows } = await pool.query<{
+        id: string;
+        total: string;
+        currency: string;
+        email: string | null;
+        status: string;
+      }>(
+        `SELECT id::text, total::text, currency, email, status
+         FROM checkouts
+         WHERE id = $1::uuid AND store_id = $2::uuid`,
+        [checkoutId, storeId]
+      );
+
+      if (!coRows[0]) {
+        return reply.status(404).send({
+          error: { code: "NOT_FOUND", message: "Checkout not found" },
+        });
+      }
+
+      const checkout = coRows[0];
+      if (checkout.status !== "pending") {
+        return reply.status(409).send({
+          error: { code: "CHECKOUT_NOT_PENDING", message: "Checkout is not in pending state" },
+        });
+      }
+
+      // ── 2. Resolve the store's first active payment provider ──────────────
+      const { rows: provRows } = await pool.query<{
+        id: string;
+        type: string;
+        slug: string | null;
+      }>(
+        `SELECT id::text, type, slug
+         FROM payment_providers
+         WHERE store_id = $1::uuid AND is_active = true
+         ORDER BY position ASC, created_at ASC
+         LIMIT 1`,
+        [storeId]
+      );
+
+      if (!provRows[0]) {
+        return reply.status(501).send({
+          error: {
+            code: "PROVIDER_NOT_CONFIGURED",
+            message: "No active payment provider configured for this store.",
+          },
+        });
+      }
+
+      const provider = provRows[0];
+      const totalAmount = parseFloat(checkout.total);
+      const currency = checkout.currency;
+      const email = checkout.email ?? undefined;
+
+      // ── 3. Create provider session and build response payload ─────────────
+      let sessionData: Record<string, unknown>;
+
+      try {
+        switch (provider.type) {
+          case "stripe": {
+            // Stripe: amount in cents (integer)
+            const amountCents = Math.round(totalAmount * 100);
+            const result = await createStripeSession(storeId, checkoutId, amountCents, currency, email);
+            sessionData = {
+              provider: "stripe",
+              client_secret: result.clientSecret,
+              payment_intent_id: result.paymentIntentId,
+            };
+            break;
+          }
+          case "paystack": {
+            // Paystack: amount in kobo/cents (smallest unit, integer)
+            const amountKobo = Math.round(totalAmount * 100);
+            const paystackEmail = email ?? "";
+            if (!paystackEmail) {
+              return reply.status(422).send({
+                error: { code: "VALIDATION_ERROR", message: "Paystack requires a customer email on the checkout" },
+              });
+            }
+            const result = await createPaystackSession(storeId, checkoutId, amountKobo, currency, paystackEmail);
+            sessionData = {
+              provider: "paystack",
+              authorization_url: result.authorizationUrl,
+              reference: result.reference,
+            };
+            break;
+          }
+          case "razorpay": {
+            // Razorpay: amount in smallest unit (paise for INR), integer
+            const amountSmallest = Math.round(totalAmount * 100);
+            const result = await createRazorpaySession(storeId, checkoutId, amountSmallest, currency);
+            // key_id is needed by the frontend SDK; read from config
+            const { rows: cfgRows } = await pool.query<{ config: Record<string, unknown> | string }>(
+              `SELECT config FROM payment_providers WHERE id = $1::uuid`,
+              [provider.id]
+            );
+            const rawCfg = cfgRows[0]?.config;
+            const cfg = typeof rawCfg === "string" ? (JSON.parse(rawCfg) as Record<string, unknown>) : (rawCfg ?? {});
+            sessionData = {
+              provider: "razorpay",
+              order_id: result.razorpayOrderId,
+              amount: result.amount,
+              currency: result.currency,
+              key_id: cfg["key_id"] ?? "",
+            };
+            break;
+          }
+          case "xendit": {
+            // Xendit: amount in full currency units (NOT cents)
+            const result = await createXenditSession(storeId, checkoutId, totalAmount, currency, email);
+            sessionData = {
+              provider: "xendit",
+              invoice_url: result.invoiceUrl,
+              invoice_id: result.invoiceId,
+            };
+            break;
+          }
+          default: {
+            // custom / webhook-only providers — no client-side session
+            return reply.status(501).send({
+              error: {
+                code: "PROVIDER_NOT_CONFIGURED",
+                message: `Provider type '${provider.type}' does not support client-side payment sessions.`,
+              },
+            });
+          }
+        }
+      } catch (err: unknown) {
+        const code = (err as NodeJS.ErrnoException).code;
+        if (code === "PROVIDER_NOT_CONFIGURED") {
+          return reply.status(501).send({
+            error: { code: "PROVIDER_NOT_CONFIGURED", message: (err as Error).message },
+          });
+        }
+        throw err;
+      }
+
+      // ── 4. Persist session data into checkouts.payment_session ────────────
+      await pool.query(
+        `UPDATE checkouts SET payment_session = $1::jsonb, updated_at = now()
+         WHERE id = $2::uuid AND store_id = $3::uuid`,
+        [JSON.stringify(sessionData), checkoutId, storeId]
+      );
+
+      // ── 5. Return provider-shaped response ────────────────────────────────
+      return reply.status(200).send(sessionData);
     }
   );
 };
