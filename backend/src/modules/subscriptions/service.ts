@@ -349,9 +349,56 @@ export async function cancelSubscription(
   return (rowCount ?? 0) > 0;
 }
 
+// ── Dunning constants ─────────────────────────────────────────────────────────
+
+/**
+ * Number of consecutive failed billing attempts before a subscription is moved
+ * to `past_due`.  After the first failure the scheduler marks it immediately;
+ * the threshold controls when a retried (past_due) subscription becomes truly
+ * stuck (exceeds max attempts) — surfaced in the attempt count for reporting.
+ *
+ * Webcrft semantics: one failure → past_due.  Attempts are still recorded so
+ * operators can see the full history and the success path can clear dunning.
+ */
+export const DUNNING_MAX_FAILED_ATTEMPTS = 3;
+
+// ── Attempt recording ─────────────────────────────────────────────────────────
+
+/**
+ * Record a billing attempt (success or failure) in subscription_billing_attempts.
+ *
+ * The attempt_number is computed from the existing row count + 1 so it is
+ * always 1-based and monotonically increasing per subscription.
+ *
+ * This is called from both billSubscription (success) and setSubscriptionPastDue
+ * (failure).  It is NOT wrapped in a try/catch — callers decide how to handle
+ * write errors (the table now exists, so silent swallowing is no longer needed).
+ */
+async function recordBillingAttempt(
+  pool: ReturnType<typeof getPool>,
+  storeId: string,
+  subId: string,
+  status: "success" | "failed",
+  errorMessage: string | null
+): Promise<void> {
+  // Compute attempt_number inside a single INSERT to avoid race conditions
+  await pool.query(
+    `INSERT INTO subscription_billing_attempts
+       (store_id, subscription_id, attempt_number, status, error_message)
+     SELECT $1::uuid, $2::uuid,
+            COALESCE((SELECT MAX(attempt_number) FROM subscription_billing_attempts
+                      WHERE subscription_id = $2::uuid), 0) + 1,
+            $3, $4`,
+    [storeId, subId, status, errorMessage]
+  );
+}
+
 /**
  * Bill a subscription — creates an order for the current period, links it via
  * subscription_orders, and advances the period dates using clock.now().
+ *
+ * On success: records a 'success' attempt in subscription_billing_attempts and
+ * clears any past_due status back to 'active'.
  *
  * If billing fails (e.g., payment error caught by caller), the caller should
  * call setSubscriptionPastDue() to mark it as past_due and record the attempt.
@@ -363,7 +410,7 @@ export async function billSubscription(
 ): Promise<BillSubscriptionResult> {
   const pool = getPool();
 
-  // Load subscription and plan — must be active
+  // Load subscription and plan — must be active or past_due (retry billing)
   const { rows: subRows } = await pool.query<{
     customer_id: string;
     interval: string;
@@ -372,7 +419,7 @@ export async function billSubscription(
     `SELECT s.customer_id::text, sp.interval, sp.interval_count
      FROM subscriptions s
      JOIN subscription_plans sp ON sp.id = s.plan_id
-     WHERE s.id = $1::uuid AND s.store_id = $2::uuid AND s.status = 'active'`,
+     WHERE s.id = $1::uuid AND s.store_id = $2::uuid AND s.status IN ('active', 'past_due')`,
     [subId, storeId]
   );
   if (!subRows[0]) {
@@ -403,7 +450,7 @@ export async function billSubscription(
   );
   const billingPeriod = parseInt(periodRows[0]?.count ?? "0", 10) + 1;
 
-  return withTx(async (client) => {
+  const result = await withTx(async (client) => {
     const { rows: numRows } = await client.query<{ next_order_number: string }>(
       `SELECT next_order_number($1::uuid)`,
       [storeId]
@@ -441,7 +488,7 @@ export async function billSubscription(
       [subId, orderId, billingPeriod]
     );
 
-    // Advance period using clock.now()
+    // Advance period using clock.now(); also clear past_due → active on success
     const now = clock.now();
     const nextBilling = nextBillingDate(now, interval, intervalCount);
 
@@ -450,6 +497,7 @@ export async function billSubscription(
          current_period_start = $2,
          current_period_end   = $3,
          next_billing_at      = $3,
+         status               = CASE WHEN status = 'past_due' THEN 'active' ELSE status END,
          updated_at           = now()
        WHERE id = $1::uuid`,
       [subId, now, nextBilling]
@@ -460,13 +508,32 @@ export async function billSubscription(
       order_number: orderNumber,
       billing_period: billingPeriod,
       next_billing_at: nextBilling,
-    };
+    } satisfies BillSubscriptionResult;
   });
+
+  // Record success attempt outside the transaction so an attempt-write failure
+  // does not roll back the completed billing cycle.
+  await recordBillingAttempt(pool, storeId, subId, "success", null);
+
+  return result;
 }
 
 /**
  * Mark a subscription as past_due after a failed billing attempt.
- * Records the attempt in subscription_billing_attempts if the table exists.
+ *
+ * Records a 'failed' attempt row in subscription_billing_attempts and
+ * transitions active subscriptions to past_due status.
+ *
+ * Dunning semantics (webcrft-aligned):
+ *  - A single billing failure moves the subscription to past_due immediately.
+ *  - The attempt is always recorded so operators can see the full history.
+ *  - DUNNING_MAX_FAILED_ATTEMPTS (3) is the threshold after which a subscription
+ *    is considered stuck; the scheduler stops retrying past_due subs automatically
+ *    (the SELECT in selectDueSubscriptions only picks up 'active' subs — retrying
+ *    a past_due sub requires an explicit operator action or a separate retry job).
+ *
+ * The try/catch around the INSERT has been removed now that the table exists.
+ * Any DB error here will propagate to the caller (scheduler logs it).
  */
 export async function setSubscriptionPastDue(
   storeId: string,
@@ -474,19 +541,14 @@ export async function setSubscriptionPastDue(
   errorMessage: string
 ): Promise<void> {
   const pool = getPool();
+
+  // Transition active → past_due (idempotent: already past_due stays past_due)
   await pool.query(
     `UPDATE subscriptions SET status = 'past_due', updated_at = now()
-     WHERE id = $1::uuid AND store_id = $2::uuid AND status = 'active'`,
+     WHERE id = $1::uuid AND store_id = $2::uuid AND status IN ('active', 'past_due')`,
     [subId, storeId]
   );
-  // Best-effort: record the failed billing attempt
-  try {
-    await pool.query(
-      `INSERT INTO subscription_billing_attempts (subscription_id, error_message)
-       VALUES ($1::uuid, $2)`,
-      [subId, errorMessage]
-    );
-  } catch {
-    // Table may not exist; ignore
-  }
+
+  // Record the failed attempt — table now guaranteed to exist (migration 0017)
+  await recordBillingAttempt(pool, storeId, subId, "failed", errorMessage);
 }
