@@ -21,7 +21,6 @@
  *   error.
  */
 
-import { test } from "vitest";
 import pg from "pg";
 import type { TestCtx, RequestResult } from "./ctx.js";
 
@@ -162,9 +161,12 @@ const PG_UNDEFINED_TABLE = "42P01";
 
 /**
  * Wraps a fixture-building async function.  If the DB throws 42P01
- * (relation/table does not exist — Wave 1 migrations not landed yet),
- * the currently running test is skipped with a clear message instead of
- * failing with a confusing Postgres error.
+ * (relation/table does not exist — a required migration is missing),
+ * this throws a hard error with a clear message so the failure is
+ * immediately visible instead of silently masked by a suite skip.
+ *
+ * H6.4: Changed from test.skip() to throw — a missing table is a
+ * configuration error that must be fixed, not silently skipped.
  *
  * Usage:
  *   const orgId = await resilientFixture(
@@ -174,7 +176,7 @@ const PG_UNDEFINED_TABLE = "42P01";
  */
 export async function resilientFixture<T>(
   fn: () => Promise<T>,
-  skipMessage: string
+  errorMessage: string
 ): Promise<T> {
   try {
     return await fn();
@@ -184,10 +186,12 @@ export async function resilientFixture<T>(
       "code" in err &&
       (err as NodeJS.ErrnoException).code === PG_UNDEFINED_TABLE
     ) {
-      // Vitest skip — test.skip() throws a special skip sentinel.
-      test.skip(skipMessage);
-      // Unreachable after skip(), but TypeScript needs a return.
-      throw err;
+      // Hard failure — missing table is a configuration error, not a
+      // graceful condition.  Throw so the suite fails visibly.
+      throw new Error(
+        `[resilientFixture] Required table missing — ${errorMessage}. ` +
+          `Original error: ${err.message}`
+      );
     }
     throw err;
   }

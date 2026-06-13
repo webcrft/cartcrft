@@ -176,17 +176,18 @@ export async function getCustomer(
 
   const addrRes = await pool.query<AddressRow>(
     `SELECT id::text, customer_id::text, first_name, last_name, company,
-            address1, address2, city, province, zip, country_code, phone,
-            is_default, created_at
+            line1 AS address1, line2 AS address2, city, province, postal_code AS zip,
+            country_code, phone,
+            (is_default_shipping OR is_default_billing) AS is_default, created_at
      FROM customer_addresses
      WHERE customer_id = $1::uuid
-     ORDER BY is_default DESC, created_at ASC`,
+     ORDER BY is_default_shipping DESC, created_at ASC`,
     [customerId]
   );
 
   const spendRes = await pool.query<{ order_count: string; total_spend: string }>(
     `SELECT count(*)::text as order_count,
-            coalesce(sum(total_price), 0)::text as total_spend
+            coalesce(sum(total), 0)::text as total_spend
      FROM orders
      WHERE customer_id = $1::uuid AND store_id = $2::uuid
        AND status NOT IN ('cancelled', 'failed')`,
@@ -222,7 +223,7 @@ export async function createCustomer(
       body.display_name ?? null,
       body.phone ?? null,
       body.is_admin ?? false,
-      body.metadata ? JSON.stringify(body.metadata) : null,
+      body.metadata ? JSON.stringify(body.metadata) : "{}",
       body.password_hash ?? null,
     ]
   );
@@ -329,16 +330,19 @@ export async function addCustomerAddress(
 
   if (body.is_default) {
     await pool.query(
-      `UPDATE customer_addresses SET is_default = false WHERE customer_id = $1::uuid`,
+      `UPDATE customer_addresses
+       SET is_default_shipping = false, is_default_billing = false
+       WHERE customer_id = $1::uuid`,
       [customerId]
     );
   }
 
   const { rows } = await pool.query<{ id: string }>(
     `INSERT INTO customer_addresses
-       (customer_id, first_name, last_name, company, address1, address2,
-        city, province, zip, country_code, phone, is_default)
-     VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+       (customer_id, first_name, last_name, company, line1, line2,
+        city, province, postal_code, country_code, phone,
+        is_default_shipping, is_default_billing)
+     VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $12)
      RETURNING id::text`,
     [
       customerId,
