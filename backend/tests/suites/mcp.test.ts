@@ -486,9 +486,10 @@ describe("MCP tool error cases", () => {
   });
 });
 
-describe("MCP ?key= query param auth", () => {
-  it("authenticates via query param instead of header", async () => {
+describe("MCP ?key= query param auth (H1.3: must be rejected)", () => {
+  it("rejects a request that supplies the key only via ?key= query param (401)", async () => {
     const setup = await setupStore();
+    // Build a URL with the key in the query string and NO Authorization header.
     const url = new URL(
       `${ctx.baseUrl}/mcp/${setup.storeId}?key=${setup.pubKey}`
     );
@@ -497,7 +498,14 @@ describe("MCP ?key= query param auth", () => {
       { name: "query-param-auth-client", version: "0.1.0" },
       { capabilities: {} }
     );
-    await client.connect(asTransport(transport));
+    // The server must reject this with a 401 — connect() should throw.
+    await expect(client.connect(asTransport(transport))).rejects.toThrow();
+  });
+
+  it("still authenticates via Authorization header when no query key is present", async () => {
+    const setup = await setupStore();
+    // Header auth must continue to work (regression guard).
+    const client = await mcpClient(setup.storeId, setup.pubKey);
     try {
       const { tools } = await client.listTools();
       expect(tools).toHaveLength(9);

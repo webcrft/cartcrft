@@ -16,11 +16,10 @@ POST/GET/DELETE https://<your-host>/mcp/<storeId>
 Authorization: Bearer <cc_pub_ or cc_prv_ key>
 ```
 
-Or via query param:
-
-```
-POST https://<your-host>/mcp/<storeId>?key=<api-key>
-```
+> **Security note:** The API key must be supplied via the `Authorization` header.
+> The `?key=` query-parameter path has been removed — query strings appear in
+> access logs, reverse-proxy logs, and browser Referer headers, which would leak
+> privileged `cc_prv_` keys.
 
 ### 2. stdio (local dev)
 

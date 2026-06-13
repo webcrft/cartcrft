@@ -75,6 +75,21 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
   const app = Fastify({
     logger: {
       level: process.env["APP_ENV"] === "production" ? "info" : "debug",
+      // ── Log redaction (H1.3) ───────────────────────────────────────────
+      // Prevent API keys, bearer tokens, and other credentials from
+      // appearing in structured log output. pino replaces each matched
+      // path with "[Redacted]" before serialisation.
+      redact: {
+        paths: [
+          "req.headers.authorization",
+          "req.headers[\"x-api-key\"]",
+          "req.query.key",
+          "req.query.token",
+          "req.query.api_key",
+          "req.query.apikey",
+        ],
+        censor: "[Redacted]",
+      },
     },
     // Generate a request ID for every request.
     genReqId: () =>

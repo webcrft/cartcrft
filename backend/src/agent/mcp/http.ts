@@ -3,8 +3,10 @@
  *
  * Mounts at /mcp/:storeId (POST + GET + DELETE per MCP streamable HTTP spec).
  *
- * Auth: cc_pub_ key required in Authorization header or ?key= query param.
- * The key must be valid and scoped to the store (same as storeAuthRead middleware).
+ * Auth: API key required via `Authorization: Bearer <key>` header ONLY.
+ * The ?key= query-param path has been removed — query strings appear in access
+ * logs, reverse-proxy logs, and browser Referer headers, which would leak
+ * privileged cc_prv_ keys. Use the Authorization header exclusively.
  *
  * Stateless transport (no sessionIdGenerator) — simple and horizontally scalable.
  * Each request is a fresh MCP exchange. For persistent SSE sessions, a session
@@ -23,20 +25,18 @@ import { buildMcpServer } from "./server.js";
 // ── Auth helper ───────────────────────────────────────────────────────────────
 
 /**
- * Extract the raw API key from Authorization: Bearer <key> or ?key= query param.
+ * Extract the raw API key from Authorization: Bearer <key> header only.
+ * The ?key= query-param path has been intentionally removed (H1.3) — keys in
+ * query strings leak into access logs, reverse-proxy logs, and Referer headers.
  */
 function extractKey(
-  headers: Record<string, string | string[] | undefined>,
-  queryKey?: string
+  headers: Record<string, string | string[] | undefined>
 ): string | null {
   const auth = headers["authorization"];
   const bearerStr = typeof auth === "string" ? auth : undefined;
   if (bearerStr?.startsWith("Bearer ")) {
     const k = bearerStr.slice(7).trim();
     if (k) return k;
-  }
-  if (typeof queryKey === "string" && queryKey.trim()) {
-    return queryKey.trim();
   }
   return null;
 }
@@ -51,15 +51,14 @@ export const mcpHttpPlugin: FastifyPluginAsync = async (app) => {
     reply: import("fastify").FastifyReply
   ) => {
     const { storeId } = request.params as { storeId: string };
-    const queryKey = (request.query as Record<string, string>)?.["key"];
 
     // ── Auth ───────────────────────────────────────────────────────────────
-    const rawKey = extractKey(request.headers as Record<string, string | string[] | undefined>, queryKey);
+    const rawKey = extractKey(request.headers as Record<string, string | string[] | undefined>);
     if (!rawKey) {
       return reply.status(401).send({
         error: {
           code: "UNAUTHORIZED",
-          message: "API key required (Authorization: Bearer cc_pub_... or ?key=)",
+          message: "API key required (Authorization: Bearer <key>)",
         },
       });
     }
