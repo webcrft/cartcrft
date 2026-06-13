@@ -265,7 +265,9 @@ beforeAll(async () => {
     authA()
   );
   expect(agRes.status).toBe(201);
-  agentAId = (agRes.json as Record<string, unknown>)["id"] as string;
+  // Create returns { agent: { id, ... } } — extract the nested id so cross-tenant
+  // GET/DELETE hit a valid uuid and exercise the auth boundary (not param validation).
+  agentAId = ((agRes.json as Record<string, Record<string, unknown>>)["agent"])["id"] as string;
 
   // Bookings: booking resource (direct SQL — booking routes may not be tested separately)
   const brRes = await ctx.pool.query<{ id: string }>(
@@ -525,7 +527,7 @@ describe("Tenant isolation — IDOR sweep", () => {
       const res = await post(
         ctx,
         `/commerce/stores/${storeAId}/discounts`,
-        { code: `INJECT-${Date.now()}`, type: "fixed", value: "99" },
+        { code: `INJECT-${Date.now()}`, type: "fixed_amount", value: "99" },
         authB()
       );
       assertDenied(res.status, "B create discount in A [JWT]");
