@@ -22,6 +22,7 @@
 
 import { getPool, withTx } from "../../db/pool.js";
 import { newBobGoClient } from "../../providers/shipping/bobgo.js";
+import { dispatchStoreEvent } from "../notifications/service.js";
 
 // ── Shipping zones ────────────────────────────────────────────────────────────
 
@@ -595,6 +596,16 @@ export async function createShipment(
         ]
       );
     }
+
+    // Fire-and-forget outbound notification (H2.1)
+    dispatchStoreEvent(storeId, "shipment.created", {
+      order_id: orderId,
+      shipment_id: shipmentId,
+      status: data.status ?? "pending",
+      tracking_number: data.tracking_number ?? "",
+      carrier: data.carrier ?? "",
+    });
+
     return shipmentId;
   });
 }
@@ -643,7 +654,20 @@ export async function updateShipment(
       data.metadata ? JSON.stringify(data.metadata) : null,
     ]
   );
-  return (rowCount ?? 0) > 0;
+  const updated = (rowCount ?? 0) > 0;
+  if (updated) {
+    // Fire-and-forget outbound notification (H2.1)
+    // Emit shipment.delivered when status transitions to delivered, else shipment.updated.
+    const eventType = data.status === "delivered" ? "shipment.delivered" : "shipment.updated";
+    dispatchStoreEvent(storeId, eventType, {
+      order_id: orderId,
+      shipment_id: shipmentId,
+      status: data.status ?? "",
+      tracking_number: data.tracking_number ?? "",
+      carrier: data.carrier ?? "",
+    });
+  }
+  return updated;
 }
 
 export async function listShipmentTracking(
@@ -724,7 +748,18 @@ export async function pushTrackingEvent(
       );
     }
 
-    return { id: rows[0]!.id, order_id: shRows[0].order_id };
+    const result = { id: rows[0]!.id, order_id: shRows[0].order_id };
+
+    // Fire-and-forget outbound notification (H2.1): carrier-push tracking event
+    const trackingEventType = newStatus === "delivered" ? "shipment.delivered" : "shipment.updated";
+    dispatchStoreEvent(storeId, trackingEventType, {
+      order_id: result.order_id,
+      shipment_id: shipmentId,
+      status: newStatus || data.status,
+      tracking_event_id: result.id,
+    });
+
+    return result;
   });
 }
 

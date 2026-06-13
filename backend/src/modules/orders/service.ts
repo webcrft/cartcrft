@@ -6,6 +6,7 @@
  */
 
 import { getPool, withTx } from "../../db/pool.js";
+import { dispatchStoreEvent } from "../notifications/service.js";
 import type {
   Order,
   OrderLine,
@@ -336,7 +337,17 @@ export async function createOrder(
       [orderId, userId ?? null]
     );
 
-    return { id: orderId, order_number: orderNumber, mode: orderMode, is_test: isTest };
+    const result = { id: orderId, order_number: orderNumber, mode: orderMode, is_test: isTest };
+
+    // Fire-and-forget outbound notification (H2.1)
+    dispatchStoreEvent(storeId, "order.created", {
+      order_id: orderId,
+      order_number: orderNumber,
+      currency,
+      total: String(computedTotal),
+    });
+
+    return result;
   });
 }
 
@@ -410,6 +421,12 @@ export async function cancelOrder(
         [orderId, reason ?? "", userId ?? null]
       )
       .catch(() => undefined);
+
+    // Fire-and-forget outbound notification (H2.1)
+    dispatchStoreEvent(storeId, "order.cancelled", {
+      order_id: orderId,
+      reason: reason ?? "",
+    });
   }
 
   return (rowCount ?? 0) > 0;

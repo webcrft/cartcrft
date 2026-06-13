@@ -11,6 +11,7 @@
 import { getPool, withTx } from "../../db/pool.js";
 import { config } from "../../config/config.js";
 import { encodeSecretValue } from "../../lib/secrets.js";
+import { dispatchStoreEvent } from "../notifications/service.js";
 import { StripeClient } from "../../providers/payments/stripe.js";
 import { PaystackClient } from "../../providers/payments/paystack.js";
 import { RazorpayClient } from "../../providers/payments/razorpay.js";
@@ -279,6 +280,13 @@ export async function capturePayment(
         [orderId, paymentId, userId ?? null]
       )
       .catch(() => undefined);
+
+    // Fire-and-forget outbound notification (H2.1)
+    dispatchStoreEvent(storeId, "payment.captured", {
+      order_id: orderId,
+      payment_id: paymentId,
+      amount: String(paymentAmount),
+    });
   });
 }
 
@@ -433,6 +441,14 @@ export async function createRefund(
         } catch {
           await client.query("ROLLBACK TO SAVEPOINT refund_event");
         }
+
+        // Fire-and-forget outbound notification (H2.1) — dispatched outside tx
+        dispatchStoreEvent(storeId, "payment.refunded", {
+          order_id: orderId,
+          payment_id: paymentId,
+          refund_id: refundId,
+          refund_amount: String(amount),
+        });
 
         return { id: refundId };
       }

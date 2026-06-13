@@ -6,17 +6,26 @@
  *   - For webhook type: POST with HMAC-SHA256 signature header (X-Cartcrft-Signature)
  *     + retries (up to MAX_RETRIES attempts with exponential backoff)
  *     + logs each attempt to notification_delivery_log
- *   - For email type: delegates to Mailer if available, else console fallback
+ *   - For email type: delegates to Mailer if set via setNotificationMailer(), else console fallback
+ *   - For sms/whatsapp type: no-op with warning (not implemented)
  *   - Fire-and-forget: runs in background, never blocks HTTP response
  *
- * Export dispatchStoreEvent for other modules (e.g. checkout, orders).
- *
- * DISCOVERED: dispatchStoreEvent is not wired into checkout/orders in this
- * task per scope rules. Integration pass required.
+ * Mailer wiring (H2.1):
+ *   main.ts cannot be touched in this wave so we use the same lazy-factory approach
+ *   as customer-auth/service.ts: a module-level singleton that defaults to ConsoleMailer
+ *   and can be overridden via setNotificationMailer(). The recovery worker already
+ *   builds a SES/Console mailer from lib/mailer — callers that want real email dispatch
+ *   call setNotificationMailer() with that instance before processing begins.
+ *   In practice the notification module resolves its own mailer at module init using the
+ *   same config env-vars the recovery worker uses, so no boot wiring is required.
  */
 
 import { createHmac } from "node:crypto";
 import { getPool } from "../../db/pool.js";
+import { config } from "../../config/config.js";
+import { ConsoleMailer } from "../../lib/mailer/console.js";
+import { SesMailer } from "../../lib/mailer/ses.js";
+import type { Mailer } from "../../lib/mailer/index.js";
 import type {
   NotificationProviderRow,
   CreateNotificationProviderInput,
@@ -24,6 +33,37 @@ import type {
   DeliveryLogRow,
 } from "./types.js";
 import { isValidEvent } from "./types.js";
+
+// ── Mailer singleton (injectable; auto-resolved from env at module load) ────────
+
+function buildMailerFromConfig(): Mailer {
+  if (
+    config.AWS_SES_REGION &&
+    config.AWS_SES_ACCESS_KEY_ID &&
+    config.AWS_SES_SECRET_ACCESS_KEY &&
+    config.EMAIL_FROM
+  ) {
+    return new SesMailer({
+      region: config.AWS_SES_REGION,
+      accessKeyId: config.AWS_SES_ACCESS_KEY_ID,
+      secretAccessKey: config.AWS_SES_SECRET_ACCESS_KEY,
+      fromAddress: config.EMAIL_FROM,
+    });
+  }
+  return new ConsoleMailer();
+}
+
+let _notifMailer: Mailer = buildMailerFromConfig();
+
+/**
+ * Override the mailer used for email-type notification providers.
+ * Called by integration tests (ConsoleMailer) or by boot code (SesMailer).
+ * Since main.ts cannot be touched in wave H2, the module self-resolves from env
+ * at load time — this setter exists for tests and future explicit wiring.
+ */
+export function setNotificationMailer(m: Mailer): void {
+  _notifMailer = m;
+}
 
 const MAX_RETRIES = 3;
 const RETRY_DELAYS_MS = [1_000, 5_000, 15_000]; // exponential-ish backoff
@@ -64,13 +104,20 @@ export async function createNotificationProvider(
     }
   }
 
+  // Reject unsupported provider types at create time (mirrors webcrft behaviour).
+  const providerType = input.type ?? "webhook";
+  if (providerType === "sms" || providerType === "whatsapp") {
+    throw Object.assign(
+      new Error(`provider type "${providerType}" is not supported — use "webhook" or "email"`),
+      { code: "VALIDATION_ERROR" }
+    );
+  }
+
   // Config can carry webhook_secret
   const cfg: Record<string, unknown> = { ...(input.config ?? {}) };
   if (input.webhook_secret) {
     cfg["webhook_secret"] = input.webhook_secret;
   }
-
-  const providerType = input.type ?? "webhook";
   const res = await pool.query<{ id: string }>(
     `INSERT INTO notification_providers
        (store_id, name, type, webhook_url, config, events, is_active)
@@ -252,8 +299,14 @@ async function _dispatchStoreEvent(
     } else if (provider.type === "email") {
       await deliverEmail(provider, eventType, out);
     }
-    // sms/whatsapp: not implemented in this pass — console fallback
-    else {
+    // sms/whatsapp: not implemented — no-op with warning (matches webcrft behaviour)
+    else if (provider.type === "sms" || provider.type === "whatsapp") {
+      console.warn("notification: sms/whatsapp provider type not supported — skipping", {
+        providerId: provider.id,
+        type: provider.type,
+        event: eventType,
+      });
+    } else {
       console.info("notification: unhandled provider type", { type: provider.type, event: eventType });
     }
   }
@@ -356,25 +409,68 @@ async function deliverWebhook(
   }
 }
 
-/** Email delivery via Mailer if available, else console fallback.
+/**
+ * Email delivery via the module-level Mailer (_notifMailer).
  *
- * DISCOVERED: Mailer wiring for notification email delivery deferred to
- * integration pass. The Mailer interface (lib/mailer/index.ts) exists but
- * there is no module-level singleton exposed yet for notification dispatch.
- * To wire: export a setNotificationMailer(m: Mailer) in this file and call
- * it from main.ts, then use it here.
+ * Mailer wiring (H2.1): _notifMailer is resolved at module load from env vars
+ * (SES if configured, ConsoleMailer otherwise) and can be overridden via
+ * setNotificationMailer(). This mirrors the customer-auth/service.ts pattern.
+ * Since main.ts cannot be touched in wave H2, no explicit boot wiring is needed —
+ * the factory runs automatically when this module is first imported.
+ *
+ * The provider's config may carry: to_email, from_name, from_email.
+ * The event payload is serialised as plain-text body for simplicity (full HTML
+ * templates live in commerce_email.go and are a follow-up for H6).
  */
 async function deliverEmail(
   provider: ProviderRecord,
   eventType: string,
   payload: Record<string, unknown>
 ): Promise<void> {
-  // Console fallback — email dispatch via Mailer is a follow-up integration task
-  console.info("notification: email event (mailer wiring deferred)", {
-    providerId: provider.id,
-    eventType,
-    to: typeof payload["email"] === "string" ? payload["email"] : "(no email in payload)",
-  });
+  const toEmail =
+    typeof provider.config["to_email"] === "string" && provider.config["to_email"]
+      ? provider.config["to_email"]
+      : typeof payload["email"] === "string"
+        ? payload["email"]
+        : "";
+
+  if (!toEmail) {
+    console.warn("notification: email provider has no recipient address", {
+      providerId: provider.id,
+      eventType,
+    });
+    return;
+  }
+
+  const fromName =
+    typeof provider.config["from_name"] === "string"
+      ? provider.config["from_name"]
+      : "Cartcrft";
+  const fromEmail =
+    typeof provider.config["from_email"] === "string" && provider.config["from_email"]
+      ? provider.config["from_email"]
+      : (config.EMAIL_FROM ?? "noreply@cartcrft.com");
+
+  const subject = `[${eventType}] Store notification`;
+  const bodyText = JSON.stringify(payload, null, 2);
+  const bodyHtml = `<pre style="font-family:monospace">${bodyText
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")}</pre>`;
+
+  try {
+    await _notifMailer.send({
+      to: toEmail,
+      fromName,
+      fromEmail,
+      subject,
+      bodyHtml,
+      bodyText,
+    });
+    console.info("notification: email delivered", { providerId: provider.id, eventType, to: toEmail });
+  } catch (err) {
+    console.error("notification: email delivery failed", { providerId: provider.id, eventType, err });
+  }
 }
 
 /** Log a delivery attempt to notification_delivery_log. */
