@@ -212,6 +212,8 @@ export const checkoutPlugin: FastifyPluginAsync = async (app) => {
               return reply.status(402).send({ error: { code: "MANDATE_SPEND_LIMIT_EXCEEDED", message: err.message } });
             case "MANDATE_REQUIRED":
               return reply.status(402).send({ error: { code: "MANDATE_REQUIRED", message: err.message } });
+            case "CREDIT_LIMIT_EXCEEDED":
+              return reply.status(422).send({ error: { code: "CREDIT_LIMIT_EXCEEDED", message: err.message } });
           }
         }
         throw err;

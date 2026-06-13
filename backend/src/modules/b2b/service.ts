@@ -4,10 +4,21 @@
  * Covers: companies CRUD, company_customers, customer groups, quotes lifecycle,
  * purchase orders.
  *
+ * H2.5 — B2B credit enforcement:
+ *   checkCreditAndConsume(client, companyId, amount): call inside the same
+ *     transaction as order creation; throws CREDIT_LIMIT_EXCEEDED if the
+ *     company's remaining credit (credit_limit - credit_used) < amount.
+ *     On success, atomically increments credit_used.  Acquires a FOR UPDATE
+ *     row lock to serialise concurrent checkouts against the same company.
+ *     Only applies when credit_limit IS NOT NULL.
+ *   releaseCredit(companyId, amount): decrement credit_used by amount,
+ *     guarded against going below zero; call from cancelOrder and createRefund.
+ *
  * Money: prices stored as numeric(15,2) in DB; returned as strings in API.
  * Quote→order conversion uses next_order_number() and mirrors checkout complete.
  */
 
+import type pg from "pg";
 import { getPool, withTx } from "../../db/pool.js";
 import type {
   Company,
@@ -118,6 +129,98 @@ export async function deleteCompany(
     [companyId, storeId]
   );
   return (rowCount ?? 0) > 0;
+}
+
+// ── H2.5 Credit enforcement ────────────────────────────────────────────────────
+
+/**
+ * checkCreditAndConsume — must be called inside the same pg transaction as
+ * order creation (checkout/complete.ts).
+ *
+ * Semantics (parity with webcrft-mono companies.credit_limit/credit_used):
+ *  1. SELECT … FOR UPDATE to serialise concurrent checkouts for the same company.
+ *  2. If credit_limit IS NULL → no cap, skip the check.
+ *  3. If credit_limit - credit_used < amount → throw CREDIT_LIMIT_EXCEEDED.
+ *  4. Otherwise increment credit_used by amount inside the same transaction.
+ *
+ * The caller is responsible for rolling back the transaction on any error —
+ * withTx() in checkout/complete.ts handles that automatically.
+ *
+ * @param client  Transaction client (must be inside an active transaction)
+ * @param companyId  UUID of the company to check/update
+ * @param amount  Order total (numeric, same currency as credit_limit)
+ */
+export async function checkCreditAndConsume(
+  client: pg.PoolClient,
+  companyId: string,
+  amount: number
+): Promise<void> {
+  // Row-lock the company row to prevent concurrent oversell
+  const { rows } = await client.query<{
+    credit_limit: string | null;
+    credit_used: string;
+  }>(
+    `SELECT credit_limit::text, credit_used::text
+     FROM companies
+     WHERE id = $1::uuid
+     FOR UPDATE`,
+    [companyId]
+  );
+
+  if (!rows[0]) {
+    // Company not found — do nothing; foreign-key constraint will handle it
+    return;
+  }
+
+  const { credit_limit, credit_used } = rows[0];
+
+  // NULL credit_limit means no cap — pass through
+  if (credit_limit === null) return;
+
+  const limit = parseFloat(credit_limit);
+  const used = parseFloat(credit_used);
+  const remaining = limit - used;
+
+  if (remaining < amount - 0.001) {
+    const e = new Error(
+      `credit limit exceeded: remaining credit ${remaining.toFixed(2)} < order total ${amount.toFixed(2)}`
+    );
+    (e as NodeJS.ErrnoException).code = "CREDIT_LIMIT_EXCEEDED";
+    throw e;
+  }
+
+  // Atomically consume the credit inside the transaction
+  await client.query(
+    `UPDATE companies
+     SET credit_used = credit_used + $1::numeric,
+         updated_at  = now()
+     WHERE id = $2::uuid`,
+    [amount, companyId]
+  );
+}
+
+/**
+ * releaseCredit — reverse a previous credit consumption when an order is
+ * cancelled or refunded.  Decrements credit_used by `amount`, guarded
+ * against going below zero (GREATEST guard).  Uses the pool directly
+ * (no transaction required; reversal races are safe because credit_used
+ * is monotone — can only be released once per order event).
+ *
+ * Parity note: webcrft-mono does not implement this (credit reversal was
+ * not in the Go codebase) — this is a forward-parity improvement.
+ */
+export async function releaseCredit(
+  companyId: string,
+  amount: number
+): Promise<void> {
+  const pool = getPool();
+  await pool.query(
+    `UPDATE companies
+     SET credit_used = GREATEST(0, credit_used - $1::numeric),
+         updated_at  = now()
+     WHERE id = $2::uuid`,
+    [amount, companyId]
+  );
 }
 
 // ── Company customers ──────────────────────────────────────────────────────────

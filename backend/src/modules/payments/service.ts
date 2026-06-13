@@ -450,6 +450,33 @@ export async function createRefund(
           refund_amount: String(amount),
         });
 
+        // H2.5: Release B2B credit on refund.
+        // A refund on a net-terms order returns credit capacity to the company.
+        // Join to companies to get payment_terms_days (the orders row may not
+        // carry it if the order came from checkout/complete).
+        // Best-effort: credit release failure must never break the refund.
+        try {
+          const { rows: ordRows } = await client.query<{
+            company_id: string | null;
+            company_payment_terms_days: number | null;
+          }>(
+            `SELECT o.company_id::text,
+                    c.payment_terms_days AS company_payment_terms_days
+             FROM orders o
+             LEFT JOIN companies c ON c.id = o.company_id
+             WHERE o.id = $1::uuid`,
+            [orderId]
+          );
+          const ord = ordRows[0];
+          if (ord?.company_id && (ord.company_payment_terms_days ?? 0) > 0) {
+            const { releaseCredit } = await import("../b2b/service.js");
+            // Release only the refunded amount, not the full order total
+            await releaseCredit(ord.company_id, amount);
+          }
+        } catch (creditErr) {
+          console.warn("[createRefund] credit release failed (non-fatal):", creditErr);
+        }
+
         return { id: refundId };
       }
 

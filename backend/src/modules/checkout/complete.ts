@@ -325,6 +325,40 @@ export async function completeCheckout(
       );
     }
 
+    // ── Step 4b: B2B credit check + consume (H2.5) ───────────────────────
+    // When the checkout carries a company_id, look up the company's
+    // payment_terms_days.  A net-terms order (payment_terms_days > 0) is
+    // invoiced and not collected immediately, so it draws on the company's
+    // credit line.  If the remaining credit is insufficient we reject with
+    // CREDIT_LIMIT_EXCEEDED before the order row is created so the entire
+    // transaction rolls back atomically.
+    // The credit increment is inside the same withTx transaction as the
+    // order INSERT — no race window between check and update.
+    if (ch.company_id) {
+      const { rows: companyRows } = await client.query<{
+        payment_terms_days: number;
+      }>(
+        `SELECT payment_terms_days FROM companies WHERE id = $1::uuid`,
+        [ch.company_id]
+      );
+      const paymentTermsDays = companyRows[0]?.payment_terms_days ?? 0;
+
+      // Only consume credit for net-terms (invoiced / unpaid) orders.
+      // Immediate-payment company orders (terms = 0) do not draw credit.
+      if (paymentTermsDays > 0) {
+        const { checkCreditAndConsume } = await import("../b2b/service.js");
+        try {
+          await checkCreditAndConsume(client, ch.company_id, total);
+        } catch (err: unknown) {
+          const code = (err as NodeJS.ErrnoException).code;
+          if (code === "CREDIT_LIMIT_EXCEEDED") {
+            throw new CheckoutError((err as Error).message, "CREDIT_LIMIT_EXCEEDED");
+          }
+          throw err;
+        }
+      }
+    }
+
     // ── Step 5: Create order row (Invariant 5) ────────────────────────────
     // Stamp metadata.agent_id when request is agent-attributed so the
     // spend-window aggregation query in verifyAgentCheckout can count this order.

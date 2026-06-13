@@ -427,6 +427,33 @@ export async function cancelOrder(
       order_id: orderId,
       reason: reason ?? "",
     });
+
+    // H2.5: Release B2B credit on cancel.
+    // Look up the order's company_id and the company's payment_terms_days.
+    // Only net-terms orders (company.payment_terms_days > 0) consumed credit
+    // at checkout — those are the only ones that need credit reversal.
+    // Best-effort: do not fail the cancel if the credit release errors.
+    try {
+      const { rows: orderRows } = await pool.query<{
+        company_id: string | null;
+        total: string;
+        company_payment_terms_days: number | null;
+      }>(
+        `SELECT o.company_id::text, o.total::text,
+                c.payment_terms_days AS company_payment_terms_days
+         FROM orders o
+         LEFT JOIN companies c ON c.id = o.company_id
+         WHERE o.id = $1::uuid`,
+        [orderId]
+      );
+      const ord = orderRows[0];
+      if (ord?.company_id && (ord.company_payment_terms_days ?? 0) > 0) {
+        const { releaseCredit } = await import("../b2b/service.js");
+        await releaseCredit(ord.company_id, parseFloat(ord.total));
+      }
+    } catch (creditErr) {
+      console.warn("[cancelOrder] credit release failed (non-fatal):", creditErr);
+    }
   }
 
   return (rowCount ?? 0) > 0;
