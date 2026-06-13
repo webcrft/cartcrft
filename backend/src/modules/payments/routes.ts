@@ -22,6 +22,7 @@ import {
   storeAuthWrite,
   storeAuthAdmin,
 } from "../../lib/auth/middleware.js";
+import { timingSafeCheckSuperToken } from "../../lib/auth/super-token.js";
 import {
   listPayments,
   createPayment,
@@ -35,14 +36,6 @@ import {
   setGatewayDevCredentials,
   getGatewayStatus,
 } from "./service.js";
-
-// ── Super-token helper ────────────────────────────────────────────────────────
-
-function checkSuperToken(headerValue: string | undefined): boolean {
-  const superToken = process.env["SUPER_TOKEN"];
-  if (!superToken) return false;
-  return headerValue === superToken;
-}
 
 // ── Schemas ────────────────────────────────────────────────────────────────────
 
@@ -262,12 +255,20 @@ export const paymentsPlugin: FastifyPluginAsync = async (app) => {
 
       const userId = request.auth?.userId;
 
+      // Honor Idempotency-Key header: pass it to the service so duplicate
+      // POSTs with the same key return the original refund.
+      const idempotencyKeyHeader = request.headers["idempotency-key"];
+      const idempotencyKey =
+        typeof idempotencyKeyHeader === "string" && idempotencyKeyHeader.trim()
+          ? idempotencyKeyHeader.trim()
+          : undefined;
+
       try {
         const result = await createRefund(
           params.data.paymentId,
           params.data.orderId,
           params.data.storeId,
-          parsed.data,
+          { ...parsed.data, idempotency_key: idempotencyKey },
           userId
         );
         return reply.status(201).send(result);
@@ -366,7 +367,7 @@ export const paymentsPlugin: FastifyPluginAsync = async (app) => {
     { preHandler: [requireJwt] },
     async (request, reply) => {
       const superToken = request.headers["x-super-token"];
-      if (!checkSuperToken(typeof superToken === "string" ? superToken : undefined)) {
+      if (!timingSafeCheckSuperToken(typeof superToken === "string" ? superToken : undefined)) {
         return reply
           .status(403)
           .send({ error: { code: "FORBIDDEN", message: "super-admin access required" } });
@@ -382,7 +383,7 @@ export const paymentsPlugin: FastifyPluginAsync = async (app) => {
     { preHandler: [requireJwt] },
     async (request, reply) => {
       const superToken = request.headers["x-super-token"];
-      if (!checkSuperToken(typeof superToken === "string" ? superToken : undefined)) {
+      if (!timingSafeCheckSuperToken(typeof superToken === "string" ? superToken : undefined)) {
         return reply
           .status(403)
           .send({ error: { code: "FORBIDDEN", message: "super-admin access required" } });
@@ -410,7 +411,7 @@ export const paymentsPlugin: FastifyPluginAsync = async (app) => {
     { preHandler: [requireJwt] },
     async (request, reply) => {
       const superToken = request.headers["x-super-token"];
-      if (!checkSuperToken(typeof superToken === "string" ? superToken : undefined)) {
+      if (!timingSafeCheckSuperToken(typeof superToken === "string" ? superToken : undefined)) {
         return reply
           .status(403)
           .send({ error: { code: "FORBIDDEN", message: "super-admin access required" } });

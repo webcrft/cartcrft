@@ -22,6 +22,7 @@ import {
   requireJwt,
   storeAuthAdmin,
 } from "../../lib/auth/middleware.js";
+import { timingSafeCheckSuperToken } from "../../lib/auth/super-token.js";
 import {
   listStores,
   getStore,
@@ -77,17 +78,8 @@ const TakedownBody = z.object({
   reason: z.string().min(1, "reason is required").max(500),
 });
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-/** Validate SUPER_TOKEN for super-admin endpoints. */
-function checkSuperToken(authHeader: string | undefined): boolean {
-  const superToken = process.env["SUPER_TOKEN"];
-  if (!superToken) return false;
-  const bearer = authHeader?.startsWith("Bearer ")
-    ? authHeader.slice(7)
-    : "";
-  return bearer === superToken;
-}
+// (Local checkSuperToken wrapper removed — routes now call
+//  timingSafeCheckSuperToken directly via the shared helper.)
 
 // ── Plugin ────────────────────────────────────────────────────────────────────
 
@@ -288,13 +280,18 @@ export const storesPlugin: FastifyPluginAsync = async (app) => {
   );
 
   // ── Super: POST /super/commerce/stores/:storeId/takedown ─────────────────
+  // Auth chain: requireJwt (first) verifies a valid platform JWT, then the
+  // x-super-token header is validated with a constant-time comparison —
+  // matching the pattern used by the payments super-routes.
   app.post(
     "/super/commerce/stores/:storeId/takedown",
+    { preHandler: [requireJwt] },
     async (request, reply) => {
-      if (!checkSuperToken(request.headers["authorization"])) {
+      const superToken = request.headers["x-super-token"];
+      if (!timingSafeCheckSuperToken(typeof superToken === "string" ? superToken : undefined)) {
         return reply
-          .status(401)
-          .send({ error: { code: "UNAUTHORIZED", message: "invalid super token" } });
+          .status(403)
+          .send({ error: { code: "FORBIDDEN", message: "super-admin access required" } });
       }
 
       const params = StoreIdParams.safeParse(request.params);
@@ -319,11 +316,13 @@ export const storesPlugin: FastifyPluginAsync = async (app) => {
   // ── Super: POST /super/commerce/stores/:storeId/restore ──────────────────
   app.post(
     "/super/commerce/stores/:storeId/restore",
+    { preHandler: [requireJwt] },
     async (request, reply) => {
-      if (!checkSuperToken(request.headers["authorization"])) {
+      const superToken = request.headers["x-super-token"];
+      if (!timingSafeCheckSuperToken(typeof superToken === "string" ? superToken : undefined)) {
         return reply
-          .status(401)
-          .send({ error: { code: "UNAUTHORIZED", message: "invalid super token" } });
+          .status(403)
+          .send({ error: { code: "FORBIDDEN", message: "super-admin access required" } });
       }
 
       const params = StoreIdParams.safeParse(request.params);
