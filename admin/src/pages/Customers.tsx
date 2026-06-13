@@ -201,6 +201,8 @@ function CustomerDetail({ storeId, customerId, onBack }: {
   )
 }
 
+const PAGE_SIZE = 25
+
 export default function Customers() {
   const { activeStore } = useStore()
   const { toast } = useToast()
@@ -209,18 +211,21 @@ export default function Customers() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null)
+  const [offset, setOffset] = useState(0)
 
-  const load = useCallback(() => {
+  const load = useCallback((off: number, q?: string) => {
     if (!activeStore) return
     setLoading(true)
     const sdk = getSdk()
-    void sdk.customers.list(activeStore.id, { limit: 100 })
+    const query: { limit: number; offset: number; q?: string } = { limit: PAGE_SIZE, offset: off }
+    if (q?.trim()) query.q = q.trim()
+    void sdk.customers.list(activeStore.id, query)
       .then(res => { setCustomers(res.customers ?? []); setTotal(res.total ?? 0) })
       .catch(() => toast('Failed to load customers', 'error'))
       .finally(() => setLoading(false))
   }, [activeStore, toast])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => { setOffset(0); load(0) }, [load])
 
   if (selectedCustomerId && activeStore) {
     return (
@@ -232,12 +237,23 @@ export default function Customers() {
     )
   }
 
-  const filtered = customers.filter(c =>
-    !search || c.email.toLowerCase().includes(search.toLowerCase()) ||
-    `${c.first_name ?? ''} ${c.last_name ?? ''}`.toLowerCase().includes(search.toLowerCase())
-  )
-
   if (loading) return <div className="flex justify-center py-16"><Spinner /></div>
+
+  const totalPages = Math.ceil(total / PAGE_SIZE)
+  const currentPage = Math.floor(offset / PAGE_SIZE) + 1
+  const hasPrev = offset > 0
+  const hasNext = offset + PAGE_SIZE < total
+
+  const handleSearch = (q: string) => {
+    setSearch(q)
+    setOffset(0)
+    load(0, q)
+  }
+
+  const goToPage = (newOffset: number) => {
+    setOffset(newOffset)
+    load(newOffset, search)
+  }
 
   return (
     <div className="space-y-4">
@@ -248,47 +264,73 @@ export default function Customers() {
 
       <input
         value={search}
-        onChange={e => setSearch(e.target.value)}
+        onChange={e => handleSearch(e.target.value)}
         placeholder="Search by name or email..."
         className="w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-2.5 text-sm text-white placeholder:text-slate-500 focus:border-violet-500/40 focus:outline-none"
       />
 
-      {filtered.length === 0 ? (
+      {customers.length === 0 ? (
         <EmptyState
           title="No customers found"
           description={search ? 'Try a different search term' : 'Customers will appear here after their first order'}
         />
       ) : (
-        <TableContainer>
-          <table className="w-full text-sm">
-            <TableHead>
-              <Th>Name</Th>
-              <Th>Email</Th>
-              <Th>Status</Th>
-              <Th>Joined</Th>
-            </TableHead>
-            <tbody>
-              {filtered.map(customer => {
-                const isBlocked = (customer.is_blocked as boolean | undefined) ?? false
-                const fullName = [customer.first_name, customer.last_name].filter(Boolean).join(' ') || '—'
-                return (
-                  <tr
-                    key={customer.id}
-                    className="border-t border-white/[0.04] hover:bg-white/[0.02] transition cursor-pointer"
-                    onClick={() => setSelectedCustomerId(customer.id)}
-                  >
-                    <Td className="font-medium text-white">{fullName}</Td>
-                    <Td className="text-slate-400">{customer.email}</Td>
-                    <Td>
-                      {isBlocked ? <Badge color="red">Blocked</Badge> : <Badge color="emerald">Active</Badge>}
-                    </Td>
-                    <Td className="text-slate-500">{new Date(customer.created_at).toLocaleDateString()}</Td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </TableContainer>
+        <>
+          <TableContainer>
+            <table className="w-full text-sm">
+              <TableHead>
+                <Th>Name</Th>
+                <Th>Email</Th>
+                <Th>Status</Th>
+                <Th>Joined</Th>
+              </TableHead>
+              <tbody>
+                {customers.map(customer => {
+                  const isBlocked = (customer.is_blocked as boolean | undefined) ?? false
+                  const fullName = [customer.first_name, customer.last_name].filter(Boolean).join(' ') || '—'
+                  return (
+                    <tr
+                      key={customer.id}
+                      className="border-t border-white/[0.04] hover:bg-white/[0.02] transition cursor-pointer"
+                      onClick={() => setSelectedCustomerId(customer.id)}
+                    >
+                      <Td className="font-medium text-white">{fullName}</Td>
+                      <Td className="text-slate-400">{customer.email}</Td>
+                      <Td>
+                        {isBlocked ? <Badge color="red">Blocked</Badge> : <Badge color="emerald">Active</Badge>}
+                      </Td>
+                      <Td className="text-slate-500">{new Date(customer.created_at).toLocaleDateString()}</Td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </TableContainer>
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-1">
+              <span className="text-xs text-slate-500">
+                Page {currentPage} of {totalPages} &middot; {total} customers
+              </span>
+              <div className="flex items-center gap-2">
+                <Btn
+                  variant="secondary"
+                  disabled={!hasPrev}
+                  onClick={() => goToPage(offset - PAGE_SIZE)}
+                >
+                  &#8592; Prev
+                </Btn>
+                <Btn
+                  variant="secondary"
+                  disabled={!hasNext}
+                  onClick={() => goToPage(offset + PAGE_SIZE)}
+                >
+                  Next &#8594;
+                </Btn>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   )

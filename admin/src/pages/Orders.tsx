@@ -317,6 +317,8 @@ function OrderDetail({ storeId, orderId, onBack }: {
   )
 }
 
+const PAGE_SIZE = 25
+
 export default function Orders() {
   const { activeStore } = useStore()
   const { toast } = useToast()
@@ -324,18 +326,19 @@ export default function Orders() {
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null)
+  const [offset, setOffset] = useState(0)
 
-  const load = useCallback(() => {
+  const load = useCallback((off: number) => {
     if (!activeStore) return
     setLoading(true)
     const sdk = getSdk()
-    void sdk.orders.list(activeStore.id, { limit: 50 })
+    void sdk.orders.list(activeStore.id, { limit: PAGE_SIZE, offset: off })
       .then(res => { setOrders(res.orders ?? []); setTotal(res.total ?? 0) })
       .catch(() => toast('Failed to load orders', 'error'))
       .finally(() => setLoading(false))
   }, [activeStore, toast])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => { setOffset(0); load(0) }, [load])
 
   if (selectedOrderId && activeStore) {
     return (
@@ -348,6 +351,16 @@ export default function Orders() {
   }
 
   if (loading) return <div className="flex justify-center py-16"><Spinner /></div>
+
+  const totalPages = Math.ceil(total / PAGE_SIZE)
+  const currentPage = Math.floor(offset / PAGE_SIZE) + 1
+  const hasPrev = offset > 0
+  const hasNext = offset + PAGE_SIZE < total
+
+  const goToPage = (newOffset: number) => {
+    setOffset(newOffset)
+    load(newOffset)
+  }
 
   return (
     <div className="space-y-4">
@@ -362,41 +375,67 @@ export default function Orders() {
           description="Orders will appear here once customers start purchasing"
         />
       ) : (
-        <TableContainer>
-          <table className="w-full text-sm">
-            <TableHead>
-              <Th>Order</Th>
-              <Th>Date</Th>
-              <Th>Customer</Th>
-              <Th>Status</Th>
-              <Th>Payment</Th>
-              <Th>Fulfillment</Th>
-              <Th className="text-right">Total</Th>
-            </TableHead>
-            <tbody>
-              {orders.map(order => {
-                const fin = statusBadgeProps(order.financial_status, FINANCIAL_STATUS_MAP)
-                const ful = statusBadgeProps(order.fulfillment_status, FULFILLMENT_MAP)
-                const ord = statusBadgeProps(order.status, ORDER_STATUS_MAP)
-                return (
-                  <tr
-                    key={order.id}
-                    className="border-t border-white/[0.04] hover:bg-white/[0.02] transition cursor-pointer"
-                    onClick={() => setSelectedOrderId(order.id)}
-                  >
-                    <Td><span className="font-mono text-violet-400">#{order.order_number}</span></Td>
-                    <Td className="text-slate-400">{new Date(order.created_at).toLocaleDateString()}</Td>
-                    <Td className="text-slate-300">{(order.email as string | undefined) ?? 'Guest'}</Td>
-                    <Td><Badge color={ord.color}>{ord.label}</Badge></Td>
-                    <Td><Badge color={fin.color}>{fin.label}</Badge></Td>
-                    <Td><Badge color={ful.color}>{ful.label}</Badge></Td>
-                    <Td className="text-right font-mono font-medium text-white">{order.currency} {Number(order.total).toFixed(2)}</Td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </TableContainer>
+        <>
+          <TableContainer>
+            <table className="w-full text-sm">
+              <TableHead>
+                <Th>Order</Th>
+                <Th>Date</Th>
+                <Th>Customer</Th>
+                <Th>Status</Th>
+                <Th>Payment</Th>
+                <Th>Fulfillment</Th>
+                <Th className="text-right">Total</Th>
+              </TableHead>
+              <tbody>
+                {orders.map(order => {
+                  const fin = statusBadgeProps(order.financial_status, FINANCIAL_STATUS_MAP)
+                  const ful = statusBadgeProps(order.fulfillment_status, FULFILLMENT_MAP)
+                  const ord = statusBadgeProps(order.status, ORDER_STATUS_MAP)
+                  return (
+                    <tr
+                      key={order.id}
+                      className="border-t border-white/[0.04] hover:bg-white/[0.02] transition cursor-pointer"
+                      onClick={() => setSelectedOrderId(order.id)}
+                    >
+                      <Td><span className="font-mono text-violet-400">#{order.order_number}</span></Td>
+                      <Td className="text-slate-400">{new Date(order.created_at).toLocaleDateString()}</Td>
+                      <Td className="text-slate-300">{(order.email as string | undefined) ?? 'Guest'}</Td>
+                      <Td><Badge color={ord.color}>{ord.label}</Badge></Td>
+                      <Td><Badge color={fin.color}>{fin.label}</Badge></Td>
+                      <Td><Badge color={ful.color}>{ful.label}</Badge></Td>
+                      <Td className="text-right font-mono font-medium text-white">{order.currency} {Number(order.total).toFixed(2)}</Td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </TableContainer>
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-1">
+              <span className="text-xs text-slate-500">
+                Page {currentPage} of {totalPages} &middot; {total} orders
+              </span>
+              <div className="flex items-center gap-2">
+                <Btn
+                  variant="secondary"
+                  disabled={!hasPrev}
+                  onClick={() => goToPage(offset - PAGE_SIZE)}
+                >
+                  &#8592; Prev
+                </Btn>
+                <Btn
+                  variant="secondary"
+                  disabled={!hasNext}
+                  onClick={() => goToPage(offset + PAGE_SIZE)}
+                >
+                  Next &#8594;
+                </Btn>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   )

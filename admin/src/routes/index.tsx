@@ -5,7 +5,7 @@ import {
   Tag, Layers, Settings, Truck, Receipt, RotateCcw, Wallet,
   Repeat, List, Building2, UsersRound, Star, Heart,
   ShoppingCart, Package2, Plug, Bell, Webhook, CreditCard,
-  ShieldCheck, Bot,
+  ShieldCheck, Bot, Key, Download,
 } from 'lucide-react'
 
 export interface NavItem {
@@ -56,6 +56,10 @@ const PaymentProvidersPage = lazy(() => import('../pages/PaymentProviders'))
 const CustomerAuthPage = lazy(() => import('../pages/CustomerAuth'))
 const AgentsPage = lazy(() => import('../pages/Agents'))
 
+// H4.2 — new pages
+const ApiKeysPage = lazy(() => import('../pages/ApiKeys'))
+const DigitalProductsPage = lazy(() => import('../pages/DigitalProducts'))
+
 export const ROUTE_ENTRIES: RouteEntry[] = [
   { path: '/', element: DashboardPage, navSection: '', navLabel: 'Overview', icon: LayoutDashboard },
   { path: '/products', element: ProductsPage, navSection: 'Catalog', navLabel: 'Products', icon: Package },
@@ -85,6 +89,10 @@ export const ROUTE_ENTRIES: RouteEntry[] = [
   { path: '/payment-providers', element: PaymentProvidersPage, navSection: 'Store', navLabel: 'Payments', icon: CreditCard },
   { path: '/customer-auth', element: CustomerAuthPage, navSection: 'Store', navLabel: 'Customer Auth', icon: ShieldCheck },
   { path: '/agents', element: AgentsPage, navSection: 'Store', navLabel: 'Agents', icon: Bot },
+
+  // H4.2 — new pages
+  { path: '/api-keys', element: ApiKeysPage, navSection: 'Store', navLabel: 'API Keys', icon: Key },
+  { path: '/digital-products', element: DigitalProductsPage, navSection: 'Catalog', navLabel: 'Digital Files', icon: Download },
 ]
 
 const SECTION_ORDER = ['', 'Catalog', 'Sales', 'Operations', 'Store']

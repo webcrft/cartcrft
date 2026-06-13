@@ -208,26 +208,32 @@ function ProductEditor({ storeId, product, onClose, onSaved }: {
   )
 }
 
+const PAGE_SIZE = 25
+
 export default function Products() {
   const { activeStore } = useStore()
   const { toast } = useToast()
   const [products, setProducts] = useState<Product[]>([])
+  const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [editProduct, setEditProduct] = useState<Product | null | undefined>(undefined)
   const [deleting, setDeleting] = useState<string | null>(null)
+  const [offset, setOffset] = useState(0)
 
-  const load = useCallback(() => {
+  const load = useCallback((off: number, q?: string) => {
     if (!activeStore) return
     setLoading(true)
     const sdk = getSdk()
-    void sdk.catalog.listProducts(activeStore.id, { limit: 100 })
-      .then(res => setProducts(res.products ?? []))
+    const query: { limit: number; offset: number; q?: string } = { limit: PAGE_SIZE, offset: off }
+    if (q?.trim()) query.q = q.trim()
+    void sdk.catalog.listProducts(activeStore.id, query)
+      .then(res => { setProducts(res.products ?? []); setTotal(res.total ?? 0) })
       .catch(() => toast('Failed to load products', 'error'))
       .finally(() => setLoading(false))
   }, [activeStore, toast])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => { setOffset(0); load(0) }, [load])
 
   const handleDelete = async (productId: string) => {
     if (!activeStore) return
@@ -237,7 +243,7 @@ export default function Products() {
       const sdk = getSdk()
       await sdk.catalog.deleteProduct(activeStore.id, productId)
       toast('Product deleted', 'success')
-      load()
+      load(offset, search)
     } catch {
       toast('Delete failed', 'error')
     } finally {
@@ -245,30 +251,42 @@ export default function Products() {
     }
   }
 
-  const filtered = products.filter(p =>
-    !search || p.title.toLowerCase().includes(search.toLowerCase())
-  )
-
   if (loading) return <div className="flex justify-center py-16"><Spinner /></div>
+
+  const totalPages = Math.ceil(total / PAGE_SIZE)
+  const currentPage = Math.floor(offset / PAGE_SIZE) + 1
+  const hasPrev = offset > 0
+  const hasNext = offset + PAGE_SIZE < total
+
+  const handleSearch = (q: string) => {
+    setSearch(q)
+    setOffset(0)
+    load(0, q)
+  }
+
+  const goToPage = (newOffset: number) => {
+    setOffset(newOffset)
+    load(newOffset, search)
+  }
 
   return (
     <div className="space-y-4">
       <PageHeader
         title="Products"
-        description={`${products.length} product${products.length !== 1 ? 's' : ''}`}
+        description={`${total} product${total !== 1 ? 's' : ''}`}
         actions={<Btn onClick={() => setEditProduct(null)}>+ New Product</Btn>}
       />
 
       <div>
         <input
           value={search}
-          onChange={e => setSearch(e.target.value)}
+          onChange={e => handleSearch(e.target.value)}
           placeholder="Search products..."
           className="w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-2.5 text-sm text-white placeholder:text-slate-500 focus:border-violet-500/40 focus:outline-none"
         />
       </div>
 
-      {filtered.length === 0 ? (
+      {products.length === 0 ? (
         <EmptyState
           title="No products yet"
           description="Create your first product to start selling"
@@ -276,43 +294,69 @@ export default function Products() {
           onAction={() => setEditProduct(null)}
         />
       ) : (
-        <TableContainer>
-          <table className="w-full text-sm">
-            <TableHead>
-              <Th>Product</Th>
-              <Th>Type</Th>
-              <Th>Status</Th>
-              <Th>Price</Th>
-              <Th></Th>
-            </TableHead>
-            <tbody>
-              {filtered.map(product => {
-                const st = statusBadgeProps(product.status, PRODUCT_STATUS_MAP)
-                return (
-                  <tr key={product.id} className="border-t border-white/[0.04] hover:bg-white/[0.02] transition">
-                    <Td>
-                      <div>
-                        <span className="font-medium text-white">{product.title}</span>
-                        {product.variants_count != null && product.variants_count > 0 && (
-                          <span className="ml-2 text-[11px] text-slate-500">{product.variants_count} variant{product.variants_count !== 1 ? 's' : ''}</span>
-                        )}
-                      </div>
-                    </Td>
-                    <Td><Badge color="slate">{product.product_type}</Badge></Td>
-                    <Td><Badge color={st.color}>{st.label}</Badge></Td>
-                    <Td className="text-slate-300 font-mono">{product.price_min ? `${product.price_min}` : '—'}</Td>
-                    <Td>
-                      <div className="flex items-center gap-2 justify-end">
-                        <Btn variant="secondary" onClick={() => setEditProduct(product)}>Edit</Btn>
-                        <Btn variant="danger" loading={deleting === product.id} onClick={() => handleDelete(product.id)}>Del</Btn>
-                      </div>
-                    </Td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </TableContainer>
+        <>
+          <TableContainer>
+            <table className="w-full text-sm">
+              <TableHead>
+                <Th>Product</Th>
+                <Th>Type</Th>
+                <Th>Status</Th>
+                <Th>Price</Th>
+                <Th></Th>
+              </TableHead>
+              <tbody>
+                {products.map(product => {
+                  const st = statusBadgeProps(product.status, PRODUCT_STATUS_MAP)
+                  return (
+                    <tr key={product.id} className="border-t border-white/[0.04] hover:bg-white/[0.02] transition">
+                      <Td>
+                        <div>
+                          <span className="font-medium text-white">{product.title}</span>
+                          {product.variants_count != null && product.variants_count > 0 && (
+                            <span className="ml-2 text-[11px] text-slate-500">{product.variants_count} variant{product.variants_count !== 1 ? 's' : ''}</span>
+                          )}
+                        </div>
+                      </Td>
+                      <Td><Badge color="slate">{product.product_type}</Badge></Td>
+                      <Td><Badge color={st.color}>{st.label}</Badge></Td>
+                      <Td className="text-slate-300 font-mono">{product.price_min ? `${product.price_min}` : '—'}</Td>
+                      <Td>
+                        <div className="flex items-center gap-2 justify-end">
+                          <Btn variant="secondary" onClick={() => setEditProduct(product)}>Edit</Btn>
+                          <Btn variant="danger" loading={deleting === product.id} onClick={() => handleDelete(product.id)}>Del</Btn>
+                        </div>
+                      </Td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </TableContainer>
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-1">
+              <span className="text-xs text-slate-500">
+                Page {currentPage} of {totalPages} &middot; {total} products
+              </span>
+              <div className="flex items-center gap-2">
+                <Btn
+                  variant="secondary"
+                  disabled={!hasPrev}
+                  onClick={() => goToPage(offset - PAGE_SIZE)}
+                >
+                  &#8592; Prev
+                </Btn>
+                <Btn
+                  variant="secondary"
+                  disabled={!hasNext}
+                  onClick={() => goToPage(offset + PAGE_SIZE)}
+                >
+                  Next &#8594;
+                </Btn>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {editProduct !== undefined && (
@@ -320,7 +364,7 @@ export default function Products() {
           storeId={activeStore?.id ?? ''}
           product={editProduct}
           onClose={() => setEditProduct(undefined)}
-          onSaved={load}
+          onSaved={() => load(offset, search)}
         />
       )}
     </div>
