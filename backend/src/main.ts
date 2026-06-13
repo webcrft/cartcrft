@@ -16,6 +16,8 @@ import { runMigrations } from "./db/migrate.js";
 import { buildApp } from "./http/app.js";
 import { startEmbeddingWorkerJob } from "./agent/search/indexer.js";
 import { startRecoveryWorkerJob } from "./modules/recovery/worker.js";
+import { startSubscriptionScheduler } from "./modules/subscriptions/scheduler.js";
+import { startFxRefreshJob } from "./modules/exchange-rates/fx-refresh.js";
 import { ConsoleMailer } from "./lib/mailer/console.js";
 import { SesMailer } from "./lib/mailer/ses.js";
 
@@ -106,12 +108,86 @@ async function runWorker(): Promise<void> {
     stopBillingWorker = await startCloudBillingWorker();
   }
 
+  // H2.3 — Subscription billing scheduler.
+  // Selects active subscriptions with next_billing_at <= clock.now() and calls
+  // billSubscription() for each. Clock-driven (SimClock when BILLING_SIM_ENABLED).
+  let clock: { now(): Date };
+  if (config.BILLING_SIM_ENABLED && config.BILLING_SIM_DAY_SECONDS > 0) {
+    const { SimClock } = await import("./clock.js");
+    clock = new SimClock(new Date(), config.BILLING_SIM_DAY_SECONDS);
+  } else {
+    const { SystemClock } = await import("./clock.js");
+    clock = new SystemClock();
+  }
+
+  // Acquire a worker lock for the subscription scheduler to prevent
+  // double-billing under multi-replica deploys.
+  const { acquireLock, releaseLock } = await import("./lib/workerlock.js");
+  const SUB_LOCK_NAME = "subscription-scheduler";
+  const SUB_LOCK_TTL_MS = 70_000; // slightly longer than the poll interval
+
+  let subLockToken: string | null = null;
+  let stopSubscriptionScheduler: () => void = () => { /* no-op */ };
+
+  try {
+    subLockToken = await acquireLock(SUB_LOCK_NAME, SUB_LOCK_TTL_MS);
+    if (!subLockToken) {
+      console.log(
+        "[worker] subscription scheduler lock held by another process — this replica will skip"
+      );
+    } else {
+      console.log("[worker] subscription scheduler lock acquired");
+      // Poll interval: compress with sim clock if configured; default 60s.
+      const subIntervalMs =
+        config.BILLING_SIM_ENABLED && config.BILLING_SIM_DAY_SECONDS > 0
+          ? Math.max(1_000, Math.min(30_000, config.BILLING_SIM_DAY_SECONDS * 100))
+          : 60_000;
+      stopSubscriptionScheduler = startSubscriptionScheduler({
+        clock,
+        intervalMs: subIntervalMs,
+        initialDelayMs: 5_000,
+      });
+      console.log(
+        `[worker] subscription scheduler registered (${subIntervalMs}ms poll interval)`
+      );
+    }
+  } catch (err) {
+    console.warn(
+      "[worker] could not acquire subscription scheduler lock (proceeding without):",
+      err instanceof Error ? err.message : String(err)
+    );
+    stopSubscriptionScheduler = startSubscriptionScheduler({
+      clock,
+      intervalMs: 60_000,
+      initialDelayMs: 5_000,
+    });
+    console.log("[worker] subscription scheduler registered (no lock — fallback mode)");
+  }
+
+  // H2.3 — Exchange-rate refresh job.
+  // Fetches USD-base rates from ExchangeRate-API and upserts into exchange_rates.
+  // Graceful no-op when EXCHANGE_RATE_API_KEY is absent.
+  const stopFxRefresh = startFxRefreshJob({
+    apiKey: config.EXCHANGE_RATE_API_KEY,
+    // Compress interval in sim mode so rates are refreshed more often in tests.
+    intervalMs:
+      config.BILLING_SIM_ENABLED && config.BILLING_SIM_DAY_SECONDS > 0
+        ? Math.max(5_000, Math.min(120_000, config.BILLING_SIM_DAY_SECONDS * 1000))
+        : 2 * 60 * 60 * 1000,
+    initialDelayMs: 15_000,
+  });
+
   // Keep alive.
   await new Promise<void>((resolve) => {
     const shutdown = () => {
       console.log("[worker] shutdown");
       stopEmbedding();
       stopRecovery();
+      stopSubscriptionScheduler();
+      stopFxRefresh();
+      if (subLockToken) {
+        void releaseLock(SUB_LOCK_NAME, subLockToken).catch(() => { /* best-effort */ });
+      }
       if (stopBillingWorker) stopBillingWorker();
       void closePool().then(resolve);
     };
