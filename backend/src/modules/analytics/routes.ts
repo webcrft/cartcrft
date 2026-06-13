@@ -119,8 +119,9 @@ export const analyticsPlugin: FastifyPluginAsync = async (app) => {
           refund_rate: refundRate,
           total_refunds: totalRefunds,
         });
-      } catch {
-        // analytics_events table may not exist — return empty
+      } catch (err) {
+        // analytics_events table may not exist yet — return empty
+        console.warn("analytics overview query failed:", err instanceof Error ? err.message : String(err));
         return reply.send({
           total_orders: 0,
           total_revenue_cents: 0,

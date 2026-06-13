@@ -58,6 +58,7 @@ import { staticPlugin } from "./static.js";
 import { recoveryPlugin } from "../modules/recovery/routes.js";
 import { catalogCsvPlugin } from "../modules/catalog/csv-routes.js";
 import { bookingsPlugin } from "../modules/bookings/index.js";
+import { setAnalyticsSink, PgAnalyticsSink } from "../lib/analytics.js";
 
 const VERSION = process.env["npm_package_version"] ?? "0.0.0";
 const OPENAPI_VERSION = "2026-06-12";
@@ -302,6 +303,9 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
   // ── Agent attribution hook — runs before all route handlers ─────────────────
   // Must be added directly (not via plugin) so it applies to all routes.
   app.addHook("preHandler", agentAttributionHook);
+
+  // ── Analytics sink (H2.2) — install PgAnalyticsSink before routes boot ────────
+  setAnalyticsSink(new PgAnalyticsSink());
 
   // ── Commerce modules ───────────────────────────────────────────────────────
   await app.register(storesPlugin);

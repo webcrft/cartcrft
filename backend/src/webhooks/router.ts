@@ -1108,6 +1108,9 @@ async function recordPaymentSuccess(
       amount,
       currency,
     });
+
+    // Fire GA4 server-side purchase event (H2.2 — fire-and-forget).
+    void fireGA4Purchase(storeId, orderId, amount, currency);
   } catch (err) {
     await client.query("ROLLBACK").catch(() => undefined);
     console.error(`recordPaymentSuccess: failed`, {
@@ -1346,4 +1349,112 @@ function razorpayEventId(ev: RazorpayEvent): string {
     if (typeof id === "string") return id;
   }
   return "";
+}
+
+// ── GA4 server-side purchase (H2.2) ──────────────────────────────────────────
+
+/**
+ * fireGA4Purchase — send a GA4 Measurement Protocol `purchase` event when the
+ * store has a google_analytics_4 pixel with a tracking_id (measurementID) and
+ * api_secret configured.
+ *
+ * Ported from: webcrft-mono/backend/internal/webhooks/router/router.go
+ *              fireGA4Purchase() + ga4.Client.Send()
+ *
+ * Measurement Protocol endpoint:
+ *   POST https://www.google-analytics.com/mp/collect
+ *        ?measurement_id=G-XXXXXXXXXX&api_secret=<secret>
+ *
+ * Payload: { client_id, events: [{ name: "purchase", params: { ... } }] }
+ *
+ * Skips gracefully (no error logged) when:
+ *  - No GA4 pixel configured for the store
+ *  - api_secret is empty (pixel exists but no server-side secret set)
+ *
+ * api_secret is stored encrypted (AES-GCM via encodeSecretValue) when
+ * AUTH_SECRETS_KEY is set — decodes transparently via decodeSecretValue.
+ */
+async function fireGA4Purchase(
+  storeId: string,
+  orderId: string,
+  amount: number,
+  currency: string
+): Promise<void> {
+  try {
+    const pool = getPool();
+
+    // Load GA4 pixel + order details in a single query (mirrors Go implementation).
+    const { rows } = await pool.query<{
+      tracking_id: string;
+      api_secret: string | null;
+      order_number: string;
+      customer_id: string | null;
+    }>(
+      `SELECT tp.tracking_id,
+              tp.api_secret,
+              o.order_number,
+              o.customer_id::text
+       FROM store_tracking_pixels tp
+       JOIN orders o ON o.id = $2::uuid
+       WHERE tp.store_id = $1::uuid
+         AND tp.pixel_type = 'google_analytics_4'
+         AND tp.is_active = true
+       LIMIT 1`,
+      [storeId, orderId]
+    );
+
+    const pixel = rows[0];
+    if (!pixel) return; // no GA4 pixel configured — skip
+
+    const measurementId = pixel.tracking_id;
+
+    // Decrypt api_secret if encrypted (AUTH_SECRETS_KEY present).
+    let apiSecret = "";
+    if (pixel.api_secret) {
+      try {
+        apiSecret = await decodeSecretValue(pixel.api_secret, secretsKey);
+      } catch {
+        apiSecret = pixel.api_secret; // plaintext dev mode fallback
+      }
+    }
+    if (!apiSecret) return; // no api_secret — server-side send impossible
+
+    // client_id: customer_id if known, else orderId (stable per order).
+    const clientId = pixel.customer_id ?? orderId;
+
+    const payload = {
+      client_id: clientId,
+      events: [
+        {
+          name: "purchase",
+          params: {
+            transaction_id: pixel.order_number,
+            value: amount,
+            currency: currency.toUpperCase(),
+            items: [], // items array required by GA4 schema; populated empty here
+          },
+        },
+      ],
+    };
+
+    const mpUrl = `https://www.google-analytics.com/mp/collect?measurement_id=${encodeURIComponent(measurementId)}&api_secret=${encodeURIComponent(apiSecret)}`;
+
+    const response = await fetch(mpUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(10_000),
+    });
+
+    if (!response.ok) {
+      console.warn("ga4: measurement protocol returned non-2xx", {
+        storeId, orderId, status: response.status,
+      });
+    }
+  } catch (err) {
+    // GA4 send must never crash the webhook flow.
+    console.warn("ga4: fireGA4Purchase failed", {
+      storeId, orderId, err: err instanceof Error ? err.message : String(err),
+    });
+  }
 }
