@@ -13,6 +13,7 @@
  */
 
 import { getPool } from "../../db/pool.js";
+import { acquireLock, releaseLock } from "../../lib/workerlock.js";
 import type { Embedder } from "./embedder.js";
 import { buildEmbedder } from "./embedder.js";
 
@@ -165,6 +166,8 @@ export async function reindexProduct(
 
 const BATCH_SIZE = 16;
 const POLL_INTERVAL_MS = 30_000;
+const EMBEDDING_LOCK_NAME = "embedding-worker";
+const EMBEDDING_LOCK_TTL_MS = 60_000; // slightly longer than a poll cycle
 
 interface StoreWithProvider {
   id: string;
@@ -189,7 +192,22 @@ export function startEmbeddingWorkerJob(): () => void {
   let running = false;
 
   const tick = async () => {
-    if (running) return; // skip overlap
+    if (running) return; // skip in-process overlap
+
+    // Acquire a distributed advisory lock so multi-replica deploys don't
+    // double-process the same products in the same tick window.
+    let lockToken: string | null = null;
+    try {
+      lockToken = await acquireLock(EMBEDDING_LOCK_NAME, EMBEDDING_LOCK_TTL_MS);
+    } catch (err) {
+      console.warn("[embedding-worker] could not acquire lock (skipping tick):", err instanceof Error ? err.message : String(err));
+      return;
+    }
+    if (!lockToken) {
+      // Another replica holds the lock — skip this tick cleanly.
+      return;
+    }
+
     running = true;
     try {
       await runEmbeddingPass();
@@ -197,6 +215,11 @@ export function startEmbeddingWorkerJob(): () => void {
       console.error("[embedding-worker] pass error:", err);
     } finally {
       running = false;
+      try {
+        await releaseLock(EMBEDDING_LOCK_NAME, lockToken);
+      } catch (err) {
+        console.warn("[embedding-worker] lock release failed:", err instanceof Error ? err.message : String(err));
+      }
     }
   };
 
