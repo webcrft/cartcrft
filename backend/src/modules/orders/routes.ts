@@ -69,14 +69,15 @@ const CreateOrderBody = z.object({
   lines: z.array(CreateOrderLineSchema).min(1, "lines must be a non-empty array"),
 });
 
+// Blocked fields are typed z.never() so Fastify rejects them at schema validation
+// with a 400, matching the original handler-level check behaviour.
 const UpdateOrderBody = z.object({
   notes: z.string().max(16384).optional(),
   tags: z.array(z.string()).optional(),
-  // Blocked fields — presence triggers 400
   status: z.never().optional(),
   financial_status: z.never().optional(),
   fulfillment_status: z.never().optional(),
-}).passthrough();
+});
 
 const CancelOrderBody = z.object({
   reason: z.string().max(500).optional(),
@@ -93,19 +94,14 @@ export const ordersPlugin: FastifyPluginAsync = async (app) => {
   // ── GET /commerce/stores/:storeId/orders ────────────────────────────────────
   app.get(
     "/commerce/stores/:storeId/orders",
-    { preHandler: [storeAuthWrite] },
+    {
+      preHandler: [storeAuthWrite],
+      schema: { params: StoreOrderParams, querystring: ListOrdersQuery },
+    },
     async (request, reply) => {
-      const params = StoreOrderParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Invalid storeId" },
-        });
-      }
-
-      const query = ListOrdersQuery.safeParse(request.query);
-      const opts = query.success ? query.data : {};
-
-      const result = await listOrders(params.data.storeId, opts);
+      const { storeId } = request.params as z.infer<typeof StoreOrderParams>;
+      const opts = request.query as z.infer<typeof ListOrdersQuery>;
+      const result = await listOrders(storeId, opts);
       return reply.send(result);
     }
   );
@@ -113,16 +109,14 @@ export const ordersPlugin: FastifyPluginAsync = async (app) => {
   // ── POST /commerce/stores/:storeId/orders ───────────────────────────────────
   app.post(
     "/commerce/stores/:storeId/orders",
-    { preHandler: [storeAuthWrite] },
+    {
+      preHandler: [storeAuthWrite],
+      schema: { params: StoreOrderParams, body: CreateOrderBody },
+    },
     async (request, reply) => {
-      const params = StoreOrderParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Invalid storeId" },
-        });
-      }
+      const { storeId } = request.params as z.infer<typeof StoreOrderParams>;
 
-      // Check for blocked status fields before full parse
+      // Check for blocked status fields before using the parsed body
       const rawBody = request.body as Record<string, unknown> | null;
       if (rawBody) {
         for (const f of ["status", "financial_status", "fulfillment_status"]) {
@@ -137,25 +131,11 @@ export const ordersPlugin: FastifyPluginAsync = async (app) => {
         }
       }
 
-      const parsed = CreateOrderBody.safeParse(request.body);
-      if (!parsed.success) {
-        return reply.status(400).send({
-          error: {
-            code: "VALIDATION_ERROR",
-            message: "Request validation failed",
-            details: parsed.error.issues,
-          },
-        });
-      }
-
+      const data = request.body as z.infer<typeof CreateOrderBody>;
       const userId = request.auth?.userId;
 
       try {
-        const result = await createOrder(
-          params.data.storeId,
-          parsed.data,
-          userId
-        );
+        const result = await createOrder(storeId, data, userId);
         return reply.status(201).send(result);
       } catch (err: unknown) {
         if (
@@ -174,16 +154,13 @@ export const ordersPlugin: FastifyPluginAsync = async (app) => {
   // ── GET /commerce/stores/:storeId/orders/:orderId ───────────────────────────
   app.get(
     "/commerce/stores/:storeId/orders/:orderId",
-    { preHandler: [storeAuthWrite] },
+    {
+      preHandler: [storeAuthWrite],
+      schema: { params: StoreOrderIdParams },
+    },
     async (request, reply) => {
-      const params = StoreOrderIdParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Invalid params" },
-        });
-      }
-
-      const order = await getOrder(params.data.orderId, params.data.storeId);
+      const { storeId, orderId } = request.params as z.infer<typeof StoreOrderIdParams>;
+      const order = await getOrder(orderId, storeId);
       if (!order) {
         return reply
           .status(404)
@@ -196,55 +173,17 @@ export const ordersPlugin: FastifyPluginAsync = async (app) => {
   // ── PUT /commerce/stores/:storeId/orders/:orderId ───────────────────────────
   app.put(
     "/commerce/stores/:storeId/orders/:orderId",
-    { preHandler: [storeAuthWrite] },
+    {
+      preHandler: [storeAuthWrite],
+      schema: { params: StoreOrderIdParams, body: UpdateOrderBody },
+    },
     async (request, reply) => {
-      const params = StoreOrderIdParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Invalid params" },
-        });
-      }
-
-      // Block state-machine fields
-      const rawBody = request.body as Record<string, unknown> | null;
-      for (const forbidden of [
-        "status",
-        "financial_status",
-        "fulfillment_status",
-      ]) {
-        if (rawBody && forbidden in rawBody) {
-          return reply.status(400).send({
-            error: {
-              code: "VALIDATION_ERROR",
-              message: `field '${forbidden}' cannot be set via UpdateOrder; use the dedicated state-transition endpoint`,
-            },
-          });
-        }
-      }
-
-      const parsed = z
-        .object({
-          notes: z.string().max(16384).optional(),
-          tags: z.array(z.string()).optional(),
-        })
-        .safeParse(request.body);
-      if (!parsed.success) {
-        return reply.status(400).send({
-          error: {
-            code: "VALIDATION_ERROR",
-            message: "Request validation failed",
-            details: parsed.error.issues,
-          },
-        });
-      }
-
+      const { storeId, orderId } = request.params as z.infer<typeof StoreOrderIdParams>;
+      // Blocked status fields (status, financial_status, fulfillment_status) are
+      // rejected at the schema level via z.never() — no handler check needed.
+      const data = request.body as z.infer<typeof UpdateOrderBody>;
       const userId = request.auth?.userId;
-      const updated = await updateOrder(
-        params.data.orderId,
-        params.data.storeId,
-        parsed.data,
-        userId
-      );
+      const updated = await updateOrder(orderId, storeId, data, userId);
 
       if (!updated) {
         return reply
@@ -258,25 +197,16 @@ export const ordersPlugin: FastifyPluginAsync = async (app) => {
   // ── POST /commerce/stores/:storeId/orders/:orderId/cancel ───────────────────
   app.post(
     "/commerce/stores/:storeId/orders/:orderId/cancel",
-    { preHandler: [storeAuthWrite] },
+    {
+      preHandler: [storeAuthWrite],
+      schema: { params: StoreOrderIdParams, body: CancelOrderBody },
+    },
     async (request, reply) => {
-      const params = StoreOrderIdParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Invalid params" },
-        });
-      }
-
-      const parsed = CancelOrderBody.safeParse(request.body);
-      const reason = parsed.success ? parsed.data.reason : undefined;
+      const { storeId, orderId } = request.params as z.infer<typeof StoreOrderIdParams>;
+      const data = request.body as z.infer<typeof CancelOrderBody>;
       const userId = request.auth?.userId;
 
-      const cancelled = await cancelOrder(
-        params.data.orderId,
-        params.data.storeId,
-        reason,
-        userId
-      );
+      const cancelled = await cancelOrder(orderId, storeId, data.reason, userId);
 
       if (!cancelled) {
         return reply.status(409).send({
@@ -294,25 +224,13 @@ export const ordersPlugin: FastifyPluginAsync = async (app) => {
   // Requires JWT auth (not API key)
   app.post(
     "/commerce/stores/:storeId/orders/:orderId/notes",
-    { preHandler: [requireJwt] },
+    {
+      preHandler: [requireJwt],
+      schema: { params: StoreOrderIdParams, body: AddNoteBody },
+    },
     async (request, reply) => {
-      const params = StoreOrderIdParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Invalid params" },
-        });
-      }
-
-      const parsed = AddNoteBody.safeParse(request.body);
-      if (!parsed.success) {
-        return reply.status(400).send({
-          error: {
-            code: "VALIDATION_ERROR",
-            message: "note is required",
-            details: parsed.error.issues,
-          },
-        });
-      }
+      const { storeId, orderId } = request.params as z.infer<typeof StoreOrderIdParams>;
+      const { note } = request.body as z.infer<typeof AddNoteBody>;
 
       const userId = request.auth?.userId;
       if (!userId) {
@@ -322,12 +240,7 @@ export const ordersPlugin: FastifyPluginAsync = async (app) => {
       }
 
       try {
-        const eventId = await addOrderNote(
-          params.data.orderId,
-          params.data.storeId,
-          parsed.data.note,
-          userId
-        );
+        const eventId = await addOrderNote(orderId, storeId, note, userId);
         return reply.status(201).send({ id: eventId });
       } catch (err: unknown) {
         if (
@@ -346,19 +259,13 @@ export const ordersPlugin: FastifyPluginAsync = async (app) => {
   // ── GET /commerce/stores/:storeId/orders/:orderId/events ────────────────────
   app.get(
     "/commerce/stores/:storeId/orders/:orderId/events",
-    { preHandler: [storeAuthWrite] },
+    {
+      preHandler: [storeAuthWrite],
+      schema: { params: StoreOrderIdParams },
+    },
     async (request, reply) => {
-      const params = StoreOrderIdParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Invalid params" },
-        });
-      }
-
-      const events = await listOrderEvents(
-        params.data.orderId,
-        params.data.storeId
-      );
+      const { storeId, orderId } = request.params as z.infer<typeof StoreOrderIdParams>;
+      const events = await listOrderEvents(orderId, storeId);
       return reply.send({ events });
     }
   );

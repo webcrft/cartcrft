@@ -76,20 +76,17 @@ export const cartsPlugin: FastifyPluginAsync = async (app) => {
   // ── POST /commerce/stores/:storeId/carts ────────────────────────────────
   app.post(
     "/commerce/stores/:storeId/carts",
-    { preHandler: [storeAuthRead] },
+    {
+      preHandler: [storeAuthRead],
+      schema: { params: StoreIdParams, body: CreateCartBody },
+    },
     async (request, reply) => {
       const storeId = request.auth!.storeId;
-
-      const parsed = CreateCartBody.safeParse(request.body);
-      if (!parsed.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Request validation failed", details: parsed.error.issues },
-        });
-      }
+      const data = request.body as z.infer<typeof CreateCartBody>;
 
       const cartId = await createCart(storeId, {
-        ...(parsed.data.currency !== undefined && { currency: parsed.data.currency }),
-        ...(parsed.data.customer_id !== undefined && { customerId: parsed.data.customer_id }),
+        ...(data.currency !== undefined && { currency: data.currency }),
+        ...(data.customer_id !== undefined && { customerId: data.customer_id }),
       });
       return reply.status(201).send({ id: cartId });
     }
@@ -98,17 +95,15 @@ export const cartsPlugin: FastifyPluginAsync = async (app) => {
   // ── GET /commerce/stores/:storeId/carts/:cartId ─────────────────────────
   app.get(
     "/commerce/stores/:storeId/carts/:cartId",
-    { preHandler: [storeAuthRead] },
+    {
+      preHandler: [storeAuthRead],
+      schema: { params: CartIdParams },
+    },
     async (request, reply) => {
       const storeId = request.auth!.storeId;
-      const params = CartIdParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Invalid params" },
-        });
-      }
+      const { cartId } = request.params as z.infer<typeof CartIdParams>;
 
-      const cart = await getCart(storeId, params.data.cartId);
+      const cart = await getCart(storeId, cartId);
       if (!cart) {
         return reply.status(404).send({ error: { code: "NOT_FOUND", message: "cart not found" } });
       }
@@ -119,30 +114,17 @@ export const cartsPlugin: FastifyPluginAsync = async (app) => {
   // ── POST /commerce/stores/:storeId/carts/:cartId/lines ──────────────────
   app.post(
     "/commerce/stores/:storeId/carts/:cartId/lines",
-    { preHandler: [storeAuthRead] },
+    {
+      preHandler: [storeAuthRead],
+      schema: { params: CartIdParams, body: AddCartLineBody },
+    },
     async (request, reply) => {
       const storeId = request.auth!.storeId;
-      const params = CartIdParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Invalid params" },
-        });
-      }
-
-      const parsed = AddCartLineBody.safeParse(request.body);
-      if (!parsed.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Request validation failed", details: parsed.error.issues },
-        });
-      }
+      const { cartId } = request.params as z.infer<typeof CartIdParams>;
+      const { variant_id, quantity } = request.body as z.infer<typeof AddCartLineBody>;
 
       try {
-        const lineId = await addCartLine(
-          storeId,
-          params.data.cartId,
-          parsed.data.variant_id,
-          parsed.data.quantity
-        );
+        const lineId = await addCartLine(storeId, cartId, variant_id, quantity);
         return reply.status(201).send({ id: lineId });
       } catch (err: unknown) {
         const code = (err as NodeJS.ErrnoException).code;
@@ -160,30 +142,17 @@ export const cartsPlugin: FastifyPluginAsync = async (app) => {
   // ── PATCH /commerce/stores/:storeId/carts/:cartId/lines/:lineId ─────────
   app.patch(
     "/commerce/stores/:storeId/carts/:cartId/lines/:lineId",
-    { preHandler: [storeAuthRead] },
+    {
+      preHandler: [storeAuthRead],
+      schema: { params: CartLineParams, body: UpdateCartLineBody },
+    },
     async (request, reply) => {
       const storeId = request.auth!.storeId;
-      const params = CartLineParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Invalid params" },
-        });
-      }
-
-      const parsed = UpdateCartLineBody.safeParse(request.body);
-      if (!parsed.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Request validation failed", details: parsed.error.issues },
-        });
-      }
+      const { cartId, lineId } = request.params as z.infer<typeof CartLineParams>;
+      const { quantity } = request.body as z.infer<typeof UpdateCartLineBody>;
 
       try {
-        await updateCartLine(
-          storeId,
-          params.data.cartId,
-          params.data.lineId,
-          parsed.data.quantity
-        );
+        await updateCartLine(storeId, cartId, lineId, quantity);
         return reply.send({ ok: true });
       } catch (err: unknown) {
         const code = (err as NodeJS.ErrnoException).code;
@@ -201,18 +170,16 @@ export const cartsPlugin: FastifyPluginAsync = async (app) => {
   // ── DELETE /commerce/stores/:storeId/carts/:cartId/lines/:lineId ────────
   app.delete(
     "/commerce/stores/:storeId/carts/:cartId/lines/:lineId",
-    { preHandler: [storeAuthRead] },
+    {
+      preHandler: [storeAuthRead],
+      schema: { params: CartLineParams },
+    },
     async (request, reply) => {
       const storeId = request.auth!.storeId;
-      const params = CartLineParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Invalid params" },
-        });
-      }
+      const { cartId, lineId } = request.params as z.infer<typeof CartLineParams>;
 
       try {
-        await removeCartLine(storeId, params.data.cartId, params.data.lineId);
+        await removeCartLine(storeId, cartId, lineId);
         return reply.send({ ok: true });
       } catch (err: unknown) {
         const code = (err as NodeJS.ErrnoException).code;
@@ -227,13 +194,16 @@ export const cartsPlugin: FastifyPluginAsync = async (app) => {
   // ── GET /commerce/stores/:storeId/abandoned-carts ───────────────────────
   app.get(
     "/commerce/stores/:storeId/abandoned-carts",
-    { preHandler: [storeAuthAdmin] },
+    {
+      preHandler: [storeAuthAdmin],
+      schema: { params: StoreIdParams, querystring: ListQuerystring },
+    },
     async (request, reply) => {
       const storeId = request.auth!.storeId;
-      const query = ListQuerystring.safeParse(request.query);
+      const q = request.query as z.infer<typeof ListQuerystring>;
       const carts = await listAbandonedCarts(storeId, {
-        ...(query.success && query.data.limit !== undefined && { limit: query.data.limit }),
-        ...(query.success && query.data.offset !== undefined && { offset: query.data.offset }),
+        ...(q.limit !== undefined && { limit: q.limit }),
+        ...(q.offset !== undefined && { offset: q.offset }),
       });
       return reply.send({ carts });
     }
@@ -242,25 +212,16 @@ export const cartsPlugin: FastifyPluginAsync = async (app) => {
   // ── POST /commerce/stores/:storeId/abandoned-carts ─────────────────────
   app.post(
     "/commerce/stores/:storeId/abandoned-carts",
-    { preHandler: [storeAuthWrite] },
+    {
+      preHandler: [storeAuthWrite],
+      schema: { params: StoreIdParams, body: MarkAbandonedBody },
+    },
     async (request, reply) => {
       const storeId = request.auth!.storeId;
-      const params = StoreIdParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Invalid storeId" },
-        });
-      }
-
-      const parsed = MarkAbandonedBody.safeParse(request.body);
-      if (!parsed.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "cart_id is required", details: parsed.error.issues },
-        });
-      }
+      const { cart_id } = request.body as z.infer<typeof MarkAbandonedBody>;
 
       try {
-        const recoveryToken = await markCartAbandoned(storeId, parsed.data.cart_id);
+        const recoveryToken = await markCartAbandoned(storeId, cart_id);
         return reply.send({ ok: true, recovery_token: recoveryToken });
       } catch (err: unknown) {
         const code = (err as NodeJS.ErrnoException).code;

@@ -30,6 +30,10 @@ import {
 
 // ── Zod schemas ───────────────────────────────────────────────────────────────
 
+const StoreIdParams = z.object({
+  storeId: z.string().uuid(),
+});
+
 const StoreCheckoutParams = z.object({
   storeId: z.string().uuid(),
   checkoutId: z.string().uuid(),
@@ -77,27 +81,24 @@ export const checkoutPlugin: FastifyPluginAsync = async (app) => {
   // ── POST /commerce/stores/:storeId/checkouts ─────────────────────────────
   app.post(
     "/commerce/stores/:storeId/checkouts",
-    { preHandler: [storeAuthRead] },
+    {
+      preHandler: [storeAuthRead],
+      schema: { params: StoreIdParams, body: CreateCheckoutBody },
+    },
     async (request, reply) => {
       const storeId = request.auth!.storeId;
-
-      const parsed = CreateCheckoutBody.safeParse(request.body);
-      if (!parsed.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Request validation failed", details: parsed.error.issues },
-        });
-      }
+      const data = request.body as z.infer<typeof CreateCheckoutBody>;
 
       try {
         const result = await createCheckout(storeId, {
-          cart_id: parsed.data.cart_id,
-          ...(parsed.data.customer_id !== undefined && { customer_id: parsed.data.customer_id }),
-          ...(parsed.data.company_id !== undefined && { company_id: parsed.data.company_id }),
-          ...(parsed.data.email !== undefined && { email: parsed.data.email }),
-          ...(parsed.data.shipping_address !== undefined && { shipping_address: parsed.data.shipping_address as Record<string, unknown> }),
-          ...(parsed.data.billing_address !== undefined && { billing_address: parsed.data.billing_address as Record<string, unknown> }),
-          ...(parsed.data.shipping_rate !== undefined && { shipping_rate: parsed.data.shipping_rate as Record<string, unknown> }),
-          ...(parsed.data.discount_code !== undefined && { discount_code: parsed.data.discount_code }),
+          cart_id: data.cart_id,
+          ...(data.customer_id !== undefined && { customer_id: data.customer_id }),
+          ...(data.company_id !== undefined && { company_id: data.company_id }),
+          ...(data.email !== undefined && { email: data.email }),
+          ...(data.shipping_address !== undefined && { shipping_address: data.shipping_address as Record<string, unknown> }),
+          ...(data.billing_address !== undefined && { billing_address: data.billing_address as Record<string, unknown> }),
+          ...(data.shipping_rate !== undefined && { shipping_rate: data.shipping_rate as Record<string, unknown> }),
+          ...(data.discount_code !== undefined && { discount_code: data.discount_code }),
         });
         return reply.status(201).send(result);
       } catch (err: unknown) {
@@ -116,17 +117,15 @@ export const checkoutPlugin: FastifyPluginAsync = async (app) => {
   // ── GET /commerce/stores/:storeId/checkouts/:checkoutId ──────────────────
   app.get(
     "/commerce/stores/:storeId/checkouts/:checkoutId",
-    { preHandler: [storeAuthRead] },
+    {
+      preHandler: [storeAuthRead],
+      schema: { params: StoreCheckoutParams },
+    },
     async (request, reply) => {
       const storeId = request.auth!.storeId;
-      const params = StoreCheckoutParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Invalid params" },
-        });
-      }
+      const { checkoutId } = request.params as z.infer<typeof StoreCheckoutParams>;
 
-      const checkout = await getCheckout(storeId, params.data.checkoutId);
+      const checkout = await getCheckout(storeId, checkoutId);
       if (!checkout) {
         return reply.status(404).send({ error: { code: "NOT_FOUND", message: "checkout not found" } });
       }
@@ -137,30 +136,22 @@ export const checkoutPlugin: FastifyPluginAsync = async (app) => {
   // ── PUT /commerce/stores/:storeId/checkouts/:checkoutId ──────────────────
   app.put(
     "/commerce/stores/:storeId/checkouts/:checkoutId",
-    { preHandler: [storeAuthRead] },
+    {
+      preHandler: [storeAuthRead],
+      schema: { params: StoreCheckoutParams, body: UpdateCheckoutBody },
+    },
     async (request, reply) => {
       const storeId = request.auth!.storeId;
-      const params = StoreCheckoutParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Invalid params" },
-        });
-      }
-
-      const parsed = UpdateCheckoutBody.safeParse(request.body);
-      if (!parsed.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Request validation failed", details: parsed.error.issues },
-        });
-      }
+      const { checkoutId } = request.params as z.infer<typeof StoreCheckoutParams>;
+      const data = request.body as z.infer<typeof UpdateCheckoutBody>;
 
       try {
-        const result = await updateCheckout(storeId, params.data.checkoutId, {
-          ...(parsed.data.email !== undefined && { email: parsed.data.email }),
-          ...(parsed.data.shipping_address !== undefined && { shipping_address: parsed.data.shipping_address as Record<string, unknown> }),
-          ...(parsed.data.billing_address !== undefined && { billing_address: parsed.data.billing_address as Record<string, unknown> }),
-          ...(parsed.data.shipping_rate !== undefined && { shipping_rate: parsed.data.shipping_rate as Record<string, unknown> }),
-          ...(parsed.data.discount_code !== undefined && { discount_code: parsed.data.discount_code }),
+        const result = await updateCheckout(storeId, checkoutId, {
+          ...(data.email !== undefined && { email: data.email }),
+          ...(data.shipping_address !== undefined && { shipping_address: data.shipping_address as Record<string, unknown> }),
+          ...(data.billing_address !== undefined && { billing_address: data.billing_address as Record<string, unknown> }),
+          ...(data.shipping_rate !== undefined && { shipping_rate: data.shipping_rate as Record<string, unknown> }),
+          ...(data.discount_code !== undefined && { discount_code: data.discount_code }),
         });
         return reply.send(result);
       } catch (err: unknown) {
@@ -179,20 +170,18 @@ export const checkoutPlugin: FastifyPluginAsync = async (app) => {
   // ── POST /commerce/stores/:storeId/checkouts/:checkoutId/complete ────────
   app.post(
     "/commerce/stores/:storeId/checkouts/:checkoutId/complete",
-    { preHandler: [storeAuthRead] },
+    {
+      preHandler: [storeAuthRead],
+      schema: { params: StoreCheckoutParams },
+    },
     async (request, reply) => {
       const storeId = request.auth!.storeId;
-      const params = StoreCheckoutParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Invalid params" },
-        });
-      }
+      const { checkoutId } = request.params as z.infer<typeof StoreCheckoutParams>;
 
       try {
         // Pass agentCtx (set by agentAttributionHook in app.ts) so
         // completeCheckout can enforce spend limits and mandate chains.
-        const result = await completeCheckout(storeId, params.data.checkoutId, request.agentCtx);
+        const result = await completeCheckout(storeId, checkoutId, request.agentCtx);
         return reply.send({
           order_id: result.orderId,
           order_number: result.orderNumber,
@@ -224,16 +213,13 @@ export const checkoutPlugin: FastifyPluginAsync = async (app) => {
   // ── POST /commerce/stores/:storeId/checkouts/:checkoutId/payment-session ──
   app.post(
     "/commerce/stores/:storeId/checkouts/:checkoutId/payment-session",
-    { preHandler: [storeAuthRead] },
+    {
+      preHandler: [storeAuthRead],
+      schema: { params: StoreCheckoutParams },
+    },
     async (request, reply) => {
       const storeId = request.auth!.storeId;
-      const params = StoreCheckoutParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Invalid params" },
-        });
-      }
-      const { checkoutId } = params.data;
+      const { checkoutId } = request.params as z.infer<typeof StoreCheckoutParams>;
 
       // ── 1. Load the checkout ──────────────────────────────────────────────
       const pool = getPool();

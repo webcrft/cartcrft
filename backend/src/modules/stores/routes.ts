@@ -90,15 +90,14 @@ export const storesPlugin: FastifyPluginAsync = async (app) => {
     "/commerce/stores",
     {
       preHandler: [requireJwt],
+      schema: { querystring: ListQuerystring },
     },
     async (request, reply) => {
       const { orgId } = request.auth!;
-      const query = ListQuerystring.safeParse(request.query);
+      const q = request.query as z.infer<typeof ListQuerystring>;
       const storeListOpts: { limit?: number; offset?: number } = {};
-      if (query.success && query.data.limit !== undefined)
-        storeListOpts.limit = query.data.limit;
-      if (query.success && query.data.offset !== undefined)
-        storeListOpts.offset = query.data.offset;
+      if (q.limit !== undefined) storeListOpts.limit = q.limit;
+      if (q.offset !== undefined) storeListOpts.offset = q.offset;
       const stores = await listStores(orgId, storeListOpts);
       return reply.send({ stores });
     }
@@ -109,35 +108,26 @@ export const storesPlugin: FastifyPluginAsync = async (app) => {
     "/commerce/stores",
     {
       preHandler: [requireJwt],
+      schema: { body: CreateStoreBody },
     },
     async (request, reply) => {
       const { orgId } = request.auth!;
-
-      const parsed = CreateStoreBody.safeParse(request.body);
-      if (!parsed.success) {
-        return reply.status(400).send({
-          error: {
-            code: "VALIDATION_ERROR",
-            message: "Request validation failed",
-            details: parsed.error.issues,
-          },
-        });
-      }
+      const data = request.body as z.infer<typeof CreateStoreBody>;
 
       try {
         const storeId = await createStore(orgId, {
-          name: parsed.data.name,
-          ...(parsed.data.slug !== undefined && { slug: parsed.data.slug }),
-          ...(parsed.data.currency !== undefined && { currency: parsed.data.currency }),
-          ...(parsed.data.timezone !== undefined && { timezone: parsed.data.timezone }),
-          ...(parsed.data.country_code !== undefined && { country_code: parsed.data.country_code }),
-          ...(parsed.data.email !== undefined && { email: parsed.data.email }),
-          ...(parsed.data.phone !== undefined && { phone: parsed.data.phone }),
-          ...(parsed.data.weight_unit !== undefined && { weight_unit: parsed.data.weight_unit }),
-          ...(parsed.data.enable_currency_conversion !== undefined && {
-            enable_currency_conversion: parsed.data.enable_currency_conversion,
+          name: data.name,
+          ...(data.slug !== undefined && { slug: data.slug }),
+          ...(data.currency !== undefined && { currency: data.currency }),
+          ...(data.timezone !== undefined && { timezone: data.timezone }),
+          ...(data.country_code !== undefined && { country_code: data.country_code }),
+          ...(data.email !== undefined && { email: data.email }),
+          ...(data.phone !== undefined && { phone: data.phone }),
+          ...(data.weight_unit !== undefined && { weight_unit: data.weight_unit }),
+          ...(data.enable_currency_conversion !== undefined && {
+            enable_currency_conversion: data.enable_currency_conversion,
           }),
-          ...(parsed.data.metadata !== undefined && { metadata: parsed.data.metadata }),
+          ...(data.metadata !== undefined && { metadata: data.metadata }),
         });
         return reply.status(201).send({ id: storeId });
       } catch (err: unknown) {
@@ -162,15 +152,11 @@ export const storesPlugin: FastifyPluginAsync = async (app) => {
     "/commerce/stores/:storeId",
     {
       preHandler: [storeAuthAdmin],
+      schema: { params: StoreIdParams },
     },
     async (request, reply) => {
-      const params = StoreIdParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Invalid storeId" },
-        });
-      }
-      const store = await getStore(params.data.storeId);
+      const params = request.params as z.infer<typeof StoreIdParams>;
+      const store = await getStore(params.storeId);
       if (!store) {
         return reply
           .status(404)
@@ -185,46 +171,31 @@ export const storesPlugin: FastifyPluginAsync = async (app) => {
     "/commerce/stores/:storeId",
     {
       preHandler: [storeAuthAdmin],
+      schema: { params: StoreIdParams, body: UpdateStoreBody },
     },
     async (request, reply) => {
-      const params = StoreIdParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Invalid storeId" },
-        });
-      }
-
-      const parsed = UpdateStoreBody.safeParse(request.body);
-      if (!parsed.success) {
-        return reply.status(400).send({
-          error: {
-            code: "VALIDATION_ERROR",
-            message: "Request validation failed",
-            details: parsed.error.issues,
-          },
-        });
-      }
+      const params = request.params as z.infer<typeof StoreIdParams>;
+      const data = request.body as z.infer<typeof UpdateStoreBody>;
 
       try {
         const updateInput: import("./types.js").UpdateStoreInput = {};
-        const d = parsed.data;
-        if (d.name !== undefined) updateInput.name = d.name;
-        if (d.slug !== undefined) updateInput.slug = d.slug;
-        if (d.currency !== undefined) updateInput.currency = d.currency;
-        if (d.timezone !== undefined) updateInput.timezone = d.timezone;
-        if (d.country_code !== undefined) updateInput.country_code = d.country_code;
-        if (d.email !== undefined) updateInput.email = d.email;
-        if (d.phone !== undefined) updateInput.phone = d.phone;
-        if (d.weight_unit !== undefined) updateInput.weight_unit = d.weight_unit;
-        if (d.is_active !== undefined) updateInput.is_active = d.is_active;
-        if (d.enable_currency_conversion !== undefined)
-          updateInput.enable_currency_conversion = d.enable_currency_conversion;
-        if (d.domain !== undefined) updateInput.domain = d.domain;
-        if (d.metadata !== undefined) updateInput.metadata = d.metadata;
-        if (d.agents_require_mandate !== undefined)
-          updateInput.agents_require_mandate = d.agents_require_mandate;
+        if (data.name !== undefined) updateInput.name = data.name;
+        if (data.slug !== undefined) updateInput.slug = data.slug;
+        if (data.currency !== undefined) updateInput.currency = data.currency;
+        if (data.timezone !== undefined) updateInput.timezone = data.timezone;
+        if (data.country_code !== undefined) updateInput.country_code = data.country_code;
+        if (data.email !== undefined) updateInput.email = data.email;
+        if (data.phone !== undefined) updateInput.phone = data.phone;
+        if (data.weight_unit !== undefined) updateInput.weight_unit = data.weight_unit;
+        if (data.is_active !== undefined) updateInput.is_active = data.is_active;
+        if (data.enable_currency_conversion !== undefined)
+          updateInput.enable_currency_conversion = data.enable_currency_conversion;
+        if (data.domain !== undefined) updateInput.domain = data.domain;
+        if (data.metadata !== undefined) updateInput.metadata = data.metadata;
+        if (data.agents_require_mandate !== undefined)
+          updateInput.agents_require_mandate = data.agents_require_mandate;
 
-        const updated = await updateStore(params.data.storeId, updateInput);
+        const updated = await updateStore(params.storeId, updateInput);
         if (!updated) {
           return reply
             .status(404)
@@ -250,26 +221,22 @@ export const storesPlugin: FastifyPluginAsync = async (app) => {
     "/commerce/stores/:storeId",
     {
       preHandler: [requireJwt],
+      schema: { params: StoreIdParams },
     },
     async (request, reply) => {
       const { orgId } = request.auth!;
-      const params = StoreIdParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Invalid storeId" },
-        });
-      }
+      const params = request.params as z.infer<typeof StoreIdParams>;
 
       // JWT callers must own the store (org check).
       const { storeExistsInOrg } = await import("./service.js");
-      const owned = await storeExistsInOrg(params.data.storeId, orgId);
+      const owned = await storeExistsInOrg(params.storeId, orgId);
       if (!owned) {
         return reply
           .status(404)
           .send({ error: { code: "NOT_FOUND", message: "store not found" } });
       }
 
-      const deleted = await deleteStore(params.data.storeId);
+      const deleted = await deleteStore(params.storeId);
       if (!deleted) {
         return reply
           .status(404)
@@ -285,7 +252,10 @@ export const storesPlugin: FastifyPluginAsync = async (app) => {
   // matching the pattern used by the payments super-routes.
   app.post(
     "/super/commerce/stores/:storeId/takedown",
-    { preHandler: [requireJwt] },
+    {
+      preHandler: [requireJwt],
+      schema: { params: StoreIdParams, body: TakedownBody },
+    },
     async (request, reply) => {
       const superToken = request.headers["x-super-token"];
       if (!timingSafeCheckSuperToken(typeof superToken === "string" ? superToken : undefined)) {
@@ -294,21 +264,10 @@ export const storesPlugin: FastifyPluginAsync = async (app) => {
           .send({ error: { code: "FORBIDDEN", message: "super-admin access required" } });
       }
 
-      const params = StoreIdParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Invalid storeId" },
-        });
-      }
+      const params = request.params as z.infer<typeof StoreIdParams>;
+      const data = request.body as z.infer<typeof TakedownBody>;
 
-      const parsed = TakedownBody.safeParse(request.body);
-      if (!parsed.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "reason is required" },
-        });
-      }
-
-      await takedownStore(params.data.storeId, parsed.data.reason);
+      await takedownStore(params.storeId, data.reason);
       return reply.send({ ok: true });
     }
   );
@@ -316,7 +275,10 @@ export const storesPlugin: FastifyPluginAsync = async (app) => {
   // ── Super: POST /super/commerce/stores/:storeId/restore ──────────────────
   app.post(
     "/super/commerce/stores/:storeId/restore",
-    { preHandler: [requireJwt] },
+    {
+      preHandler: [requireJwt],
+      schema: { params: StoreIdParams },
+    },
     async (request, reply) => {
       const superToken = request.headers["x-super-token"];
       if (!timingSafeCheckSuperToken(typeof superToken === "string" ? superToken : undefined)) {
@@ -325,14 +287,9 @@ export const storesPlugin: FastifyPluginAsync = async (app) => {
           .send({ error: { code: "FORBIDDEN", message: "super-admin access required" } });
       }
 
-      const params = StoreIdParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Invalid storeId" },
-        });
-      }
+      const params = request.params as z.infer<typeof StoreIdParams>;
 
-      await restoreStore(params.data.storeId);
+      await restoreStore(params.storeId);
       return reply.send({ ok: true });
     }
   );

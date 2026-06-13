@@ -149,6 +149,350 @@ const TranslationResourceTypeEnum = z.enum([
   "collection",
 ]);
 
+// ── Params schemas ────────────────────────────────────────────────────────────
+
+const StoreParams = z.object({
+  storeId: UUID,
+});
+
+const ProductParams = z.object({
+  storeId: UUID,
+  productId: UUID,
+});
+
+const VariantParams = z.object({
+  storeId: UUID,
+  productId: UUID,
+  variantId: UUID,
+});
+
+const OptionParams = z.object({
+  storeId: UUID,
+  productId: UUID,
+  optionId: UUID,
+});
+
+const MediaParams = z.object({
+  storeId: UUID,
+  productId: UUID,
+  mediaId: UUID,
+});
+
+const BundleItemParams = z.object({
+  storeId: UUID,
+  productId: UUID,
+  itemId: UUID,
+});
+
+const DigitalFileParams = z.object({
+  storeId: UUID,
+  productId: UUID,
+  fileId: UUID,
+});
+
+const ReviewParams = z.object({
+  storeId: UUID,
+  reviewId: UUID,
+});
+
+const CollectionParams = z.object({
+  storeId: UUID,
+  collectionId: UUID,
+});
+
+const CollectionProductParams = z.object({
+  storeId: UUID,
+  collectionId: UUID,
+  productId: UUID,
+});
+
+const RuleParams = z.object({
+  storeId: UUID,
+  collectionId: UUID,
+  ruleId: UUID,
+});
+
+const PriceListParams = z.object({
+  storeId: UUID,
+  listId: UUID,
+});
+
+const PriceListItemParams = z.object({
+  storeId: UUID,
+  listId: UUID,
+  itemId: UUID,
+});
+
+const MetafieldParams = z.object({
+  storeId: UUID,
+  metafieldId: UUID,
+});
+
+const MetafieldDefParams = z.object({
+  storeId: UUID,
+  defId: UUID,
+});
+
+const TranslationParams = z.object({
+  storeId: UUID,
+  resourceType: TranslationResourceTypeEnum,
+  resourceId: UUID,
+});
+
+const TranslationLocaleParams = z.object({
+  storeId: UUID,
+  resourceType: TranslationResourceTypeEnum,
+  resourceId: UUID,
+  locale: z.string().min(2),
+});
+
+const PaginationQuery = z.object({
+  limit: z.coerce.number().int().min(1).max(200).optional(),
+  offset: z.coerce.number().int().min(0).optional(),
+});
+
+// ── Body schemas ──────────────────────────────────────────────────────────────
+
+const CreateProductBody = z.object({
+  title: z.string().min(1).max(500),
+  slug: SlugStr.optional(),
+  description: z.string().optional(),
+  type: ProductTypeEnum.optional(),
+  status: ProductStatusEnum.optional(),
+  vendor: z.string().optional(),
+  seo_title: z.string().optional(),
+  seo_desc: z.string().optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+  price: PricePositive.optional(),
+  images: z.array(z.string().url()).optional(),
+});
+
+const UpdateProductBody = z.object({
+  title: z.string().min(1).max(500).optional(),
+  slug: SlugStr.optional(),
+  description: z.string().optional(),
+  type: ProductTypeEnum.optional(),
+  status: ProductStatusEnum.optional(),
+  vendor: z.string().optional(),
+  seo_title: z.string().optional(),
+  seo_desc: z.string().optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+});
+
+const ProductsQuery = z.object({
+  status: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(200).optional(),
+  offset: z.coerce.number().int().min(0).optional(),
+});
+
+const CreateVariantBody = z.object({
+  sku: z.string().optional(),
+  barcode: z.string().optional(),
+  title: z.string().optional(),
+  price: PricePositive,
+  compare_at_price: PriceStr.optional(),
+  cost_price: PriceStr.optional(),
+  weight_g: z.number().int().min(0).optional(),
+  requires_shipping: z.boolean().optional(),
+  is_taxable: z.boolean().optional(),
+  track_inventory: z.boolean().optional(),
+  allow_backorder: z.boolean().optional(),
+  position: z.number().int().min(0).optional(),
+  is_active: z.boolean().optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+  inventory_quantity: z.number().int().min(0).optional(),
+});
+
+const UpdateVariantBody = z.object({
+  sku: z.string().optional(),
+  barcode: z.string().optional(),
+  title: z.string().optional(),
+  price: PricePositive.optional(),
+  compare_at_price: PriceStr.optional(),
+  cost_price: PriceStr.optional(),
+  weight_g: z.number().int().min(0).optional(),
+  requires_shipping: z.boolean().optional(),
+  is_taxable: z.boolean().optional(),
+  track_inventory: z.boolean().optional(),
+  allow_backorder: z.boolean().optional(),
+  position: z.number().int().min(0).optional(),
+  is_active: z.boolean().optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+});
+
+const CreateOptionBody = z.object({
+  name: z.string().min(1),
+  values: z.array(z.string()).optional(),
+  position: z.number().int().min(0).optional(),
+});
+
+const AddMediaBody = z.object({
+  url: z.string().url("url is required and must be a valid URL"),
+  type: MediaTypeEnum.optional(),
+  variant_id: UUID.optional(),
+  alt_text: z.string().optional(),
+  position: z.number().int().min(0).optional(),
+});
+
+const AddBundleItemBody = z.object({
+  variant_id: UUID,
+  quantity: z.number().int().min(1).optional(),
+  is_optional: z.boolean().optional(),
+  position: z.number().int().min(0).optional(),
+});
+
+const UpdateBundleItemBody = z.object({
+  quantity: z.number().int().min(1).optional(),
+  is_optional: z.boolean().optional(),
+  position: z.number().int().min(0).optional(),
+});
+
+const CreateDigitalFileBody = z.object({
+  name: z.string().min(1),
+  file_url: z.string().url(),
+  variant_id: UUID.optional(),
+  file_size: z.number().int().min(0).optional(),
+  mime_type: z.string().optional(),
+  version: z.string().optional(),
+  download_limit: z.number().int().min(0).optional(),
+  is_active: z.boolean().optional(),
+});
+
+const ReviewsQuery = z.object({
+  status: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(200).optional(),
+  offset: z.coerce.number().int().min(0).optional(),
+});
+
+const CreateReviewBody = z.object({
+  rating: z.number().int().min(1).max(5),
+  title: z.string().optional(),
+  body: z.string().optional(),
+  reviewer_name: z.string().optional(),
+  reviewer_email: z.string().email().optional(),
+  customer_id: UUID.optional(),
+  order_id: UUID.optional(),
+  media_urls: z.unknown().optional(),
+});
+
+const UpdateReviewBody = z.object({
+  status: ReviewStatusEnum.optional(),
+  reply: z.string().optional(),
+});
+
+const SetTagsBody = z.object({
+  tags: z.array(z.string()),
+});
+
+const CreateCollectionBody = z.object({
+  title: z.string().min(1),
+  slug: SlugStr.optional(),
+  description: z.string().optional(),
+  parent_id: UUID.optional(),
+  image_url: z.string().url().optional(),
+  seo_title: z.string().optional(),
+  seo_desc: z.string().optional(),
+  sort_order: z.string().optional(),
+  is_active: z.boolean().optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+});
+
+const UpdateCollectionBody = z.object({
+  title: z.string().min(1).optional(),
+  slug: SlugStr.optional(),
+  description: z.string().optional(),
+  parent_id: UUID.optional(),
+  image_url: z.string().url().optional(),
+  seo_title: z.string().optional(),
+  seo_desc: z.string().optional(),
+  sort_order: z.string().optional(),
+  is_active: z.boolean().optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+});
+
+const AddCollectionProductBody = z.object({ product_id: UUID });
+
+const AddCollectionRuleBody = z.object({
+  field: RuleFieldEnum,
+  relation: RuleRelationEnum,
+  value: z.string().min(1),
+  position: z.number().int().min(0).optional(),
+});
+
+const CreatePriceListBody = z.object({
+  name: z.string().min(1),
+  currency: z.string().length(3),
+  type: PriceListTypeEnum.optional(),
+  is_default: z.boolean().optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+});
+
+const UpdatePriceListBody = z.object({
+  name: z.string().min(1).optional(),
+  currency: z.string().length(3).optional(),
+  type: PriceListTypeEnum.optional(),
+  is_default: z.boolean().optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+});
+
+const UpsertPriceListItemBody = z.object({
+  variant_id: UUID,
+  price: PricePositive,
+  min_qty: z.number().int().min(1).optional(),
+  max_qty: z.number().int().min(1).optional(),
+});
+
+const UpdatePriceListItemBody = z.object({
+  price: PricePositive.optional(),
+  min_qty: z.number().int().min(1).optional(),
+  max_qty: z.number().int().min(1).optional(),
+});
+
+const MetafieldsQuery = z.object({
+  owner_resource: z.string().optional(),
+  owner_id: z.string().optional(),
+  namespace: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(200).optional(),
+  offset: z.coerce.number().int().min(0).optional(),
+});
+
+const UpsertMetafieldBody = z.object({
+  owner_resource: z.string().min(1),
+  owner_id: UUID,
+  namespace: z.string().min(1),
+  key: z.string().min(1),
+  value: z.string().optional(),
+  type: MetafieldTypeEnum.optional(),
+});
+
+const UpdateMetafieldBody = z.object({
+  value: z.string().optional(),
+  type: MetafieldTypeEnum.optional(),
+});
+
+const CreateMetafieldDefinitionBody = z.object({
+  name: z.string().min(1),
+  namespace: z.string().min(1),
+  key: z.string().min(1),
+  owner_resource: z.string().min(1),
+  description: z.string().optional(),
+  type: MetafieldTypeEnum.optional(),
+  validations: z.unknown().optional(),
+  is_required: z.boolean().optional(),
+});
+
+const UpdateMetafieldDefinitionBody = z.object({
+  name: z.string().min(1).optional(),
+  description: z.string().optional(),
+  type: MetafieldTypeEnum.optional(),
+  validations: z.unknown().optional(),
+  is_required: z.boolean().optional(),
+});
+
+const UpsertTranslationBody = z.object({
+  fields: z.record(z.string(), z.string().nullable()),
+});
+
 // ── Error helpers ──────────────────────────────────────────────────────────────
 
 function validationError(
@@ -181,20 +525,6 @@ function isNotFoundError(err: unknown): boolean {
   );
 }
 
-const StoreParams = z.object({
-  storeId: UUID,
-});
-
-const ProductParams = z.object({
-  storeId: UUID,
-  productId: UUID,
-});
-
-const PaginationQuery = z.object({
-  limit: z.coerce.number().int().min(1).max(200).optional(),
-  offset: z.coerce.number().int().min(0).optional(),
-});
-
 // ── Plugin ─────────────────────────────────────────────────────────────────────
 
 export const catalogPlugin: FastifyPluginAsync = async (app) => {
@@ -205,20 +535,14 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // GET /commerce/stores/:storeId/products
   app.get(
     "/commerce/stores/:storeId/products",
-    { preHandler: [storeAuthRead] },
+    {
+      preHandler: [storeAuthRead],
+      schema: { params: StoreParams, querystring: ProductsQuery },
+    },
     async (request, reply) => {
-      const params = StoreParams.safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
-
-      const q = z
-        .object({
-          status: z.string().optional(),
-          limit: z.coerce.number().int().min(1).max(200).optional(),
-          offset: z.coerce.number().int().min(0).optional(),
-        })
-        .safeParse(request.query);
-
-      const products = await listProducts(params.data.storeId, q.success ? q.data : {});
+      const { storeId } = request.params as z.infer<typeof StoreParams>;
+      const q = request.query as z.infer<typeof ProductsQuery>;
+      const products = await listProducts(storeId, q);
       return reply.send({ products });
     }
   );
@@ -226,30 +550,16 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // POST /commerce/stores/:storeId/products
   app.post(
     "/commerce/stores/:storeId/products",
-    { preHandler: [storeAuthWrite] },
+    {
+      preHandler: [storeAuthWrite],
+      schema: { params: StoreParams, body: CreateProductBody },
+    },
     async (request, reply) => {
-      const params = StoreParams.safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
-
-      const Body = z.object({
-        title: z.string().min(1).max(500),
-        slug: SlugStr.optional(),
-        description: z.string().optional(),
-        type: ProductTypeEnum.optional(),
-        status: ProductStatusEnum.optional(),
-        vendor: z.string().optional(),
-        seo_title: z.string().optional(),
-        seo_desc: z.string().optional(),
-        metadata: z.record(z.string(), z.unknown()).optional(),
-        price: PricePositive.optional(),
-        images: z.array(z.string().url()).optional(),
-      });
-
-      const parsed = Body.safeParse(request.body);
-      if (!parsed.success) return reply.status(400).send(validationError(parsed.error.issues));
+      const { storeId } = request.params as z.infer<typeof StoreParams>;
+      const data = request.body as z.infer<typeof CreateProductBody>;
 
       try {
-        const id = await createProduct(params.data.storeId, parsed.data);
+        const id = await createProduct(storeId, data);
         return reply.status(201).send({ id });
       } catch (err) {
         if (isDuplicateSlugError(err)) {
@@ -268,12 +578,13 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // GET /commerce/stores/:storeId/products/:productId
   app.get(
     "/commerce/stores/:storeId/products/:productId",
-    { preHandler: [storeAuthRead] },
+    {
+      preHandler: [storeAuthRead],
+      schema: { params: ProductParams },
+    },
     async (request, reply) => {
-      const params = ProductParams.safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
-
-      const product = await getProduct(params.data.storeId, params.data.productId);
+      const { storeId, productId } = request.params as z.infer<typeof ProductParams>;
+      const product = await getProduct(storeId, productId);
       if (!product) return reply.status(404).send(notFound("product not found"));
       return reply.send(product);
     }
@@ -282,32 +593,16 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // PUT /commerce/stores/:storeId/products/:productId
   app.put(
     "/commerce/stores/:storeId/products/:productId",
-    { preHandler: [storeAuthWrite] },
+    {
+      preHandler: [storeAuthWrite],
+      schema: { params: ProductParams, body: UpdateProductBody },
+    },
     async (request, reply) => {
-      const params = ProductParams.safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
-
-      const Body = z.object({
-        title: z.string().min(1).max(500).optional(),
-        slug: SlugStr.optional(),
-        description: z.string().optional(),
-        type: ProductTypeEnum.optional(),
-        status: ProductStatusEnum.optional(),
-        vendor: z.string().optional(),
-        seo_title: z.string().optional(),
-        seo_desc: z.string().optional(),
-        metadata: z.record(z.string(), z.unknown()).optional(),
-      });
-
-      const parsed = Body.safeParse(request.body);
-      if (!parsed.success) return reply.status(400).send(validationError(parsed.error.issues));
+      const { storeId, productId } = request.params as z.infer<typeof ProductParams>;
+      const data = request.body as z.infer<typeof UpdateProductBody>;
 
       try {
-        const updated = await updateProduct(
-          params.data.storeId,
-          params.data.productId,
-          parsed.data
-        );
+        const updated = await updateProduct(storeId, productId, data);
         if (!updated) return reply.status(404).send(notFound("product not found"));
         return reply.send({ ok: true });
       } catch (err) {
@@ -324,12 +619,13 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // DELETE /commerce/stores/:storeId/products/:productId
   app.delete(
     "/commerce/stores/:storeId/products/:productId",
-    { preHandler: [storeAuthAdmin] },
+    {
+      preHandler: [storeAuthAdmin],
+      schema: { params: ProductParams },
+    },
     async (request, reply) => {
-      const params = ProductParams.safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
-
-      const deleted = await deleteProduct(params.data.storeId, params.data.productId);
+      const { storeId, productId } = request.params as z.infer<typeof ProductParams>;
+      const deleted = await deleteProduct(storeId, productId);
       if (!deleted) return reply.status(404).send(notFound("product not found"));
       return reply.send({ ok: true });
     }
@@ -342,12 +638,13 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // GET /commerce/stores/:storeId/products/:productId/variants
   app.get(
     "/commerce/stores/:storeId/products/:productId/variants",
-    { preHandler: [storeAuthRead] },
+    {
+      preHandler: [storeAuthRead],
+      schema: { params: ProductParams },
+    },
     async (request, reply) => {
-      const params = ProductParams.safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
-
-      const variants = await listVariants(params.data.storeId, params.data.productId);
+      const { storeId, productId } = request.params as z.infer<typeof ProductParams>;
+      const variants = await listVariants(storeId, productId);
       return reply.send({ variants });
     }
   );
@@ -355,38 +652,16 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // POST /commerce/stores/:storeId/products/:productId/variants
   app.post(
     "/commerce/stores/:storeId/products/:productId/variants",
-    { preHandler: [storeAuthWrite] },
+    {
+      preHandler: [storeAuthWrite],
+      schema: { params: ProductParams, body: CreateVariantBody },
+    },
     async (request, reply) => {
-      const params = ProductParams.safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
-
-      const Body = z.object({
-        sku: z.string().optional(),
-        barcode: z.string().optional(),
-        title: z.string().optional(),
-        price: PricePositive,
-        compare_at_price: PriceStr.optional(),
-        cost_price: PriceStr.optional(),
-        weight_g: z.number().int().min(0).optional(),
-        requires_shipping: z.boolean().optional(),
-        is_taxable: z.boolean().optional(),
-        track_inventory: z.boolean().optional(),
-        allow_backorder: z.boolean().optional(),
-        position: z.number().int().min(0).optional(),
-        is_active: z.boolean().optional(),
-        metadata: z.record(z.string(), z.unknown()).optional(),
-        inventory_quantity: z.number().int().min(0).optional(),
-      });
-
-      const parsed = Body.safeParse(request.body);
-      if (!parsed.success) return reply.status(400).send(validationError(parsed.error.issues));
+      const { storeId, productId } = request.params as z.infer<typeof ProductParams>;
+      const data = request.body as z.infer<typeof CreateVariantBody>;
 
       try {
-        const id = await createVariant(
-          params.data.storeId,
-          params.data.productId,
-          parsed.data
-        );
+        const id = await createVariant(storeId, productId, data);
         return reply.status(201).send({ id });
       } catch (err) {
         if (isNotFoundError(err)) return reply.status(404).send(notFound((err as Error).message));
@@ -398,39 +673,15 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // PUT /commerce/stores/:storeId/products/:productId/variants/:variantId
   app.put(
     "/commerce/stores/:storeId/products/:productId/variants/:variantId",
-    { preHandler: [storeAuthWrite] },
+    {
+      preHandler: [storeAuthWrite],
+      schema: { params: VariantParams, body: UpdateVariantBody },
+    },
     async (request, reply) => {
-      const params = z
-        .object({ storeId: UUID, productId: UUID, variantId: UUID })
-        .safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
+      const { storeId, productId, variantId } = request.params as z.infer<typeof VariantParams>;
+      const data = request.body as z.infer<typeof UpdateVariantBody>;
 
-      const Body = z.object({
-        sku: z.string().optional(),
-        barcode: z.string().optional(),
-        title: z.string().optional(),
-        price: PricePositive.optional(),
-        compare_at_price: PriceStr.optional(),
-        cost_price: PriceStr.optional(),
-        weight_g: z.number().int().min(0).optional(),
-        requires_shipping: z.boolean().optional(),
-        is_taxable: z.boolean().optional(),
-        track_inventory: z.boolean().optional(),
-        allow_backorder: z.boolean().optional(),
-        position: z.number().int().min(0).optional(),
-        is_active: z.boolean().optional(),
-        metadata: z.record(z.string(), z.unknown()).optional(),
-      });
-
-      const parsed = Body.safeParse(request.body);
-      if (!parsed.success) return reply.status(400).send(validationError(parsed.error.issues));
-
-      const updated = await updateVariant(
-        params.data.storeId,
-        params.data.productId,
-        params.data.variantId,
-        parsed.data
-      );
+      const updated = await updateVariant(storeId, productId, variantId, data);
       if (!updated) return reply.status(404).send(notFound("variant not found"));
       return reply.send({ ok: true });
     }
@@ -439,18 +690,13 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // DELETE /commerce/stores/:storeId/products/:productId/variants/:variantId
   app.delete(
     "/commerce/stores/:storeId/products/:productId/variants/:variantId",
-    { preHandler: [storeAuthAdmin] },
+    {
+      preHandler: [storeAuthAdmin],
+      schema: { params: VariantParams },
+    },
     async (request, reply) => {
-      const params = z
-        .object({ storeId: UUID, productId: UUID, variantId: UUID })
-        .safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
-
-      const deleted = await deleteVariant(
-        params.data.storeId,
-        params.data.productId,
-        params.data.variantId
-      );
+      const { storeId, productId, variantId } = request.params as z.infer<typeof VariantParams>;
+      const deleted = await deleteVariant(storeId, productId, variantId);
       if (!deleted) return reply.status(404).send(notFound("variant not found"));
       return reply.send({ ok: true });
     }
@@ -463,12 +709,13 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // GET /commerce/stores/:storeId/products/:productId/options
   app.get(
     "/commerce/stores/:storeId/products/:productId/options",
-    { preHandler: [storeAuthRead] },
+    {
+      preHandler: [storeAuthRead],
+      schema: { params: ProductParams },
+    },
     async (request, reply) => {
-      const params = ProductParams.safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
-
-      const options = await listOptions(params.data.storeId, params.data.productId);
+      const { storeId, productId } = request.params as z.infer<typeof ProductParams>;
+      const options = await listOptions(storeId, productId);
       return reply.send({ options });
     }
   );
@@ -476,26 +723,16 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // POST /commerce/stores/:storeId/products/:productId/options
   app.post(
     "/commerce/stores/:storeId/products/:productId/options",
-    { preHandler: [storeAuthWrite] },
+    {
+      preHandler: [storeAuthWrite],
+      schema: { params: ProductParams, body: CreateOptionBody },
+    },
     async (request, reply) => {
-      const params = ProductParams.safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
-
-      const Body = z.object({
-        name: z.string().min(1),
-        values: z.array(z.string()).optional(),
-        position: z.number().int().min(0).optional(),
-      });
-
-      const parsed = Body.safeParse(request.body);
-      if (!parsed.success) return reply.status(400).send(validationError(parsed.error.issues));
+      const { storeId, productId } = request.params as z.infer<typeof ProductParams>;
+      const data = request.body as z.infer<typeof CreateOptionBody>;
 
       try {
-        const id = await createOption(
-          params.data.storeId,
-          params.data.productId,
-          parsed.data
-        );
+        const id = await createOption(storeId, productId, data);
         return reply.status(201).send({ id });
       } catch (err) {
         if (isNotFoundError(err)) return reply.status(404).send(notFound((err as Error).message));
@@ -507,18 +744,13 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // DELETE /commerce/stores/:storeId/products/:productId/options/:optionId
   app.delete(
     "/commerce/stores/:storeId/products/:productId/options/:optionId",
-    { preHandler: [storeAuthAdmin] },
+    {
+      preHandler: [storeAuthAdmin],
+      schema: { params: OptionParams },
+    },
     async (request, reply) => {
-      const params = z
-        .object({ storeId: UUID, productId: UUID, optionId: UUID })
-        .safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
-
-      const deleted = await deleteOption(
-        params.data.storeId,
-        params.data.productId,
-        params.data.optionId
-      );
+      const { storeId, productId, optionId } = request.params as z.infer<typeof OptionParams>;
+      const deleted = await deleteOption(storeId, productId, optionId);
       if (!deleted) return reply.status(404).send(notFound("option not found"));
       return reply.send({ ok: true });
     }
@@ -531,28 +763,16 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // POST /commerce/stores/:storeId/products/:productId/media
   app.post(
     "/commerce/stores/:storeId/products/:productId/media",
-    { preHandler: [storeAuthWrite] },
+    {
+      preHandler: [storeAuthWrite],
+      schema: { params: ProductParams, body: AddMediaBody },
+    },
     async (request, reply) => {
-      const params = ProductParams.safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
-
-      const Body = z.object({
-        url: z.string().url("url is required and must be a valid URL"),
-        type: MediaTypeEnum.optional(),
-        variant_id: UUID.optional(),
-        alt_text: z.string().optional(),
-        position: z.number().int().min(0).optional(),
-      });
-
-      const parsed = Body.safeParse(request.body);
-      if (!parsed.success) return reply.status(400).send(validationError(parsed.error.issues));
+      const { storeId, productId } = request.params as z.infer<typeof ProductParams>;
+      const data = request.body as z.infer<typeof AddMediaBody>;
 
       try {
-        const id = await addMedia(
-          params.data.storeId,
-          params.data.productId,
-          parsed.data
-        );
+        const id = await addMedia(storeId, productId, data);
         return reply.status(201).send({ id });
       } catch (err) {
         if (isNotFoundError(err)) return reply.status(404).send(notFound((err as Error).message));
@@ -564,18 +784,13 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // DELETE /commerce/stores/:storeId/products/:productId/media/:mediaId
   app.delete(
     "/commerce/stores/:storeId/products/:productId/media/:mediaId",
-    { preHandler: [storeAuthAdmin] },
+    {
+      preHandler: [storeAuthAdmin],
+      schema: { params: MediaParams },
+    },
     async (request, reply) => {
-      const params = z
-        .object({ storeId: UUID, productId: UUID, mediaId: UUID })
-        .safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
-
-      const deleted = await deleteMedia(
-        params.data.storeId,
-        params.data.productId,
-        params.data.mediaId
-      );
+      const { storeId, productId, mediaId } = request.params as z.infer<typeof MediaParams>;
+      const deleted = await deleteMedia(storeId, productId, mediaId);
       if (!deleted) return reply.status(404).send(notFound("media not found"));
       return reply.send({ ok: true });
     }
@@ -588,12 +803,13 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // GET /commerce/stores/:storeId/products/:productId/bundle-items
   app.get(
     "/commerce/stores/:storeId/products/:productId/bundle-items",
-    { preHandler: [storeAuthRead] },
+    {
+      preHandler: [storeAuthRead],
+      schema: { params: ProductParams },
+    },
     async (request, reply) => {
-      const params = ProductParams.safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
-
-      const items = await listBundleItems(params.data.storeId, params.data.productId);
+      const { storeId, productId } = request.params as z.infer<typeof ProductParams>;
+      const items = await listBundleItems(storeId, productId);
       return reply.send({ bundle_items: items });
     }
   );
@@ -601,27 +817,16 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // POST /commerce/stores/:storeId/products/:productId/bundle-items
   app.post(
     "/commerce/stores/:storeId/products/:productId/bundle-items",
-    { preHandler: [storeAuthWrite] },
+    {
+      preHandler: [storeAuthWrite],
+      schema: { params: ProductParams, body: AddBundleItemBody },
+    },
     async (request, reply) => {
-      const params = ProductParams.safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
-
-      const Body = z.object({
-        variant_id: UUID,
-        quantity: z.number().int().min(1).optional(),
-        is_optional: z.boolean().optional(),
-        position: z.number().int().min(0).optional(),
-      });
-
-      const parsed = Body.safeParse(request.body);
-      if (!parsed.success) return reply.status(400).send(validationError(parsed.error.issues));
+      const { storeId, productId } = request.params as z.infer<typeof ProductParams>;
+      const data = request.body as z.infer<typeof AddBundleItemBody>;
 
       try {
-        const id = await addBundleItem(
-          params.data.storeId,
-          params.data.productId,
-          parsed.data
-        );
+        const id = await addBundleItem(storeId, productId, data);
         return reply.status(201).send({ id });
       } catch (err) {
         if (isNotFoundError(err)) return reply.status(404).send(notFound((err as Error).message));
@@ -633,28 +838,15 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // PUT /commerce/stores/:storeId/products/:productId/bundle-items/:itemId
   app.put(
     "/commerce/stores/:storeId/products/:productId/bundle-items/:itemId",
-    { preHandler: [storeAuthWrite] },
+    {
+      preHandler: [storeAuthWrite],
+      schema: { params: BundleItemParams, body: UpdateBundleItemBody },
+    },
     async (request, reply) => {
-      const params = z
-        .object({ storeId: UUID, productId: UUID, itemId: UUID })
-        .safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
+      const { storeId, productId, itemId } = request.params as z.infer<typeof BundleItemParams>;
+      const data = request.body as z.infer<typeof UpdateBundleItemBody>;
 
-      const Body = z.object({
-        quantity: z.number().int().min(1).optional(),
-        is_optional: z.boolean().optional(),
-        position: z.number().int().min(0).optional(),
-      });
-
-      const parsed = Body.safeParse(request.body);
-      if (!parsed.success) return reply.status(400).send(validationError(parsed.error.issues));
-
-      const updated = await updateBundleItem(
-        params.data.storeId,
-        params.data.productId,
-        params.data.itemId,
-        parsed.data
-      );
+      const updated = await updateBundleItem(storeId, productId, itemId, data);
       if (!updated) return reply.status(404).send(notFound("bundle item not found"));
       return reply.send({ ok: true });
     }
@@ -663,18 +855,13 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // DELETE /commerce/stores/:storeId/products/:productId/bundle-items/:itemId
   app.delete(
     "/commerce/stores/:storeId/products/:productId/bundle-items/:itemId",
-    { preHandler: [storeAuthAdmin] },
+    {
+      preHandler: [storeAuthAdmin],
+      schema: { params: BundleItemParams },
+    },
     async (request, reply) => {
-      const params = z
-        .object({ storeId: UUID, productId: UUID, itemId: UUID })
-        .safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
-
-      const deleted = await deleteBundleItem(
-        params.data.storeId,
-        params.data.productId,
-        params.data.itemId
-      );
+      const { storeId, productId, itemId } = request.params as z.infer<typeof BundleItemParams>;
+      const deleted = await deleteBundleItem(storeId, productId, itemId);
       if (!deleted) return reply.status(404).send(notFound("bundle item not found"));
       return reply.send({ ok: true });
     }
@@ -687,12 +874,13 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // GET /commerce/stores/:storeId/products/:productId/digital-files
   app.get(
     "/commerce/stores/:storeId/products/:productId/digital-files",
-    { preHandler: [storeAuthRead] },
+    {
+      preHandler: [storeAuthRead],
+      schema: { params: ProductParams },
+    },
     async (request, reply) => {
-      const params = ProductParams.safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
-
-      const files = await listDigitalFiles(params.data.storeId, params.data.productId);
+      const { storeId, productId } = request.params as z.infer<typeof ProductParams>;
+      const files = await listDigitalFiles(storeId, productId);
       return reply.send({ files });
     }
   );
@@ -700,31 +888,16 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // POST /commerce/stores/:storeId/products/:productId/digital-files
   app.post(
     "/commerce/stores/:storeId/products/:productId/digital-files",
-    { preHandler: [storeAuthWrite] },
+    {
+      preHandler: [storeAuthWrite],
+      schema: { params: ProductParams, body: CreateDigitalFileBody },
+    },
     async (request, reply) => {
-      const params = ProductParams.safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
-
-      const Body = z.object({
-        name: z.string().min(1),
-        file_url: z.string().url(),
-        variant_id: UUID.optional(),
-        file_size: z.number().int().min(0).optional(),
-        mime_type: z.string().optional(),
-        version: z.string().optional(),
-        download_limit: z.number().int().min(0).optional(),
-        is_active: z.boolean().optional(),
-      });
-
-      const parsed = Body.safeParse(request.body);
-      if (!parsed.success) return reply.status(400).send(validationError(parsed.error.issues));
+      const { storeId, productId } = request.params as z.infer<typeof ProductParams>;
+      const data = request.body as z.infer<typeof CreateDigitalFileBody>;
 
       try {
-        const id = await createDigitalFile(
-          params.data.storeId,
-          params.data.productId,
-          parsed.data
-        );
+        const id = await createDigitalFile(storeId, productId, data);
         return reply.status(201).send({ id });
       } catch (err) {
         if (isNotFoundError(err)) return reply.status(404).send(notFound((err as Error).message));
@@ -736,18 +909,13 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // DELETE /commerce/stores/:storeId/products/:productId/digital-files/:fileId
   app.delete(
     "/commerce/stores/:storeId/products/:productId/digital-files/:fileId",
-    { preHandler: [storeAuthAdmin] },
+    {
+      preHandler: [storeAuthAdmin],
+      schema: { params: DigitalFileParams },
+    },
     async (request, reply) => {
-      const params = z
-        .object({ storeId: UUID, productId: UUID, fileId: UUID })
-        .safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
-
-      const deleted = await deleteDigitalFile(
-        params.data.storeId,
-        params.data.productId,
-        params.data.fileId
-      );
+      const { storeId, productId, fileId } = request.params as z.infer<typeof DigitalFileParams>;
+      const deleted = await deleteDigitalFile(storeId, productId, fileId);
       if (!deleted) return reply.status(404).send(notFound("digital file not found"));
       return reply.send({ ok: true });
     }
@@ -760,24 +928,14 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // GET /commerce/stores/:storeId/products/:productId/reviews
   app.get(
     "/commerce/stores/:storeId/products/:productId/reviews",
-    { preHandler: [storeAuthRead] },
+    {
+      preHandler: [storeAuthRead],
+      schema: { params: ProductParams, querystring: ReviewsQuery },
+    },
     async (request, reply) => {
-      const params = ProductParams.safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
-
-      const q = z
-        .object({
-          status: z.string().optional(),
-          limit: z.coerce.number().int().min(1).max(200).optional(),
-          offset: z.coerce.number().int().min(0).optional(),
-        })
-        .safeParse(request.query);
-
-      const reviews = await listReviews(
-        params.data.storeId,
-        params.data.productId,
-        q.success ? q.data : {}
-      );
+      const { storeId, productId } = request.params as z.infer<typeof ProductParams>;
+      const q = request.query as z.infer<typeof ReviewsQuery>;
+      const reviews = await listReviews(storeId, productId, q);
       return reply.send({ reviews });
     }
   );
@@ -785,31 +943,16 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // POST /commerce/stores/:storeId/products/:productId/reviews
   app.post(
     "/commerce/stores/:storeId/products/:productId/reviews",
-    { preHandler: [storeAuthWrite] },
+    {
+      preHandler: [storeAuthWrite],
+      schema: { params: ProductParams, body: CreateReviewBody },
+    },
     async (request, reply) => {
-      const params = ProductParams.safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
-
-      const Body = z.object({
-        rating: z.number().int().min(1).max(5),
-        title: z.string().optional(),
-        body: z.string().optional(),
-        reviewer_name: z.string().optional(),
-        reviewer_email: z.string().email().optional(),
-        customer_id: UUID.optional(),
-        order_id: UUID.optional(),
-        media_urls: z.unknown().optional(),
-      });
-
-      const parsed = Body.safeParse(request.body);
-      if (!parsed.success) return reply.status(400).send(validationError(parsed.error.issues));
+      const { storeId, productId } = request.params as z.infer<typeof ProductParams>;
+      const data = request.body as z.infer<typeof CreateReviewBody>;
 
       try {
-        const id = await createReview(
-          params.data.storeId,
-          params.data.productId,
-          parsed.data
-        );
+        const id = await createReview(storeId, productId, data);
         return reply.status(201).send({ id });
       } catch (err) {
         if (isNotFoundError(err)) return reply.status(404).send(notFound((err as Error).message));
@@ -821,26 +964,15 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // PUT /commerce/stores/:storeId/reviews/:reviewId
   app.put(
     "/commerce/stores/:storeId/reviews/:reviewId",
-    { preHandler: [storeAuthAdmin] },
+    {
+      preHandler: [storeAuthAdmin],
+      schema: { params: ReviewParams, body: UpdateReviewBody },
+    },
     async (request, reply) => {
-      const params = z
-        .object({ storeId: UUID, reviewId: UUID })
-        .safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
+      const { storeId, reviewId } = request.params as z.infer<typeof ReviewParams>;
+      const data = request.body as z.infer<typeof UpdateReviewBody>;
 
-      const Body = z.object({
-        status: ReviewStatusEnum.optional(),
-        reply: z.string().optional(),
-      });
-
-      const parsed = Body.safeParse(request.body);
-      if (!parsed.success) return reply.status(400).send(validationError(parsed.error.issues));
-
-      const updated = await updateReview(
-        params.data.storeId,
-        params.data.reviewId,
-        parsed.data
-      );
+      const updated = await updateReview(storeId, reviewId, data);
       if (!updated) return reply.status(404).send(notFound("review not found"));
       return reply.send({ ok: true });
     }
@@ -853,12 +985,13 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // GET /commerce/stores/:storeId/products/:productId/tags
   app.get(
     "/commerce/stores/:storeId/products/:productId/tags",
-    { preHandler: [storeAuthRead] },
+    {
+      preHandler: [storeAuthRead],
+      schema: { params: ProductParams },
+    },
     async (request, reply) => {
-      const params = ProductParams.safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
-
-      const tags = await getProductTags(params.data.storeId, params.data.productId);
+      const { storeId, productId } = request.params as z.infer<typeof ProductParams>;
+      const tags = await getProductTags(storeId, productId);
       return reply.send({ tags });
     }
   );
@@ -866,20 +999,16 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // PUT /commerce/stores/:storeId/products/:productId/tags
   app.put(
     "/commerce/stores/:storeId/products/:productId/tags",
-    { preHandler: [storeAuthWrite] },
+    {
+      preHandler: [storeAuthWrite],
+      schema: { params: ProductParams, body: SetTagsBody },
+    },
     async (request, reply) => {
-      const params = ProductParams.safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
-
-      const Body = z.object({
-        tags: z.array(z.string()),
-      });
-
-      const parsed = Body.safeParse(request.body);
-      if (!parsed.success) return reply.status(400).send(validationError(parsed.error.issues));
+      const { storeId, productId } = request.params as z.infer<typeof ProductParams>;
+      const { tags } = request.body as z.infer<typeof SetTagsBody>;
 
       try {
-        await setProductTags(params.data.storeId, params.data.productId, parsed.data.tags);
+        await setProductTags(storeId, productId, tags);
         return reply.send({ ok: true });
       } catch (err) {
         if (isNotFoundError(err)) return reply.status(404).send(notFound((err as Error).message));
@@ -895,16 +1024,14 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // GET /commerce/stores/:storeId/collections
   app.get(
     "/commerce/stores/:storeId/collections",
-    { preHandler: [storeAuthRead] },
+    {
+      preHandler: [storeAuthRead],
+      schema: { params: StoreParams, querystring: PaginationQuery },
+    },
     async (request, reply) => {
-      const params = StoreParams.safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
-
-      const q = PaginationQuery.safeParse(request.query);
-      const collections = await listCollections(
-        params.data.storeId,
-        q.success ? q.data : {}
-      );
+      const { storeId } = request.params as z.infer<typeof StoreParams>;
+      const q = request.query as z.infer<typeof PaginationQuery>;
+      const collections = await listCollections(storeId, q);
       return reply.send({ collections });
     }
   );
@@ -912,29 +1039,16 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // POST /commerce/stores/:storeId/collections
   app.post(
     "/commerce/stores/:storeId/collections",
-    { preHandler: [storeAuthWrite] },
+    {
+      preHandler: [storeAuthWrite],
+      schema: { params: StoreParams, body: CreateCollectionBody },
+    },
     async (request, reply) => {
-      const params = StoreParams.safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
-
-      const Body = z.object({
-        title: z.string().min(1),
-        slug: SlugStr.optional(),
-        description: z.string().optional(),
-        parent_id: UUID.optional(),
-        image_url: z.string().url().optional(),
-        seo_title: z.string().optional(),
-        seo_desc: z.string().optional(),
-        sort_order: z.string().optional(),
-        is_active: z.boolean().optional(),
-        metadata: z.record(z.string(), z.unknown()).optional(),
-      });
-
-      const parsed = Body.safeParse(request.body);
-      if (!parsed.success) return reply.status(400).send(validationError(parsed.error.issues));
+      const { storeId } = request.params as z.infer<typeof StoreParams>;
+      const data = request.body as z.infer<typeof CreateCollectionBody>;
 
       try {
-        const id = await createCollection(params.data.storeId, parsed.data);
+        const id = await createCollection(storeId, data);
         return reply.status(201).send({ id });
       } catch (err) {
         if (isDuplicateSlugError(err)) {
@@ -950,14 +1064,13 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // GET /commerce/stores/:storeId/collections/:collectionId
   app.get(
     "/commerce/stores/:storeId/collections/:collectionId",
-    { preHandler: [storeAuthRead] },
+    {
+      preHandler: [storeAuthRead],
+      schema: { params: CollectionParams },
+    },
     async (request, reply) => {
-      const params = z
-        .object({ storeId: UUID, collectionId: UUID })
-        .safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
-
-      const collection = await getCollection(params.data.storeId, params.data.collectionId);
+      const { storeId, collectionId } = request.params as z.infer<typeof CollectionParams>;
+      const collection = await getCollection(storeId, collectionId);
       if (!collection) return reply.status(404).send(notFound("collection not found"));
       return reply.send(collection);
     }
@@ -966,35 +1079,16 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // PUT /commerce/stores/:storeId/collections/:collectionId
   app.put(
     "/commerce/stores/:storeId/collections/:collectionId",
-    { preHandler: [storeAuthWrite] },
+    {
+      preHandler: [storeAuthWrite],
+      schema: { params: CollectionParams, body: UpdateCollectionBody },
+    },
     async (request, reply) => {
-      const params = z
-        .object({ storeId: UUID, collectionId: UUID })
-        .safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
-
-      const Body = z.object({
-        title: z.string().min(1).optional(),
-        slug: SlugStr.optional(),
-        description: z.string().optional(),
-        parent_id: UUID.optional(),
-        image_url: z.string().url().optional(),
-        seo_title: z.string().optional(),
-        seo_desc: z.string().optional(),
-        sort_order: z.string().optional(),
-        is_active: z.boolean().optional(),
-        metadata: z.record(z.string(), z.unknown()).optional(),
-      });
-
-      const parsed = Body.safeParse(request.body);
-      if (!parsed.success) return reply.status(400).send(validationError(parsed.error.issues));
+      const { storeId, collectionId } = request.params as z.infer<typeof CollectionParams>;
+      const data = request.body as z.infer<typeof UpdateCollectionBody>;
 
       try {
-        const updated = await updateCollection(
-          params.data.storeId,
-          params.data.collectionId,
-          parsed.data
-        );
+        const updated = await updateCollection(storeId, collectionId, data);
         if (!updated) return reply.status(404).send(notFound("collection not found"));
         return reply.send({ ok: true });
       } catch (err) {
@@ -1011,14 +1105,13 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // DELETE /commerce/stores/:storeId/collections/:collectionId
   app.delete(
     "/commerce/stores/:storeId/collections/:collectionId",
-    { preHandler: [storeAuthAdmin] },
+    {
+      preHandler: [storeAuthAdmin],
+      schema: { params: CollectionParams },
+    },
     async (request, reply) => {
-      const params = z
-        .object({ storeId: UUID, collectionId: UUID })
-        .safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
-
-      const deleted = await deleteCollection(params.data.storeId, params.data.collectionId);
+      const { storeId, collectionId } = request.params as z.infer<typeof CollectionParams>;
+      const deleted = await deleteCollection(storeId, collectionId);
       if (!deleted) return reply.status(404).send(notFound("collection not found"));
       return reply.send({ ok: true });
     }
@@ -1027,23 +1120,16 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // POST /commerce/stores/:storeId/collections/:collectionId/products
   app.post(
     "/commerce/stores/:storeId/collections/:collectionId/products",
-    { preHandler: [storeAuthWrite] },
+    {
+      preHandler: [storeAuthWrite],
+      schema: { params: CollectionParams, body: AddCollectionProductBody },
+    },
     async (request, reply) => {
-      const params = z
-        .object({ storeId: UUID, collectionId: UUID })
-        .safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
-
-      const Body = z.object({ product_id: UUID });
-      const parsed = Body.safeParse(request.body);
-      if (!parsed.success) return reply.status(400).send(validationError(parsed.error.issues));
+      const { storeId, collectionId } = request.params as z.infer<typeof CollectionParams>;
+      const { product_id } = request.body as z.infer<typeof AddCollectionProductBody>;
 
       try {
-        await addProductToCollection(
-          params.data.storeId,
-          params.data.collectionId,
-          parsed.data.product_id
-        );
+        await addProductToCollection(storeId, collectionId, product_id);
         return reply.status(201).send({ ok: true });
       } catch (err) {
         if (isNotFoundError(err)) return reply.status(404).send(notFound((err as Error).message));
@@ -1055,18 +1141,13 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // DELETE /commerce/stores/:storeId/collections/:collectionId/products/:productId
   app.delete(
     "/commerce/stores/:storeId/collections/:collectionId/products/:productId",
-    { preHandler: [storeAuthWrite] },
+    {
+      preHandler: [storeAuthWrite],
+      schema: { params: CollectionProductParams },
+    },
     async (request, reply) => {
-      const params = z
-        .object({ storeId: UUID, collectionId: UUID, productId: UUID })
-        .safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
-
-      const removed = await removeProductFromCollection(
-        params.data.storeId,
-        params.data.collectionId,
-        params.data.productId
-      );
+      const { storeId, collectionId, productId } = request.params as z.infer<typeof CollectionProductParams>;
+      const removed = await removeProductFromCollection(storeId, collectionId, productId);
       if (!removed) return reply.status(404).send(notFound("product not in collection"));
       return reply.send({ ok: true });
     }
@@ -1076,19 +1157,14 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // (list products in collection — convenience endpoint, not in spec but needed for smart rules test)
   app.get(
     "/commerce/stores/:storeId/collections/:collectionId/products",
-    { preHandler: [storeAuthRead] },
+    {
+      preHandler: [storeAuthRead],
+      schema: { params: CollectionParams, querystring: PaginationQuery },
+    },
     async (request, reply) => {
-      const params = z
-        .object({ storeId: UUID, collectionId: UUID })
-        .safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
-
-      const q = PaginationQuery.safeParse(request.query);
-      const products = await getCollectionProducts(
-        params.data.storeId,
-        params.data.collectionId,
-        q.success ? q.data : {}
-      );
+      const { storeId, collectionId } = request.params as z.infer<typeof CollectionParams>;
+      const q = request.query as z.infer<typeof PaginationQuery>;
+      const products = await getCollectionProducts(storeId, collectionId, q);
       return reply.send({ products });
     }
   );
@@ -1100,14 +1176,13 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // GET /commerce/stores/:storeId/collections/:collectionId/rules
   app.get(
     "/commerce/stores/:storeId/collections/:collectionId/rules",
-    { preHandler: [storeAuthRead] },
+    {
+      preHandler: [storeAuthRead],
+      schema: { params: CollectionParams },
+    },
     async (request, reply) => {
-      const params = z
-        .object({ storeId: UUID, collectionId: UUID })
-        .safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
-
-      const rules = await listCollectionRules(params.data.storeId, params.data.collectionId);
+      const { storeId, collectionId } = request.params as z.infer<typeof CollectionParams>;
+      const rules = await listCollectionRules(storeId, collectionId);
       return reply.send({ rules });
     }
   );
@@ -1115,29 +1190,16 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // POST /commerce/stores/:storeId/collections/:collectionId/rules
   app.post(
     "/commerce/stores/:storeId/collections/:collectionId/rules",
-    { preHandler: [storeAuthWrite] },
+    {
+      preHandler: [storeAuthWrite],
+      schema: { params: CollectionParams, body: AddCollectionRuleBody },
+    },
     async (request, reply) => {
-      const params = z
-        .object({ storeId: UUID, collectionId: UUID })
-        .safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
-
-      const Body = z.object({
-        field: RuleFieldEnum,
-        relation: RuleRelationEnum,
-        value: z.string().min(1),
-        position: z.number().int().min(0).optional(),
-      });
-
-      const parsed = Body.safeParse(request.body);
-      if (!parsed.success) return reply.status(400).send(validationError(parsed.error.issues));
+      const { storeId, collectionId } = request.params as z.infer<typeof CollectionParams>;
+      const data = request.body as z.infer<typeof AddCollectionRuleBody>;
 
       try {
-        const id = await addCollectionRule(
-          params.data.storeId,
-          params.data.collectionId,
-          parsed.data
-        );
+        const id = await addCollectionRule(storeId, collectionId, data);
         return reply.status(201).send({ id });
       } catch (err) {
         if (isNotFoundError(err)) return reply.status(404).send(notFound((err as Error).message));
@@ -1149,18 +1211,13 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // DELETE /commerce/stores/:storeId/collections/:collectionId/rules/:ruleId
   app.delete(
     "/commerce/stores/:storeId/collections/:collectionId/rules/:ruleId",
-    { preHandler: [storeAuthAdmin] },
+    {
+      preHandler: [storeAuthAdmin],
+      schema: { params: RuleParams },
+    },
     async (request, reply) => {
-      const params = z
-        .object({ storeId: UUID, collectionId: UUID, ruleId: UUID })
-        .safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
-
-      const deleted = await deleteCollectionRule(
-        params.data.storeId,
-        params.data.collectionId,
-        params.data.ruleId
-      );
+      const { storeId, collectionId, ruleId } = request.params as z.infer<typeof RuleParams>;
+      const deleted = await deleteCollectionRule(storeId, collectionId, ruleId);
       if (!deleted) return reply.status(404).send(notFound("rule not found"));
       return reply.send({ ok: true });
     }
@@ -1173,13 +1230,14 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // GET /commerce/stores/:storeId/price-lists
   app.get(
     "/commerce/stores/:storeId/price-lists",
-    { preHandler: [storeAuthRead] },
+    {
+      preHandler: [storeAuthRead],
+      schema: { params: StoreParams, querystring: PaginationQuery },
+    },
     async (request, reply) => {
-      const params = StoreParams.safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
-
-      const q = PaginationQuery.safeParse(request.query);
-      const priceLists = await listPriceLists(params.data.storeId, q.success ? q.data : {});
+      const { storeId } = request.params as z.infer<typeof StoreParams>;
+      const q = request.query as z.infer<typeof PaginationQuery>;
+      const priceLists = await listPriceLists(storeId, q);
       return reply.send({ price_lists: priceLists });
     }
   );
@@ -1187,23 +1245,14 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // POST /commerce/stores/:storeId/price-lists
   app.post(
     "/commerce/stores/:storeId/price-lists",
-    { preHandler: [storeAuthWrite] },
+    {
+      preHandler: [storeAuthWrite],
+      schema: { params: StoreParams, body: CreatePriceListBody },
+    },
     async (request, reply) => {
-      const params = StoreParams.safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
-
-      const Body = z.object({
-        name: z.string().min(1),
-        currency: z.string().length(3),
-        type: PriceListTypeEnum.optional(),
-        is_default: z.boolean().optional(),
-        metadata: z.record(z.string(), z.unknown()).optional(),
-      });
-
-      const parsed = Body.safeParse(request.body);
-      if (!parsed.success) return reply.status(400).send(validationError(parsed.error.issues));
-
-      const id = await createPriceList(params.data.storeId, parsed.data);
+      const { storeId } = request.params as z.infer<typeof StoreParams>;
+      const data = request.body as z.infer<typeof CreatePriceListBody>;
+      const id = await createPriceList(storeId, data);
       return reply.status(201).send({ id });
     }
   );
@@ -1211,14 +1260,13 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // GET /commerce/stores/:storeId/price-lists/:listId
   app.get(
     "/commerce/stores/:storeId/price-lists/:listId",
-    { preHandler: [storeAuthRead] },
+    {
+      preHandler: [storeAuthRead],
+      schema: { params: PriceListParams },
+    },
     async (request, reply) => {
-      const params = z
-        .object({ storeId: UUID, listId: UUID })
-        .safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
-
-      const pl = await getPriceList(params.data.storeId, params.data.listId);
+      const { storeId, listId } = request.params as z.infer<typeof PriceListParams>;
+      const pl = await getPriceList(storeId, listId);
       if (!pl) return reply.status(404).send(notFound("price list not found"));
       return reply.send(pl);
     }
@@ -1227,29 +1275,14 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // PUT /commerce/stores/:storeId/price-lists/:listId
   app.put(
     "/commerce/stores/:storeId/price-lists/:listId",
-    { preHandler: [storeAuthWrite] },
+    {
+      preHandler: [storeAuthWrite],
+      schema: { params: PriceListParams, body: UpdatePriceListBody },
+    },
     async (request, reply) => {
-      const params = z
-        .object({ storeId: UUID, listId: UUID })
-        .safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
-
-      const Body = z.object({
-        name: z.string().min(1).optional(),
-        currency: z.string().length(3).optional(),
-        type: PriceListTypeEnum.optional(),
-        is_default: z.boolean().optional(),
-        metadata: z.record(z.string(), z.unknown()).optional(),
-      });
-
-      const parsed = Body.safeParse(request.body);
-      if (!parsed.success) return reply.status(400).send(validationError(parsed.error.issues));
-
-      const updated = await updatePriceList(
-        params.data.storeId,
-        params.data.listId,
-        parsed.data
-      );
+      const { storeId, listId } = request.params as z.infer<typeof PriceListParams>;
+      const data = request.body as z.infer<typeof UpdatePriceListBody>;
+      const updated = await updatePriceList(storeId, listId, data);
       if (!updated) return reply.status(404).send(notFound("price list not found"));
       return reply.send({ ok: true });
     }
@@ -1258,14 +1291,13 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // DELETE /commerce/stores/:storeId/price-lists/:listId
   app.delete(
     "/commerce/stores/:storeId/price-lists/:listId",
-    { preHandler: [storeAuthAdmin] },
+    {
+      preHandler: [storeAuthAdmin],
+      schema: { params: PriceListParams },
+    },
     async (request, reply) => {
-      const params = z
-        .object({ storeId: UUID, listId: UUID })
-        .safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
-
-      const deleted = await deletePriceList(params.data.storeId, params.data.listId);
+      const { storeId, listId } = request.params as z.infer<typeof PriceListParams>;
+      const deleted = await deletePriceList(storeId, listId);
       if (!deleted) return reply.status(404).send(notFound("price list not found"));
       return reply.send({ ok: true });
     }
@@ -1274,19 +1306,14 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // GET /commerce/stores/:storeId/price-lists/:listId/items
   app.get(
     "/commerce/stores/:storeId/price-lists/:listId/items",
-    { preHandler: [storeAuthRead] },
+    {
+      preHandler: [storeAuthRead],
+      schema: { params: PriceListParams, querystring: PaginationQuery },
+    },
     async (request, reply) => {
-      const params = z
-        .object({ storeId: UUID, listId: UUID })
-        .safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
-
-      const q = PaginationQuery.safeParse(request.query);
-      const items = await listPriceListItems(
-        params.data.storeId,
-        params.data.listId,
-        q.success ? q.data : {}
-      );
+      const { storeId, listId } = request.params as z.infer<typeof PriceListParams>;
+      const q = request.query as z.infer<typeof PaginationQuery>;
+      const items = await listPriceListItems(storeId, listId, q);
       return reply.send({ items });
     }
   );
@@ -1294,29 +1321,16 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // POST /commerce/stores/:storeId/price-lists/:listId/items
   app.post(
     "/commerce/stores/:storeId/price-lists/:listId/items",
-    { preHandler: [storeAuthWrite] },
+    {
+      preHandler: [storeAuthWrite],
+      schema: { params: PriceListParams, body: UpsertPriceListItemBody },
+    },
     async (request, reply) => {
-      const params = z
-        .object({ storeId: UUID, listId: UUID })
-        .safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
-
-      const Body = z.object({
-        variant_id: UUID,
-        price: PricePositive,
-        min_qty: z.number().int().min(1).optional(),
-        max_qty: z.number().int().min(1).optional(),
-      });
-
-      const parsed = Body.safeParse(request.body);
-      if (!parsed.success) return reply.status(400).send(validationError(parsed.error.issues));
+      const { storeId, listId } = request.params as z.infer<typeof PriceListParams>;
+      const data = request.body as z.infer<typeof UpsertPriceListItemBody>;
 
       try {
-        const id = await upsertPriceListItem(
-          params.data.storeId,
-          params.data.listId,
-          parsed.data
-        );
+        const id = await upsertPriceListItem(storeId, listId, data);
         return reply.status(201).send({ id });
       } catch (err) {
         if (isNotFoundError(err)) return reply.status(404).send(notFound((err as Error).message));
@@ -1328,28 +1342,14 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // PUT /commerce/stores/:storeId/price-lists/:listId/items/:itemId
   app.put(
     "/commerce/stores/:storeId/price-lists/:listId/items/:itemId",
-    { preHandler: [storeAuthWrite] },
+    {
+      preHandler: [storeAuthWrite],
+      schema: { params: PriceListItemParams, body: UpdatePriceListItemBody },
+    },
     async (request, reply) => {
-      const params = z
-        .object({ storeId: UUID, listId: UUID, itemId: UUID })
-        .safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
-
-      const Body = z.object({
-        price: PricePositive.optional(),
-        min_qty: z.number().int().min(1).optional(),
-        max_qty: z.number().int().min(1).optional(),
-      });
-
-      const parsed = Body.safeParse(request.body);
-      if (!parsed.success) return reply.status(400).send(validationError(parsed.error.issues));
-
-      const updated = await updatePriceListItem(
-        params.data.storeId,
-        params.data.listId,
-        params.data.itemId,
-        parsed.data
-      );
+      const { storeId, listId, itemId } = request.params as z.infer<typeof PriceListItemParams>;
+      const data = request.body as z.infer<typeof UpdatePriceListItemBody>;
+      const updated = await updatePriceListItem(storeId, listId, itemId, data);
       if (!updated) return reply.status(404).send(notFound("price list item not found"));
       return reply.send({ ok: true });
     }
@@ -1358,18 +1358,13 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // DELETE /commerce/stores/:storeId/price-lists/:listId/items/:itemId
   app.delete(
     "/commerce/stores/:storeId/price-lists/:listId/items/:itemId",
-    { preHandler: [storeAuthAdmin] },
+    {
+      preHandler: [storeAuthAdmin],
+      schema: { params: PriceListItemParams },
+    },
     async (request, reply) => {
-      const params = z
-        .object({ storeId: UUID, listId: UUID, itemId: UUID })
-        .safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
-
-      const deleted = await deletePriceListItem(
-        params.data.storeId,
-        params.data.listId,
-        params.data.itemId
-      );
+      const { storeId, listId, itemId } = request.params as z.infer<typeof PriceListItemParams>;
+      const deleted = await deletePriceListItem(storeId, listId, itemId);
       if (!deleted) return reply.status(404).send(notFound("price list item not found"));
       return reply.send({ ok: true });
     }
@@ -1382,25 +1377,14 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // GET /commerce/stores/:storeId/metafields
   app.get(
     "/commerce/stores/:storeId/metafields",
-    { preHandler: [storeAuthRead] },
+    {
+      preHandler: [storeAuthRead],
+      schema: { params: StoreParams, querystring: MetafieldsQuery },
+    },
     async (request, reply) => {
-      const params = StoreParams.safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
-
-      const q = z
-        .object({
-          owner_resource: z.string().optional(),
-          owner_id: z.string().optional(),
-          namespace: z.string().optional(),
-          limit: z.coerce.number().int().min(1).max(200).optional(),
-          offset: z.coerce.number().int().min(0).optional(),
-        })
-        .safeParse(request.query);
-
-      const metafields = await listMetafields(
-        params.data.storeId,
-        q.success ? q.data : {}
-      );
+      const { storeId } = request.params as z.infer<typeof StoreParams>;
+      const q = request.query as z.infer<typeof MetafieldsQuery>;
+      const metafields = await listMetafields(storeId, q);
       return reply.send({ metafields });
     }
   );
@@ -1408,24 +1392,14 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // POST /commerce/stores/:storeId/metafields
   app.post(
     "/commerce/stores/:storeId/metafields",
-    { preHandler: [storeAuthWrite] },
+    {
+      preHandler: [storeAuthWrite],
+      schema: { params: StoreParams, body: UpsertMetafieldBody },
+    },
     async (request, reply) => {
-      const params = StoreParams.safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
-
-      const Body = z.object({
-        owner_resource: z.string().min(1),
-        owner_id: UUID,
-        namespace: z.string().min(1),
-        key: z.string().min(1),
-        value: z.string().optional(),
-        type: MetafieldTypeEnum.optional(),
-      });
-
-      const parsed = Body.safeParse(request.body);
-      if (!parsed.success) return reply.status(400).send(validationError(parsed.error.issues));
-
-      const id = await upsertMetafield(params.data.storeId, parsed.data);
+      const { storeId } = request.params as z.infer<typeof StoreParams>;
+      const data = request.body as z.infer<typeof UpsertMetafieldBody>;
+      const id = await upsertMetafield(storeId, data);
       return reply.status(201).send({ id });
     }
   );
@@ -1433,26 +1407,14 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // PUT /commerce/stores/:storeId/metafields/:metafieldId
   app.put(
     "/commerce/stores/:storeId/metafields/:metafieldId",
-    { preHandler: [storeAuthWrite] },
+    {
+      preHandler: [storeAuthWrite],
+      schema: { params: MetafieldParams, body: UpdateMetafieldBody },
+    },
     async (request, reply) => {
-      const params = z
-        .object({ storeId: UUID, metafieldId: UUID })
-        .safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
-
-      const Body = z.object({
-        value: z.string().optional(),
-        type: MetafieldTypeEnum.optional(),
-      });
-
-      const parsed = Body.safeParse(request.body);
-      if (!parsed.success) return reply.status(400).send(validationError(parsed.error.issues));
-
-      const updated = await updateMetafield(
-        params.data.storeId,
-        params.data.metafieldId,
-        parsed.data
-      );
+      const { storeId, metafieldId } = request.params as z.infer<typeof MetafieldParams>;
+      const data = request.body as z.infer<typeof UpdateMetafieldBody>;
+      const updated = await updateMetafield(storeId, metafieldId, data);
       if (!updated) return reply.status(404).send(notFound("metafield not found"));
       return reply.send({ ok: true });
     }
@@ -1461,14 +1423,13 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // DELETE /commerce/stores/:storeId/metafields/:metafieldId
   app.delete(
     "/commerce/stores/:storeId/metafields/:metafieldId",
-    { preHandler: [storeAuthAdmin] },
+    {
+      preHandler: [storeAuthAdmin],
+      schema: { params: MetafieldParams },
+    },
     async (request, reply) => {
-      const params = z
-        .object({ storeId: UUID, metafieldId: UUID })
-        .safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
-
-      const deleted = await deleteMetafield(params.data.storeId, params.data.metafieldId);
+      const { storeId, metafieldId } = request.params as z.infer<typeof MetafieldParams>;
+      const deleted = await deleteMetafield(storeId, metafieldId);
       if (!deleted) return reply.status(404).send(notFound("metafield not found"));
       return reply.send({ ok: true });
     }
@@ -1477,16 +1438,14 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // GET /commerce/stores/:storeId/metafield-definitions
   app.get(
     "/commerce/stores/:storeId/metafield-definitions",
-    { preHandler: [storeAuthRead] },
+    {
+      preHandler: [storeAuthRead],
+      schema: { params: StoreParams, querystring: PaginationQuery },
+    },
     async (request, reply) => {
-      const params = StoreParams.safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
-
-      const q = PaginationQuery.safeParse(request.query);
-      const defs = await listMetafieldDefinitions(
-        params.data.storeId,
-        q.success ? q.data : {}
-      );
+      const { storeId } = request.params as z.infer<typeof StoreParams>;
+      const q = request.query as z.infer<typeof PaginationQuery>;
+      const defs = await listMetafieldDefinitions(storeId, q);
       return reply.send({ definitions: defs });
     }
   );
@@ -1494,26 +1453,14 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // POST /commerce/stores/:storeId/metafield-definitions
   app.post(
     "/commerce/stores/:storeId/metafield-definitions",
-    { preHandler: [storeAuthWrite] },
+    {
+      preHandler: [storeAuthWrite],
+      schema: { params: StoreParams, body: CreateMetafieldDefinitionBody },
+    },
     async (request, reply) => {
-      const params = StoreParams.safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
-
-      const Body = z.object({
-        name: z.string().min(1),
-        namespace: z.string().min(1),
-        key: z.string().min(1),
-        owner_resource: z.string().min(1),
-        description: z.string().optional(),
-        type: MetafieldTypeEnum.optional(),
-        validations: z.unknown().optional(),
-        is_required: z.boolean().optional(),
-      });
-
-      const parsed = Body.safeParse(request.body);
-      if (!parsed.success) return reply.status(400).send(validationError(parsed.error.issues));
-
-      const id = await createMetafieldDefinition(params.data.storeId, parsed.data);
+      const { storeId } = request.params as z.infer<typeof StoreParams>;
+      const data = request.body as z.infer<typeof CreateMetafieldDefinitionBody>;
+      const id = await createMetafieldDefinition(storeId, data);
       return reply.status(201).send({ id });
     }
   );
@@ -1521,29 +1468,14 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // PUT /commerce/stores/:storeId/metafield-definitions/:defId
   app.put(
     "/commerce/stores/:storeId/metafield-definitions/:defId",
-    { preHandler: [storeAuthWrite] },
+    {
+      preHandler: [storeAuthWrite],
+      schema: { params: MetafieldDefParams, body: UpdateMetafieldDefinitionBody },
+    },
     async (request, reply) => {
-      const params = z
-        .object({ storeId: UUID, defId: UUID })
-        .safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
-
-      const Body = z.object({
-        name: z.string().min(1).optional(),
-        description: z.string().optional(),
-        type: MetafieldTypeEnum.optional(),
-        validations: z.unknown().optional(),
-        is_required: z.boolean().optional(),
-      });
-
-      const parsed = Body.safeParse(request.body);
-      if (!parsed.success) return reply.status(400).send(validationError(parsed.error.issues));
-
-      const updated = await updateMetafieldDefinition(
-        params.data.storeId,
-        params.data.defId,
-        parsed.data
-      );
+      const { storeId, defId } = request.params as z.infer<typeof MetafieldDefParams>;
+      const data = request.body as z.infer<typeof UpdateMetafieldDefinitionBody>;
+      const updated = await updateMetafieldDefinition(storeId, defId, data);
       if (!updated) return reply.status(404).send(notFound("metafield definition not found"));
       return reply.send({ ok: true });
     }
@@ -1552,14 +1484,13 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // DELETE /commerce/stores/:storeId/metafield-definitions/:defId
   app.delete(
     "/commerce/stores/:storeId/metafield-definitions/:defId",
-    { preHandler: [storeAuthAdmin] },
+    {
+      preHandler: [storeAuthAdmin],
+      schema: { params: MetafieldDefParams },
+    },
     async (request, reply) => {
-      const params = z
-        .object({ storeId: UUID, defId: UUID })
-        .safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
-
-      const deleted = await deleteMetafieldDefinition(params.data.storeId, params.data.defId);
+      const { storeId, defId } = request.params as z.infer<typeof MetafieldDefParams>;
+      const deleted = await deleteMetafieldDefinition(storeId, defId);
       if (!deleted) return reply.status(404).send(notFound("metafield definition not found"));
       return reply.send({ ok: true });
     }
@@ -1569,25 +1500,16 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // TRANSLATIONS
   // ══════════════════════════════════════════════════════════════════════════
 
-  const TranslationParams = z.object({
-    storeId: UUID,
-    resourceType: TranslationResourceTypeEnum,
-    resourceId: UUID,
-  });
-
   // GET /commerce/stores/:storeId/translations/:resourceType/:resourceId
   app.get(
     "/commerce/stores/:storeId/translations/:resourceType/:resourceId",
-    { preHandler: [storeAuthRead] },
+    {
+      preHandler: [storeAuthRead],
+      schema: { params: TranslationParams },
+    },
     async (request, reply) => {
-      const params = TranslationParams.safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
-
-      const translations = await listTranslations(
-        params.data.storeId,
-        params.data.resourceType,
-        params.data.resourceId
-      );
+      const { storeId, resourceType, resourceId } = request.params as z.infer<typeof TranslationParams>;
+      const translations = await listTranslations(storeId, resourceType, resourceId);
       return reply.send({ translations });
     }
   );
@@ -1595,32 +1517,15 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // PUT /commerce/stores/:storeId/translations/:resourceType/:resourceId/:locale
   app.put(
     "/commerce/stores/:storeId/translations/:resourceType/:resourceId/:locale",
-    { preHandler: [storeAuthWrite] },
+    {
+      preHandler: [storeAuthWrite],
+      schema: { params: TranslationLocaleParams, body: UpsertTranslationBody },
+    },
     async (request, reply) => {
-      const params = z
-        .object({
-          storeId: UUID,
-          resourceType: TranslationResourceTypeEnum,
-          resourceId: UUID,
-          locale: z.string().min(2),
-        })
-        .safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
+      const { storeId, resourceType, resourceId, locale } = request.params as z.infer<typeof TranslationLocaleParams>;
+      const { fields } = request.body as z.infer<typeof UpsertTranslationBody>;
 
-      const Body = z.object({
-        fields: z.record(z.string(), z.string().nullable()),
-      });
-
-      const parsed = Body.safeParse(request.body);
-      if (!parsed.success) return reply.status(400).send(validationError(parsed.error.issues));
-
-      await upsertTranslation(
-        params.data.storeId,
-        params.data.resourceType,
-        params.data.resourceId,
-        params.data.locale,
-        { fields: parsed.data.fields }
-      );
+      await upsertTranslation(storeId, resourceType, resourceId, locale, { fields });
       return reply.send({ ok: true });
     }
   );
@@ -1628,24 +1533,13 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // DELETE /commerce/stores/:storeId/translations/:resourceType/:resourceId/:locale
   app.delete(
     "/commerce/stores/:storeId/translations/:resourceType/:resourceId/:locale",
-    { preHandler: [storeAuthAdmin] },
+    {
+      preHandler: [storeAuthAdmin],
+      schema: { params: TranslationLocaleParams },
+    },
     async (request, reply) => {
-      const params = z
-        .object({
-          storeId: UUID,
-          resourceType: TranslationResourceTypeEnum,
-          resourceId: UUID,
-          locale: z.string().min(2),
-        })
-        .safeParse(request.params);
-      if (!params.success) return reply.status(400).send(validationError(params.error.issues));
-
-      const deleted = await deleteTranslation(
-        params.data.storeId,
-        params.data.resourceType,
-        params.data.resourceId,
-        params.data.locale
-      );
+      const { storeId, resourceType, resourceId, locale } = request.params as z.infer<typeof TranslationLocaleParams>;
+      const deleted = await deleteTranslation(storeId, resourceType, resourceId, locale);
       if (!deleted) return reply.status(404).send(notFound("translation not found"));
       return reply.send({ ok: true });
     }

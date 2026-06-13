@@ -64,22 +64,13 @@ export const apiKeysPlugin: FastifyPluginAsync = async (app) => {
   // ── POST /api-keys ────────────────────────────────────────────────────────
   app.post(
     "/api-keys",
-    { preHandler: [requireJwt] },
+    {
+      preHandler: [requireJwt],
+      schema: { body: CreateKeyBody },
+    },
     async (request, reply) => {
       const { orgId, userId } = request.auth!;
-
-      const parsed = CreateKeyBody.safeParse(request.body);
-      if (!parsed.success) {
-        return reply.status(400).send({
-          error: {
-            code: "VALIDATION_ERROR",
-            message: "Request validation failed",
-            details: parsed.error.issues,
-          },
-        });
-      }
-
-      const { name, key_type, scopes, store_id, expires_at } = parsed.data;
+      const { name, key_type, scopes, store_id, expires_at } = request.body as z.infer<typeof CreateKeyBody>;
 
       // Validate key_type
       const keyType = key_type ?? "private";
@@ -138,18 +129,18 @@ export const apiKeysPlugin: FastifyPluginAsync = async (app) => {
   );
 
   // ── PATCH /api-keys/:keyId ────────────────────────────────────────────────
+  // Note: The PATCH route uses raw body inspection to distinguish "omitted"
+  // from "explicit null" for store_id / expires_at. We add params schema for
+  // OpenAPI but keep manual body handling to preserve null-vs-omitted semantics.
   app.patch(
     "/api-keys/:keyId",
-    { preHandler: [requireJwt] },
+    {
+      preHandler: [requireJwt],
+      schema: { params: KeyIdParams },
+    },
     async (request, reply) => {
       const { orgId } = request.auth!;
-
-      const params = KeyIdParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Invalid keyId" },
-        });
-      }
+      const { keyId } = request.params as z.infer<typeof KeyIdParams>;
 
       // Parse as raw object to distinguish "omitted" from "explicit null".
       const raw = request.body as Record<string, unknown>;
@@ -200,7 +191,7 @@ export const apiKeysPlugin: FastifyPluginAsync = async (app) => {
       }
 
       try {
-        const updated = await updateApiKey(params.data.keyId, orgId, updateInput);
+        const updated = await updateApiKey(keyId, orgId, updateInput);
         if (!updated) {
           return reply.status(404).send({
             error: {
@@ -227,18 +218,15 @@ export const apiKeysPlugin: FastifyPluginAsync = async (app) => {
   // ── DELETE /api-keys/:keyId ───────────────────────────────────────────────
   app.delete(
     "/api-keys/:keyId",
-    { preHandler: [requireJwt] },
+    {
+      preHandler: [requireJwt],
+      schema: { params: KeyIdParams },
+    },
     async (request, reply) => {
       const { orgId } = request.auth!;
+      const { keyId } = request.params as z.infer<typeof KeyIdParams>;
 
-      const params = KeyIdParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Invalid keyId" },
-        });
-      }
-
-      const revoked = await revokeApiKey(params.data.keyId, orgId);
+      const revoked = await revokeApiKey(keyId, orgId);
       if (!revoked) {
         return reply.status(404).send({
           error: {

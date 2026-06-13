@@ -119,18 +119,13 @@ export const paymentsPlugin: FastifyPluginAsync = async (app) => {
   // ── GET /commerce/stores/:storeId/orders/:orderId/payments ──────────────────
   app.get(
     "/commerce/stores/:storeId/orders/:orderId/payments",
-    { preHandler: [storeAuthWrite] },
+    {
+      preHandler: [storeAuthWrite],
+      schema: { params: StoreOrderParams },
+    },
     async (request, reply) => {
-      const params = StoreOrderParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Invalid params" },
-        });
-      }
-      const payments = await listPayments(
-        params.data.orderId,
-        params.data.storeId
-      );
+      const { orderId, storeId } = request.params as z.infer<typeof StoreOrderParams>;
+      const payments = await listPayments(orderId, storeId);
       return reply.send({ payments });
     }
   );
@@ -138,32 +133,16 @@ export const paymentsPlugin: FastifyPluginAsync = async (app) => {
   // ── POST /commerce/stores/:storeId/orders/:orderId/payments ─────────────────
   app.post(
     "/commerce/stores/:storeId/orders/:orderId/payments",
-    { preHandler: [storeAuthWrite] },
+    {
+      preHandler: [storeAuthWrite],
+      schema: { params: StoreOrderParams, body: CreatePaymentBody },
+    },
     async (request, reply) => {
-      const params = StoreOrderParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Invalid params" },
-        });
-      }
-
-      const parsed = CreatePaymentBody.safeParse(request.body);
-      if (!parsed.success) {
-        return reply.status(400).send({
-          error: {
-            code: "VALIDATION_ERROR",
-            message: "Request validation failed",
-            details: parsed.error.issues,
-          },
-        });
-      }
+      const { orderId, storeId } = request.params as z.infer<typeof StoreOrderParams>;
+      const data = request.body as z.infer<typeof CreatePaymentBody>;
 
       try {
-        const result = await createPayment(
-          params.data.orderId,
-          params.data.storeId,
-          parsed.data
-        );
+        const result = await createPayment(orderId, storeId, data);
         return reply.status(201).send(result);
       } catch (err: unknown) {
         if (err instanceof Error) {
@@ -187,24 +166,16 @@ export const paymentsPlugin: FastifyPluginAsync = async (app) => {
   // ── POST /commerce/stores/:storeId/orders/:orderId/payments/:paymentId/capture
   app.post(
     "/commerce/stores/:storeId/orders/:orderId/payments/:paymentId/capture",
-    { preHandler: [storeAuthAdmin] },
+    {
+      preHandler: [storeAuthAdmin],
+      schema: { params: PaymentParams },
+    },
     async (request, reply) => {
-      const params = PaymentParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Invalid params" },
-        });
-      }
-
+      const { paymentId, orderId, storeId } = request.params as z.infer<typeof PaymentParams>;
       const userId = request.auth?.userId;
 
       try {
-        await capturePayment(
-          params.data.paymentId,
-          params.data.orderId,
-          params.data.storeId,
-          userId
-        );
+        await capturePayment(paymentId, orderId, storeId, userId);
         return reply.send({ ok: true });
       } catch (err: unknown) {
         if (err instanceof Error) {
@@ -233,26 +204,13 @@ export const paymentsPlugin: FastifyPluginAsync = async (app) => {
   // ── POST /commerce/stores/:storeId/orders/:orderId/payments/:paymentId/refund
   app.post(
     "/commerce/stores/:storeId/orders/:orderId/payments/:paymentId/refund",
-    { preHandler: [storeAuthAdmin] },
+    {
+      preHandler: [storeAuthAdmin],
+      schema: { params: PaymentParams, body: CreateRefundBody },
+    },
     async (request, reply) => {
-      const params = PaymentParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Invalid params" },
-        });
-      }
-
-      const parsed = CreateRefundBody.safeParse(request.body);
-      if (!parsed.success) {
-        return reply.status(400).send({
-          error: {
-            code: "VALIDATION_ERROR",
-            message: "Request validation failed",
-            details: parsed.error.issues,
-          },
-        });
-      }
-
+      const { paymentId, orderId, storeId } = request.params as z.infer<typeof PaymentParams>;
+      const data = request.body as z.infer<typeof CreateRefundBody>;
       const userId = request.auth?.userId;
 
       // Honor Idempotency-Key header: pass it to the service so duplicate
@@ -265,10 +223,10 @@ export const paymentsPlugin: FastifyPluginAsync = async (app) => {
 
       try {
         const result = await createRefund(
-          params.data.paymentId,
-          params.data.orderId,
-          params.data.storeId,
-          { ...parsed.data, idempotency_key: idempotencyKey },
+          paymentId,
+          orderId,
+          storeId,
+          { ...data, idempotency_key: idempotencyKey },
           userId
         );
         return reply.status(201).send(result);
@@ -294,15 +252,13 @@ export const paymentsPlugin: FastifyPluginAsync = async (app) => {
   // ── GET /commerce/stores/:storeId/payment-providers ─────────────────────────
   app.get(
     "/commerce/stores/:storeId/payment-providers",
-    { preHandler: [storeAuthAdmin] },
+    {
+      preHandler: [storeAuthAdmin],
+      schema: { params: StoreParams },
+    },
     async (request, reply) => {
-      const params = StoreParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Invalid storeId" },
-        });
-      }
-      const providers = await listProviders(params.data.storeId);
+      const { storeId } = request.params as z.infer<typeof StoreParams>;
+      const providers = await listProviders(storeId);
       return reply.send({ providers });
     }
   );
@@ -310,27 +266,14 @@ export const paymentsPlugin: FastifyPluginAsync = async (app) => {
   // ── POST /commerce/stores/:storeId/payment-providers ────────────────────────
   app.post(
     "/commerce/stores/:storeId/payment-providers",
-    { preHandler: [storeAuthAdmin] },
+    {
+      preHandler: [storeAuthAdmin],
+      schema: { params: StoreParams, body: UpsertProviderBody },
+    },
     async (request, reply) => {
-      const params = StoreParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Invalid storeId" },
-        });
-      }
-
-      const parsed = UpsertProviderBody.safeParse(request.body);
-      if (!parsed.success) {
-        return reply.status(400).send({
-          error: {
-            code: "VALIDATION_ERROR",
-            message: "Request validation failed",
-            details: parsed.error.issues,
-          },
-        });
-      }
-
-      const id = await upsertProvider(params.data.storeId, parsed.data);
+      const { storeId } = request.params as z.infer<typeof StoreParams>;
+      const data = request.body as z.infer<typeof UpsertProviderBody>;
+      const id = await upsertProvider(storeId, data);
       return reply.status(201).send({ id });
     }
   );
@@ -338,19 +281,13 @@ export const paymentsPlugin: FastifyPluginAsync = async (app) => {
   // ── DELETE /commerce/stores/:storeId/payment-providers/:providerId ──────────
   app.delete(
     "/commerce/stores/:storeId/payment-providers/:providerId",
-    { preHandler: [storeAuthAdmin] },
+    {
+      preHandler: [storeAuthAdmin],
+      schema: { params: ProviderParams },
+    },
     async (request, reply) => {
-      const params = ProviderParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Invalid params" },
-        });
-      }
-
-      const deleted = await deleteProvider(
-        params.data.providerId,
-        params.data.storeId
-      );
+      const { providerId, storeId } = request.params as z.infer<typeof ProviderParams>;
+      const deleted = await deleteProvider(providerId, storeId);
       if (!deleted) {
         return reply
           .status(404)
@@ -380,7 +317,10 @@ export const paymentsPlugin: FastifyPluginAsync = async (app) => {
   // ── POST /commerce/payment-gateways ─────────────────────────────────────────
   app.post(
     "/commerce/payment-gateways",
-    { preHandler: [requireJwt] },
+    {
+      preHandler: [requireJwt],
+      schema: { body: UpsertGatewayBody },
+    },
     async (request, reply) => {
       const superToken = request.headers["x-super-token"];
       if (!timingSafeCheckSuperToken(typeof superToken === "string" ? superToken : undefined)) {
@@ -389,18 +329,8 @@ export const paymentsPlugin: FastifyPluginAsync = async (app) => {
           .send({ error: { code: "FORBIDDEN", message: "super-admin access required" } });
       }
 
-      const parsed = UpsertGatewayBody.safeParse(request.body);
-      if (!parsed.success) {
-        return reply.status(400).send({
-          error: {
-            code: "VALIDATION_ERROR",
-            message: "Request validation failed",
-            details: parsed.error.issues,
-          },
-        });
-      }
-
-      const id = await upsertGateway(parsed.data);
+      const data = request.body as z.infer<typeof UpsertGatewayBody>;
+      const id = await upsertGateway(data);
       return reply.status(201).send({ id });
     }
   );
@@ -408,7 +338,10 @@ export const paymentsPlugin: FastifyPluginAsync = async (app) => {
   // ── PUT /commerce/payment-gateways/:gatewayId/dev-credentials ───────────────
   app.put(
     "/commerce/payment-gateways/:gatewayId/dev-credentials",
-    { preHandler: [requireJwt] },
+    {
+      preHandler: [requireJwt],
+      schema: { params: GatewayParams, body: SetDevCredsBody },
+    },
     async (request, reply) => {
       const superToken = request.headers["x-super-token"];
       if (!timingSafeCheckSuperToken(typeof superToken === "string" ? superToken : undefined)) {
@@ -417,28 +350,10 @@ export const paymentsPlugin: FastifyPluginAsync = async (app) => {
           .send({ error: { code: "FORBIDDEN", message: "super-admin access required" } });
       }
 
-      const params = GatewayParams.safeParse(request.params);
-      if (!params.success) {
-        return reply.status(400).send({
-          error: { code: "VALIDATION_ERROR", message: "Invalid gatewayId" },
-        });
-      }
+      const { gatewayId } = request.params as z.infer<typeof GatewayParams>;
+      const data = request.body as z.infer<typeof SetDevCredsBody>;
 
-      const parsed = SetDevCredsBody.safeParse(request.body);
-      if (!parsed.success) {
-        return reply.status(400).send({
-          error: {
-            code: "VALIDATION_ERROR",
-            message: "Request validation failed",
-            details: parsed.error.issues,
-          },
-        });
-      }
-
-      const updated = await setGatewayDevCredentials(
-        params.data.gatewayId,
-        parsed.data
-      );
+      const updated = await setGatewayDevCredentials(gatewayId, data);
       if (!updated) {
         return reply
           .status(404)
