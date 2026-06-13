@@ -59,6 +59,7 @@ export interface CreateRefundInput {
   notes?: string | undefined;
   restock?: boolean | undefined;
   provider_reference?: string | undefined;
+  idempotency_key?: string | undefined;
 }
 
 export interface CreateRefundResult {

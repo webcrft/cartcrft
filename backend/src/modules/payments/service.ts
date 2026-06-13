@@ -305,7 +305,22 @@ export async function createRefund(
   const reason =
     input.reason && validReasons.has(input.reason) ? input.reason : null;
 
+  const idempotencyKey = input.idempotency_key?.trim() || null;
+
   return withTx(async (client) => {
+    // ── Idempotency-Key fast-path ─────────────────────────────────────────
+    // If the caller supplied a key, try to look up an existing refund first.
+    // We do this BEFORE locking the order row so that concurrent duplicates
+    // resolve to the same row without re-running the balance check.
+    if (idempotencyKey) {
+      const { rows: existing } = await client.query<{ id: string }>(
+        `SELECT id::text FROM refunds
+         WHERE payment_id = $1::uuid AND idempotency_key = $2`,
+        [paymentId, idempotencyKey]
+      );
+      if (existing[0]) return { id: existing[0].id };
+    }
+
     // Lock order row
     const { rows: lockRows } = await client.query<{ id: string }>(
       `SELECT id::text FROM orders
@@ -346,57 +361,97 @@ export async function createRefund(
     }
 
     try {
-      const { rows } = await client.query<{ id: string }>(
-        `INSERT INTO refunds
-           (payment_id, order_id, amount, reason, notes, status,
-            restock_inventory, provider_reference, created_by)
-         VALUES ($1::uuid, $2::uuid, $3, $4, $5, 'pending', $6, $7, $8)
-         RETURNING id::text`,
-        [
-          paymentId,
-          orderId,
-          amount,
-          reason,
-          input.notes ?? null,
-          input.restock ?? true,
-          input.provider_reference ?? null,
-          userId ?? null,
-        ]
-      );
+      // Insert with ON CONFLICT on idempotency_key — concurrent duplicate
+      // POSTs with the same key both race to insert; exactly one wins and the
+      // other gets DO NOTHING, then falls through to the SELECT below.
+      const { rows } = idempotencyKey
+        ? await client.query<{ id: string }>(
+            `INSERT INTO refunds
+               (payment_id, order_id, amount, reason, notes, status,
+                restock_inventory, provider_reference, idempotency_key, created_by)
+             VALUES ($1::uuid, $2::uuid, $3, $4, $5, 'pending', $6, $7, $8, $9)
+             ON CONFLICT (payment_id, idempotency_key)
+               WHERE idempotency_key IS NOT NULL
+             DO NOTHING
+             RETURNING id::text`,
+            [
+              paymentId,
+              orderId,
+              amount,
+              reason,
+              input.notes ?? null,
+              input.restock ?? true,
+              input.provider_reference ?? null,
+              idempotencyKey,
+              userId ?? null,
+            ]
+          )
+        : await client.query<{ id: string }>(
+            `INSERT INTO refunds
+               (payment_id, order_id, amount, reason, notes, status,
+                restock_inventory, provider_reference, created_by)
+             VALUES ($1::uuid, $2::uuid, $3, $4, $5, 'pending', $6, $7, $8)
+             RETURNING id::text`,
+            [
+              paymentId,
+              orderId,
+              amount,
+              reason,
+              input.notes ?? null,
+              input.restock ?? true,
+              input.provider_reference ?? null,
+              userId ?? null,
+            ]
+          );
 
-      const refundId = rows[0]?.id;
-      if (!refundId) throw new Error("createRefund: no id returned");
+      if (rows[0]) {
+        const refundId = rows[0].id;
 
-      // Update total_refunded on order
-      const { rowCount: updateRowCount } = await client.query(
-        `UPDATE orders SET total_refunded = total_refunded + $2::numeric, updated_at = now()
-         WHERE id = $1::uuid`,
-        [orderId, amount]
-      );
-      if ((updateRowCount ?? 0) === 0) {
-        const e = new Error("createRefund: order not found when updating total_refunded");
-        (e as NodeJS.ErrnoException).code = "NOT_FOUND";
-        throw e;
-      }
-
-      // Insert event (best-effort, use savepoint to avoid aborting the transaction)
-      try {
-        await client.query("SAVEPOINT refund_event");
-        await client.query(
-          `INSERT INTO order_events (order_id, type, data, created_by)
-           VALUES ($1::uuid, 'refund_created',
-                   jsonb_build_object('refund_id', $2::text, 'amount', $3::numeric),
-                   $4)`,
-          [orderId, refundId, amount, userId ?? null]
+        // Update total_refunded on order
+        const { rowCount: updateRowCount } = await client.query(
+          `UPDATE orders SET total_refunded = total_refunded + $2::numeric, updated_at = now()
+           WHERE id = $1::uuid`,
+          [orderId, amount]
         );
-        await client.query("RELEASE SAVEPOINT refund_event");
-      } catch {
-        await client.query("ROLLBACK TO SAVEPOINT refund_event");
+        if ((updateRowCount ?? 0) === 0) {
+          const e = new Error("createRefund: order not found when updating total_refunded");
+          (e as NodeJS.ErrnoException).code = "NOT_FOUND";
+          throw e;
+        }
+
+        // Insert event (best-effort, use savepoint to avoid aborting the transaction)
+        try {
+          await client.query("SAVEPOINT refund_event");
+          await client.query(
+            `INSERT INTO order_events (order_id, type, data, created_by)
+             VALUES ($1::uuid, 'refund_created',
+                     jsonb_build_object('refund_id', $2::text, 'amount', $3::numeric),
+                     $4)`,
+            [orderId, refundId, amount, userId ?? null]
+          );
+          await client.query("RELEASE SAVEPOINT refund_event");
+        } catch {
+          await client.query("ROLLBACK TO SAVEPOINT refund_event");
+        }
+
+        return { id: refundId };
       }
 
-      return { id: refundId };
+      // ON CONFLICT fired (concurrent duplicate with same idempotency_key) —
+      // the row was already inserted; return it.
+      if (idempotencyKey) {
+        const { rows: deduped } = await client.query<{ id: string }>(
+          `SELECT id::text FROM refunds
+           WHERE payment_id = $1::uuid AND idempotency_key = $2`,
+          [paymentId, idempotencyKey]
+        );
+        const existingId = deduped[0]?.id;
+        if (existingId) return { id: existingId };
+      }
+
+      throw new Error("createRefund: no id returned");
     } catch (err: unknown) {
-      // Idempotency: duplicate (payment_id, provider_reference)
+      // Idempotency: duplicate (payment_id, provider_reference) from webhook path
       if (
         err instanceof Error &&
         err.message.includes("uq_refunds_payment_provider_reference")
