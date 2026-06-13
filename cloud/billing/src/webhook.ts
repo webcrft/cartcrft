@@ -307,7 +307,9 @@ export async function billingWebhookPlugin(
   instance: any,
   opts: BillingWebhookPluginOptions & Record<string, unknown>
 ): Promise<void> {
-  // Resolve pool from options or fall back to DATABASE_URL.
+  // Reuse the pool passed by the host (backend passes getPool() via opts.pool).
+  // The fallback new Pool is only for standalone worker contexts that mount this
+  // plugin without a host app pool — it is not reached when mounted in backend/app.ts.
   const pool: pg.Pool = opts.pool ?? (() => {
     const { Pool } = require('pg') as typeof import('pg'); // eslint-disable-line @typescript-eslint/no-require-imports
     return new Pool({ connectionString: process.env['DATABASE_URL'] });

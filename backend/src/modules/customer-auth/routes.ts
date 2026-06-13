@@ -248,12 +248,21 @@ export const customerAuthPlugin: FastifyPluginAsyncZod = async (app) => {
     return reply.send({ ok: true });
   });
 
-  // email/connect — stub for connecting custom SMTP (returns ok)
+  // email/connect — SMTP connectivity check (not implemented).
+  // Returns 501 NOT_IMPLEMENTED rather than a misleading { ok: true } success.
+  // A real SMTP connectivity check (nodemailer verify, etc.) is out of scope
+  // until a dedicated SMTP provider integration is added; returning a false
+  // success would silently hide misconfigured credentials.
   app.post(`${base}/auth/email/connect`, {
     schema: { params: StoreIdParams },
     preHandler: [storeAuthAdmin],
   }, async (_request, reply) => {
-    return reply.send({ ok: true });
+    return reply.status(501).send({
+      error: {
+        code: "NOT_IMPLEMENTED",
+        message: "SMTP connectivity check is not implemented. Configure your SMTP provider credentials and send a test email via POST /auth/email/test to verify delivery.",
+      },
+    });
   });
 
   // ── Public auth info ───────────────────────────────────────────────────────

@@ -5,9 +5,9 @@
  *   webcrft-mono/backend/internal/webhooks/router/router.go
  *
  * Routes:
- *   POST /webhooks/:storeId/payment/:providerRef  (path-based — T2.5)
- *   POST /{providerType}/{ref}  via Host: {storeId}.webhooks.{BASE_DOMAIN}  (T6.3)
- *   GET  /commerce/stores/:storeId/webhook-url  (T6.3)
+ *   POST /webhooks/:storeId/payment/:providerRef  (path-based)
+ *   POST /{providerType}/{ref}  via Host: {storeId}.webhooks.{BASE_DOMAIN}  (subdomain routing)
+ *   GET  /commerce/stores/:storeId/webhook-url
  *
  * The `:providerRef` param is the payment provider id or slug. The handler:
  *  1. Reads the raw body (needed for HMAC verification — must run before JSON parsing).
@@ -18,11 +18,11 @@
  *  5. Records payment success / refund in the appropriate tables.
  *  6. Logs the request to payment_provider_webhook_log.
  *
- * Note: the tracking webhook /webhooks/:storeId/tracking/:shipmentId is owned by
- * T2.6 (logistics). This router is mounted at /webhooks/:storeId/payment/:providerRef
+ * Note: the tracking webhook /webhooks/:storeId/tracking/:shipmentId is handled by
+ * the shipping/logistics module. This router is mounted at /webhooks/:storeId/payment/:providerRef
  * so both coexist under the same /webhooks prefix without conflict.
  *
- * Subdomain routing (T6.3):
+ * Subdomain routing:
  *   An onRequest hook inspects the Host header. If it matches
  *   {storeId}.webhooks.{BASE_DOMAIN}, the storeId is extracted and the
  *   path is interpreted as /{providerType}/{providerRef}. Both path-based and

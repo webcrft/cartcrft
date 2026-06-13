@@ -214,8 +214,7 @@ export async function getWebhookLog(storeId: string): Promise<DeliveryLogRow[]> 
 }
 
 export async function getWebhookUrl(storeId: string): Promise<string> {
-  // The webhook URL for the store is the inbound endpoint.
-  // This is a placeholder — actual inbound routing is T2.5.
+  // Returns the inbound payment webhook endpoint for the store.
   const pool = getPool();
   const res = await pool.query<{ id: string }>(
     `SELECT id::text FROM stores WHERE id = $1::uuid`,

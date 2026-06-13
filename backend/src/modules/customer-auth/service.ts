@@ -377,6 +377,18 @@ export async function updateAuthConfig(
 
 // ── JWT ───────────────────────────────────────────────────────────────────────
 
+/**
+ * Audience claim for a per-store customer JWT.
+ * Scoped to the store so a customer token from store A is rejected by store B's
+ * verifyCustomerJwt() call even if they share the same JWT secret (defence in depth).
+ */
+export function customerJwtAudience(storeId: string): string {
+  return `cartcrft:store:${storeId}`;
+}
+
+/** Issuer claim for all customer (storefront) JWTs. */
+export const CUSTOMER_JWT_ISSUER = "cartcrft" as const;
+
 export async function issueCustomerJwt(
   secret: string,
   customerId: string,
@@ -388,16 +400,21 @@ export async function issueCustomerJwt(
 ): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
   const key = new TextEncoder().encode(secret);
+  // jti omitted: no revocation list exists for customer tokens.
+  // Revocation is handled via customers.tokens_invalidated_at timestamp
+  // (checked in verifyCustomerJwt), which is a lighter-weight and actually
+  // enforced mechanism.
   return new SignJWT({
     sub: customerId,
     email,
     store: storeId,
     is_admin: isAdmin,
     tags,
-    jti: randomBytes(16).toString("hex"),
     iat: now,
   })
     .setProtectedHeader({ alg: "HS256" })
+    .setIssuer(CUSTOMER_JWT_ISSUER)
+    .setAudience(customerJwtAudience(storeId))
     .setExpirationTime(`${expiryMins}m`)
     .sign(key);
 }
@@ -405,11 +422,22 @@ export async function issueCustomerJwt(
 export async function verifyCustomerJwt(
   token: string,
   secret: string,
-  pool?: pg.Pool
+  pool?: pg.Pool,
+  storeId?: string
 ): Promise<CustomerClaims | null> {
   try {
     const key = new TextEncoder().encode(secret);
-    const { payload } = await jwtVerify(token, key, { algorithms: ["HS256"] });
+    const verifyOpts: Parameters<typeof jwtVerify>[2] = {
+      algorithms: ["HS256"],
+      issuer: CUSTOMER_JWT_ISSUER,
+    };
+    // Validate store-scoped audience when storeId is provided.
+    // When storeId is absent (legacy call sites during migration) skip audience
+    // check — the store claim is still validated below.
+    if (storeId) {
+      verifyOpts.audience = customerJwtAudience(storeId);
+    }
+    const { payload } = await jwtVerify(token, key, verifyOpts);
     const claims = payload as CustomerClaims;
     if (!claims.sub || !claims.store) return null;
 
@@ -453,7 +481,7 @@ export async function bearerAuth(
   }
   if (!cfg.jwtSecret) return null;
 
-  return verifyCustomerJwt(bearer, cfg.jwtSecret, pool);
+  return verifyCustomerJwt(bearer, cfg.jwtSecret, pool, storeId);
 }
 
 // ── Sessions ──────────────────────────────────────────────────────────────────

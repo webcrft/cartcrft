@@ -3,13 +3,19 @@
  *
  * JWT claim shape (management / dashboard tokens):
  * {
+ *   iss:   "cartcrft",               // issuer — always "cartcrft" for platform tokens
+ *   aud:   "cartcrft",               // audience — always "cartcrft" for platform tokens
  *   sub:   "<userId UUID>",          // user identifier
  *   org:   "<orgId UUID>",           // org the user is acting in
  *   email: "<email>",                // informational
  *   iat:   <unix seconds>,
  *   exp:   <unix seconds>,
- *   jti:   "<uuid>",                 // for future blacklisting
  * }
+ *
+ * jti (JWT ID) decision: DROPPED. No revocation list exists in this codebase.
+ * Keeping jti without a blacklist provides false safety: callers see the claim
+ * and assume revocation is possible, but it is not checked. If a revocation list
+ * is added in a future task, restore jti at that point.
  *
  * Uses `jose` (JOSE spec, HS256) — same library installed in the skeleton.
  * Mirrors webcrft JWT shape (sub = userId, org claim added for cartcrft
@@ -20,8 +26,15 @@
  */
 
 import { SignJWT, jwtVerify, type JWTPayload } from "jose";
-import { randomUUID } from "node:crypto";
 import { config } from "../../config/config.js";
+
+// ── Constants ─────────────────────────────────────────────────────────────────
+
+/** Issuer claim value for all platform (management/dashboard) JWTs. */
+export const JWT_ISSUER = "cartcrft" as const;
+
+/** Audience claim value for all platform JWTs. */
+export const JWT_AUDIENCE = "cartcrft" as const;
 
 // ── Claim types ───────────────────────────────────────────────────────────────
 
@@ -40,6 +53,10 @@ function secretKey(): Uint8Array {
 /**
  * Mint a signed JWT for a user + org pair.
  *
+ * Sets `iss: "cartcrft"` and `aud: "cartcrft"` on every token so that
+ * verifyJwt() can reject tokens issued by a different system or intended for
+ * a different audience (defence-in-depth against key reuse across services).
+ *
  * Used by:
  *  - Platform auth (T2.8) when a dashboard user logs in.
  *  - mintTestJwt() in test suites.
@@ -57,17 +74,18 @@ export async function mintJwt(opts: {
     sub: opts.userId,
     org: opts.orgId,
     email: opts.email,
-    jti: randomUUID(),
     iat: now,
   })
     .setProtectedHeader({ alg: "HS256" })
+    .setIssuer(JWT_ISSUER)
+    .setAudience(JWT_AUDIENCE)
     .setExpirationTime(`${expHours}h`)
     .sign(secretKey());
 }
 
 /**
  * Verify + decode a JWT.
- * Returns the claims on success, null on failure (expired / invalid).
+ * Returns the claims on success, null on failure (expired / invalid / wrong iss or aud).
  */
 export async function verifyJwt(
   token: string
@@ -75,6 +93,8 @@ export async function verifyJwt(
   try {
     const { payload } = await jwtVerify(token, secretKey(), {
       algorithms: ["HS256"],
+      issuer: JWT_ISSUER,
+      audience: JWT_AUDIENCE,
     });
     const claims = payload as CartcrftJwtClaims;
     if (!claims.sub || !claims.org) return null;
@@ -90,6 +110,7 @@ export async function verifyJwt(
  * Signs a JWT with JWT_SECRET from the environment.  Suites import this
  * directly; no REST endpoint needed to obtain a test token.
  *
+ * Includes iss/aud so tokens minted here pass verifyJwt() validation.
  * Claim shape documented in docs/parity-endpoints.md.
  */
 export async function mintTestJwt(opts: {

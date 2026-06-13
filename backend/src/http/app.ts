@@ -342,7 +342,7 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
   // ── UCP adapter (T6.2) ────────────────────────────────────────────────────
   await app.register(ucpPlugin);
 
-  // ── Inbound payment webhook router (T2.5) ─────────────────────────────────
+  // ── Inbound payment webhook router ────────────────────────────────────────
   await app.register(webhooksPlugin);
 
   // ── T2.9 — B2B, subscriptions, returns, digital, engagement ──────────────
@@ -360,10 +360,12 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
     // workspace dep (cloud-license boundary). TypeScript cannot statically verify
     // the import target when the package may be absent. The plugin function is
     // duck-typed by Fastify's register() call — safe at runtime. /* any: optional cloud dep */
+    // Pass the backend's existing pg.Pool so billingWebhookPlugin reuses the
+    // connection pool instead of opening a second one from DATABASE_URL.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const cloudBilling = await import("@cartcrft/cloud-billing" as any) as { billingWebhookPlugin: (instance: unknown, opts: Record<string, unknown>) => Promise<void> };
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (app as any).register(cloudBilling.billingWebhookPlugin, { prefix: "/webhooks/billing" });
+    await (app as any).register(cloudBilling.billingWebhookPlugin, { prefix: "/webhooks/billing", pool: getPool() });
   }
 
   // ── T6.5 — Abandoned-cart recovery emails (routes) ───────────────────────────
