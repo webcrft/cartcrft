@@ -200,7 +200,7 @@ export async function webhooksPlugin(app: FastifyInstance): Promise<void> {
     const providerRef = params["providerRef"] ?? "";
 
     if (!providerType) {
-      return reply.status(400).send({ message: "path must be /{provider_type}/{provider_ref}" });
+      return reply.status(400).send({ error: { code: "INVALID_PAYLOAD", message: "path must be /{provider_type}/{provider_ref}" } });
     }
 
     const rawBody: Buffer =
@@ -391,7 +391,7 @@ async function handleWebhook(
       captureHeaders(request), body,
       404, "provider not found", 0
     );
-    return reply.status(404).send({ message: "provider not found" });
+    return reply.status(404).send({ error: { code: "WEBHOOK_PROVIDER_NOT_FOUND", message: "provider not found" } });
   }
 
   let statusCode = 200;
@@ -401,12 +401,17 @@ async function handleWebhook(
     const result = await dispatch(request, prov, storeId, body);
     statusCode = result.status;
     message = result.message;
-    reply.status(statusCode).send({ message });
+    if (statusCode >= 400) {
+      const code = result.code ?? (statusCode === 401 ? "INVALID_SIGNATURE" : "WEBHOOK_ERROR");
+      reply.status(statusCode).send({ error: { code, message } });
+    } else {
+      reply.status(statusCode).send({ message });
+    }
   } catch (err) {
     statusCode = 500;
     message = err instanceof Error ? err.message : "internal error";
     request.log.error({ err }, "webhook dispatch error");
-    reply.status(500).send({ message });
+    reply.status(500).send({ error: { code: "INTERNAL_ERROR", message } });
   } finally {
     const durationMs = Date.now() - startMs;
     void logEvent(
@@ -418,12 +423,22 @@ async function handleWebhook(
   }
 }
 
+// DispatchResult carries an optional machine-readable error code for non-2xx
+// results; when absent the caller falls back to a generic code.
+interface DispatchResult {
+  status: number;
+  message: string;
+  /** Machine-readable error code included in the { error: { code, message } }
+   *  envelope for non-2xx responses. Only set on error paths. */
+  code?: string;
+}
+
 async function dispatch(
   request: FastifyRequest,
   prov: ProviderRow,
   storeId: string,
   body: Buffer
-): Promise<{ status: number; message: string }> {
+): Promise<DispatchResult> {
   switch (prov.type) {
     case "stripe":
       return dispatchStripe(request, prov, storeId, body);
@@ -446,13 +461,13 @@ async function dispatchStripe(
   prov: ProviderRow,
   storeId: string,
   body: Buffer
-): Promise<{ status: number; message: string }> {
+): Promise<DispatchResult> {
   // Extract secrets from provider config.
   const primarySecret = configSecret(prov.config, "webhook_secret");
   const secondarySecret = configSecret(prov.config, "webhook_secret_secondary");
 
   if (!primarySecret && !secondarySecret) {
-    return { status: 401, message: "webhook secret not configured" };
+    return { status: 401, code: "INVALID_SIGNATURE", message: "webhook secret not configured" };
   }
 
   const sigHeader = (request.headers["stripe-signature"] as string) ?? "";
@@ -489,6 +504,7 @@ async function dispatchStripe(
   if (verifyErr || !ev!) {
     return {
       status: 401,
+      code: "INVALID_SIGNATURE",
       message: `stripe signature invalid: ${verifyErr?.message ?? "unknown"}`,
     };
   }
@@ -550,10 +566,10 @@ async function dispatchPaystack(
   prov: ProviderRow,
   storeId: string,
   body: Buffer
-): Promise<{ status: number; message: string }> {
+): Promise<DispatchResult> {
   const secretKey = configSecret(prov.config, "secret_key");
   if (!secretKey) {
-    return { status: 401, message: "paystack secret not configured" };
+    return { status: 401, code: "INVALID_SIGNATURE", message: "paystack secret not configured" };
   }
 
   const sigHeader = (request.headers["x-paystack-signature"] as string) ?? "";
@@ -563,6 +579,7 @@ async function dispatchPaystack(
   } catch (e) {
     return {
       status: 401,
+      code: "INVALID_SIGNATURE",
       message: `paystack signature invalid: ${e instanceof Error ? e.message : String(e)}`,
     };
   }
@@ -617,10 +634,10 @@ async function dispatchXendit(
   prov: ProviderRow,
   storeId: string,
   body: Buffer
-): Promise<{ status: number; message: string }> {
+): Promise<DispatchResult> {
   const webhookToken = configSecret(prov.config, "webhook_token");
   if (!webhookToken) {
-    return { status: 401, message: "xendit webhook token not configured" };
+    return { status: 401, code: "INVALID_SIGNATURE", message: "xendit webhook token not configured" };
   }
 
   const callbackToken = (request.headers["x-callback-token"] as string) ?? "";
@@ -630,6 +647,7 @@ async function dispatchXendit(
   } catch (e) {
     return {
       status: 401,
+      code: "INVALID_SIGNATURE",
       message: `xendit callback token invalid: ${e instanceof Error ? e.message : String(e)}`,
     };
   }
@@ -675,10 +693,10 @@ async function dispatchRazorpay(
   prov: ProviderRow,
   storeId: string,
   body: Buffer
-): Promise<{ status: number; message: string }> {
+): Promise<DispatchResult> {
   const webhookSecret = configSecret(prov.config, "webhook_secret");
   if (!webhookSecret) {
-    return { status: 401, message: "razorpay webhook secret not configured" };
+    return { status: 401, code: "INVALID_SIGNATURE", message: "razorpay webhook secret not configured" };
   }
 
   const sigHeader = (request.headers["x-razorpay-signature"] as string) ?? "";
@@ -688,6 +706,7 @@ async function dispatchRazorpay(
   } catch (e) {
     return {
       status: 401,
+      code: "INVALID_SIGNATURE",
       message: `razorpay signature invalid: ${e instanceof Error ? e.message : String(e)}`,
     };
   }
@@ -746,14 +765,14 @@ async function dispatchCustom(
   prov: ProviderRow,
   storeId: string,
   body: Buffer
-): Promise<{ status: number; message: string }> {
+): Promise<DispatchResult> {
   if (!prov.webhookSecret) {
-    return { status: 401, message: "webhook secret not configured" };
+    return { status: 401, code: "INVALID_SIGNATURE", message: "webhook secret not configured" };
   }
 
   // HMAC-SHA256 validation.
   if (!validateHMAC(body, prov.webhookSecret, request)) {
-    return { status: 401, message: "invalid signature" };
+    return { status: 401, code: "INVALID_SIGNATURE", message: "invalid signature" };
   }
 
   // 5-minute timestamp window (X-Webhook-Timestamp header).
@@ -763,7 +782,7 @@ async function dispatchCustom(
     if (!isNaN(parsed)) {
       const skew = Math.abs(Math.floor(Date.now() / 1000) - parsed);
       if (skew > 300) {
-        return { status: 401, message: "stale timestamp" };
+        return { status: 401, code: "INVALID_SIGNATURE", message: "stale timestamp" };
       }
     }
   }
