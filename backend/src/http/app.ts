@@ -20,6 +20,8 @@ import {
   validatorCompiler,
   jsonSchemaTransform,
 } from "fastify-type-provider-zod";
+import fastifyCors from "@fastify/cors";
+import fastifyHelmet from "@fastify/helmet";
 import { getPool } from "../db/pool.js";
 import { authPlugin, rateLimitHook } from "../lib/auth/middleware.js";
 import { storesPlugin } from "../modules/stores/routes.js";
@@ -83,6 +85,74 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
   // ── Zod type provider ───────────────────────────────────────────────────
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
+
+  // ── Security: CORS ──────────────────────────────────────────────────────
+  //
+  // Allowed origins: FRONTEND_URL (always) + comma-separated CORS_ORIGINS env
+  // (optional, e.g. a CDN or partner storefront) + localhost variants in dev.
+  // credentials: true so the storefront SDK can send session cookies / auth
+  // headers from a browser context.
+  {
+    const frontendUrl = process.env["FRONTEND_URL"] ?? "http://localhost:5173";
+    const isDev = (process.env["APP_ENV"] ?? "development") !== "production";
+
+    const allowedOrigins = new Set<string>([frontendUrl]);
+
+    const extraOrigins = process.env["CORS_ORIGINS"];
+    if (extraOrigins) {
+      for (const o of extraOrigins.split(",")) {
+        const trimmed = o.trim();
+        if (trimmed) allowedOrigins.add(trimmed);
+      }
+    }
+
+    // In dev mode allow common localhost ports so the admin + storefront dev
+    // servers work without any extra env setup.
+    if (isDev) {
+      for (const port of ["3000", "3001", "4000", "5173", "5174", "8080"]) {
+        allowedOrigins.add(`http://localhost:${port}`);
+        allowedOrigins.add(`http://127.0.0.1:${port}`);
+      }
+    }
+
+    await app.register(fastifyCors, {
+      origin: (origin, cb) => {
+        // No Origin header → same-origin / curl / server-to-server → allow.
+        if (!origin) return cb(null, true);
+        cb(null, allowedOrigins.has(origin));
+      },
+      credentials: true,
+      methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
+      allowedHeaders: [
+        "Authorization",
+        "Content-Type",
+        "X-Request-Id",
+        "X-Api-Key",
+        "Idempotency-Key",
+        "Mcp-Session-Id",
+      ],
+      exposedHeaders: ["X-Request-Id"],
+      maxAge: 86_400, // 24 h preflight cache
+    });
+  }
+
+  // ── Security: Helmet (security response headers) ────────────────────────
+  //
+  // CSP is intentionally disabled (contentSecurityPolicy: false).
+  //
+  // Rationale:
+  //  - This is a headless API server, not a browser document server. The only
+  //    HTML-adjacent assets served are /storefront.js (an IIFE bundle) and the
+  //    MCP/SSE stream. Neither needs a document-level CSP — that's the
+  //    storefront's responsibility.
+  //  - A strict CSP on a JSON API would block nothing meaningful (browsers
+  //    don't apply CSP to XHR/fetch response bodies) but could break tooling.
+  //  - Strict-Transport-Security, X-Content-Type-Options, X-Frame-Options,
+  //    Referrer-Policy, and Permissions-Policy are all still active — these
+  //    headers are valuable even on API responses.
+  await app.register(fastifyHelmet, {
+    contentSecurityPolicy: false,
+  });
 
   // ── OpenAPI 3.1 (opt-in via CARTCRFT_OPENAPI=1 or buildApp({ openapi: true })) ─
   if (enableOpenApi) {

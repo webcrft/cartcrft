@@ -41,6 +41,12 @@ const configSchema = z.object({
   FRONTEND_URL: z.string().url().default("http://localhost:5173"),
   BASE_DOMAIN: z.string().default("localhost"),
 
+  // CORS — optional comma-separated list of additional allowed origins.
+  // E.g. CORS_ORIGINS=https://store.example.com,https://www.example.com
+  // FRONTEND_URL is always included. In dev (APP_ENV !== production) localhost
+  // origins are also allowed automatically.
+  CORS_ORIGINS: z.string().optional(),
+
   // Provider secrets encryption (AES-256-GCM)
   // Optional — keys stored unencrypted in dev without it; required in prod.
   AUTH_SECRETS_KEY: z.string().optional(),
