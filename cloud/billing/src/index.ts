@@ -16,6 +16,13 @@ export {
   isSimEnabled,
 } from './billingsim.js';
 
+// ── Clock helpers ─────────────────────────────────────────────────────────────
+export {
+  type Clock,
+  SystemClock,
+  ManualClock,
+} from './clock.js';
+
 // ── Migration list ────────────────────────────────────────────────────────────
 export { billingMigrations } from './migrations.js';
 
@@ -74,6 +81,13 @@ export {
   type WorkerConfig,
   type WorkerRunResult,
 } from './worker.js';
+
+// ── Host convenience: start billing worker from pool + clock + opts ────────────
+export {
+  startBillingWorker,
+  type StartBillingWorkerOpts,
+  type BillingWorkerHandle,
+} from './startBillingWorker.js';
 
 // ── Webhook handler + Fastify plugin ─────────────────────────────────────────
 export {

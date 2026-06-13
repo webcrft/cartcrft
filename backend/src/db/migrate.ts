@@ -6,6 +6,11 @@
  *  3. For each file not yet in schema_migrations:
  *       BEGIN; <file SQL>; INSERT INTO schema_migrations(name) VALUES ($1); COMMIT;
  *  4. Skip already-applied files (idempotent re-run).
+ *  5. When CARTCRFT_CLOUD is set, also apply cloud/billing/migrations/*.sql after
+ *     the backend migrations.  Cloud migration names are stored with a "cloud/"
+ *     prefix (e.g. "cloud/0001_billing.sql") so they never collide with backend
+ *     migration names.  The cloud package is dynamic-imported so the OSS build
+ *     works with the cloud package absent.
  *
  * Works whether or not any .sql files exist yet — a fresh run with an empty
  * migrations dir is a valid no-op.
@@ -56,14 +61,16 @@ function getMigrationFiles(): string[] {
 
 /**
  * Apply a single migration file inside its own transaction.
- * Records the filename in schema_migrations on success.
+ * Records the tracking name in schema_migrations on success.
+ * The trackingName may differ from the filename when the file is from an
+ * external package (e.g. "cloud/0001_billing.sql").
  * Throws on error (letting the caller abort).
  */
 async function applyFile(
   pool: pg.Pool,
-  filename: string
+  filePath: string,
+  trackingName: string
 ): Promise<void> {
-  const filePath = path.join(migrationsDir, filename);
   const sql = fs.readFileSync(filePath, "utf-8");
 
   const client = await pool.connect();
@@ -72,7 +79,7 @@ async function applyFile(
     await client.query(sql);
     await client.query(
       "INSERT INTO schema_migrations (name) VALUES ($1)",
-      [filename]
+      [trackingName]
     );
     await client.query("COMMIT");
   } catch (err) {
@@ -84,8 +91,43 @@ async function applyFile(
 }
 
 /**
+ * Resolve cloud billing migration paths via dynamic import of @cartcrft/cloud-billing.
+ * Returns [] when the package is absent (OSS build) or CARTCRFT_CLOUD is unset.
+ * Each entry is { filePath, trackingName } where trackingName has the "cloud/" prefix.
+ */
+async function getCloudMigrationEntries(): Promise<
+  { filePath: string; trackingName: string }[]
+> {
+  if (!process.env["CARTCRFT_CLOUD"]) return [];
+
+  let billingMigrations: () => string[];
+  try {
+    // Dynamic import keeps the OSS build clean when @cartcrft/cloud-billing is absent.
+    const cloudBilling = await import("@cartcrft/cloud-billing" as never) as {
+      billingMigrations: () => string[];
+    };
+    billingMigrations = cloudBilling.billingMigrations;
+  } catch (err) {
+    console.warn(
+      "[migrate] CARTCRFT_CLOUD set but @cartcrft/cloud-billing unavailable:",
+      err instanceof Error ? err.message : String(err)
+    );
+    return [];
+  }
+
+  const paths = billingMigrations();
+  return paths.map((filePath) => ({
+    filePath,
+    // e.g. /abs/path/migrations/0001_billing.sql → "cloud/0001_billing.sql"
+    trackingName: `cloud/${path.basename(filePath)}`,
+  }));
+}
+
+/**
  * Run all pending migrations.
- * Returns the number of migrations applied.
+ * When CARTCRFT_CLOUD is set, also applies cloud billing migrations after the
+ * backend migrations.  Cloud names are stored with a "cloud/" prefix.
+ * Returns the total number of migrations applied.
  */
 export async function runMigrations(): Promise<number> {
   const pool = getPool();
@@ -100,8 +142,19 @@ export async function runMigrations(): Promise<number> {
     client.release();
   }
 
-  const files = getMigrationFiles();
-  const pending = files.filter((f) => !applied.has(f));
+  // ── Backend migrations ─────────────────────────────────────────────────────
+  const backendFiles = getMigrationFiles();
+  const pendingBackend = backendFiles
+    .filter((f) => !applied.has(f))
+    .map((f) => ({ filePath: path.join(migrationsDir, f), trackingName: f }));
+
+  // ── Cloud billing migrations (CARTCRFT_CLOUD only) ─────────────────────────
+  const cloudEntries = await getCloudMigrationEntries();
+  const pendingCloud = cloudEntries.filter(
+    (e) => !applied.has(e.trackingName)
+  );
+
+  const pending = [...pendingBackend, ...pendingCloud];
 
   if (pending.length === 0) {
     console.log("[migrate] Everything up to date.");
@@ -109,9 +162,9 @@ export async function runMigrations(): Promise<number> {
   }
 
   console.log(`[migrate] ${pending.length} pending migration(s):`);
-  for (const filename of pending) {
-    process.stdout.write(`  → ${filename} ... `);
-    await applyFile(pool, filename);
+  for (const { filePath, trackingName } of pending) {
+    process.stdout.write(`  → ${trackingName} ... `);
+    await applyFile(pool, filePath, trackingName);
     console.log("ok");
   }
   console.log("[migrate] Done!");

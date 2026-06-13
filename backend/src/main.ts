@@ -99,17 +99,138 @@ async function runWorker(): Promise<void> {
   const stopRecovery = startRecoveryWorkerJob({ mailer });
   console.log("[worker] recovery job registered (5-min poll interval)");
 
+  // H0.2 — Cloud billing worker (CARTCRFT_CLOUD only).
+  // Dynamic import keeps the OSS build working with @cartcrft/cloud-billing absent.
+  let stopBillingWorker: (() => void) | null = null;
+  if (process.env["CARTCRFT_CLOUD"]) {
+    stopBillingWorker = await startCloudBillingWorker();
+  }
+
   // Keep alive.
   await new Promise<void>((resolve) => {
     const shutdown = () => {
       console.log("[worker] shutdown");
       stopEmbedding();
       stopRecovery();
+      if (stopBillingWorker) stopBillingWorker();
       void closePool().then(resolve);
     };
     process.on("SIGINT", shutdown);
     process.on("SIGTERM", shutdown);
   });
+}
+
+/**
+ * Start the cloud billing worker loop (subscription renewals + FX refresh).
+ * Uses SimClock when BILLING_SIM_DAY_SECONDS is set, SystemClock otherwise.
+ * Worker locks (workerlock.ts / H2.4) are used to prevent double-processing in
+ * multi-replica deploys.
+ *
+ * Returns a stop function for graceful shutdown.
+ */
+async function startCloudBillingWorker(): Promise<() => void> {
+  let cloudBilling: {
+    createBillingWorker: (pool: import("pg").Pool, cfg: unknown) => {
+      start(): Promise<void>;
+      stop(): void;
+      enqueueUpcomingRenewals(): Promise<number>;
+    };
+  };
+
+  try {
+    cloudBilling = await import("@cartcrft/cloud-billing" as never) as typeof cloudBilling;
+  } catch (err) {
+    console.warn(
+      "[worker] CARTCRFT_CLOUD set but @cartcrft/cloud-billing unavailable — billing worker not started:",
+      err instanceof Error ? err.message : String(err)
+    );
+    return () => { /* no-op */ };
+  }
+
+  const { getPool: getMainPool } = await import("./db/pool.js");
+  const pool = getMainPool();
+
+  // Build the clock — SimClock when BILLING_SIM_DAY_SECONDS is in sim mode.
+  let clock: { now(): Date };
+  const simConfig = {
+    billingSimEnabled: config.BILLING_SIM_ENABLED,
+    billingSimDaySeconds: config.BILLING_SIM_DAY_SECONDS,
+  };
+
+  if (config.BILLING_SIM_ENABLED && config.BILLING_SIM_DAY_SECONDS > 0) {
+    const { SimClock } = await import("./clock.js");
+    clock = new SimClock(new Date(), config.BILLING_SIM_DAY_SECONDS);
+    console.log(
+      `[worker] billing clock: SimClock (1 day = ${config.BILLING_SIM_DAY_SECONDS}s)`
+    );
+  } else {
+    const { SystemClock } = await import("./clock.js");
+    clock = new SystemClock();
+    console.log("[worker] billing clock: SystemClock");
+  }
+
+  const paystackSecretKey = config.PAYSTACK_SECRET_KEY ?? "";
+
+  const worker = cloudBilling.createBillingWorker(pool, {
+    clock,
+    paystackSecretKey,
+    billingSimConfig: simConfig,
+    exchangeRateApiKey: config.EXCHANGE_RATE_API_KEY,
+  });
+
+  // Acquire worker lock so multi-replica deploys don't double-drain the queue.
+  const { acquireLock, releaseLock } = await import("./lib/workerlock.js");
+  const LOCK_NAME = "billing-worker";
+  const LOCK_TTL_MS = 65_000; // slightly longer than a poll cycle
+
+  let lockToken: string | null = null;
+  try {
+    lockToken = await acquireLock(LOCK_NAME, LOCK_TTL_MS);
+    if (!lockToken) {
+      console.log(
+        "[worker] billing worker lock held by another process — this replica will skip"
+      );
+      return () => { /* no-op */ };
+    }
+    console.log("[worker] billing worker lock acquired");
+  } catch (err) {
+    // Lock unavailable (DB issue) — proceed without lock; queue SKIP LOCKED prevents double work.
+    console.warn(
+      "[worker] could not acquire billing worker lock (proceeding without):",
+      err instanceof Error ? err.message : String(err)
+    );
+  }
+
+  // Kick off renewal enqueuer loop alongside the queue drain loop.
+  // The worker.start() loop drains billing_queue; we run enqueueUpcomingRenewals
+  // on the same cadence in a separate setInterval.
+  const pollMs = config.BILLING_SIM_ENABLED && config.BILLING_SIM_DAY_SECONDS > 0
+    ? Math.max(1_000, Math.min(60_000, config.BILLING_SIM_DAY_SECONDS * 100))
+    : 60_000;
+
+  const enqueueTimer = setInterval(() => {
+    void worker.enqueueUpcomingRenewals().then((n) => {
+      if (n > 0) console.log(`[billing-worker] enqueued ${n} upcoming renewal(s)`);
+    }).catch((err) => {
+      console.error("[billing-worker] enqueueUpcomingRenewals error:", err);
+    });
+  }, pollMs);
+
+  // Start the main queue drain loop (non-blocking — runs in background).
+  void worker.start().catch((err) => {
+    console.error("[billing-worker] worker loop exited with error:", err);
+  });
+
+  console.log("[worker] cloud billing worker started");
+
+  return () => {
+    worker.stop();
+    clearInterval(enqueueTimer);
+    if (lockToken) {
+      void releaseLock(LOCK_NAME, lockToken).catch(() => { /* best-effort */ });
+    }
+    console.log("[worker] cloud billing worker stopped");
+  };
 }
 
 // ── migrate ───────────────────────────────────────────────────────────────
