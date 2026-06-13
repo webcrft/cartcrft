@@ -3,7 +3,7 @@ import { useStore } from '../context/StoreContext'
 import { getSdk } from '../lib/sdk'
 import { useToast } from '../context/ToastContext'
 import {
-  Btn, Card, FormInput, FormSelect, PageHeader, EmptyState, Spinner, Modal,
+  Btn, Card, FormInput, FormSelect, LoadError, PageHeader, EmptyState, Spinner, Modal,
   TableContainer, TableHead, Th, Td, Badge,
 } from '../components/ui/index'
 
@@ -107,6 +107,7 @@ export default function Shipping() {
   const [providers, setProviders] = useState<Provider[]>([])
   const [collectionPoints, setCollectionPoints] = useState<CollectionPoint[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [showCreateZone, setShowCreateZone] = useState(false)
   const [newZone, setNewZone] = useState({ name: '', countries: '' })
   const [creatingZone, setCreatingZone] = useState(false)
@@ -116,11 +117,17 @@ export default function Shipping() {
   const loadZones = useCallback(async () => {
     if (!activeStore) return
     const sdk = getSdk()
+    setLoadError(null)
     try {
       const res = await sdk.request<{ zones: Zone[] }>(`/commerce/stores/${activeStore.id}/shipping-zones`)
       setZones((res as { zones?: Zone[] }).zones ?? [])
-    } catch { setZones([]) }
-  }, [activeStore])
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to load shipping zones'
+      setLoadError(msg)
+      toast(msg, 'error')
+      setZones([])
+    }
+  }, [activeStore, toast])
 
   const loadRates = useCallback(async (zoneId: string) => {
     if (!activeStore) return
@@ -137,8 +144,11 @@ export default function Shipping() {
     try {
       const res = await sdk.request<{ providers: Provider[] }>(`/commerce/stores/${activeStore.id}/shipping-providers`)
       setProviders((res as { providers?: Provider[] }).providers ?? [])
-    } catch { setProviders([]) }
-  }, [activeStore])
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Failed to load shipping providers', 'error')
+      setProviders([])
+    }
+  }, [activeStore, toast])
 
   const loadCollectionPoints = useCallback(async () => {
     if (!activeStore) return
@@ -146,8 +156,11 @@ export default function Shipping() {
     try {
       const res = await sdk.request<{ collection_points: CollectionPoint[] }>(`/commerce/stores/${activeStore.id}/collection-points`)
       setCollectionPoints((res as { collection_points?: CollectionPoint[] }).collection_points ?? [])
-    } catch { setCollectionPoints([]) }
-  }, [activeStore])
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Failed to load collection points', 'error')
+      setCollectionPoints([])
+    }
+  }, [activeStore, toast])
 
   useEffect(() => {
     void (async () => {
@@ -220,6 +233,8 @@ export default function Shipping() {
         description="Zones, rates, and shipping providers"
         actions={tab === 'zones' ? <Btn onClick={() => setShowCreateZone(v => !v)}>+ Add Zone</Btn> : tab === 'providers' ? <Btn onClick={() => setBobGoModal(null)}>+ Add BobGo</Btn> : undefined}
       />
+
+      {loadError && <LoadError message={loadError} onRetry={() => void loadZones()} />}
 
       <div className="flex border-b border-white/[0.06]">
         {TABS.map(t => (

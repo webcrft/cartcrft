@@ -203,19 +203,27 @@ export default function Agents() {
     setLoading(true)
     const sdk = getSdk()
     try {
-      const res = await sdk.agents.list(activeStore.id)
-      const agentList = res.agents ?? []
-      setAgents(agentList)
-      if (!selectedAgentId && agentList.length > 0) setSelectedAgentId(agentList[0].id)
-    } catch { setAgents([]) }
-    try {
-      const res = await sdk.request<{ entries: Record<string, unknown>[] }>(
-        `/commerce/stores/${activeStore.id}/agents/audit-log`
-      )
-      setAuditLog((res as { entries?: Record<string, unknown>[] }).entries ?? [])
-    } catch { setAuditLog([]) }
-    setLoading(false)
-  }, [activeStore, selectedAgentId])
+      const [agentsRes, auditRes] = await Promise.allSettled([
+        sdk.agents.list(activeStore.id),
+        sdk.request<{ entries: Record<string, unknown>[] }>(`/commerce/stores/${activeStore.id}/agents/audit-log`),
+      ])
+      if (agentsRes.status === 'fulfilled') {
+        const agentList = agentsRes.value.agents ?? []
+        setAgents(agentList)
+        if (!selectedAgentId && agentList.length > 0) setSelectedAgentId(agentList[0].id)
+      } else {
+        toast(agentsRes.reason instanceof Error ? agentsRes.reason.message : 'Failed to load agents', 'error')
+        setAgents([])
+      }
+      if (auditRes.status === 'fulfilled') {
+        setAuditLog((auditRes.value as { entries?: Record<string, unknown>[] }).entries ?? [])
+      } else {
+        setAuditLog([])
+      }
+    } finally {
+      setLoading(false)
+    }
+  }, [activeStore, selectedAgentId, toast])
 
   useEffect(() => { void load() }, [load])
 
@@ -226,10 +234,13 @@ export default function Agents() {
           const sdk = getSdk()
           const res = await sdk.agents.listMandates(activeStore.id, selectedAgentId)
           setMandates(res.mandates ?? [])
-        } catch { setMandates([]) }
+        } catch (err) {
+          toast(err instanceof Error ? err.message : 'Failed to load mandates', 'error')
+          setMandates([])
+        }
       })()
     }
-  }, [tab, selectedAgentId, activeStore])
+  }, [tab, selectedAgentId, activeStore, toast])
 
   const revokeAgent = async (agentId: string) => {
     if (!activeStore || !confirm('Revoke this agent? It will lose API access immediately.')) return

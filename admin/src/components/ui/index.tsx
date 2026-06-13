@@ -144,3 +144,26 @@ export function Th({ children, className = '' }: { children?: React.ReactNode; c
 export function Td({ children, className = '' }: { children?: React.ReactNode; className?: string }) {
   return <td className={`px-5 py-3 ${className}`}>{children}</td>
 }
+
+/**
+ * Inline "failed to load" indicator — distinguishes a real error from genuinely
+ * empty data so broken endpoints are immediately visible.
+ */
+export function LoadError({ message, onRetry }: { message?: string; onRetry?: () => void }) {
+  return (
+    <div className="rounded-xl border border-red-500/20 bg-red-500/[0.06] px-5 py-4 flex items-center justify-between gap-4">
+      <div className="flex items-center gap-2.5">
+        <span className="text-red-400 text-base leading-none">&#9888;</span>
+        <p className="text-xs text-red-300">{message ?? 'Failed to load data — check the API connection.'}</p>
+      </div>
+      {onRetry && (
+        <button
+          onClick={onRetry}
+          className="flex-shrink-0 text-xs text-red-400 hover:text-red-300 underline underline-offset-2 transition"
+        >
+          Retry
+        </button>
+      )}
+    </div>
+  )
+}

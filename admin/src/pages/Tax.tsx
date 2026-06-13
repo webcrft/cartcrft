@@ -3,7 +3,7 @@ import { useStore } from '../context/StoreContext'
 import { getSdk } from '../lib/sdk'
 import { useToast } from '../context/ToastContext'
 import {
-  Btn, Card, FormInput, FormSelect, PageHeader, EmptyState, Spinner, Modal,
+  Btn, Card, FormInput, FormSelect, LoadError, PageHeader, EmptyState, Spinner, Modal,
   TableContainer, TableHead, Th, Td, Badge,
 } from '../components/ui/index'
 
@@ -21,6 +21,7 @@ export default function Tax() {
   const [zones, setZones] = useState<TaxZone[]>([])
   const [rates, setRates] = useState<TaxRate[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [showCreate, setShowCreate] = useState(false)
   const [form, setForm] = useState({ name: '', code: '', rate: '', zone_id: '', is_inclusive: 'false' })
   const [saving, setSaving] = useState(false)
@@ -29,20 +30,35 @@ export default function Tax() {
     if (!activeStore) return
     const sdk = getSdk()
     setLoading(true)
+    setLoadError(null)
     try {
-      const [catRes, zoneRes] = await Promise.all([
+      const [catRes, zoneRes, rateRes] = await Promise.allSettled([
         sdk.tax.listCategories(activeStore.id),
         sdk.tax.listZones(activeStore.id),
+        sdk.request<{ rates: TaxRate[] }>(`/commerce/stores/${activeStore.id}/tax/rates`),
       ])
-      setCategories((catRes as { categories?: TaxCategory[] }).categories ?? [])
-      setZones((zoneRes as { zones?: TaxZone[] }).zones ?? [])
-    } catch { setCategories([]); setZones([]) }
-    try {
-      const rateRes = await sdk.request<{ rates: TaxRate[] }>(`/commerce/stores/${activeStore.id}/tax/rates`)
-      setRates((rateRes as { rates?: TaxRate[] }).rates ?? [])
-    } catch { setRates([]) }
-    setLoading(false)
-  }, [activeStore])
+      if (catRes.status === 'fulfilled') {
+        setCategories((catRes.value as { categories?: TaxCategory[] }).categories ?? [])
+      } else {
+        const msg = catRes.reason instanceof Error ? catRes.reason.message : 'Failed to load tax data'
+        setLoadError(msg)
+        toast(msg, 'error')
+        setCategories([])
+      }
+      if (zoneRes.status === 'fulfilled') {
+        setZones((zoneRes.value as { zones?: TaxZone[] }).zones ?? [])
+      } else {
+        setZones([])
+      }
+      if (rateRes.status === 'fulfilled') {
+        setRates((rateRes.value as { rates?: TaxRate[] }).rates ?? [])
+      } else {
+        setRates([])
+      }
+    } finally {
+      setLoading(false)
+    }
+  }, [activeStore, toast])
 
   useEffect(() => { void load() }, [load])
 
@@ -102,6 +118,8 @@ export default function Tax() {
         description="Manage tax categories, zones, and rates"
         actions={<Btn onClick={() => setShowCreate(v => !v)}>+ Add</Btn>}
       />
+
+      {loadError && <LoadError message={loadError} onRetry={() => void load()} />}
 
       <div className="flex border-b border-white/[0.06]">
         {TABS.map(t => (

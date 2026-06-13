@@ -3,7 +3,7 @@ import { useStore } from '../context/StoreContext'
 import { getSdk } from '../lib/sdk'
 import { useToast } from '../context/ToastContext'
 import {
-  Btn, Card, FormInput, FormSelect, PageHeader, EmptyState, Spinner, Modal,
+  Btn, Card, FormInput, FormSelect, LoadError, PageHeader, EmptyState, Spinner, Modal,
   TableContainer, TableHead, Th, Td, Badge,
 } from '../components/ui/index'
 
@@ -113,22 +113,36 @@ export default function PaymentProviders() {
   const [providers, setProviders] = useState<PaymentProvider[]>([])
   const [gateways, setGateways] = useState<Gateway[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [modal, setModal] = useState<PaymentProvider | null | undefined>(undefined)
 
   const load = useCallback(async () => {
     if (!activeStore) return
     setLoading(true)
+    setLoadError(null)
     const sdk = getSdk()
     try {
-      const res = await sdk.request<{ providers: PaymentProvider[] }>(`/commerce/stores/${activeStore.id}/payment-providers`)
-      setProviders((res as { providers?: PaymentProvider[] }).providers ?? [])
-    } catch { setProviders([]) }
-    try {
-      const res = await sdk.request<{ gateways: Gateway[] }>(`/commerce/stores/${activeStore.id}/payment-gateways`)
-      setGateways((res as { gateways?: Gateway[] }).gateways ?? [])
-    } catch { setGateways([]) }
-    setLoading(false)
-  }, [activeStore])
+      const [providersRes, gatewaysRes] = await Promise.allSettled([
+        sdk.request<{ providers: PaymentProvider[] }>(`/commerce/stores/${activeStore.id}/payment-providers`),
+        sdk.request<{ gateways: Gateway[] }>(`/commerce/stores/${activeStore.id}/payment-gateways`),
+      ])
+      if (providersRes.status === 'fulfilled') {
+        setProviders((providersRes.value as { providers?: PaymentProvider[] }).providers ?? [])
+      } else {
+        const msg = providersRes.reason instanceof Error ? providersRes.reason.message : 'Failed to load payment providers'
+        setLoadError(msg)
+        toast(msg, 'error')
+        setProviders([])
+      }
+      if (gatewaysRes.status === 'fulfilled') {
+        setGateways((gatewaysRes.value as { gateways?: Gateway[] }).gateways ?? [])
+      } else {
+        setGateways([])
+      }
+    } finally {
+      setLoading(false)
+    }
+  }, [activeStore, toast])
 
   useEffect(() => { void load() }, [load])
 
@@ -166,6 +180,8 @@ export default function PaymentProviders() {
         Transactions are processed directly through your own provider account — Cartcrft never handles customer payments.
         Webhook URL shown per provider for easy copy-paste configuration.
       </div>
+
+      {loadError && <LoadError message={loadError} onRetry={() => void load()} />}
 
       <div className="flex border-b border-white/[0.06]">
         {TABS.map(t => (

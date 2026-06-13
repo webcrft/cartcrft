@@ -3,7 +3,7 @@ import { useStore } from '../context/StoreContext'
 import { getSdk } from '../lib/sdk'
 import { useToast } from '../context/ToastContext'
 import {
-  Btn, Card, FormInput, PageHeader, EmptyState, Spinner,
+  Btn, Card, FormInput, LoadError, PageHeader, EmptyState, Spinner,
   TableContainer, TableHead, Th, Td,
 } from '../components/ui/index'
 
@@ -24,6 +24,7 @@ export default function CustomerGroups() {
   const [members, setMembers] = useState<Record<string, GroupMember[]>>({})
   const [expanded, setExpanded] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [showCreate, setShowCreate] = useState(false)
   const [form, setForm] = useState({ name: '', description: '' })
   const [saving, setSaving] = useState(false)
@@ -33,12 +34,19 @@ export default function CustomerGroups() {
   const load = useCallback(async () => {
     if (!activeStore) return
     setLoading(true)
+    setLoadError(null)
     try {
       const res = await getSdk().request<{ groups: Group[] }>(`/commerce/stores/${activeStore.id}/customer-groups`)
       setGroups((res as { groups?: Group[] }).groups ?? [])
-    } catch { setGroups([]) }
-    setLoading(false)
-  }, [activeStore])
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to load customer groups'
+      setLoadError(msg)
+      toast(msg, 'error')
+      setGroups([])
+    } finally {
+      setLoading(false)
+    }
+  }, [activeStore, toast])
 
   useEffect(() => { void load() }, [load])
 
@@ -130,9 +138,11 @@ export default function CustomerGroups() {
         </Card>
       )}
 
-      {groups.length === 0 ? (
+      {loadError && <LoadError message={loadError} onRetry={() => void load()} />}
+
+      {!loadError && groups.length === 0 ? (
         <EmptyState title="No customer groups" description="Create groups to segment customers for pricing and offers" action="New Group" onAction={() => setShowCreate(true)} />
-      ) : (
+      ) : !loadError ? (
         <div className="space-y-3">
           {groups.map(g => (
             <div key={g.id} className="rounded-xl border border-white/[0.08] bg-white/[0.02] overflow-hidden">
@@ -177,7 +187,7 @@ export default function CustomerGroups() {
             </div>
           ))}
         </div>
-      )}
+      ) : null}
     </div>
   )
 }

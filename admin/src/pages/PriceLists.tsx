@@ -3,7 +3,7 @@ import { useStore } from '../context/StoreContext'
 import { getSdk } from '../lib/sdk'
 import { useToast } from '../context/ToastContext'
 import {
-  Btn, Card, FormInput, FormSelect, PageHeader, EmptyState, Spinner,
+  Btn, Card, FormInput, FormSelect, PageHeader, EmptyState, LoadError, Spinner,
   TableContainer, TableHead, Th, Td, Badge,
 } from '../components/ui/index'
 
@@ -23,6 +23,7 @@ export default function PriceLists() {
   const [items, setItems] = useState<Record<string, PriceListItem[]>>({})
   const [expanded, setExpanded] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [showCreate, setShowCreate] = useState(false)
   const [form, setForm] = useState({ name: '', type: 'sale', currency: '' })
   const [saving, setSaving] = useState(false)
@@ -32,12 +33,19 @@ export default function PriceLists() {
   const load = useCallback(async () => {
     if (!activeStore) return
     setLoading(true)
+    setLoadError(null)
     try {
       const res = await getSdk().catalog.listPriceLists(activeStore.id)
       setLists((res as { price_lists?: PriceList[] }).price_lists ?? [])
-    } catch { setLists([]) }
-    setLoading(false)
-  }, [activeStore])
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to load price lists'
+      setLoadError(msg)
+      toast(msg, 'error')
+      setLists([])
+    } finally {
+      setLoading(false)
+    }
+  }, [activeStore, toast])
 
   useEffect(() => { void load() }, [load])
 
@@ -131,9 +139,11 @@ export default function PriceLists() {
         </Card>
       )}
 
-      {lists.length === 0 ? (
+      {loadError && <LoadError message={loadError} onRetry={() => void load()} />}
+
+      {!loadError && lists.length === 0 ? (
         <EmptyState title="No price lists" description="Create price lists for different customer segments" action="New List" onAction={() => setShowCreate(true)} />
-      ) : (
+      ) : !loadError ? (
         <div className="space-y-3">
           {lists.map(list => (
             <div key={list.id} className="rounded-xl border border-white/[0.08] bg-white/[0.02] overflow-hidden">
@@ -190,7 +200,7 @@ export default function PriceLists() {
             </div>
           ))}
         </div>
-      )}
+      ) : null}
     </div>
   )
 }

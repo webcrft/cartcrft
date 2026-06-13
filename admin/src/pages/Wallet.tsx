@@ -147,9 +147,13 @@ export default function Wallet() {
     try {
       const res = await getSdk().giftCards.list(activeStore.id)
       setGiftCards(res.gift_cards ?? [])
-    } catch { setGiftCards([]) }
-    setLoading(false)
-  }, [activeStore])
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Failed to load gift cards', 'error')
+      setGiftCards([])
+    } finally {
+      setLoading(false)
+    }
+  }, [activeStore, toast])
 
   const loadCustomers = useCallback(async () => {
     if (!activeStore) return
@@ -157,9 +161,13 @@ export default function Wallet() {
     try {
       const res = await getSdk().customers.list(activeStore.id, { limit: 50 })
       setCustomers(res.customers ?? [])
-    } catch { setCustomers([]) }
-    setLoading(false)
-  }, [activeStore])
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Failed to load customers', 'error')
+      setCustomers([])
+    } finally {
+      setLoading(false)
+    }
+  }, [activeStore, toast])
 
   useEffect(() => {
     if (tab === 'gift-cards') void loadGiftCards()

@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react'
 import { useStore } from '../context/StoreContext'
 import { getSdk } from '../lib/sdk'
 import { useToast } from '../context/ToastContext'
-import { Btn, Card, FormInput, FormSelect, PageHeader, EmptyState, Spinner, Modal, TableContainer, TableHead, Th, Td } from '../components/ui/index'
+import { Btn, Card, FormInput, FormSelect, LoadError, PageHeader, EmptyState, Spinner, Modal, TableContainer, TableHead, Th, Td } from '../components/ui/index'
 import type { Warehouse, InventoryLevel } from '@cartcrft/sdk'
 
 interface AdjustForm {
@@ -98,11 +98,13 @@ export default function Inventory() {
   const [lots, setLots] = useState<Lot[]>([])
   const [serials, setSerials] = useState<Serial[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [adjustLevel, setAdjustLevel] = useState<InventoryLevel | null | undefined>(undefined)
 
   const loadWarehouses = useCallback(async () => {
     if (!activeStore) return
     const sdk = getSdk()
+    setLoadError(null)
     try {
       const res = await sdk.inventory.listWarehouses(activeStore.id)
       const whs = res.warehouses ?? []
@@ -110,8 +112,13 @@ export default function Inventory() {
       const def = whs.find(w => w.is_default) ?? whs[0]
       if (def) setSelectedWarehouseId(def.id)
       return whs
-    } catch { return [] }
-  }, [activeStore])
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to load warehouses'
+      setLoadError(msg)
+      toast(msg, 'error')
+      return []
+    }
+  }, [activeStore, toast])
 
   const loadLevels = useCallback(async (warehouseId: string) => {
     if (!activeStore || !warehouseId) return
@@ -128,8 +135,11 @@ export default function Inventory() {
     try {
       const res = await sdk.request<{ lots: Lot[] }>(`/commerce/stores/${activeStore.id}/inventory/lots`)
       setLots((res as { lots?: Lot[] }).lots ?? [])
-    } catch { setLots([]) }
-  }, [activeStore])
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Failed to load lots', 'error')
+      setLots([])
+    }
+  }, [activeStore, toast])
 
   const loadSerials = useCallback(async () => {
     if (!activeStore) return
@@ -137,8 +147,11 @@ export default function Inventory() {
     try {
       const res = await sdk.request<{ serials: Serial[] }>(`/commerce/stores/${activeStore.id}/inventory/serials`)
       setSerials((res as { serials?: Serial[] }).serials ?? [])
-    } catch { setSerials([]) }
-  }, [activeStore])
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Failed to load serials', 'error')
+      setSerials([])
+    }
+  }, [activeStore, toast])
 
   useEffect(() => {
     void (async () => {
@@ -176,6 +189,8 @@ export default function Inventory() {
         description="Track stock levels across warehouses"
         actions={tab === 'levels' ? <Btn onClick={() => setAdjustLevel(null)}>+ Adjust</Btn> : undefined}
       />
+
+      {loadError && <LoadError message={loadError} onRetry={() => { void (async () => { setLoading(true); const whs = await loadWarehouses() as Warehouse[] | undefined; const defId = whs?.find(w => w.is_default)?.id ?? whs?.[0]?.id; if (defId) await loadLevels(defId); setLoading(false) })() }} />}
 
       {/* Tabs */}
       <div className="flex border-b border-white/[0.06]">

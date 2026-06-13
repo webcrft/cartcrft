@@ -3,7 +3,7 @@ import { useStore } from '../context/StoreContext'
 import { getSdk } from '../lib/sdk'
 import { useToast } from '../context/ToastContext'
 import {
-  Btn, PageHeader, EmptyState, Spinner, TableContainer, TableHead, Th, Td, Badge,
+  Btn, PageHeader, EmptyState, LoadError, Spinner, TableContainer, TableHead, Th, Td, Badge,
 } from '../components/ui/index'
 
 interface Review {
@@ -33,21 +33,29 @@ export default function Reviews() {
   const { toast } = useToast()
   const [reviews, setReviews] = useState<Review[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [filter, setFilter] = useState<string>('pending')
   const [acting, setActing] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     if (!activeStore) return
     setLoading(true)
+    setLoadError(null)
     try {
       const res = await getSdk().request<{ reviews: Review[] }>(
         `/commerce/stores/${activeStore.id}/reviews`,
         { query: filter ? { status: filter } : undefined },
       )
       setReviews((res as { reviews?: Review[] }).reviews ?? [])
-    } catch { setReviews([]) }
-    setLoading(false)
-  }, [activeStore, filter])
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to load reviews'
+      setLoadError(msg)
+      toast(msg, 'error')
+      setReviews([])
+    } finally {
+      setLoading(false)
+    }
+  }, [activeStore, filter, toast])
 
   useEffect(() => { void load() }, [load])
 
@@ -77,9 +85,11 @@ export default function Reviews() {
         ))}
       </div>
 
-      {reviews.length === 0 ? (
+      {loadError && <LoadError message={loadError} onRetry={() => void load()} />}
+
+      {!loadError && reviews.length === 0 ? (
         <EmptyState title="No reviews" description={`No ${filter || 'reviews'} to show`} />
-      ) : (
+      ) : !loadError ? (
         <div className="space-y-3">
           {reviews.map(r => {
             const st = REVIEW_STATUS[r.status] ?? { color: 'slate' as const, label: r.status }
@@ -111,7 +121,7 @@ export default function Reviews() {
             )
           })}
         </div>
-      )}
+      ) : null}
     </div>
   )
 }

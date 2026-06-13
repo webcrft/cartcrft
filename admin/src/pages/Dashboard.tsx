@@ -25,20 +25,22 @@ export default function Dashboard() {
 
     void (async () => {
       try {
-        const [analyticsRes, ordersRes] = await Promise.allSettled([
+        const [analyticsRes, ordersRes, customersRes] = await Promise.allSettled([
           sdk.analytics.overview(activeStore.id),
           sdk.orders.list(activeStore.id, { limit: 10 }),
+          sdk.customers.list(activeStore.id, { limit: 1 }),
         ])
 
         const analytics = analyticsRes.status === 'fulfilled' ? analyticsRes.value : null
         const ordersData = ordersRes.status === 'fulfilled' ? ordersRes.value : { orders: [], total: 0 }
+        const customersTotal = customersRes.status === 'fulfilled' ? (customersRes.value.total ?? 0) : 0
 
         setOrders(ordersData.orders ?? [])
         setMetrics({
           revenue: analytics?.revenue ?? '0',
           orders: analytics?.orders_count ?? ordersData.total ?? 0,
           aov: analytics?.average_order_value ?? '0',
-          customers: 0,
+          customers: customersTotal,
         })
       } finally {
         setLoading(false)

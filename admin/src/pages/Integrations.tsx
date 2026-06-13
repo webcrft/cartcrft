@@ -138,23 +138,28 @@ export default function Integrations() {
     setLoading(true)
     const sdk = getSdk()
     try {
-      const [defRes, intRes] = await Promise.all([
+      const [defRes, intRes, pixelsRes, feedsRes] = await Promise.allSettled([
         sdk.integrations.listDefinitions(),
         sdk.integrations.list(activeStore.id),
+        sdk.integrations.listPixels(activeStore.id),
+        sdk.feeds.listMerchantFeeds(activeStore.id),
       ])
-      setDefinitions((defRes as { definitions?: Definition[] }).definitions ?? [])
-      setIntegrations((intRes as { integrations?: Integration[] }).integrations ?? [])
-    } catch {}
-    try {
-      const res = await sdk.integrations.listPixels(activeStore.id)
-      setPixels((res as { pixels?: Pixel[] }).pixels ?? [])
-    } catch { setPixels([]) }
-    try {
-      const res = await sdk.feeds.listMerchantFeeds(activeStore.id)
-      setFeeds((res as { feeds?: MerchantFeed[] }).feeds ?? [])
-    } catch { setFeeds([]) }
-    setLoading(false)
-  }, [activeStore])
+      if (defRes.status === 'fulfilled') setDefinitions((defRes.value as { definitions?: Definition[] }).definitions ?? [])
+      else setDefinitions([])
+      if (intRes.status === 'fulfilled') {
+        setIntegrations((intRes.value as { integrations?: Integration[] }).integrations ?? [])
+      } else {
+        toast(intRes.reason instanceof Error ? intRes.reason.message : 'Failed to load integrations', 'error')
+        setIntegrations([])
+      }
+      if (pixelsRes.status === 'fulfilled') setPixels((pixelsRes.value as { pixels?: Pixel[] }).pixels ?? [])
+      else setPixels([])
+      if (feedsRes.status === 'fulfilled') setFeeds((feedsRes.value as { feeds?: MerchantFeed[] }).feeds ?? [])
+      else setFeeds([])
+    } finally {
+      setLoading(false)
+    }
+  }, [activeStore, toast])
 
   useEffect(() => { void load() }, [load])
 

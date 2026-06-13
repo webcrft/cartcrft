@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
-import { getSdk } from '../lib/sdk'
+import { useNavigate } from 'react-router-dom'
+import { getSdk, setOn401Handler } from '../lib/sdk'
 import { getActiveStoreId, setActiveStoreId } from '../lib/auth'
 
 interface Store {
@@ -28,6 +29,15 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [stores, setStores] = useState<Store[]>([])
   const [activeStore, setActiveStoreState] = useState<Store | null>(null)
   const [loading, setLoading] = useState(true)
+  const navigate = useNavigate()
+
+  // Register a global 401 handler so any SDK call that returns 401 sends the
+  // user back to /login rather than leaving a blank screen.
+  useEffect(() => {
+    setOn401Handler(() => {
+      void navigate('/login', { replace: true })
+    })
+  }, [navigate])
 
   const reload = useCallback(async (selectId?: string) => {
     setLoading(true)

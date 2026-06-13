@@ -3,7 +3,7 @@ import { useStore } from '../context/StoreContext'
 import { getSdk } from '../lib/sdk'
 import { useToast } from '../context/ToastContext'
 import {
-  Btn, Card, FormInput, FormSelect, PageHeader, EmptyState, Spinner,
+  Btn, Card, FormInput, FormSelect, LoadError, PageHeader, EmptyState, Spinner,
   TableContainer, TableHead, Th, Td, Badge,
 } from '../components/ui/index'
 
@@ -41,6 +41,7 @@ export default function B2B() {
   const [quotes, setQuotes] = useState<Quote[]>([])
   const [pos, setPos] = useState<PurchaseOrder[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [showCreate, setShowCreate] = useState(false)
   const [companyForm, setCompanyForm] = useState({ name: '', credit_limit: '', net_terms: '0' })
   const [saving, setSaving] = useState(false)
@@ -49,21 +50,36 @@ export default function B2B() {
   const load = useCallback(async () => {
     if (!activeStore) return
     setLoading(true)
+    setLoadError(null)
     const sdk = getSdk()
     try {
-      const res = await sdk.b2b.listCompanies(activeStore.id)
-      setCompanies((res as { companies?: Company[] }).companies ?? [])
-    } catch { setCompanies([]) }
-    try {
-      const res = await sdk.b2b.listQuotes(activeStore.id)
-      setQuotes((res as { quotes?: Quote[] }).quotes ?? [])
-    } catch { setQuotes([]) }
-    try {
-      const res = await sdk.request<{ purchase_orders: PurchaseOrder[] }>(`/commerce/stores/${activeStore.id}/purchase-orders`)
-      setPos((res as { purchase_orders?: PurchaseOrder[] }).purchase_orders ?? [])
-    } catch { setPos([]) }
-    setLoading(false)
-  }, [activeStore])
+      const [companiesRes, quotesRes, posRes] = await Promise.allSettled([
+        sdk.b2b.listCompanies(activeStore.id),
+        sdk.b2b.listQuotes(activeStore.id),
+        sdk.request<{ purchase_orders: PurchaseOrder[] }>(`/commerce/stores/${activeStore.id}/purchase-orders`),
+      ])
+      if (companiesRes.status === 'fulfilled') {
+        setCompanies((companiesRes.value as { companies?: Company[] }).companies ?? [])
+      } else {
+        const msg = companiesRes.reason instanceof Error ? companiesRes.reason.message : 'Failed to load companies'
+        setLoadError(msg)
+        toast(msg, 'error')
+        setCompanies([])
+      }
+      if (quotesRes.status === 'fulfilled') {
+        setQuotes((quotesRes.value as { quotes?: Quote[] }).quotes ?? [])
+      } else {
+        setQuotes([])
+      }
+      if (posRes.status === 'fulfilled') {
+        setPos((posRes.value as { purchase_orders?: PurchaseOrder[] }).purchase_orders ?? [])
+      } else {
+        setPos([])
+      }
+    } finally {
+      setLoading(false)
+    }
+  }, [activeStore, toast])
 
   useEffect(() => { void load() }, [load])
 
@@ -111,6 +127,8 @@ export default function B2B() {
         description="Companies, quotes, and purchase orders"
         actions={tab === 'companies' ? <Btn onClick={() => setShowCreate(v => !v)}>+ Add Company</Btn> : undefined}
       />
+
+      {loadError && <LoadError message={loadError} onRetry={() => void load()} />}
 
       <div className="flex border-b border-white/[0.06]">
         {TABS.map(t => (

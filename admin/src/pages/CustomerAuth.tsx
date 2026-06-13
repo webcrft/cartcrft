@@ -74,10 +74,14 @@ function AuthConfigTab({ storeId }: { storeId: string }) {
       try {
         const res = await getSdk().customerAuth.getConfig(storeId)
         setConfig((res as { auth?: AuthConfig }).auth ?? (res as AuthConfig))
-      } catch { setConfig({}) }
-      setLoading(false)
+      } catch (err) {
+        toast(err instanceof Error ? err.message : 'Failed to load auth config', 'error')
+        setConfig({})
+      } finally {
+        setLoading(false)
+      }
     })()
-  }, [storeId])
+  }, [storeId, toast])
 
   const set = (k: keyof AuthConfig) => (v: unknown) => setConfig(c => ({ ...c, [k]: v }))
 
@@ -204,10 +208,14 @@ function SessionsTab({ storeId }: { storeId: string }) {
       try {
         const res = await getSdk().request<{ sessions: Session[] }>(`/commerce/stores/${storeId}/auth/sessions`)
         setSessions((res as { sessions?: Session[] }).sessions ?? [])
-      } catch { setSessions([]) }
-      setLoading(false)
+      } catch (err) {
+        toast(err instanceof Error ? err.message : 'Failed to load sessions', 'error')
+        setSessions([])
+      } finally {
+        setLoading(false)
+      }
     })()
-  }, [storeId])
+  }, [storeId, toast])
 
   const revoke = async (sessionId: string) => {
     setRevoking(sessionId)
@@ -256,10 +264,14 @@ function EmailTab({ storeId }: { storeId: string }) {
       try {
         const res = await getSdk().request<{ logs: EmailLog[] }>(`/commerce/stores/${storeId}/auth/email-log`)
         setLogs((res as { logs?: EmailLog[] }).logs ?? [])
-      } catch { setLogs([]) }
-      setLoading(false)
+      } catch (err) {
+        toast(err instanceof Error ? err.message : 'Failed to load email log', 'error')
+        setLogs([])
+      } finally {
+        setLoading(false)
+      }
     })()
-  }, [storeId])
+  }, [storeId, toast])
 
   const sendTest = async () => {
     if (!testEmail) { toast('Email required', 'error'); return }
@@ -317,12 +329,17 @@ function AuditTab({ storeId }: { storeId: string }) {
         const res = await getSdk().request<{ entries: AuditEntry[] }>(`/commerce/stores/${storeId}/customers/audit-log`)
         setEntries((res as { entries?: AuditEntry[] }).entries ?? [])
       } catch {
+        // Fallback path
         try {
           const res2 = await getSdk().request<{ logs: AuditEntry[] }>(`/commerce/stores/${storeId}/auth/audit-log`)
           setEntries((res2 as { logs?: AuditEntry[] }).logs ?? [])
-        } catch { setEntries([]) }
+        } catch (err) {
+          console.warn('Failed to load audit log:', err)
+          setEntries([])
+        }
+      } finally {
+        setLoading(false)
       }
-      setLoading(false)
     })()
   }, [storeId])
 

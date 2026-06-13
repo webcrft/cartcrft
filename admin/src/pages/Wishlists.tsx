@@ -3,7 +3,7 @@ import { useStore } from '../context/StoreContext'
 import { getSdk } from '../lib/sdk'
 import { useToast } from '../context/ToastContext'
 import {
-  Btn, PageHeader, EmptyState, Spinner, Modal, TableContainer, TableHead, Th, Td, Badge,
+  Btn, LoadError, PageHeader, EmptyState, Spinner, Modal, TableContainer, TableHead, Th, Td, Badge,
 } from '../components/ui/index'
 
 interface Wishlist {
@@ -62,19 +62,28 @@ function WishlistItemsModal({ storeId, wishlist, onClose }: {
 
 export default function Wishlists() {
   const { activeStore } = useStore()
+  const { toast } = useToast()
   const [wishlists, setWishlists] = useState<Wishlist[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [selected, setSelected] = useState<Wishlist | null>(null)
 
   const load = useCallback(async () => {
     if (!activeStore) return
     setLoading(true)
+    setLoadError(null)
     try {
       const res = await getSdk().engagement.listWishlists(activeStore.id)
       setWishlists((res as { wishlists?: Wishlist[] }).wishlists ?? [])
-    } catch { setWishlists([]) }
-    setLoading(false)
-  }, [activeStore])
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to load wishlists'
+      setLoadError(msg)
+      toast(msg, 'error')
+      setWishlists([])
+    } finally {
+      setLoading(false)
+    }
+  }, [activeStore, toast])
 
   useEffect(() => { void load() }, [load])
 
@@ -84,9 +93,11 @@ export default function Wishlists() {
     <div className="space-y-4">
       <PageHeader title="Wishlists" description="Customer wishlists and saved items" />
 
-      {wishlists.length === 0 ? (
+      {loadError && <LoadError message={loadError} onRetry={() => void load()} />}
+
+      {!loadError && wishlists.length === 0 ? (
         <EmptyState title="No wishlists" description="Customer wishlists will appear here once created via the storefront" />
-      ) : (
+      ) : !loadError ? (
         <TableContainer>
           <table className="w-full text-sm">
             <TableHead>
@@ -110,7 +121,7 @@ export default function Wishlists() {
             </tbody>
           </table>
         </TableContainer>
-      )}
+      ) : null}
 
       {selected && activeStore && (
         <WishlistItemsModal

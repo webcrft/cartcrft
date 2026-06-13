@@ -3,7 +3,7 @@ import { useStore } from '../context/StoreContext'
 import { getSdk } from '../lib/sdk'
 import { useToast } from '../context/ToastContext'
 import {
-  Btn, PageHeader, EmptyState, Spinner, Modal, TableContainer, TableHead, Th, Td, Badge,
+  Btn, LoadError, PageHeader, EmptyState, Spinner, Modal, TableContainer, TableHead, Th, Td, Badge,
 } from '../components/ui/index'
 import { statusBadgeProps } from '../lib/statusMaps'
 
@@ -115,20 +115,29 @@ function ReturnDetail({ storeId, returnId, onClose }: { storeId: string; returnI
 
 export default function Returns() {
   const { activeStore } = useStore()
+  const { toast } = useToast()
   const [returns, setReturns] = useState<ReturnItem[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [selected, setSelected] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     if (!activeStore) return
     setLoading(true)
+    setLoadError(null)
     try {
       const sdk = getSdk()
       const res = await sdk.returns.list(activeStore.id)
       setReturns((res as { returns?: ReturnItem[] }).returns ?? [])
-    } catch { setReturns([]) }
-    setLoading(false)
-  }, [activeStore])
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to load returns'
+      setLoadError(msg)
+      toast(msg, 'error')
+      setReturns([])
+    } finally {
+      setLoading(false)
+    }
+  }, [activeStore, toast])
 
   useEffect(() => { void load() }, [load])
 
@@ -138,9 +147,11 @@ export default function Returns() {
     <div className="space-y-4">
       <PageHeader title="Returns" description="RMA list — approve, receive, and resolve return requests" />
 
-      {returns.length === 0 ? (
+      {loadError && <LoadError message={loadError} onRetry={() => void load()} />}
+
+      {!loadError && returns.length === 0 ? (
         <EmptyState title="No returns" description="Customer return requests will appear here" />
-      ) : (
+      ) : !loadError ? (
         <TableContainer>
           <table className="w-full text-sm">
             <TableHead>
@@ -163,7 +174,7 @@ export default function Returns() {
             </tbody>
           </table>
         </TableContainer>
-      )}
+      ) : null}
 
       {selected && activeStore && (
         <ReturnDetail

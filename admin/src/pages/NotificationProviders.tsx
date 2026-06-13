@@ -3,7 +3,7 @@ import { useStore } from '../context/StoreContext'
 import { getSdk } from '../lib/sdk'
 import { useToast } from '../context/ToastContext'
 import {
-  Btn, Card, FormInput, FormSelect, PageHeader, EmptyState, Spinner, Modal,
+  Btn, Card, FormInput, FormSelect, PageHeader, EmptyState, LoadError, Spinner, Modal,
   TableContainer, TableHead, Th, Td, Badge,
 } from '../components/ui/index'
 
@@ -100,17 +100,25 @@ export default function NotificationProviders() {
   const { toast } = useToast()
   const [providers, setProviders] = useState<NotifProvider[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [modal, setModal] = useState<NotifProvider | null | undefined>(undefined)
 
   const load = useCallback(async () => {
     if (!activeStore) return
     setLoading(true)
+    setLoadError(null)
     try {
       const res = await getSdk().notifications.listProviders(activeStore.id)
       setProviders((res as { providers?: NotifProvider[] }).providers ?? [])
-    } catch { setProviders([]) }
-    setLoading(false)
-  }, [activeStore])
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to load notification providers'
+      setLoadError(msg)
+      toast(msg, 'error')
+      setProviders([])
+    } finally {
+      setLoading(false)
+    }
+  }, [activeStore, toast])
 
   useEffect(() => { void load() }, [load])
 
@@ -133,14 +141,16 @@ export default function NotificationProviders() {
         actions={<Btn onClick={() => setModal(null)}>+ Add Provider</Btn>}
       />
 
-      {providers.length === 0 ? (
+      {loadError && <LoadError message={loadError} onRetry={() => void load()} />}
+
+      {!loadError && providers.length === 0 ? (
         <EmptyState
           title="No notification providers"
           description="Add providers to receive webhooks or send emails/SMS on commerce events"
           action="Add Provider"
           onAction={() => setModal(null)}
         />
-      ) : (
+      ) : !loadError ? (
         <TableContainer>
           <table className="w-full text-sm">
             <TableHead><Th>Name</Th><Th>Type</Th><Th>Events</Th><Th>Status</Th><Th></Th></TableHead>
@@ -162,7 +172,7 @@ export default function NotificationProviders() {
             </tbody>
           </table>
         </TableContainer>
-      )}
+      ) : null}
 
       {modal !== undefined && activeStore && (
         <ProviderModal

@@ -3,7 +3,7 @@ import { useStore } from '../context/StoreContext'
 import { getSdk } from '../lib/sdk'
 import { useToast } from '../context/ToastContext'
 import {
-  Btn, PageHeader, EmptyState, Spinner, TableContainer, TableHead, Th, Td, Badge,
+  Btn, PageHeader, EmptyState, LoadError, Spinner, TableContainer, TableHead, Th, Td, Badge,
 } from '../components/ui/index'
 
 interface FulfillmentOrder {
@@ -25,19 +25,27 @@ export default function FulfillmentOrders() {
   const { toast } = useToast()
   const [orders, setOrders] = useState<FulfillmentOrder[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [acting, setActing] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     if (!activeStore) return
     setLoading(true)
+    setLoadError(null)
     try {
       const res = await getSdk().request<{ fulfillment_orders: FulfillmentOrder[] }>(
         `/commerce/stores/${activeStore.id}/fulfillment-orders`
       )
       setOrders((res as { fulfillment_orders?: FulfillmentOrder[] }).fulfillment_orders ?? [])
-    } catch { setOrders([]) }
-    setLoading(false)
-  }, [activeStore])
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to load fulfillment orders'
+      setLoadError(msg)
+      toast(msg, 'error')
+      setOrders([])
+    } finally {
+      setLoading(false)
+    }
+  }, [activeStore, toast])
 
   useEffect(() => { void load() }, [load])
 
@@ -60,9 +68,11 @@ export default function FulfillmentOrders() {
     <div className="space-y-4">
       <PageHeader title="Fulfillment Orders" description="Track and update fulfillment status for each warehouse" />
 
-      {orders.length === 0 ? (
+      {loadError && <LoadError message={loadError} onRetry={() => void load()} />}
+
+      {!loadError && orders.length === 0 ? (
         <EmptyState title="No fulfillment orders" description="Fulfillment orders are created when customers place orders" />
-      ) : (
+      ) : !loadError ? (
         <TableContainer>
           <table className="w-full text-sm">
             <TableHead>
@@ -100,7 +110,7 @@ export default function FulfillmentOrders() {
             </tbody>
           </table>
         </TableContainer>
-      )}
+      ) : null}
     </div>
   )
 }

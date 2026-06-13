@@ -4,10 +4,13 @@ import { useStore } from '../../context/StoreContext'
 import { clearToken } from '../../lib/auth'
 import { resetSdk } from '../../lib/sdk'
 import { NAV_SECTIONS } from '../../routes/index'
+import CreateStoreModal from '../CreateStoreModal'
+import { Btn } from '../ui/index'
 
 export default function AppShell() {
-  const { stores, activeStore, setActiveStore } = useStore()
+  const { stores, activeStore, setActiveStore, reload } = useStore()
   const [showStoreMenu, setShowStoreMenu] = useState(false)
+  const [showCreateStore, setShowCreateStore] = useState(false)
   const navigate = useNavigate()
 
   const handleSignOut = () => {
@@ -15,6 +18,12 @@ export default function AppShell() {
     localStorage.removeItem('cc_admin_apikey')
     resetSdk()
     void navigate('/login')
+  }
+
+  const handleStoreCreated = async (newStoreId: string) => {
+    setShowCreateStore(false)
+    setShowStoreMenu(false)
+    await reload(newStoreId)
   }
 
   return (
@@ -38,7 +47,7 @@ export default function AppShell() {
             </div>
             <span className="text-slate-500">&#x2304;</span>
           </button>
-          {showStoreMenu && stores.length > 0 && (
+          {showStoreMenu && (
             <div className="absolute left-3 right-3 top-full mt-1 z-50 rounded-xl border border-white/[0.08] bg-slate-900 shadow-xl overflow-hidden">
               {stores.map(s => (
                 <button
@@ -49,6 +58,13 @@ export default function AppShell() {
                   {s.name}
                 </button>
               ))}
+              {/* Always show "Create store" in the switcher dropdown */}
+              <button
+                onClick={() => { setShowCreateStore(true); setShowStoreMenu(false) }}
+                className="w-full text-left px-3 py-2.5 text-xs text-violet-400 hover:bg-white/[0.04] transition border-t border-white/[0.06]"
+              >
+                + Create new store
+              </button>
             </div>
           )}
         </div>
@@ -97,14 +113,29 @@ export default function AppShell() {
       <main className="flex-1 overflow-y-auto">
         <div className="max-w-5xl mx-auto px-6 py-6">
           {!activeStore ? (
-            <div className="flex items-center justify-center py-32 text-slate-500 text-sm">
-              {stores.length === 0 ? 'No stores found. Create one first.' : 'Select a store to continue.'}
+            <div className="flex flex-col items-center justify-center py-32 gap-4">
+              <p className="text-slate-400 text-sm">
+                {stores.length === 0
+                  ? 'No stores found. Create your first store to get started.'
+                  : 'Select a store to continue.'}
+              </p>
+              {stores.length === 0 && (
+                <Btn onClick={() => setShowCreateStore(true)}>Create Store</Btn>
+              )}
             </div>
           ) : (
             <Outlet />
           )}
         </div>
       </main>
+
+      {/* Create-store modal — reachable from zero-store landing AND store switcher */}
+      {showCreateStore && (
+        <CreateStoreModal
+          onClose={() => setShowCreateStore(false)}
+          onCreated={storeId => { void handleStoreCreated(storeId) }}
+        />
+      )}
     </div>
   )
 }

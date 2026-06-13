@@ -3,7 +3,7 @@ import { useStore } from '../context/StoreContext'
 import { getSdk } from '../lib/sdk'
 import { useToast } from '../context/ToastContext'
 import {
-  Btn, PageHeader, EmptyState, Spinner, TableContainer, TableHead, Th, Td, Badge,
+  Btn, PageHeader, EmptyState, LoadError, Spinner, TableContainer, TableHead, Th, Td, Badge,
 } from '../components/ui/index'
 
 interface AbandonedCart {
@@ -17,17 +17,25 @@ export default function AbandonedCarts() {
   const { toast } = useToast()
   const [carts, setCarts] = useState<AbandonedCart[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [recovering, setRecovering] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     if (!activeStore) return
     setLoading(true)
+    setLoadError(null)
     try {
       const res = await getSdk().engagement.listAbandonedCarts(activeStore.id)
       setCarts((res as { carts?: AbandonedCart[] }).carts ?? [])
-    } catch { setCarts([]) }
-    setLoading(false)
-  }, [activeStore])
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to load abandoned carts'
+      setLoadError(msg)
+      toast(msg, 'error')
+      setCarts([])
+    } finally {
+      setLoading(false)
+    }
+  }, [activeStore, toast])
 
   useEffect(() => { void load() }, [load])
 
@@ -51,9 +59,11 @@ export default function AbandonedCarts() {
         description={`${carts.length} abandoned cart${carts.length !== 1 ? 's' : ''}`}
       />
 
-      {carts.length === 0 ? (
+      {loadError && <LoadError message={loadError} onRetry={() => void load()} />}
+
+      {!loadError && carts.length === 0 ? (
         <EmptyState title="No abandoned carts" description="Carts that weren't checked out will appear here" />
-      ) : (
+      ) : !loadError ? (
         <TableContainer>
           <table className="w-full text-sm">
             <TableHead>
@@ -88,7 +98,7 @@ export default function AbandonedCarts() {
             </tbody>
           </table>
         </TableContainer>
-      )}
+      ) : null}
     </div>
   )
 }

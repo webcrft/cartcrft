@@ -3,7 +3,7 @@ import { useStore } from '../context/StoreContext'
 import { getSdk } from '../lib/sdk'
 import { useToast } from '../context/ToastContext'
 import {
-  Btn, Card, FormInput, FormSelect, PageHeader, EmptyState, Spinner, Modal,
+  Btn, Card, FormInput, FormSelect, LoadError, PageHeader, EmptyState, Spinner, Modal,
   TableContainer, TableHead, Th, Td, Badge,
 } from '../components/ui/index'
 
@@ -34,6 +34,7 @@ export default function Subscriptions() {
   const [plans, setPlans] = useState<Plan[]>([])
   const [subs, setSubs] = useState<Sub[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [showCreate, setShowCreate] = useState(false)
   const [planForm, setPlanForm] = useState({ name: '', interval: 'month', interval_count: '1', price: '', trial_days: '' })
   const [saving, setSaving] = useState(false)
@@ -42,17 +43,30 @@ export default function Subscriptions() {
   const load = useCallback(async () => {
     if (!activeStore) return
     setLoading(true)
+    setLoadError(null)
     const sdk = getSdk()
     try {
-      const res = await sdk.subscriptions.listPlans(activeStore.id)
-      setPlans((res as { plans?: Plan[] }).plans ?? [])
-    } catch { setPlans([]) }
-    try {
-      const res = await sdk.subscriptions.list(activeStore.id)
-      setSubs((res as { subscriptions?: Sub[] }).subscriptions ?? [])
-    } catch { setSubs([]) }
-    setLoading(false)
-  }, [activeStore])
+      const [plansRes, subsRes] = await Promise.allSettled([
+        sdk.subscriptions.listPlans(activeStore.id),
+        sdk.subscriptions.list(activeStore.id),
+      ])
+      if (plansRes.status === 'fulfilled') {
+        setPlans((plansRes.value as { plans?: Plan[] }).plans ?? [])
+      } else {
+        const msg = plansRes.reason instanceof Error ? plansRes.reason.message : 'Failed to load plans'
+        setLoadError(msg)
+        toast(msg, 'error')
+        setPlans([])
+      }
+      if (subsRes.status === 'fulfilled') {
+        setSubs((subsRes.value as { subscriptions?: Sub[] }).subscriptions ?? [])
+      } else {
+        setSubs([])
+      }
+    } finally {
+      setLoading(false)
+    }
+  }, [activeStore, toast])
 
   useEffect(() => { void load() }, [load])
 
@@ -103,6 +117,8 @@ export default function Subscriptions() {
         description="Subscription plans and active subscriptions"
         actions={tab === 'plans' ? <Btn onClick={() => setShowCreate(v => !v)}>+ New Plan</Btn> : undefined}
       />
+
+      {loadError && <LoadError message={loadError} onRetry={() => void load()} />}
 
       <div className="flex border-b border-white/[0.06]">
         {TABS.map(t => (
