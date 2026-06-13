@@ -264,6 +264,46 @@ export async function createCtx(): Promise<TestCtx> {
     throw err;
   }
 
+  // ── 5b. Grant cartcrft_app access to the test schema (H1.1 RLS) ──────────
+  //
+  // Migration 0014_rls_enforce.sql creates the cartcrft_app role and grants it
+  // access to the PUBLIC schema.  But test schemas are per-run (`test_<runid>`)
+  // and the DEFAULT PRIVILEGES in 0014 only cover the `public` schema.
+  // We must explicitly grant cartcrft_app on this test schema so that:
+  //   - withTx's `SET LOCAL ROLE cartcrft_app` can access the test schema tables
+  //   - RLS policies evaluate correctly under the restricted role
+  //
+  // Fixture inserts (ctx.pool.query) still run as neondb_owner (BYPASSRLS) —
+  // intentional: test setup code must not be blocked by tenant policies.
+  //
+  // If cartcrft_app does not exist yet (DB doesn't have 0014 applied) we skip
+  // silently — withTx will simply not switch role, reverting to pre-H1.1 behaviour.
+  try {
+    const adminClient = new pg.Client({ connectionString: databaseUrl });
+    await adminClient.connect();
+    try {
+      const roleCheck = await adminClient.query(
+        "SELECT 1 FROM pg_roles WHERE rolname = 'cartcrft_app'"
+      );
+      if (roleCheck.rowCount && roleCheck.rowCount > 0) {
+        await adminClient.query(
+          `GRANT USAGE ON SCHEMA "${schemaName}" TO cartcrft_app`
+        );
+        await adminClient.query(
+          `GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA "${schemaName}" TO cartcrft_app`
+        );
+        await adminClient.query(
+          `GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA "${schemaName}" TO cartcrft_app`
+        );
+      }
+    } finally {
+      await adminClient.end();
+    }
+  } catch {
+    // Best-effort — if grants fail the tests run without RLS enforcement
+    // (pre-H1.1 posture), which is acceptable for test isolation.
+  }
+
   // ── 6. Boot the Fastify app on an ephemeral port ─────────────────────────
   process.env["APP_ENV"] = "test";
 

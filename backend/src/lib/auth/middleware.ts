@@ -42,6 +42,7 @@ import { lookupApiKey, hasScope } from "../../modules/apikeys/service.js";
 import { storeExistsInOrg } from "../../modules/stores/service.js";
 import { config } from "../../config/config.js";
 import { buildKv, getKvSync, MemoryKv } from "../cache/kv.js";
+import { setRequestCtx } from "../request-ctx.js";
 
 // ── Request decoration ────────────────────────────────────────────────────────
 
@@ -244,6 +245,11 @@ async function resolveStoreAuth(
       orgId: cached.orgId,
       authType: "api-key",
     };
+
+    // Populate AsyncLocalStorage so withTx can set the RLS GUC.
+    // For API-key auth there is no individual userId; use a synthetic identifier
+    // that is stable and non-empty (signals an authenticated connection).
+    setRequestCtx({ userId: `apikey:${cached.orgId}`, orgId: cached.orgId });
     return;
   }
 
@@ -271,6 +277,9 @@ async function resolveStoreAuth(
     userId,
     authType: "jwt",
   };
+
+  // Populate AsyncLocalStorage so withTx can set the RLS GUC.
+  setRequestCtx({ userId, orgId });
 }
 
 // ── JWT-only (management endpoints) ──────────────────────────────────────────
@@ -303,6 +312,9 @@ export const requireJwt: preHandlerHookHandler = async (request, reply) => {
     userId: claims.sub,
     authType: "jwt",
   };
+
+  // Populate AsyncLocalStorage so withTx can set the RLS GUC.
+  setRequestCtx({ userId: claims.sub, orgId: claims.org });
 };
 
 // ── Tier preHandlers ──────────────────────────────────────────────────────────

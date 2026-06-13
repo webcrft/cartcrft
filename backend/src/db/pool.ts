@@ -4,9 +4,28 @@
  * Lazily created on first access so the server can boot (and serve /healthz)
  * even when DATABASE_URL is unreachable — the pool itself doesn't connect
  * until the first query.
+ *
+ * RLS enforcement (H1.1)
+ * ----------------------
+ * The application connects as neondb_owner which has rolbypassrls=TRUE,
+ * silently skipping all RLS policies. To enforce the policies in 0006_rls.sql
+ * and 0007_booking.sql, withTx() now:
+ *
+ *   1. Calls getRequestCtx() (AsyncLocalStorage) to retrieve the current
+ *      authenticated principal (populated by the auth middleware).
+ *   2. If a principal is present, executes inside the transaction:
+ *        SET LOCAL ROLE cartcrft_app            -- role with NOBYPASSRLS
+ *        set_config('app.user_id', userId, true) -- signals authenticated conn
+ *        set_config('app.org_id',  orgId,  true) -- org context for future use
+ *   3. LOCAL scope ensures the role and GUCs revert at COMMIT/ROLLBACK.
+ *
+ * Non-request contexts (worker, migration, seed, test fixtures) have no entry
+ * in the AsyncLocalStorage store → withTx runs as neondb_owner (BYPASSRLS)
+ * → trusted infrastructure code is not blocked by policies.
  */
 import pg from "pg";
 import { config } from "../config/config.js";
+import { getRequestCtx } from "../lib/request-ctx.js";
 
 const { Pool } = pg;
 
@@ -56,6 +75,12 @@ export async function closePool(): Promise<void> {
  * Run `fn` inside a single database transaction.
  * Rolls back and rethrows on any error.
  *
+ * RLS enforcement: if an authenticated request context exists (set by the auth
+ * middleware via runWithRequestCtx), the transaction switches to the
+ * cartcrft_app role (NOBYPASSRLS) and sets app.user_id / app.org_id GUCs so
+ * that the RLS policies in 0006_rls.sql / 0007_booking.sql evaluate correctly.
+ * The SET LOCAL scope ensures the role and GUCs revert at COMMIT/ROLLBACK.
+ *
  * Usage:
  *   const result = await withTx(async (client) => {
  *     await client.query('INSERT ...');
@@ -69,6 +94,20 @@ export async function withTx<T>(
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
+
+    // ── RLS enforcement: switch to restricted role if inside a request ──────
+    const reqCtx = getRequestCtx();
+    if (reqCtx) {
+      // SET LOCAL ROLE restores to the session role (neondb_owner) at
+      // COMMIT/ROLLBACK. cartcrft_app has NOBYPASSRLS, so policies evaluate.
+      await client.query("SET LOCAL ROLE cartcrft_app");
+      // set_config with is_local=true resets at end of transaction.
+      await client.query(
+        "SELECT set_config('app.user_id', $1, true), set_config('app.org_id', $2, true)",
+        [reqCtx.userId, reqCtx.orgId]
+      );
+    }
+
     const result = await fn(client);
     await client.query("COMMIT");
     return result;
