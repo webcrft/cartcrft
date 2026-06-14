@@ -3,7 +3,7 @@
  * store integrations (with encrypted creds), and tracking pixels.
  */
 
-import { getPool } from "../../db/pool.js";
+import { getPool, getReadDb } from "../../db/pool.js";
 import { encodeSecretValue } from "../../lib/secrets.js";
 import { config } from "../../config/config.js";
 import type {
@@ -48,7 +48,7 @@ export async function listIntegrationDefinitions(
 export async function listStoreIntegrations(
   storeId: string
 ): Promise<StoreIntegrationRow[]> {
-  const pool = getPool();
+  const pool = getReadDb();
   const res = await pool.query<StoreIntegrationRow>(
     `SELECT si.id::text, si.store_id::text, si.integration_slug,
             si.name, si.oauth_account_id, si.oauth_account_name,
@@ -155,7 +155,7 @@ export async function deleteStoreIntegration(
 // ── Tracking pixels ────────────────────────────────────────────────────────────
 
 export async function listTrackingPixels(storeId: string): Promise<TrackingPixelRow[]> {
-  const pool = getPool();
+  const pool = getReadDb();
   const res = await pool.query<TrackingPixelRow>(
     `SELECT id::text, store_id::text, pixel_type, name, tracking_id,
             fire_on, url_pattern, event_mapping, inject_location,

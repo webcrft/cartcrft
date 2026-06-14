@@ -36,6 +36,9 @@ import { runWithRequestCtx } from "../../src/lib/request-ctx.js";
 import { withTx } from "../../src/db/pool.js";
 import { listOrders, getOrder } from "../../src/modules/orders/service.js";
 import { listProducts } from "../../src/modules/catalog/service.js";
+import { listShippingZones } from "../../src/modules/shipping/service.js";
+import { listTaxZones } from "../../src/modules/tax/service.js";
+import { listAgents } from "../../src/modules/agents/service.js";
 
 let ctx: TestCtx;
 
@@ -1089,6 +1092,51 @@ describe("Tenant isolation — IDOR sweep", () => {
       const asA = await runWithRequestCtx(
         { userId: `user-${userAId}`, orgId: orgAId },
         () => listProducts(storeAId, { limit: 200 })
+      );
+      expect(asA.length).toBeGreaterThan(0);
+    });
+
+    // ── Newly-converted follow-up modules (P4 / item-2 follow-up) ─────────────
+    // shipping, tax, and agents read service fns were migrated from owner-role
+    // getPool() to the role-switched getReadDb() path. Prove RLS denies the
+    // cross-org read at the DB layer and the same-org control still sees rows.
+
+    it("listShippingZones() under Org B context returns ZERO of Store A's zones", async () => {
+      const asB = await runWithRequestCtx(
+        { userId: `user-${userBId}`, orgId: orgBId },
+        () => listShippingZones(storeAId)
+      );
+      expect(asB).toHaveLength(0);
+    });
+
+    it("listShippingZones() under Org A context CAN see Store A's zones (control)", async () => {
+      const asA = await runWithRequestCtx(
+        { userId: `user-${userAId}`, orgId: orgAId },
+        () => listShippingZones(storeAId)
+      );
+      expect(asA.length).toBeGreaterThan(0);
+    });
+
+    it("listTaxZones() under Org B context returns ZERO of Store A's tax zones", async () => {
+      const asB = await runWithRequestCtx(
+        { userId: `user-${userBId}`, orgId: orgBId },
+        () => listTaxZones(storeAId)
+      );
+      expect(asB).toHaveLength(0);
+    });
+
+    it("listAgents() under Org B context returns ZERO of Store A's agents", async () => {
+      const asB = await runWithRequestCtx(
+        { userId: `user-${userBId}`, orgId: orgBId },
+        () => listAgents(storeAId, { limit: 200 })
+      );
+      expect(asB).toHaveLength(0);
+    });
+
+    it("listAgents() under Org A context CAN see Store A's agents (control)", async () => {
+      const asA = await runWithRequestCtx(
+        { userId: `user-${userAId}`, orgId: orgAId },
+        () => listAgents(storeAId, { limit: 200 })
       );
       expect(asA.length).toBeGreaterThan(0);
     });

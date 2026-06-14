@@ -6,7 +6,7 @@
  */
 
 import type pg from "pg";
-import { getPool, withTx } from "../../db/pool.js";
+import { getPool, getReadDb, withTx } from "../../db/pool.js";
 import { encodeSecretValue } from "../../lib/secrets.js";
 import type {
   StorePublic,
@@ -67,7 +67,7 @@ export async function listStores(
   orgId: string,
   opts: { limit?: number; offset?: number } = {}
 ): Promise<StorePublic[]> {
-  const pool = getPool();
+  const pool = getReadDb();
   const limit = Math.min(Math.max(opts.limit ?? 50, 1), 200);
   const offset = opts.offset ?? 0;
 
@@ -84,7 +84,7 @@ export async function listStores(
 
 /** Get a single store by id. Returns null if not found. */
 export async function getStore(storeId: string): Promise<StorePublic | null> {
-  const pool = getPool();
+  const pool = getReadDb();
   const { rows } = await pool.query<StorePublic>(
     `SELECT ${STORE_COLS}
      FROM stores

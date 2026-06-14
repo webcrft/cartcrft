@@ -10,7 +10,7 @@
  *  - maxCartLineQuantity = 1000.
  */
 
-import { getPool } from "../../db/pool.js";
+import { getPool, getReadDb } from "../../db/pool.js";
 
 export const MAX_CART_LINE_QUANTITY = 1000;
 
@@ -84,7 +84,7 @@ export async function createCart(
  * Get a cart with its lines. Returns null if not found or doesn't belong to store.
  */
 export async function getCart(storeId: string, cartId: string): Promise<Cart | null> {
-  const pool = getPool();
+  const pool = getReadDb();
 
   const { rows: cartRows } = await pool.query<Cart>(
     `SELECT id::text, store_id::text, customer_id::text, currency, status,
@@ -290,7 +290,7 @@ export async function listAbandonedCarts(
   storeId: string,
   opts: { limit?: number; offset?: number } = {}
 ): Promise<Cart[]> {
-  const pool = getPool();
+  const pool = getReadDb();
   const limit = Math.min(Math.max(opts.limit ?? 50, 1), 200);
   const offset = opts.offset ?? 0;
 

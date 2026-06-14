@@ -20,15 +20,15 @@
  *   4. BobGo live rates merged after static when a bobgo provider is active + api_key present
  */
 
-import { getPool, withTx } from "../../db/pool.js";
+import { getPool, getReadDb, withTx } from "../../db/pool.js";
 import { newBobGoClient } from "../../providers/shipping/bobgo.js";
 import { dispatchStoreEvent } from "../notifications/service.js";
 
 // ── Shipping zones ────────────────────────────────────────────────────────────
 
 export async function listShippingZones(storeId: string) {
-  const pool = getPool();
-  const { rows: zones } = await pool.query(
+  const pool = getReadDb();
+  const { rows: zones } = await pool.query<{ id: string }>(
     `SELECT id::text, store_id::text, name, created_at
      FROM shipping_zones WHERE store_id = $1::uuid ORDER BY name`,
     [storeId]
@@ -115,7 +115,7 @@ export async function deleteShippingZone(storeId: string, zoneId: string) {
 // ── Static shipping rates ─────────────────────────────────────────────────────
 
 export async function listShippingRates(storeId: string, zoneId: string) {
-  const pool = getPool();
+  const pool = getReadDb();
   const { rows } = await pool.query(
     `SELECT sr.id::text, sr.zone_id::text, sr.provider_id::text, sr.name,
             sr.price, sr.min_weight_g, sr.max_weight_g,
@@ -240,7 +240,7 @@ export async function getAvailableShippingRates(
   storeId: string,
   opts: AvailableRateOpts
 ) {
-  const pool = getPool();
+  const pool = getReadDb();
   const countryCode = opts.country_code.toUpperCase().trim();
   const provinceCode = opts.province_code?.trim() ?? "";
   const weightG = opts.weight_g ?? 0;
@@ -285,7 +285,7 @@ async function fetchBobGoRates(
   storeId: string,
   opts: { countryCode: string; weightG: number; city: string; postalCode: string }
 ) {
-  const pool = getPool();
+  const pool = getReadDb();
 
   // Find active bobgo provider: stored as type='webhook' with config.provider='bobgo'
   const { rows: provRows } = await pool.query<{ id: string; config: Record<string, unknown> }>(
@@ -360,7 +360,7 @@ async function fetchBobGoRates(
 // ── Shipping providers ────────────────────────────────────────────────────────
 
 export async function listShippingProviders(storeId: string) {
-  const pool = getPool();
+  const pool = getReadDb();
   const { rows } = await pool.query(
     `SELECT id::text, store_id::text, name, type, webhook_url,
             config, is_active, position, created_at, updated_at
@@ -413,7 +413,7 @@ export async function listCollectionPoints(
   storeId: string,
   opts: { active_only?: boolean | undefined; provider_id?: string | undefined } = {}
 ) {
-  const pool = getPool();
+  const pool = getReadDb();
   let query = `
     SELECT id::text, store_id::text, provider_id::text, name, provider_ref,
            address, coordinates, operating_hours, is_active, created_at, updated_at
@@ -510,7 +510,7 @@ export async function deleteCollectionPoint(storeId: string, pointId: string) {
 // ── Shipments ─────────────────────────────────────────────────────────────────
 
 export async function listShipments(storeId: string, orderId: string) {
-  const pool = getPool();
+  const pool = getReadDb();
   const { rows } = await pool.query(
     `SELECT s.id::text, s.order_id::text, s.provider_id::text, s.warehouse_id::text,
             s.collection_point_id::text, s.status, s.tracking_number, s.tracking_url,
@@ -675,7 +675,7 @@ export async function listShipmentTracking(
   orderId: string,
   shipmentId: string
 ) {
-  const pool = getPool();
+  const pool = getReadDb();
   const { rows } = await pool.query(
     `SELECT ste.id::text, ste.shipment_id::text, ste.status, ste.location, ste.description,
             ste.occurred_at, ste.created_at
@@ -770,7 +770,7 @@ export async function getShipmentWebhookSecret(
   storeId: string,
   shipmentId: string
 ): Promise<string | null> {
-  const pool = getPool();
+  const pool = getReadDb();
   const { rows } = await pool.query<{ webhook_secret: string | null }>(
     `SELECT COALESCE(sp.webhook_secret, '') AS webhook_secret
      FROM shipments s
@@ -800,8 +800,8 @@ export function mapCarrierStatus(s: string): string {
 // ── Fulfillment orders ────────────────────────────────────────────────────────
 
 export async function listFulfillmentOrders(storeId: string, orderId: string) {
-  const pool = getPool();
-  const { rows: fos } = await pool.query(
+  const pool = getReadDb();
+  const { rows: fos } = await pool.query<{ id: string }>(
     `SELECT fo.id::text, fo.store_id::text, fo.order_id::text, fo.warehouse_id::text,
             fo.status, fo.request_status, fo.notes,
             fo.created_at, fo.updated_at

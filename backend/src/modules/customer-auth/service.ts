@@ -18,6 +18,7 @@ import { hashSync as argon2HashSync, verifySync as argon2VerifySync } from "@nod
 const ARGON2ID_ALGORITHM = 2 as const;
 import { SignJWT, jwtVerify, type JWTPayload } from "jose";
 import type pg from "pg";
+import type { ReadDb } from "../../db/pool.js";
 import { decodeSecretValue, encodeSecretValue } from "../../lib/secrets.js";
 import { ConsoleMailer } from "../../lib/mailer/console.js";
 import type { Mailer } from "../../lib/mailer/index.js";
@@ -717,7 +718,7 @@ export async function caAudit(
 // ── Email log ─────────────────────────────────────────────────────────────────
 
 export async function getEmailLog(
-  pool: pg.Pool,
+  pool: ReadDb,
   storeId: string,
   limit = 50
 ): Promise<unknown[]> {

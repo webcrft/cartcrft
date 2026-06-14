@@ -27,7 +27,7 @@
  */
 
 import { generateKeyPairSync, createVerify, sign as cryptoSign, verify as cryptoVerify } from "node:crypto";
-import { getPool } from "../../db/pool.js";
+import { getPool, getReadDb } from "../../db/pool.js";
 import type {
   AgentRow,
   AgentPublic,
@@ -279,7 +279,7 @@ export async function listAgents(
   storeId: string,
   opts: { limit?: number; offset?: number } = {}
 ): Promise<AgentPublic[]> {
-  const pool = getPool();
+  const pool = getReadDb();
   const limit = opts.limit ?? 50;
   const offset = opts.offset ?? 0;
   const { rows } = await pool.query<AgentRow>(
@@ -305,7 +305,7 @@ export async function getAgent(
   storeId: string,
   agentId: string
 ): Promise<AgentPublic | null> {
-  const pool = getPool();
+  const pool = getReadDb();
   const { rows } = await pool.query<AgentRow>(
     `SELECT
        id::text, store_id::text, name, slug, description,
@@ -690,7 +690,7 @@ export async function verifyMandate(
   storeId: string,
   mandateId: string
 ): Promise<MandateVerifyResult> {
-  const pool = getPool();
+  const pool = getReadDb();
   const errors: string[] = [];
   const chain: MandatePublic[] = [];
 
@@ -874,7 +874,7 @@ export async function listMandates(
   agentId: string,
   opts: { limit?: number; offset?: number; type?: string; active?: boolean } = {}
 ): Promise<MandatePublic[]> {
-  const pool = getPool();
+  const pool = getReadDb();
   const conditions = ["store_id = $1::uuid", "agent_id = $2::uuid"];
   const vals: unknown[] = [storeId, agentId];
   let i = 3;
@@ -972,7 +972,7 @@ export async function listAuditLog(
     status?: string;
   } = {}
 ): Promise<AuditLogPublic[]> {
-  const pool = getPool();
+  const pool = getReadDb();
   const conditions = ["store_id = $1::uuid"];
   const vals: unknown[] = [storeId];
   let i = 2;

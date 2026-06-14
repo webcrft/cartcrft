@@ -5,7 +5,7 @@
  * and the feed-generation queries for Google Shopping / Facebook Catalog.
  */
 
-import { getPool } from "../../db/pool.js";
+import { getPool, getReadDb } from "../../db/pool.js";
 import type {
   MerchantFeedRow,
   CreateMerchantFeedInput,
@@ -213,7 +213,7 @@ export async function getFacebookFeedItems(storeId: string): Promise<
 // ── Merchant feeds CRUD ────────────────────────────────────────────────────────
 
 export async function listMerchantFeeds(storeId: string): Promise<MerchantFeedRow[]> {
-  const pool = getPool();
+  const pool = getReadDb();
   const res = await pool.query<MerchantFeedRow>(
     `SELECT id::text, store_id::text,
             store_integration_id::text,
@@ -328,7 +328,7 @@ export async function getProductFeedData(
   variantId: string,
   storeId: string
 ): Promise<FeedDataRow | null> {
-  const pool = getPool();
+  const pool = getReadDb();
   const res = await pool.query<FeedDataRow>(
     `SELECT pfd.id::text, pfd.variant_id::text,
             pfd.gtin, pfd.mpn, pfd.brand, pfd.google_product_category,

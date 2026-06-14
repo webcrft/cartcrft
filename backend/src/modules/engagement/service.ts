@@ -16,7 +16,7 @@
  * is in carts module (T2.3). This module provides the admin listing.
  */
 
-import { getPool, withTx } from "../../db/pool.js";
+import { getPool, getReadDb, withTx } from "../../db/pool.js";
 import type {
   Wishlist,
   WishlistItem,
@@ -31,7 +31,7 @@ export async function listWishlists(
   storeId: string,
   customerId?: string | null
 ): Promise<Wishlist[]> {
-  const pool = getPool();
+  const pool = getReadDb();
   if (customerId) {
     const { rows } = await pool.query<Wishlist>(
       `SELECT * FROM wishlists WHERE store_id = $1::uuid AND customer_id = $2::uuid ORDER BY created_at DESC`,
@@ -50,7 +50,7 @@ export async function getWishlist(
   storeId: string,
   wishlistId: string
 ): Promise<Wishlist | null> {
-  const pool = getPool();
+  const pool = getReadDb();
   const { rows } = await pool.query<Wishlist>(
     `SELECT * FROM wishlists WHERE id = $1::uuid AND store_id = $2::uuid`,
     [wishlistId, storeId]
@@ -203,7 +203,7 @@ export async function removeWishlistItem(
 // ── Abandoned carts ───────────────────────────────────────────────────────────
 
 export async function listAbandonedCarts(storeId: string): Promise<AbandonedCart[]> {
-  const pool = getPool();
+  const pool = getReadDb();
   const { rows } = await pool.query<AbandonedCart>(
     `SELECT ac.id::text, ac.store_id::text, ac.cart_id::text, ac.customer_id::text,
             ac.email, ac.abandoned_at, ac.recovered_at, ac.recovery_order_id::text,

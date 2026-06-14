@@ -29,7 +29,7 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { SignJWT } from "jose";
 import { hashSync as argon2HashSync, verifySync as argon2VerifySync } from "@node-rs/argon2";
-import { getPool } from "../../db/pool.js";
+import { getPool, getReadDb } from "../../db/pool.js";
 import { config } from "../../config/config.js";
 import { JWT_ISSUER, JWT_AUDIENCE } from "../../lib/auth/jwt.js";
 
@@ -381,7 +381,7 @@ export async function revokeByToken(refreshToken: string): Promise<void> {
 // ── /account/me ──────────────────────────────────────────────────────────────
 
 export async function getUser(userId: string): Promise<PublicPlatformUser | null> {
-  const { rows } = await getPool().query<{ id: string; org_id: string; email: string; role: PlatformRole; is_active: boolean; last_login_at: string | null; created_at: string }>(
+  const { rows } = await getReadDb().query<{ id: string; org_id: string; email: string; role: PlatformRole; is_active: boolean; last_login_at: string | null; created_at: string }>(
     `SELECT id::text, org_id::text, email, role, is_active, last_login_at::text, created_at::text
        FROM platform_users WHERE id = $1::uuid`,
     [userId]
@@ -392,7 +392,7 @@ export async function getUser(userId: string): Promise<PublicPlatformUser | null
 // ── Team management ──────────────────────────────────────────────────────────
 
 export async function listUsers(orgId: string): Promise<PublicPlatformUser[]> {
-  const { rows } = await getPool().query<{ id: string; org_id: string; email: string; role: PlatformRole; is_active: boolean; last_login_at: string | null; created_at: string }>(
+  const { rows } = await getReadDb().query<{ id: string; org_id: string; email: string; role: PlatformRole; is_active: boolean; last_login_at: string | null; created_at: string }>(
     `SELECT id::text, org_id::text, email, role, is_active, last_login_at::text, created_at::text
        FROM platform_users WHERE org_id = $1::uuid ORDER BY created_at ASC`,
     [orgId]

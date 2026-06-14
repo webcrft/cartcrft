@@ -20,7 +20,7 @@
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { z } from "zod";
 import { requireJwt } from "../../lib/auth/middleware.js";
-import { getPool } from "../../db/pool.js";
+import { getReadDb } from "../../db/pool.js";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -69,7 +69,7 @@ export const analyticsPlugin: FastifyPluginAsyncZod = async (app) => {
 
       // Verify the store belongs to the JWT's org
       const { orgId } = request.auth!;
-      const pool = getPool();
+      const pool = getReadDb();
       const storeCheck = await pool.query<{ ok: boolean }>(
         `SELECT (organization_id = $2::uuid) AS ok FROM stores WHERE id = $1::uuid`,
         [store_id, orgId]
@@ -136,7 +136,7 @@ export const analyticsPlugin: FastifyPluginAsyncZod = async (app) => {
       const { start: startDate, end: endDate } = parseDateRange(start, end);
 
       const { orgId } = request.auth!;
-      const pool = getPool();
+      const pool = getReadDb();
       const storeCheck = await pool.query<{ ok: boolean }>(
         `SELECT (organization_id = $2::uuid) AS ok FROM stores WHERE id = $1::uuid`,
         [store_id, orgId]
@@ -200,7 +200,7 @@ export const analyticsPlugin: FastifyPluginAsyncZod = async (app) => {
       const { start: startDate, end: endDate } = parseDateRange(start, end);
 
       const { orgId } = request.auth!;
-      const pool = getPool();
+      const pool = getReadDb();
       const storeCheck = await pool.query<{ ok: boolean }>(
         `SELECT (organization_id = $2::uuid) AS ok FROM stores WHERE id = $1::uuid`,
         [store_id, orgId]
@@ -269,7 +269,7 @@ export const analyticsPlugin: FastifyPluginAsyncZod = async (app) => {
       const { start: startDate, end: endDate } = parseDateRange(start, end);
 
       const { orgId } = request.auth!;
-      const pool = getPool();
+      const pool = getReadDb();
       const storeCheck = await pool.query<{ ok: boolean }>(
         `SELECT (organization_id = $2::uuid) AS ok FROM stores WHERE id = $1::uuid`,
         [store_id, orgId]

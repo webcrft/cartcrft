@@ -16,7 +16,7 @@ import {
   storeAuthAdmin,
   storeAuthWrite,
 } from "../../lib/auth/middleware.js";
-import { getPool } from "../../db/pool.js";
+import { getPool, getReadDb } from "../../db/pool.js";
 import { config } from "../../config/config.js";
 import {
   loadStoreConfig,
@@ -231,8 +231,7 @@ export const customerAuthPlugin: FastifyPluginAsyncZod = async (app) => {
     preHandler: [storeAuthAdmin],
   }, async (request, reply) => {
     const { storeId } = request.params;
-    const pool = getPool();
-    const entries = await getEmailLog(pool, storeId);
+    const entries = await getEmailLog(getReadDb(), storeId);
     return reply.send({ entries });
   });
 

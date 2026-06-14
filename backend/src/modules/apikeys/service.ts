@@ -14,7 +14,7 @@
  */
 
 import { createHash, randomBytes } from "node:crypto";
-import { getPool } from "../../db/pool.js";
+import { getPool, getReadDb } from "../../db/pool.js";
 import {
   VALID_SCOPES,
   READ_ONLY_SCOPES,
@@ -179,7 +179,7 @@ export async function createApiKey(
 
 /** List active (non-revoked) API keys for an org. */
 export async function listApiKeys(orgId: string): Promise<ApiKeyRow[]> {
-  const pool = getPool();
+  const pool = getReadDb();
   const { rows } = await pool.query<ApiKeyRow>(
     `SELECT id::text,
             organization_id::text,

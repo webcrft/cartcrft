@@ -13,7 +13,7 @@
  * This module handles download link generation + token validation only.
  */
 
-import { getPool, withTx } from "../../db/pool.js";
+import { getPool, getReadDb, withTx } from "../../db/pool.js";
 import type { DigitalDownloadLink, GenerateDownloadLinksInput, DownloadTokenInfo } from "./types.js";
 
 // ── Generate download links for an order ─────────────────────────────────────
@@ -90,7 +90,7 @@ export async function listDownloadLinks(
   storeId: string,
   orderId: string
 ): Promise<DigitalDownloadLink[]> {
-  const pool = getPool();
+  const pool = getReadDb();
   const { rows } = await pool.query<DigitalDownloadLink>(
     `SELECT dl.id::text, dl.order_id::text, dl.file_id::text, dl.customer_id::text,
             dl.token::text, dl.download_count, dl.max_downloads,

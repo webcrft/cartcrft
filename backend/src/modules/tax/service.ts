@@ -12,12 +12,12 @@
  *  - category code must be unique per store (DB UNIQUE constraint enforced)
  */
 
-import { getPool, withTx } from "../../db/pool.js";
+import { getPool, getReadDb, withTx } from "../../db/pool.js";
 
 // ── Tax categories ────────────────────────────────────────────────────────────
 
 export async function listTaxCategories(storeId: string) {
-  const pool = getPool();
+  const pool = getReadDb();
   const { rows } = await pool.query(
     `SELECT id::text, store_id::text, name, code, created_at
      FROM tax_categories WHERE store_id = $1::uuid ORDER BY name`,
@@ -57,8 +57,8 @@ export async function deleteTaxCategory(storeId: string, categoryId: string) {
 // ── Tax zones ─────────────────────────────────────────────────────────────────
 
 export async function listTaxZones(storeId: string) {
-  const pool = getPool();
-  const { rows: zones } = await pool.query(
+  const pool = getReadDb();
+  const { rows: zones } = await pool.query<{ id: string }>(
     `SELECT id::text, store_id::text, name, created_at
      FROM tax_zones WHERE store_id = $1::uuid ORDER BY name`,
     [storeId]
@@ -142,7 +142,7 @@ export async function deleteTaxZone(storeId: string, zoneId: string) {
 // ── Tax rates ─────────────────────────────────────────────────────────────────
 
 export async function listTaxRates(storeId: string, zoneId: string) {
-  const pool = getPool();
+  const pool = getReadDb();
   const { rows } = await pool.query(
     `SELECT tr.id::text, tr.zone_id::text, tr.category_id::text, tr.name,
             tr.rate_pct, tr.is_inclusive, tr.is_active, tr.created_at,

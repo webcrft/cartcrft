@@ -11,7 +11,7 @@
  *  discount validation is read-only here; the atomic burn happens at complete time.
  */
 
-import { getPool } from "../../db/pool.js";
+import { getPool, getReadDb } from "../../db/pool.js";
 import { calcTax, extractAddressCodes, type TaxLine } from "../../lib/tax.js";
 import { round2 } from "../../lib/money.js";
 
@@ -136,7 +136,7 @@ export async function applyDiscount(
 }> {
   if (!code) return { discountTotal: 0, discountLines: [], error: null };
 
-  const pool = getPool();
+  const pool = getReadDb();
   const { rows } = await pool.query<{
     id: string;
     type: string;
@@ -375,7 +375,7 @@ export async function getCheckout(
   storeId: string,
   checkoutId: string
 ): Promise<CheckoutPublic | null> {
-  const pool = getPool();
+  const pool = getReadDb();
   const { rows } = await pool.query<CheckoutPublic>(
     `SELECT id::text, cart_id::text, store_id::text, customer_id::text, company_id::text,
             email,
