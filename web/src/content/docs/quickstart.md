@@ -1,7 +1,9 @@
 ---
-title: "Quickstart — Local Development"
-description: "Get a Cartcrft server running locally with a seeded demo store and make your"
-# TODO(docs-agent): refine title, description, sidebar label, and ordering
+title: "Quickstart"
+description: "Get a Cartcrft server running locally with a seeded demo store and make your first API calls in under five minutes."
+sidebar:
+  label: "Quickstart"
+  order: 1
 ---
 
 # Quickstart — Local Development
@@ -68,7 +70,7 @@ cp .env.example .env   # if the example exists, otherwise create manually
 
 Minimum required variables:
 
-```env
+```bash
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/cartcrft
 JWT_SECRET=change-me-in-production
 APP_ENV=development
@@ -77,7 +79,7 @@ PORT=3000
 
 Optional but recommended for production:
 
-```env
+```bash
 # AES-256-GCM key for encrypting provider secrets at rest.
 # 64-char hex (openssl rand -hex 32) or 44-char base64 (openssl rand -base64 32).
 # Required when APP_ENV=production — server refuses to start without it.

@@ -1,7 +1,9 @@
 ---
-title: "Testing Guide"
-description: "Cartcrft uses Vitest with a suite-per-concern layout. Integration suites boot"
-# TODO(docs-agent): refine title, description, sidebar label, and ordering
+title: "Testing"
+description: "Vitest suite-per-concern layout, integration tests against real Postgres, simulated time for billing, and CI setup."
+sidebar:
+  label: "Testing"
+  order: 2
 ---
 
 # Testing Guide
@@ -193,7 +195,7 @@ real second equals one simulated day.
 
 The compression factor is set via environment variables:
 
-```env
+```bash
 BILLING_SIM_ENABLED=true
 BILLING_SIM_DAY_SECONDS=1    # 1 real second = 1 simulated day
 ```

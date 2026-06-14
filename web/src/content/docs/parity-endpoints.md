@@ -1,7 +1,9 @@
 ---
-title: "Parity Endpoints Reference"
-description: "Full endpoint inventory ported from webcrft-mono `backend/cmd/server/main.go` route registrations."
-# TODO(docs-agent): refine title, description, sidebar label, and ordering
+title: "Endpoint Reference"
+description: "Full endpoint inventory with auth tiers (JWT, read, write, admin, super) and Wave 2 task mapping."
+sidebar:
+  label: "Endpoint Reference"
+  order: 2
 ---
 
 # Cartcrft Parity Endpoints

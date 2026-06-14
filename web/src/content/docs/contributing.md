@@ -1,7 +1,9 @@
 ---
 title: "Contributing"
-description: "Developer guide for the Cartcrft monorepo."
-# TODO(docs-agent): refine title, description, sidebar label, and ordering
+description: "Developer guide for the Cartcrft monorepo — layout, pnpm commands, migration rules, commit style."
+sidebar:
+  label: "Contributing"
+  order: 1
 ---
 
 # Contributing

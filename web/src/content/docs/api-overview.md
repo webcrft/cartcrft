@@ -1,14 +1,16 @@
 ---
 title: "API Overview"
-description: "Reference for authentication, error handling, idempotency, pagination, and"
-# TODO(docs-agent): refine title, description, sidebar label, and ordering
+description: "Auth patterns (JWT vs cc_ keys), error envelope, idempotency, pagination, and money encoding conventions."
+sidebar:
+  label: "API Overview"
+  order: 1
 ---
 
 # API Overview
 
 Reference for authentication, error handling, idempotency, pagination, and
 money encoding conventions. See [parity-endpoints.md](./parity-endpoints.md)
-for the full endpoint table and [openapi.json](./openapi.json) for the machine-
+for the full endpoint table and `openapi.json` in the repo root for the machine-
 readable spec.
 
 ---
@@ -241,6 +243,6 @@ ACP endpoints carry an explicit version in the path:
 ## Further reading
 
 - Full endpoint table: [parity-endpoints.md](./parity-endpoints.md)
-- Machine-readable spec: [openapi.json](./openapi.json)
+- Machine-readable spec: `openapi.json` (repo root)
 - Agent / MCP auth: [agent-native.md](./agent-native.md)
 - Payment provider setup: [byo-keys.md](./byo-keys.md)

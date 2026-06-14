@@ -1,7 +1,9 @@
 ---
-title: "Cloud vs Self-Host"
-description: "Cartcrft is designed so that self-hosting requires nothing from `cloud/`. This"
-# TODO(docs-agent): refine title, description, sidebar label, and ordering
+title: "Cloud vs Self-host"
+description: "MIT core vs the cloud/ layer — what the cloud tier adds, licensing split, and what you get when self-hosting."
+sidebar:
+  label: "Cloud vs Self-host"
+  order: 3
 ---
 
 # Cloud vs Self-Host

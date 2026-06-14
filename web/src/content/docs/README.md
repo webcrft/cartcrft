@@ -1,7 +1,9 @@
 ---
-title: "Documentation Overview"
-description: "Developer reference for the Cartcrft headless commerce backend."
-# TODO(docs-agent): refine title, description, sidebar label, and ordering
+title: "Docs Overview"
+description: "Reading order and quick links for the Cartcrft developer reference."
+sidebar:
+  label: "Docs Overview"
+  order: 2
 ---
 
 # Cartcrft Documentation
@@ -27,7 +29,7 @@ up a deployment; jump to a specific doc if you have a targeted question.
 | [testing.md](./testing.md) | Test harness design, writing a suite, simulated time for billing |
 | [parity-endpoints.md](./parity-endpoints.md) | Full endpoint table with auth tiers (T2.1–T2.10) |
 | [acp.md](./acp.md) | ACP adapter spec pin, endpoint table, field mapping, divergences |
-| [openapi.json](./openapi.json) | OpenAPI 3.1 spec (generated — do not edit by hand) |
+| `openapi.json` (repo root) | OpenAPI 3.1 spec (generated — do not edit by hand) |
 
 ---
 
@@ -43,6 +45,5 @@ up a deployment; jump to a specific doc if you have a targeted question.
 
 ## External references
 
-- Root README: [../README.md](../README.md)
-- Monorepo roadmap: [../roadmap.md](../roadmap.md)
-- MCP tools reference: [../mcp/README.md](../mcp/README.md)
+- Root README: [GitHub — webcrftsystems/cartcrft](https://github.com/webcrftsystems/cartcrft)
+- MCP tools reference: [Agent-native docs](/docs/agent-native/)

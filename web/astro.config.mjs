@@ -3,6 +3,7 @@ import starlight from '@astrojs/starlight';
 
 // https://astro.build/config
 export default defineConfig({
+  site: 'https://cartcrft.dev',
   output: 'static',
   integrations: [
     starlight({
@@ -16,29 +17,60 @@ export default defineConfig({
       social: [
         { icon: 'github', label: 'GitHub', href: 'https://github.com/webcrftsystems/cartcrft' },
       ],
-      // Sidebar — TODO(docs-agent): replace autogenerate with explicit grouped sidebar.
-      // Autogenerate is used during scaffold to avoid slug resolution issues.
-      //
-      // Verified slugs (from content collection IDs, no extension):
-      //   quickstart, quickstart-mcp, api-overview, byo-keys, parity-endpoints,
-      //   agent-native, acp, ucp, security, self-host, cloud-vs-selfhost,
-      //   contributing, testing, readme
-      //
-      // Switch to explicit groups like:
-      //   { label: 'Getting Started', items: [{ slug: 'quickstart' }, { slug: 'quickstart-mcp' }] }
-      //   { label: 'Guides', items: [{ slug: 'api-overview' }, { slug: 'byo-keys' }, { slug: 'parity-endpoints' }] }
-      //   { label: 'Agent-Native', items: [{ slug: 'agent-native' }, { slug: 'acp' }, { slug: 'ucp' }] }
-      //   { label: 'Self-Host', items: [{ slug: 'self-host' }, { slug: 'cloud-vs-selfhost' }] }
-      //   { label: 'Security', items: [{ slug: 'security' }] }
-      //   { label: 'Contributing', items: [{ slug: 'contributing' }, { slug: 'testing' }] }
-      //   { label: 'Reference', items: [{ slug: 'readme', label: 'Docs Overview' }] }
+      editLink: {
+        baseUrl: 'https://github.com/webcrftsystems/cartcrft/edit/main/web/',
+      },
       sidebar: [
         {
-          label: 'All Docs',
-          autogenerate: { directory: '.' },
+          label: 'Getting Started',
+          items: [
+            { slug: 'quickstart' },
+            { slug: 'quickstart-mcp' },
+          ],
+        },
+        {
+          label: 'Guides',
+          items: [
+            { slug: 'byo-keys' },
+            { slug: 'self-host' },
+            { slug: 'cloud-vs-selfhost' },
+          ],
+        },
+        {
+          label: 'Agent-native',
+          items: [
+            { slug: 'agent-native' },
+            {
+              label: 'Protocols',
+              items: [
+                { slug: 'acp' },
+                { slug: 'ucp' },
+              ],
+            },
+          ],
+        },
+        {
+          label: 'Reference',
+          items: [
+            { slug: 'api-overview' },
+            { slug: 'parity-endpoints' },
+          ],
+        },
+        {
+          label: 'Operations',
+          items: [
+            { slug: 'security' },
+            { slug: 'testing' },
+          ],
+        },
+        {
+          label: 'Project',
+          items: [
+            { slug: 'contributing' },
+            { slug: 'readme', label: 'Docs Overview' },
+          ],
         },
       ],
-      // Let docs agent override head, favicon, etc.
       head: [
         {
           tag: 'meta',

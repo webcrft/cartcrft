@@ -1,7 +1,9 @@
 ---
-title: "Self-Hosting Cartcrft"
-description: "Cartcrft runs as a single Docker image with three subcommands (`serve`, `worker`, `migrate`)."
-# TODO(docs-agent): refine title, description, sidebar label, and ordering
+title: "Self-hosting"
+description: "Run Cartcrft with Docker Compose or bare-metal — single image, three subcommands, Postgres 16 + pgvector required."
+sidebar:
+  label: "Self-hosting"
+  order: 2
 ---
 
 # Self-Hosting Cartcrft

@@ -1,7 +1,9 @@
 ---
 title: "UCP Adapter"
-description: "**Pinned spec version:** 2026-01 NRF baseline, provisional"
-# TODO(docs-agent): refine title, description, sidebar label, and ordering
+description: "Universal Commerce Protocol adapter for Google surfaces and NRF 2026 — pinned to the provisional 2026-01 baseline."
+sidebar:
+  label: "UCP Adapter"
+  order: 3
 ---
 
 # Cartcrft UCP Adapter

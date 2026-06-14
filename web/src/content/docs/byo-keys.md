@@ -1,7 +1,9 @@
 ---
-title: "BYO Keys Guide"
-description: "Cartcrft has zero take rate. You bring your own payment provider credentials,"
-# TODO(docs-agent): refine title, description, sidebar label, and ordering
+title: "BYO Keys"
+description: "Bring your own payment provider, LLM key for semantic search, and email provider — no platform credentials required."
+sidebar:
+  label: "BYO Keys"
+  order: 1
 ---
 
 # BYO Keys Guide
@@ -158,7 +160,7 @@ openssl rand -base64 32
 
 **Environment variable:**
 
-```env
+```bash
 AUTH_SECRETS_KEY=<64-char-hex-or-44-char-base64>
 ```
 
@@ -181,7 +183,7 @@ with the new key. There is no automatic re-encryption on key change.
 Transactional emails (verification, magic link, password reset) use AWS SES when
 configured, or a console mailer (prints to stdout) otherwise.
 
-```env
+```bash
 AWS_SES_REGION=us-east-1
 AWS_SES_ACCESS_KEY_ID=AKIA...
 AWS_SES_SECRET_ACCESS_KEY=...
@@ -198,7 +200,7 @@ client uses Signature Version 4 directly (no AWS SDK dependency).
 The cloud billing layer uses live USD/ZAR exchange rates for invoicing. This
 requires an API key from exchangerate-api.com:
 
-```env
+```bash
 EXCHANGE_RATE_API_KEY=<key>
 ```
 

@@ -1,7 +1,9 @@
 ---
-title: "Security Model"
-description: "> **Hardening wave H1.1** — 2026-06-13. Reviewed against all 53 confirmed findings"
-# TODO(docs-agent): refine title, description, sidebar label, and ordering
+title: "Security & RLS"
+description: "Tenant isolation, RLS policies, auth key tiers, webhook verification, secrets encryption, and hardening notes."
+sidebar:
+  label: "Security & RLS"
+  order: 1
 ---
 
 # Cartcrft Security Model

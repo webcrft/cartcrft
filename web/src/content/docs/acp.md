@@ -1,7 +1,9 @@
 ---
 title: "ACP Adapter"
-description: "**Pinned spec version:** 2026-04 baseline"
-# TODO(docs-agent): refine title, description, sidebar label, and ordering
+description: "Agentic Commerce Protocol adapter — versioned, isolated API surface for agent-driven checkout flows. Pinned to the 2026-04 baseline."
+sidebar:
+  label: "ACP Adapter"
+  order: 2
 ---
 
 # Cartcrft ACP Adapter

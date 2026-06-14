@@ -1,7 +1,9 @@
 ---
-title: "Quickstart: Buy with an AI Agent"
-description: "This guide sets up a running Cartcrft store with a demo catalog and walks an AI agent"
-# TODO(docs-agent): refine title, description, sidebar label, and ordering
+title: "MCP — Buy in 10 minutes"
+description: "Set up a store with a demo catalog and walk an AI agent through a complete purchase over the MCP protocol."
+sidebar:
+  label: "MCP — Buy in 10 minutes"
+  order: 2
 ---
 
 # Quickstart: Buy with an AI Agent in 10 Minutes
@@ -49,7 +51,7 @@ pnpm install
 
 Copy `.env.example` to `.env` at the repo root and fill in your Postgres URL:
 
-```env
+```bash
 # .env
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/cartcrft
 JWT_SECRET=change-me-in-production
@@ -114,7 +116,7 @@ curl http://localhost:3000/healthz
 
 ## 5. Connect your MCP client
 
-See [mcp/README.md](../mcp/README.md) for full connection options.
+See [Agent-native docs](/docs/agent-native/) for full connection options.
 
 ### Claude Desktop (stdio)
 

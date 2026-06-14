@@ -1,7 +1,9 @@
 ---
-title: "Agent-Native Commerce"
-description: "Cartcrft is designed from the data model up for agent-driven commerce. This doc"
-# TODO(docs-agent): refine title, description, sidebar label, and ordering
+title: "Agent-native (MCP, search, mandates)"
+description: "MCP server, semantic search, ACP/UCP adapters, agent registry, mandates, and spend limits."
+sidebar:
+  label: "Agent-native"
+  order: 1
 ---
 
 # Agent-Native Commerce
@@ -17,7 +19,7 @@ and the mandate / trust layer.
 Every Cartcrft store exposes a Model Context Protocol (MCP) server. Any
 MCP-capable agent — Claude Desktop, Claude Code, a custom LLM agent — can
 browse and buy from the store using the tools described in
-[mcp/README.md](../mcp/README.md).
+[MCP quickstart](/docs/quickstart-mcp/).
 
 ### Transports
 
@@ -289,7 +291,7 @@ When agent-attributed checkout completion fails, the route returns HTTP 402:
 
 ## Further reading
 
-- MCP client config + all 9 tools: [mcp/README.md](../mcp/README.md)
+- MCP client config + all 9 tools: [MCP quickstart](/docs/quickstart-mcp/)
 - 9-step scripted purchase: [quickstart-mcp.md](./quickstart-mcp.md)
 - ACP spec pin + field mapping: [acp.md](./acp.md)
 - Configuring LLM key: [byo-keys.md](./byo-keys.md)
