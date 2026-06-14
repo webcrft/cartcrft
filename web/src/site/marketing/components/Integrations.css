@@ -1,0 +1,163 @@
+/* ═══ Integrations — grouped "works with" spec-sheet ═════════════════════
+ * Hairline cards in the Agentic Terminal language. Logos are forced
+ * monochrome (grayscale + lifted brightness) so multicolour brand marks read
+ * as calm ink/off-white glyphs on the dark surface, lighting up on hover.
+ * ======================================================================== */
+.integrations {
+  padding: clamp(4rem, 7vw, 6rem) var(--gutter);
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-subtle);
+}
+
+.integrations-inner {
+  max-width: var(--maxw);
+  margin: 0 auto;
+}
+
+.integrations-header {
+  max-width: 720px;
+  margin: 0 0 2.75rem;
+}
+
+.integrations-header h2 {
+  font-family: var(--font-display);
+  font-size: clamp(1.9rem, 3.4vw, 2.7rem);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  color: var(--ink);
+  line-height: 1.02;
+  margin-bottom: 0.9rem;
+  text-wrap: balance;
+}
+.integrations-header h2 .hl { color: var(--brand); }
+
+.integrations-header p {
+  font-size: clamp(1rem, 1.3vw, 1.1rem);
+  color: var(--ink-muted);
+  max-width: 46em;
+  line-height: 1.62;
+  margin: 0;
+}
+
+/* — Group grid — */
+.integration-groups {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+}
+
+@media (max-width: 900px) {
+  .integration-groups { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 520px) {
+  .integration-groups { grid-template-columns: 1fr; }
+}
+
+.integration-group {
+  position: relative;
+  background: var(--surface);
+  padding: 1.65rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  transition: background 0.22s ease;
+}
+.integration-group:hover {
+  background: color-mix(in srgb, var(--brand) 5%, var(--surface));
+}
+
+.ig-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.ig-label {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--brand);
+}
+.ig-index {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  letter-spacing: 0.05em;
+  color: var(--ink-subtle);
+  transition: color 0.22s ease;
+}
+.integration-group:hover .ig-index { color: var(--brand); }
+
+/* — Logo rows — */
+.ig-logos {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.7rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  flex: 1;
+}
+
+.ig-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 2.5rem;
+  padding: 0 0.85rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-sm);
+  background: var(--bg-sunken);
+  transition: border-color 0.22s ease, background 0.22s ease, box-shadow 0.28s ease;
+}
+
+.ig-logo img {
+  height: 1.05rem;
+  width: auto;
+  max-width: 96px;
+  display: block;
+  /* force brand marks to a calm off-white glyph on the dark chip */
+  filter: grayscale(1) brightness(0) invert(0.86);
+  opacity: 0.78;
+  transition: filter 0.22s ease, opacity 0.22s ease;
+}
+
+.ig-logo:hover {
+  border-color: color-mix(in srgb, var(--brand) 45%, transparent);
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brand) 14%, transparent),
+    0 0 22px color-mix(in srgb, var(--brand) 16%, transparent);
+}
+.ig-logo:hover img {
+  filter: grayscale(1) brightness(0) invert(1);
+  opacity: 1;
+}
+
+.ig-note {
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: var(--ink-muted);
+  margin: 0;
+}
+
+.integrations-foot {
+  margin: 1.75rem 0 0;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+  color: var(--ink-subtle);
+  line-height: 1.6;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .integration-group, .ig-logo, .ig-logo img, .ig-index { transition: none; }
+}

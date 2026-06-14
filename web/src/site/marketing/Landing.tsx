@@ -11,7 +11,6 @@ import {
   CreditCard,
   Building2,
   RotateCcw,
-  Lock,
   Braces,
   Zap,
   Container,
@@ -19,11 +18,20 @@ import {
   FileBadge,
   KeyRound,
   Server,
+  UserCircle,
+  Boxes,
+  Repeat,
+  Truck,
+  Receipt,
+  Tag,
+  Gift,
+  CalendarClock,
 } from 'lucide-react'
 import SiteLayout from '../SiteLayout'
 import { useDocumentMeta } from '../useDocumentMeta'
 import Hero from './components/Hero'
 import FeatureGrid, { type FeatureItem } from './components/FeatureGrid'
+import Integrations from './components/Integrations'
 import './Landing.css'
 
 /**
@@ -76,38 +84,92 @@ const agentFeatures: FeatureItem[] = [
 const commerceFeatures: FeatureItem[] = [
   {
     Icon: Package,
-    title: 'Catalog and inventory',
-    description: 'Products (simple, bundle, configurable, digital, service, subscription, rental), unlimited variants, collections, metafields, i18n. Warehouses, lot tracking, FEFO, reorder points.',
+    title: 'Catalog',
+    description: 'Products (simple, bundle, configurable, digital, service, subscription, rental), unlimited variants, collections, metafields, and full i18n. The model real catalogs need.',
+    href: '/api-overview',
+  },
+  {
+    Icon: UserCircle,
+    title: 'Customer identity and accounts',
+    description: 'First-class customer accounts: register, login, magic-link, and social sign-in with Google, Microsoft, and Discord. Sessions, saved addresses, and customer groups — built in, not bolted on.',
     href: '/api-overview',
   },
   {
     Icon: ShoppingCart,
     title: 'Carts, checkout and orders',
-    description: 'Atomic CompleteByID with price re-validation, inventory decrement, and discount burn in a single transaction. Order lifecycle state machines, cancel, notes, abandoned cart recovery.',
+    description: 'Atomic checkout with price re-validation, inventory decrement, and discount burn in a single transaction. Order lifecycle state machines, cancellations, notes, and abandoned-cart recovery.',
     href: '/api-overview',
   },
   {
     Icon: CreditCard,
-    title: '4 payment providers, BYO',
-    description: 'Stripe, Paystack, Razorpay, and Xendit — bring your own credentials. AES-256-GCM secret encryption. Inbound webhook router with replay protection. Zero percent platform rake.',
+    title: 'Payments — 4 providers, BYO',
+    description: 'Stripe, Paystack, Razorpay, and Xendit on your own credentials. AES-256-GCM secret encryption, an inbound webhook router with replay protection, and zero percent platform rake.',
     href: '/byo-keys',
   },
   {
+    Icon: Boxes,
+    title: 'Inventory and warehousing',
+    description: 'Multi-warehouse stock, lot tracking with FEFO, and reorder points. Inventory is decremented inside the same transaction that places the order, so you never oversell.',
+    href: '/api-overview',
+  },
+  {
     Icon: Building2,
-    title: 'B2B and subscriptions',
-    description: 'Companies, credit limits, net terms, quotes/RFQ lifecycle, purchase orders, and customer group pricing. Subscription plans with trial, pause/resume, and generated orders.',
+    title: 'B2B commerce',
+    description: 'Companies, credit limits and net terms, a full quotes/RFQ lifecycle, purchase orders, and customer-group pricing. Wholesale alongside DTC on one backend.',
+    href: '/api-overview',
+  },
+  {
+    Icon: Repeat,
+    title: 'Subscriptions and recurring orders',
+    description: 'Subscription plans with trials, pause/resume, and automatically generated orders on each cycle. Recurring revenue handled in the core, not a plugin.',
     href: '/api-overview',
   },
   {
     Icon: RotateCcw,
-    title: 'Returns, gift cards and more',
-    description: 'Full RMA flow (refund/exchange/store credit/repair), restock. Gift card transactions, store credit ledger. Shipping zones, live rates (BobGo), collection points (PUDO).',
+    title: 'Returns and RMA',
+    description: 'A full return-merchandise flow — refund, exchange, store credit, or repair — with restock. The post-purchase side of commerce that most headless stacks leave out.',
     href: '/api-overview',
   },
   {
-    Icon: Lock,
-    title: 'Customer auth and feeds',
-    description: 'Register, login, magic link, OAuth (Google, Microsoft, Discord). Google Shopping XML and Facebook Catalog feeds. GA4 server-side purchase events.',
+    Icon: Truck,
+    title: 'Shipping',
+    description: 'Shipping zones, live carrier rates (BobGo), and collection points (PUDO). Rates and tax are calculated at checkout so the order total is correct before payment.',
+    href: '/api-overview',
+  },
+  {
+    Icon: Receipt,
+    title: 'Tax',
+    description: 'Configurable tax rules applied at checkout across regions, included in the atomic checkout calculation alongside shipping and discounts.',
+    href: '/api-overview',
+  },
+  {
+    Icon: Tag,
+    title: 'Discounts and promotions',
+    description: 'Codes, automatic discounts, and customer-group pricing. Discount burn is part of the single checkout transaction, so a code can never be double-spent.',
+    href: '/api-overview',
+  },
+  {
+    Icon: Gift,
+    title: 'Wallet — gift cards and store credit',
+    description: 'Gift-card transactions and a store-credit ledger, usable at checkout and as a refund destination from the returns flow.',
+    href: '/api-overview',
+  },
+  {
+    Icon: Container,
+    title: 'Digital products',
+    description: 'Sell downloads and licenses with digital delivery — first-class product types, not a workaround layered on physical goods.',
+    href: '/api-overview',
+  },
+  {
+    Icon: CalendarClock,
+    title: 'Bookings and rentals',
+    description: 'Time-based products with availability and iCal sync for bookings and rentals, sitting in the same catalog as everything else you sell.',
+    href: '/api-overview',
+  },
+  {
+    Icon: Search,
+    title: 'Channels, feeds and analytics',
+    description: 'Google Shopping XML and Meta / Facebook Catalog feeds, plus GA4 server-side purchase events and built-in ecommerce analytics. Reach shopping surfaces without a third-party app.',
     href: '/api-overview',
   },
 ]
@@ -155,9 +217,9 @@ const CODE_PANEL_HTML = `<span class="c-comment">// 1. Search catalog</span>
 
 export default function Landing() {
   useDocumentMeta({
-    title: 'The open-source, agent-native commerce backend',
+    title: 'The complete commerce backend — also agent-native',
     description:
-      'Cartcrft is an open-source headless commerce backend built for the agentic era. MCP server, ACP/UCP adapters, signed mandates, 4 payment providers. MIT licensed, zero take rate, self-host or cloud.',
+      'Cartcrft is a complete open-source commerce backend: catalog, payments, customer accounts and social login, B2B, subscriptions, returns, shipping, tax. It also ships an MCP server and ACP/UCP adapters, making it the most agent-ready stack you can self-host. MIT licensed, zero take rate.',
   })
 
   return (
@@ -166,8 +228,8 @@ export default function Landing() {
         {/* Hero */}
         <Hero
           badge="Open source · MIT licensed · TypeScript"
-          headline='The <span class="gradient">open-source, agent-native</span> commerce backend.'
-          subheadline="Make your store reachable by every AI agent — owned by no single platform. MCP server shipped by default. ACP + UCP adapters. Signed agent mandates. Zero take rate. BYO keys. Self-host or cloud."
+          headline='A complete commerce backend. That&rsquo;s also <span class="gradient">agent-native</span>.'
+          subheadline="Catalog, payments, customer accounts and social login, B2B, subscriptions, returns, shipping and tax — everything a real store needs, shipped and tested. And every store is MCP-accessible with ACP + UCP adapters, so it&rsquo;s the most agent-ready stack you can own. Zero take rate. BYO keys. Self-host or cloud."
           ctaPrimary={{ label: 'Get started', href: '/quickstart' }}
           ctaSecondary={{ label: 'View on GitHub', href: 'https://github.com/webcrft/cartcrft' }}
         />
@@ -194,6 +256,40 @@ export default function Landing() {
           </div>
         </section>
 
+        {/* Everything a store needs — commerce-first reframe */}
+        <section className="everything" data-reveal>
+          <div className="everything-inner">
+            <div className="mk-eyebrow">
+              <span className="ey-b">[</span>
+              <span className="ey-dot" />
+              everything a store needs
+              <span className="ey-b">]</span>
+            </div>
+            <h2>
+              First, it&rsquo;s a <span className="hl">full commerce platform</span>.
+            </h2>
+            <p>
+              Before the agent layer, Cartcrft is a complete, standard ecommerce backend. Catalog and
+              inventory, carts and orders, payments, customer accounts, B2B, subscriptions, returns,
+              shipping, tax, discounts, gift cards, digital products, and bookings — all shipped, all tested,
+              all on a clean REST API and typed SDK. The agent-native part sits on top of a real store.
+            </p>
+          </div>
+        </section>
+
+        {/* Commerce core features — moved up so completeness leads */}
+        <FeatureGrid
+          eyebrow="commerce core"
+          heading="Catalog, customers, payments, and everything between."
+          highlight="customers"
+          subheading="A complete commerce data model with first-class customer identity. Catalog, orders, payments, inventory, B2B, subscriptions, returns, shipping, tax, discounts, wallet, digital, and bookings — shipped and tested, not a prototype."
+          features={commerceFeatures}
+          columns={3}
+        />
+
+        {/* Integrations — works-with / BYO keys */}
+        <Integrations />
+
         {/* Why-now section */}
         <section className="why-now" data-reveal>
           <div className="why-now-fx" aria-hidden="true">
@@ -208,12 +304,13 @@ export default function Landing() {
                 <span className="ey-b">]</span>
               </div>
               <h2>
-                Agentic commerce is <span className="hl">not a future</span> roadmap item.
+                And the agent layer is <span className="hl">not a future</span> roadmap item.
               </h2>
             </div>
             <div className="why-now-body">
               <p>
-                AI agents already browse, compare, and purchase on behalf of humans. MCP, ACP, and UCP are
+                A complete commerce backend is table stakes. What makes Cartcrft different is that the same
+                store is agent-ready today. AI agents already browse, compare, and purchase on behalf of humans. MCP, ACP, and UCP are
                 shipping standards in 2025 and 2026 — not hypotheticals. But every major commerce platform treats
                 agent access as an afterthought: a webhook here, a plugin there.
               </p>
@@ -233,12 +330,12 @@ export default function Landing() {
           </div>
         </section>
 
-        {/* Agent-native features */}
+        {/* Agent-native features — the differentiator on top of the platform */}
         <FeatureGrid
           eyebrow="agent layer"
-          heading="Agent-native in the core, not bolted on."
-          highlight="Agent-native"
-          subheading="Every Cartcrft store is MCP-accessible by default. ACP and UCP protocol adapters are isolated so spec churn never touches your commerce data model."
+          heading="And it&rsquo;s the most agent-native backend on the market."
+          highlight="agent-native"
+          subheading="The same complete store is MCP-accessible by default, with ACP and UCP adapters and signed mandates. The protocol adapters are isolated, so spec churn never touches your commerce data model."
           features={agentFeatures}
           columns={3}
         />
@@ -317,16 +414,6 @@ export default function Landing() {
             </p>
           </div>
         </section>
-
-        {/* Commerce core features */}
-        <FeatureGrid
-          eyebrow="commerce core"
-          heading="A complete commerce stack under the agent layer."
-          highlight="complete commerce stack"
-          subheading="Catalog, orders, payments, shipping, tax, discounts, B2B, subscriptions, returns — all shipped, all tested. Not a prototype."
-          features={commerceFeatures}
-          columns={3}
-        />
 
         {/* Fair and open section */}
         <section className="fair-open" data-reveal>

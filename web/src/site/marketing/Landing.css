@@ -88,6 +88,31 @@
   line-height: 1.5;
 }
 
+/* ─── Everything-a-store-needs (commerce-first reframe) ───────── */
+.mk-landing .everything {
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: clamp(4rem, 7vw, 6rem) var(--gutter) 0;
+}
+.mk-landing .everything-inner { max-width: 720px; }
+.mk-landing .everything h2 {
+  font-family: var(--font-display);
+  font-size: clamp(1.9rem, 3.4vw, 2.7rem);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  color: var(--ink);
+  line-height: 1.02;
+  margin-bottom: 0.9rem;
+  text-wrap: balance;
+}
+.mk-landing .everything p {
+  font-size: clamp(1rem, 1.3vw, 1.1rem);
+  color: var(--ink-muted);
+  max-width: 46em;
+  line-height: 1.62;
+  margin: 0;
+}
+
 /* ─── Why-now section (asymmetric two-column) ─────────────────── */
 .mk-landing .why-now {
   position: relative;
