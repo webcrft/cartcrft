@@ -70,7 +70,7 @@ def print_profitability():
     add(f"  {'-'*18} {'-'*10} {'-'*8} {'-'*9} {'-'*8} {'-'*8} {'-'*8} {'-'*8}")
 
     results = {}
-    for tier_key in ['starter', 'scale', 'enterprise']:
+    for tier_key in ['nano', 'starter', 'scale', 'enterprise']:
         gm = gross_margin(tier_key)
         results[tier_key] = gm
         price = gm['price_usd']
@@ -86,7 +86,7 @@ def print_profitability():
 
     add("")
     add("  COGS breakdown detail:")
-    for tier_key in ['starter', 'scale', 'enterprise']:
+    for tier_key in ['nano', 'starter', 'scale', 'enterprise']:
         add(f"    {TIERS[tier_key]['label']}:")
         for k, v in INFRA_PER_TENANT[tier_key].items():
             add(f"      {k:<22} ${float(v):.2f}/mo")
@@ -105,7 +105,7 @@ def print_profitability():
     add("  BREAKEVEN ANALYSIS — tenants needed to cover fixed costs:")
     add(f"  {'Tier':<18} {'Contribution/tenant':>22} {'Tenants to breakeven':>22} {'Annual tenants':>16}")
     add(f"  {'-'*18} {'-'*22} {'-'*22} {'-'*16}")
-    for tier_key in ['starter', 'scale', 'enterprise']:
+    for tier_key in ['nano', 'starter', 'scale', 'enterprise']:
         gp = results[tier_key]['gross_profit_usd']
         if gp > 0:
             tenants_needed = FIXED_COSTS['total'] / gp
@@ -143,10 +143,10 @@ def print_competitiveness():
         sr = calc_scenario(sk)
         scenario_results[sk] = sr
 
-    # Main comparison table
-    W = [14, 10, 12, 10, 12, 10, 12, 12]
+    # Main comparison table (now includes CC Nano)
+    W = [14, 10, 10, 12, 10, 12, 10, 12, 12]
     hdr = [
-        "GMV/mo", "CC Start.", "Shpfy Bsc", "Shpfy Adv",
+        "GMV/mo", "CC Nano", "CC Start.", "Shpfy Bsc", "Shpfy Adv",
         "Med Laun.", "Med Scale", "Self-Host", "Shpfy Rake"
     ]
     add("  " + "  ".join(col(h, w) for h, w in zip(hdr, W)))
@@ -155,6 +155,7 @@ def print_competitiveness():
     for sk, sr in scenario_results.items():
         row = [
             fmt(sr['gmv_usd']),
+            fmt(sr['cartcrft']['nano_paystack'], decimals=0),
             fmt(sr['cartcrft']['starter_paystack'], decimals=0),
             fmt(sr['shopify']['basic'], decimals=0),
             fmt(sr['shopify']['advanced'], decimals=0),
@@ -170,6 +171,19 @@ def print_competitiveness():
     add("  Shopify Basic = $39 plan + 2% GMV rake + Paystack gateway cost.")
     add("  Medusa Cloud = flat plan + 0% rake + Paystack gateway cost.")
     add("  Self-Host = $40 minimal infra + Paystack gateway cost (no ops time counted).")
+
+    # Nano sub-$4k gap analysis
+    add("")
+    add("  Nano tier gap-closure — sub-$4k GMV segment (does Nano close the Shopify gap?):")
+    add(f"  {'GMV':>12}  {'CC Nano':>10}  {'Shpfy Basic':>12}  {'Saving':>10}  {'Verdict'}")
+    add(f"  {'-'*12}  {'-'*10}  {'-'*12}  {'-'*10}  {'-'*30}")
+    for sk, sr in scenario_results.items():
+        nano_saving = sr['shopify']['basic'] - sr['cartcrft']['nano_paystack']
+        verdict = "Nano wins" if nano_saving > 0 else "Shopify cheaper"
+        add(f"  {fmt(sr['gmv_usd']):>12}  "
+            f"{fmt(sr['cartcrft']['nano_paystack'], decimals=0):>10}  "
+            f"{fmt(sr['shopify']['basic'], decimals=0):>12}  "
+            f"{fmt(nano_saving, decimals=0):>10}  {verdict}")
     add("")
 
     # Gateway cost detail
@@ -262,17 +276,26 @@ def print_verdict(profit_results, scenario_results):
     add("                if you have ops capacity. For founder-led teams, the $39 premium is")
     add("                likely justified. For teams with a dedicated DevOps engineer, self-host.")
     add("")
-    add("  vs Shopify at X-Small ($1k GMV):  Shopify WINS — Shopify Basic $59/mo total")
-    add("                vs Cartcrft Starter $109/mo total (Paystack on $1k = $30, so CC")
-    add("                total = $79+$30=$109 vs Shopify $39+$20+$30=$89). At very low GMV,")
-    add("                the flat fee hurts Cartcrft. Cartcrft is not the right choice for")
-    add("                sub-$4k/mo GMV stores unless agent-native features are the pull.")
-    add("")
+
+    # Dynamic Nano vs Shopify Basic at $1k GMV
+    xsmall = scenario_results.get('xsmall', {})
+    if xsmall:
+        nano_total = xsmall['cartcrft']['nano_paystack']
+        shpfy_total = xsmall['shopify']['basic']
+        nano_saving = shpfy_total - nano_total
+        if nano_saving > 0:
+            add(f"  vs Shopify at X-Small ($1k GMV) — NANO:  Nano WINS — Nano ${float(nano_total):.0f}/mo total")
+            add(f"                vs Shopify Basic ${float(shpfy_total):.0f}/mo. Nano saves ${float(nano_saving):.0f}/mo")
+            add(f"                at $1k GMV. Sub-$4k gap is now CLOSED by the Nano tier.")
+        else:
+            add(f"  vs Shopify at X-Small ($1k GMV) — NANO:  Shopify still ${abs(float(nano_saving)):.0f}/mo cheaper")
+            add(f"                at Nano pricing. Nano narrows the gap vs Starter.")
+        add("")
 
     # Profitability
     add("  PROFITABLE?")
     add("")
-    for tier_key in ['starter', 'scale', 'enterprise']:
+    for tier_key in ['nano', 'starter', 'scale', 'enterprise']:
         gm = profit_results[tier_key]
         gp = gm['gross_profit_usd']
         mp = gm['gross_margin_pct']
@@ -289,6 +312,23 @@ def print_verdict(profit_results, scenario_results):
 
     # Key recommendations
     add("  RECOMMENDATIONS:")
+    add("")
+
+    nano_gm = profit_results['nano']
+    nano_gp = nano_gm['gross_profit_usd']
+    nano_mp = nano_gm['gross_margin_pct']
+    nano_cogs = nano_gm['cogs_usd']
+    if nano_gp > 0:
+        nano_be = FIXED_COSTS['total'] / nano_gp
+        add(f"  0. Cloud Nano ({pct(nano_mp)} margin, ${float(nano_gp):.2f}/tenant GP) is PROFITABLE at unit level.")
+        add(f"     Breakeven requires ~{float(nano_be):.0f} Nano-only tenants. Realistic as an entry funnel tier.")
+        add(f"     COGS: ${float(nano_cogs):.2f}/mo (infra+collect+community support). Margin is thin but positive.")
+        add(f"     Verdict: deliberate FUNNEL PLAY — slim margin accepted in exchange for lower acquisition barrier.")
+        add(f"     Nano merchants growing to Starter ($79) double the GP per tenant — upgrade path is the ROI.")
+    else:
+        add(f"  0. Cloud Nano LOSES ${abs(float(nano_gp)):.2f}/tenant/mo at unit level (COGS: ${float(nano_cogs):.2f}).")
+        add(f"     This is a deliberate LOSS-LEADER for the sub-$4k GMV funnel segment.")
+        add(f"     Accept only if upgrade conversion rate from Nano→Starter is measurably positive.")
     add("")
 
     starter_gm = profit_results['starter']
@@ -316,9 +356,9 @@ def print_verdict(profit_results, scenario_results):
     add("     depends on tenant query load and storage. Monitor actual Neon/Supabase")
     add("     bills per tenant cohort and adjust tier pricing accordingly.")
     add("")
-    add("  5. At X-Small GMV ($1k/mo), Cartcrft is more expensive than Shopify Basic.")
-    add("     Consider a $29/mo 'Nano' tier or free trial period to lower the acquisition")
-    add("     barrier for early-stage merchants who will grow into Starter/Scale.")
+    add("  5. Nano tier ($19/mo) closes the sub-$4k GMV gap against Shopify Basic.")
+    add("     Nano beats Shopify Basic at $1k GMV; funnel role: acquire early-stage")
+    add("     merchants who will grow into Starter ($79) and Scale ($199).")
     add("")
 
     return lines
@@ -342,6 +382,7 @@ def print_assumptions():
     add("")
     add("  Cartcrft Cloud Pricing")
     add("    Source: web/src/pages/pricing.astro (confirmed, June 2026)")
+    add("    Cloud Nano:     $19/mo flat  (preview — 1 store, 200 orders/mo, community support)")
     add("    Cloud Starter:  $79/mo flat  (preview — not yet locked in)")
     add("    Cloud Scale:    $199/mo flat (preview — not yet locked in)")
     add("    Enterprise:     custom; modelled at $500/mo (conservative mid-point)")

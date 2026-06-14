@@ -82,6 +82,15 @@ PAYSTACK_FLAT_USD = zar_to_usd('1.0')   # ~$0.054
 
 # ── Cartcrft Cloud tiers (from pricing.astro, June 2026 preview) ───────────────
 TIERS = {
+    'nano': {
+        'label': 'Cloud Nano',
+        'price_usd': Decimal('19.00'),
+        'stores': 1,
+        'seats': 1,
+        'support': 'Community (GitHub)',
+        'sla': None,
+        'note': 'Sub-$4k GMV entry tier; tighter limits; 0% rake / BYO keys',
+    },
     'starter': {
         'label': 'Cloud Starter',
         'price_usd': Decimal('79.00'),
@@ -116,6 +125,17 @@ TIERS = {
 # Enterprise: dedicated or near-dedicated resources
 
 INFRA_PER_TENANT = {
+    'nano': {
+        # Nano: shared multi-tenant cluster, minimal resource allocation.
+        # Single-store, 200-order/mo cap keeps storage + compute tiny.
+        # Lighter Postgres slice (schema isolation only, very low query load).
+        'postgres_pgvector': Decimal('7.00'),    # Neon shared micro slice
+        'compute': Decimal('3.00'),              # Fly.io fractional cpu-1x
+        'backups': Decimal('0.75'),              # B2 ~10GB
+        'bandwidth': Decimal('0.75'),            # ~50GB egress
+        'ssl_cdn': Decimal('0.50'),              # Cloudflare free tier
+        'monitoring': Decimal('0.50'),           # Shared Grafana, amortised
+    },
     'starter': {
         'postgres_pgvector': Decimal('12.00'),   # Neon/Supabase shared marginal
         'compute': Decimal('6.00'),              # Fly.io shared-cpu-1x slice
@@ -144,6 +164,10 @@ INFRA_PER_TENANT = {
 
 # ── Support cost allocation per tenant (USD/month) ─────────────────────────────
 SUPPORT_COST_PER_TENANT = {
+    # Nano: community only — GitHub issues, no SLA. Very low support load.
+    # 1 FTE / 200 tenants = $9.41; Nano expects higher volume of low-touch tenants.
+    # Discount to $4/tenant (community; similar to how Medusa Develop ~$29 treats it).
+    'nano': Decimal('4.00'),
     'starter': Decimal('9.00'),
     'scale': Decimal('15.00'),
     'enterprise': Decimal('40.00'),

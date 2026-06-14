@@ -47,6 +47,31 @@ const tiers = [
     badge: undefined as string | undefined,
   },
   {
+    name: 'Cloud Nano',
+    price: '$19',
+    priceSub: '/mo',
+    description:
+      'Managed cloud for early-stage stores under $4k/mo GMV. Zero percent rake — beats Shopify Basic at $1k GMV by $40/mo.',
+    features: [
+      'Everything in Open Source',
+      'Managed Postgres + pgvector (included)',
+      'Automated daily backups',
+      'One-click deploy + zero-downtime upgrades',
+      'Managed SSL + custom domain',
+      '1 store, 1 team seat',
+      '200 orders/mo included',
+      'Community support (GitHub)',
+      '0% GMV rake — flat fee only',
+      'BYO payment keys (Stripe / Paystack)',
+    ],
+    cta: {
+      label: 'Join the waitlist',
+      href: 'mailto:hello@webcrft.systems?subject=Cloud+Nano+waitlist',
+    },
+    highlighted: false,
+    badge: 'Preview pricing' as string | undefined,
+  },
+  {
     name: 'Cloud Starter',
     price: '$79',
     priceSub: '/mo',
@@ -124,7 +149,7 @@ const compRows = [
     category: 'Pricing model',
     feature: 'Monthly platform fee',
     values: {
-      'Cartcrft Cloud': '$79-$199 flat',
+      'Cartcrft Cloud': '$19-$199 flat',
       'Shopify Basic': '$39/mo',
       'Medusa Cloud': '$99-$299/mo',
       'Self-host': '~$20-$60 infra',
@@ -479,6 +504,22 @@ const faqs: { q: string; a: string }[] = [
                 <span class="td-note">managed infra, backups, upgrades included</span>
               </td>
             </tr>
+            <tr class="row-ours">
+              <td class="td-platform">
+                <strong>Cartcrft Cloud Nano</strong>
+                <span class="td-note">Preview · sub-$4k GMV entry tier</span>
+              </td>
+              <td>$19 flat</td>
+              <td>
+                <span class="rake-good">$0</span>
+                <span class="rake-pct">(0% rake)</span>
+              </td>
+              <td>Paystack/Stripe at cost (~$290)</td>
+              <td class="td-total">
+                <strong class="total-good">~$309</strong>
+                <span class="td-note">vs Shopify Basic ~$539 at $10k GMV</span>
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -508,6 +549,12 @@ const faqs: { q: string; a: string }[] = [
             At $10,000 GMV / 200 orders: 2.9% x $10,000 = $290 + 200 x R1 = ~$295.
             Source: <a href="https://paystack.com/pricing" target="_blank" rel="noopener noreferrer">paystack.com/pricing</a>
             and <code>billingmodel/costs.py</code> (paystack_pct=0.029, paystack_flat_zar=1.0).
+          </li>
+          <li>
+            <strong>Cartcrft Cloud Nano:</strong> $19/mo illustrative flat fee (preview, subject to change before GA).
+            1 store, 200 orders/mo, community support only. 0% GMV rake. Positioned for sub-$4k-GMV merchants
+            where Starter's $79 flat fee is not yet covered by the 0% rake advantage.
+            At $1k GMV: Nano $49/mo total vs Shopify Basic $89/mo — Nano saves $40/mo.
           </li>
           <li>
             <strong>Cartcrft Cloud Starter:</strong> $79/mo illustrative flat fee (preview, subject to change before GA).
@@ -565,6 +612,10 @@ const faqs: { q: string; a: string }[] = [
           Shopify rake figures are the platform fee only; your payment processor (Stripe, Paystack) charges
           additionally on top. Upgrade to Shopify Advanced to reduce rake to 0.6% at $299/mo.
         </p>
+        <div class="nano-callout" role="note">
+          <strong>Under $4k/mo GMV?</strong> The Cloud Nano tier at $19/mo gives you the same 0% rake
+          at a lower entry point. Nano total at $1k GMV = $49/mo vs Shopify Basic $89/mo — you save $40/mo.
+        </div>
       </div>
     </div>
   </section>
@@ -1196,6 +1247,33 @@ const faqs: { q: string; a: string }[] = [
     color: #64748b;
     line-height: 1.55;
     margin: 0;
+  }
+
+  .nano-callout {
+    margin-top: 1rem;
+    padding: 0.85rem 1.1rem;
+    background: color-mix(in srgb, #14b8a6 8%, #fff);
+    border: 1.5px solid #14b8a6;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    color: #0f172a;
+    line-height: 1.55;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .nano-callout {
+      background: color-mix(in srgb, #14b8a6 12%, #0f172a);
+      color: #e2e8f0;
+    }
+  }
+
+  .nano-callout strong {
+    color: #0d9488;
+    font-weight: 700;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .nano-callout strong { color: #2dd4bf; }
   }
 
   /* ---- Feature comparison table ----------------------------------------- */

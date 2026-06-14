@@ -66,12 +66,16 @@ insert into public.billing_tiers
 values
   ('Free',    'free',    'Open-source self-host, no cloud metering',
    0,    1, '{"commerce_stores": 1, "commerce_orders_monthly": 100, "api_requests_monthly": 5000}'::jsonb),
+  -- Nano: sub-$4k-GMV entry tier (C-10e). 1 store, 200 orders/mo cap,
+  -- community support only, 0% rake + BYO keys. Closes the Shopify gap at <$4k GMV.
+  ('Cloud Nano', 'nano', 'Sub-$4k-GMV entry tier: 1 store, 200 orders/mo, community support, 0% rake',
+   1900, 2, '{"commerce_stores": 1, "commerce_orders_monthly": 200, "api_requests_monthly": 10000, "team_seats": 1, "support": "community"}'::jsonb),
   ('Starter', 'starter', 'Small store, cloud-hosted, metered',
-   2900, 2, '{"commerce_stores": 1, "commerce_orders_monthly": 500,  "api_requests_monthly": 25000}'::jsonb),
+   2900, 3, '{"commerce_stores": 1, "commerce_orders_monthly": 500,  "api_requests_monthly": 25000}'::jsonb),
   ('Growth',  'growth',  'Growing store with higher quotas',
-   7900, 3, '{"commerce_stores": 3, "commerce_orders_monthly": 2000, "api_requests_monthly": 100000}'::jsonb),
+   7900, 4, '{"commerce_stores": 3, "commerce_orders_monthly": 2000, "api_requests_monthly": 100000}'::jsonb),
   ('Scale',   'scale',   'High-volume, priority support',
-   19900, 4, '{"commerce_stores": 10,"commerce_orders_monthly": -1,  "api_requests_monthly": -1}'::jsonb)
+   19900, 5, '{"commerce_stores": 10,"commerce_orders_monthly": -1,  "api_requests_monthly": -1}'::jsonb)
 on conflict (slug) do nothing;
 
 -- ============================================================================

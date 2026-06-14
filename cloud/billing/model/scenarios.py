@@ -100,6 +100,7 @@ def calc_scenario(scenario_key: str) -> dict:
     stripe_cost = stripe_merchant_cost_usd(gmv, orders)
 
     # Cartcrft Cloud options (Paystack gateway)
+    cc_nano_paystack    = cartcrft_cloud_total_cost_usd('nano', paystack_cost)
     cc_starter_paystack = cartcrft_cloud_total_cost_usd('starter', paystack_cost)
     cc_scale_paystack   = cartcrft_cloud_total_cost_usd('scale', paystack_cost)
 
@@ -127,6 +128,7 @@ def calc_scenario(scenario_key: str) -> dict:
             'stripe_usd': stripe_cost,
         },
         'cartcrft': {
+            'nano_paystack':    cc_nano_paystack,
             'starter_paystack': cc_starter_paystack,
             'scale_paystack':   cc_scale_paystack,
         },
