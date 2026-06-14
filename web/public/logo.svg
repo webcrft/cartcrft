@@ -1,15 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Cartcrft logo">
-  <defs>
-    <linearGradient id="cc-tile" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#7c7bff"/>
-      <stop offset="1" stop-color="#4f46e5"/>
-    </linearGradient>
-  </defs>
-  <rect width="128" height="128" rx="29" fill="url(#cc-tile)"/>
-  <g fill="none" stroke="#fff" stroke-width="7.2" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M30.5 37H40l7.2 35a6.7 6.7 0 0 0 6.55 5.3H85.5a6.7 6.7 0 0 0 6.5-5.2L97.5 48H45"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="cartcrft">
+  <!-- Solid hexagon tile (echoes webcrft's solid hex, our lime) -->
+  <path d="M64 10 L110.77 37 L110.77 91 L64 118 L17.23 91 L17.23 37 Z" fill="#B5FF2E"/>
+  <!-- Minimal geometric cart in ink, heavy round-capped strokes -->
+  <g fill="none" stroke="#0C0D0A" stroke-width="7.6" stroke-linecap="round" stroke-linejoin="round">
+    <!-- handle rises, then basket: top rail + sloped side -->
+    <path d="M35 40 H45 L53 80 H86.5 L95.5 51 H49"/>
   </g>
-  <circle cx="56" cy="92" r="6.4" fill="#fff"/>
-  <circle cx="85.5" cy="92" r="6.4" fill="#fff"/>
-  <circle cx="88" cy="34.5" r="7" fill="#5eead4"/>
+  <!-- wheels (ink nodes) -->
+  <circle cx="56" cy="94.5" r="6.3" fill="#0C0D0A"/>
+  <circle cx="83" cy="94.5" r="6.3" fill="#0C0D0A"/>
+  <!-- agent node accent at cart corner (ink) -->
+  <circle cx="96.5" cy="49.5" r="7.2" fill="#0C0D0A"/>
 </svg>

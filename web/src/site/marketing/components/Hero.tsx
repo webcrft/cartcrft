@@ -1,9 +1,9 @@
 import './Hero.css'
 
 /**
- * Hero — landing hero. Left: headline + CTAs + protocol chips. Right: a premium
- * glass "agent session" terminal showing a real MCP tool-call sequence, with a
- * floating order-confirmed card. Restrained palette, layered depth.
+ * Hero — "Agentic Terminal" aesthetic. Big Bricolage display headline, mono
+ * spec-strip, electric-lime accents over a grained, grid-lit dark canvas, and a
+ * custom animated agent-console illustration. Orchestrated staggered entrance.
  */
 export interface HeroProps {
   headline: string
@@ -17,25 +17,28 @@ export default function Hero({ headline, subheadline, ctaPrimary, ctaSecondary, 
   const isExternal = ctaSecondary?.href.startsWith('http')
   return (
     <section className="hero">
-      <div className="hero-bg" aria-hidden="true">
-        <div className="hero-aurora" />
-        <div className="hero-grid" />
+      <div className="hero-fx" aria-hidden="true">
+        <div className="hero-gridlines cc-grid-bg" />
+        <div className="hero-glow" />
+        <div className="hero-glow hero-glow--2" />
       </div>
+      <div className="cc-grain" aria-hidden="true" />
 
       <div className="hero-inner">
-        <div className="hero-content">
-          {badge && (
-            <div className="hero-eyebrow">
-              <span className="eyebrow-dot" aria-hidden="true" />
-              <span>{badge}</span>
-            </div>
-          )}
+        <div className="hero-lead">
+          <div className="hero-eyebrow">
+            <span className="ey-bracket">[</span>
+            <span className="ey-dot" />
+            {badge ?? 'open source · agent-native'}
+            <span className="ey-bracket">]</span>
+          </div>
 
-          <h1 className="hero-headline" dangerouslySetInnerHTML={{ __html: headline }} />
+          <h1 className="hero-h1" dangerouslySetInnerHTML={{ __html: headline }} />
+
           <p className="hero-sub">{subheadline}</p>
 
-          <div className="hero-actions">
-            <a href={ctaPrimary.href} className="cc-btn cc-btn--primary">
+          <div className="hero-cta">
+            <a href={ctaPrimary.href} className="cc-btn cc-btn--primary cc-btn--lg">
               {ctaPrimary.label}
               <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true">
                 <path fill="currentColor" d="M6.22 3.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 1 1-1.06-1.06L9.94 8 6.22 4.28a.75.75 0 0 1 0-1.06z" />
@@ -44,7 +47,7 @@ export default function Hero({ headline, subheadline, ctaPrimary, ctaSecondary, 
             {ctaSecondary && (
               <a
                 href={ctaSecondary.href}
-                className="cc-btn cc-btn--ghost"
+                className="cc-btn cc-btn--ghost cc-btn--lg"
                 target={isExternal ? '_blank' : undefined}
                 rel={isExternal ? 'noopener noreferrer' : undefined}
               >
@@ -58,41 +61,49 @@ export default function Hero({ headline, subheadline, ctaPrimary, ctaSecondary, 
             )}
           </div>
 
-          <div className="hero-chips" role="list" aria-label="Protocol status">
-            <span className="chip chip--on" role="listitem"><span className="chip-dot" />MCP server</span>
-            <span className="chip chip--beta" role="listitem"><span className="chip-dot" />ACP · UCP</span>
-            <span className="chip chip--on" role="listitem"><span className="chip-dot" />Signed mandates</span>
-            <span className="chip chip--on" role="listitem"><span className="chip-dot" />0% take rate</span>
-          </div>
+          <dl className="hero-spec">
+            <div><dt>protocols</dt><dd>MCP · ACP · UCP</dd></div>
+            <div><dt>take rate</dt><dd>0<span>%</span></dd></div>
+            <div><dt>providers</dt><dd>4 · BYO</dd></div>
+            <div><dt>license</dt><dd>MIT</dd></div>
+          </dl>
         </div>
 
-        <div className="hero-visual" aria-hidden="true">
-          <div className="term">
-            <div className="term-bar">
-              <span className="term-dot" />
-              <span className="term-dot" />
-              <span className="term-dot" />
-              <span className="term-title">agent · mcp session</span>
+        <div className="hero-stage" aria-hidden="true">
+          <div className="console">
+            <div className="console-bar">
+              <span className="cb-dot" /><span className="cb-dot" /><span className="cb-dot" />
+              <span className="cb-title">agent_session.mcp</span>
+              <span className="cb-live"><span className="cb-live-dot" />live</span>
             </div>
-            <pre className="term-body"><code>
-<span className="t-cmt"># any MCP agent connects in minutes</span>{'\n'}
-<span className="t-fn">search_products</span>(<span className="t-str">"merino hoodie under $100"</span>)<span className="t-ok">  → 12</span>{'\n'}
-<span className="t-fn">create_cart</span>() · <span className="t-fn">add_to_cart</span>(<span className="t-var">var_8x</span>, <span className="t-num">1</span>){'\n'}
-<span className="t-fn">start_checkout</span>(<span className="t-var">address</span>)<span className="t-cmt">  # tax + shipping</span>{'\n'}
-<span className="t-fn">complete_checkout</span>()<span className="t-ok">  ✓ paid · order #1024</span>{'\n'}
-<span className="t-cmt"># ed25519 mandate verified ✓</span>
+            <pre className="console-body"><code>
+<span className="ln"><span className="c-cmt"># any MCP agent — Claude, your own — connects</span></span>
+<span className="ln"><span className="c-fn">search_products</span>(<span className="c-str">"merino hoodie &lt; $100"</span>)<span className="c-ok"> → 12</span></span>
+<span className="ln"><span className="c-fn">create_cart</span>() · <span className="c-fn">add</span>(<span className="c-var">var_8x</span>, <span className="c-num">1</span>)</span>
+<span className="ln"><span className="c-fn">start_checkout</span>(<span className="c-var">addr</span>)<span className="c-cmt"> # tax+ship</span></span>
+<span className="ln ln-final"><span className="c-fn">complete_checkout</span>()<span className="c-ok"> ✓ paid #1024</span><span className="caret" /></span>
             </code></pre>
           </div>
 
-          <div className="hero-receipt">
-            <div className="receipt-check">
-              <svg viewBox="0 0 24 24" width="18" height="18"><path fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" d="M5 12.5l4.2 4.2L19 7" /></svg>
-            </div>
-            <div className="receipt-text">
-              <strong>Order confirmed</strong>
-              <span>#1024 · $89.00 · captured live</span>
-            </div>
-          </div>
+          {/* custom node illustration: agent → cart → store, animated */}
+          <svg className="flow" viewBox="0 0 320 120" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path className="flow-path" d="M40 60 H140 M180 60 H280" stroke="var(--brand)" strokeWidth="2" strokeDasharray="4 6" strokeLinecap="round" />
+            <g className="node node--a">
+              <circle cx="40" cy="60" r="22" fill="var(--bg-subtle)" stroke="var(--line-strong)" strokeWidth="1.5" />
+              <circle cx="40" cy="60" r="5" fill="var(--accent)" />
+              <circle cx="30" cy="52" r="2.4" fill="var(--ink-subtle)" /><circle cx="50" cy="52" r="2.4" fill="var(--ink-subtle)" />
+              <circle cx="30" cy="68" r="2.4" fill="var(--ink-subtle)" /><circle cx="50" cy="68" r="2.4" fill="var(--ink-subtle)" />
+            </g>
+            <g className="node node--c">
+              <rect x="138" y="38" width="44" height="44" rx="10" fill="var(--brand)" />
+              <path d="M150 52 H154 L157 68 H171 L174 57 H156" stroke="var(--brand-ink)" strokeWidth="2.4" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+              <circle cx="156" cy="72" r="1.8" fill="var(--brand-ink)" /><circle cx="168" cy="72" r="1.8" fill="var(--brand-ink)" />
+            </g>
+            <g className="node node--s">
+              <circle cx="280" cy="60" r="22" fill="var(--bg-subtle)" stroke="var(--line-strong)" strokeWidth="1.5" />
+              <path d="M270 64 v-7 l10 -7 l10 7 v7 z" fill="none" stroke="var(--accent)" strokeWidth="1.8" strokeLinejoin="round" />
+            </g>
+          </svg>
         </div>
       </div>
     </section>

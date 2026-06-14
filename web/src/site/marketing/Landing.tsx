@@ -176,19 +176,19 @@ export default function Landing() {
         <section className="stats-band" aria-label="At a glance" data-reveal>
           <div className="stats-inner">
             <div className="stat">
-              <div className="stat-num gradient-num">0%</div>
+              <div className="stat-num">0<span className="stat-unit">%</span></div>
               <div className="stat-label">Platform take rate</div>
             </div>
             <div className="stat">
-              <div className="stat-num gradient-num">3</div>
+              <div className="stat-num">3</div>
               <div className="stat-label">Agent protocols<br />MCP · ACP · UCP</div>
             </div>
             <div className="stat">
-              <div className="stat-num gradient-num">4</div>
+              <div className="stat-num">4</div>
               <div className="stat-label">Payment providers<br />bring your own keys</div>
             </div>
             <div className="stat">
-              <div className="stat-num gradient-num">MIT</div>
+              <div className="stat-num stat-num--word">MIT</div>
               <div className="stat-label">License · self-host<br />or fair cloud</div>
             </div>
           </div>
@@ -196,32 +196,48 @@ export default function Landing() {
 
         {/* Why-now section */}
         <section className="why-now" data-reveal>
+          <div className="why-now-fx" aria-hidden="true">
+            <div className="why-now-glow" />
+          </div>
           <div className="why-now-inner">
-            <div className="why-now-label">Why now</div>
-            <h2>Agentic commerce is not a future roadmap item.</h2>
-            <p>
-              AI agents already browse, compare, and purchase on behalf of humans. MCP, ACP, and UCP are
-              shipping standards in 2025 and 2026 — not hypotheticals. But every major commerce platform treats
-              agent access as an afterthought: a webhook here, a plugin there.
-            </p>
-            <p>
-              Merchants face a new dilemma: surrender to Shopify's closed ecosystem, or hand control to
-              OpenAI and Google's native checkout surfaces. Cartcrft is the neutral, open layer you own —
-              the Switzerland of agentic commerce. Implement the protocols once; reach every agent platform.
-            </p>
-            <div className="protocol-pills">
-              <span className="pill pill--shipped">MCP — shipped</span>
-              <span className="pill pill--test">ACP 2026-04 — test mode</span>
-              <span className="pill pill--test">UCP 2026-01 — test mode</span>
-              <span className="pill pill--shipped">ed25519 mandates — shipped</span>
-              <span className="pill pill--shipped">Semantic search — shipped</span>
+            <div className="why-now-lead">
+              <div className="mk-eyebrow">
+                <span className="ey-b">[</span>
+                <span className="ey-dot" />
+                why now
+                <span className="ey-b">]</span>
+              </div>
+              <h2>
+                Agentic commerce is <span className="hl">not a future</span> roadmap item.
+              </h2>
+            </div>
+            <div className="why-now-body">
+              <p>
+                AI agents already browse, compare, and purchase on behalf of humans. MCP, ACP, and UCP are
+                shipping standards in 2025 and 2026 — not hypotheticals. But every major commerce platform treats
+                agent access as an afterthought: a webhook here, a plugin there.
+              </p>
+              <p>
+                Merchants face a new dilemma: surrender to Shopify's closed ecosystem, or hand control to
+                OpenAI and Google's native checkout surfaces. Cartcrft is the neutral, open layer you own —
+                the Switzerland of agentic commerce. Implement the protocols once; reach every agent platform.
+              </p>
+              <div className="protocol-pills">
+                <span className="pill pill--shipped">MCP — shipped</span>
+                <span className="pill pill--test">ACP 2026-04 — test mode</span>
+                <span className="pill pill--test">UCP 2026-01 — test mode</span>
+                <span className="pill pill--shipped">ed25519 mandates — shipped</span>
+                <span className="pill pill--shipped">Semantic search — shipped</span>
+              </div>
             </div>
           </div>
         </section>
 
         {/* Agent-native features */}
         <FeatureGrid
+          eyebrow="agent layer"
           heading="Agent-native in the core, not bolted on."
+          highlight="Agent-native"
           subheading="Every Cartcrft store is MCP-accessible by default. ACP and UCP protocol adapters are isolated so spec churn never touches your commerce data model."
           features={agentFeatures}
           columns={3}
@@ -230,8 +246,16 @@ export default function Landing() {
         {/* How it works — with a connecting line illustration */}
         <section className="how-it-works" data-reveal>
           <div className="how-it-works-inner">
-            <h2>How an agent buys from your store</h2>
-            <p className="how-subtitle">5 steps. No custom integration. Any MCP-capable agent.</p>
+            <div className="how-header">
+              <div className="mk-eyebrow">
+                <span className="ey-b">[</span>
+                <span className="ey-dot" />
+                how it works
+                <span className="ey-b">]</span>
+              </div>
+              <h2>How an <span className="hl">agent buys</span> from your store</h2>
+              <p className="how-subtitle">5 steps. No custom integration. Any MCP-capable agent.</p>
+            </div>
 
             <div className="steps-layout">
               {/* Steps list */}
@@ -273,13 +297,14 @@ export default function Landing() {
                 </li>
               </ol>
 
-              {/* Mini-illustration: code snippet panel */}
+              {/* Mini-illustration: code snippet panel — matches the hero console */}
               <div className="how-code-panel" aria-label="Example MCP tool call sequence">
                 <div className="code-panel-header">
                   <span className="dot red"></span>
                   <span className="dot amber"></span>
                   <span className="dot green"></span>
                   <span className="panel-title">mcp://cartcrft.io/&lt;storeId&gt;</span>
+                  <span className="panel-live"><span className="panel-live-dot" />live</span>
                 </div>
                 <pre className="code-panel-body"><code dangerouslySetInnerHTML={{ __html: CODE_PANEL_HTML }} /></pre>
               </div>
@@ -295,7 +320,9 @@ export default function Landing() {
 
         {/* Commerce core features */}
         <FeatureGrid
+          eyebrow="commerce core"
           heading="A complete commerce stack under the agent layer."
+          highlight="complete commerce stack"
           subheading="Catalog, orders, payments, shipping, tax, discounts, B2B, subscriptions, returns — all shipped, all tested. Not a prototype."
           features={commerceFeatures}
           columns={3}
@@ -305,13 +332,21 @@ export default function Landing() {
         <section className="fair-open" data-reveal>
           <div className="fair-open-inner">
             <div className="fair-open-header">
-              <div className="section-label">Fair by design</div>
-              <h2>Built for developers who want to own their stack.</h2>
+              <div className="mk-eyebrow">
+                <span className="ey-b">[</span>
+                <span className="ey-dot" />
+                fair by design
+                <span className="ey-b">]</span>
+              </div>
+              <h2>Built for developers who want to <span className="hl">own their stack</span>.</h2>
             </div>
             <div className="fair-open-grid">
               <div className="fair-card">
-                <div className="fair-icon-wrap">
-                  <FileBadge size={22} strokeWidth={1.75} absoluteStrokeWidth aria-hidden="true" />
+                <div className="fair-card-top">
+                  <div className="fair-icon-wrap">
+                    <FileBadge size={22} strokeWidth={1.75} absoluteStrokeWidth aria-hidden="true" />
+                  </div>
+                  <span className="fair-index" aria-hidden="true">01</span>
                 </div>
                 <h3>MIT licensed</h3>
                 <p>
@@ -320,8 +355,11 @@ export default function Landing() {
                 </p>
               </div>
               <div className="fair-card">
-                <div className="fair-icon-wrap">
-                  <KeyRound size={22} strokeWidth={1.75} absoluteStrokeWidth aria-hidden="true" />
+                <div className="fair-card-top">
+                  <div className="fair-icon-wrap">
+                    <KeyRound size={22} strokeWidth={1.75} absoluteStrokeWidth aria-hidden="true" />
+                  </div>
+                  <span className="fair-index" aria-hidden="true">02</span>
                 </div>
                 <h3>BYO keys, zero rake</h3>
                 <p>
@@ -330,8 +368,11 @@ export default function Landing() {
                 </p>
               </div>
               <div className="fair-card">
-                <div className="fair-icon-wrap">
-                  <Server size={22} strokeWidth={1.75} absoluteStrokeWidth aria-hidden="true" />
+                <div className="fair-card-top">
+                  <div className="fair-icon-wrap">
+                    <Server size={22} strokeWidth={1.75} absoluteStrokeWidth aria-hidden="true" />
+                  </div>
+                  <span className="fair-index" aria-hidden="true">03</span>
                 </div>
                 <h3>Self-host or fair cloud</h3>
                 <p>
@@ -341,8 +382,11 @@ export default function Landing() {
                 </p>
               </div>
               <div className="fair-card">
-                <div className="fair-icon-wrap">
-                  <ShieldCheck size={22} strokeWidth={1.75} absoluteStrokeWidth aria-hidden="true" />
+                <div className="fair-card-top">
+                  <div className="fair-icon-wrap">
+                    <ShieldCheck size={22} strokeWidth={1.75} absoluteStrokeWidth aria-hidden="true" />
+                  </div>
+                  <span className="fair-index" aria-hidden="true">04</span>
                 </div>
                 <h3>Security by design</h3>
                 <p>
@@ -356,7 +400,9 @@ export default function Landing() {
 
         {/* DX section */}
         <FeatureGrid
+          eyebrow="developer experience"
           heading="Developer experience as a retention moat."
+          highlight="retention moat"
           subheading="TypeScript end-to-end. Generated SDK. OpenAPI 3.1. One-command setup. Tested core. No magic, no black boxes."
           features={dxFeatures}
           columns={4}
@@ -366,8 +412,13 @@ export default function Landing() {
         <section className="compare-teaser" data-reveal>
           <div className="compare-teaser-inner">
             <div className="compare-teaser-text">
-              <div className="section-label">Platform comparison</div>
-              <h2>See how we stack up.</h2>
+              <div className="mk-eyebrow">
+                <span className="ey-b">[</span>
+                <span className="ey-dot" />
+                platform comparison
+                <span className="ey-b">]</span>
+              </div>
+              <h2>See how we <span className="hl">stack up</span>.</h2>
               <p>
                 Side-by-side comparison of Cartcrft vs Shopify, Medusa v2, Vendure, Saleor, Swell, and
                 WooCommerce — across licensing, pricing, agent-native capabilities, and commerce features.
@@ -435,16 +486,22 @@ export default function Landing() {
             {/* decorative SVG circles */}
             <div className="cta-deco" aria-hidden="true">
               <svg viewBox="0 0 200 200" width="200" height="200">
-                <circle cx="100" cy="100" r="80" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="1.5" />
-                <circle cx="100" cy="100" r="55" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="1.5" />
-                <circle cx="100" cy="100" r="30" fill="rgba(255,255,255,0.06)" />
-                <path d="M75 75 H85 L92 105 a4 4 0 0 0 3.9 3.1 h21 a4 4 0 0 0 3.9-3.1 L110 85 H80" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
-                <circle cx="93" cy="115" r="3.5" fill="rgba(255,255,255,0.5)" />
-                <circle cx="107" cy="115" r="3.5" fill="rgba(255,255,255,0.5)" />
+                <circle cx="100" cy="100" r="80" fill="none" stroke="var(--brand-ink)" strokeOpacity="0.18" strokeWidth="1.5" />
+                <circle cx="100" cy="100" r="55" fill="none" stroke="var(--brand-ink)" strokeOpacity="0.12" strokeWidth="1.5" />
+                <circle cx="100" cy="100" r="30" fill="var(--brand-ink)" fillOpacity="0.06" />
+                <path d="M75 75 H85 L92 105 a4 4 0 0 0 3.9 3.1 h21 a4 4 0 0 0 3.9-3.1 L110 85 H80" fill="none" stroke="var(--brand-ink)" strokeOpacity="0.55" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+                <circle cx="93" cy="115" r="3.5" fill="var(--brand-ink)" fillOpacity="0.55" />
+                <circle cx="107" cy="115" r="3.5" fill="var(--brand-ink)" fillOpacity="0.55" />
               </svg>
             </div>
 
             <div className="cta-band-text">
+              <div className="cta-eyebrow">
+                <span className="ey-b">[</span>
+                <span className="ey-dot" />
+                ship it
+                <span className="ey-b">]</span>
+              </div>
               <h2>Your store, reachable by every agent.</h2>
               <p>
                 Get a Cartcrft server running and MCP-connected in under 10 minutes.

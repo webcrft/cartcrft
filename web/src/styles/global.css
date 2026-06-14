@@ -28,10 +28,12 @@ body {
 }
 
 h1, h2, h3, h4 {
+  font-family: var(--font-display);
   color: var(--ink);
-  letter-spacing: -0.025em;
-  line-height: 1.1;
+  letter-spacing: -0.03em;
+  line-height: 1.04;
   font-weight: 700;
+  font-optical-sizing: auto;
 }
 
 a { color: inherit; }
@@ -42,8 +44,18 @@ img, svg {
 }
 
 ::selection {
-  background: color-mix(in srgb, var(--brand) 22%, transparent);
-  color: var(--ink);
+  background: var(--brand);
+  color: var(--brand-ink);
+}
+
+/* Grain overlay — drop <div class="cc-grain"/> into any positioned container */
+.cc-grain {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: var(--grain-opacity);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 :focus-visible {
@@ -77,41 +89,41 @@ img, svg {
 .cc-btn--primary {
   background: var(--brand);
   color: var(--brand-ink);
-  box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  font-weight: 700;
 }
 .cc-btn--primary:hover {
-  background: var(--brand-strong);
-  box-shadow: var(--shadow-brand);
+  background: var(--brand-bright);
+  box-shadow: var(--glow-brand);
   transform: translateY(-1px);
 }
 
 .cc-btn--ghost {
-  background: var(--surface);
+  background: transparent;
   color: var(--ink);
   border-color: var(--line-strong);
-  box-shadow: var(--shadow-xs);
 }
 .cc-btn--ghost:hover {
-  border-color: color-mix(in srgb, var(--brand) 45%, var(--line-strong));
+  border-color: var(--brand);
+  color: var(--ink);
   transform: translateY(-1px);
-  box-shadow: var(--shadow-sm);
 }
 
-.cc-btn--lg { padding: 0.85rem 1.6rem; font-size: 1rem; }
+.cc-btn--lg { padding: 0.9rem 1.7rem; font-size: 1rem; }
 
-/* On inverted/dark bands */
+/* On the light "paper" / lime bands */
 .cc-btn--on-dark.cc-btn--primary {
-  background: #fff;
-  color: var(--brand-strong);
+  background: var(--brand-ink);
+  color: var(--brand);
 }
+.cc-btn--on-dark.cc-btn--primary:hover { background: #1a1c14; box-shadow: none; }
 .cc-btn--on-dark.cc-btn--ghost {
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
-  border-color: rgba(255, 255, 255, 0.35);
+  background: transparent;
+  color: var(--brand-ink);
+  border-color: color-mix(in srgb, var(--brand-ink) 30%, transparent);
 }
 .cc-btn--on-dark.cc-btn--ghost:hover {
-  background: rgba(255, 255, 255, 0.16);
-  border-color: rgba(255, 255, 255, 0.5);
+  border-color: var(--brand-ink);
+  background: color-mix(in srgb, var(--brand-ink) 6%, transparent);
 }
 
 /* ─── Scroll-reveal animation utility ───────────────────────────────
