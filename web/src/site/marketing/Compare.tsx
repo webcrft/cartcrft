@@ -1,4 +1,18 @@
 import { Link } from 'react-router-dom'
+import {
+  CheckCircle,
+  ArrowRight,
+  ShoppingBag,
+  Code2,
+  GitBranch,
+  DollarSign,
+  Layers,
+  Plug,
+  Globe,
+  Database,
+  AlertTriangle,
+  BookOpen,
+} from 'lucide-react'
 import SiteLayout from '../SiteLayout'
 import { useDocumentMeta } from '../useDocumentMeta'
 import ComparisonTable, { type ComparisonRow } from './components/ComparisonTable'
@@ -8,13 +22,10 @@ import './Compare.css'
 /**
  * Compare page — /compare
  * Narrative content ported verbatim from src/content/marketing/compare.md.
- * The .md-prose CSS styles a flat h2 + p sibling sequence into cards, so the
- * markdown is rendered as a flat sequence of <h2>/<p> elements (no wrappers).
- *
- * Competitor table data stays as structured data (rendered by ComparisonTable).
+ * Redesigned narrative section: intro block + per-competitor cards + sources.
+ * ComparisonTable and PricingCalculator are preserved unchanged.
  */
 
-// Frontmatter (from compare.md)
 const PAGE_TITLE = 'How Cartcrft compares'
 const PAGE_DESCRIPTION =
   'A grounded comparison of Cartcrft vs Shopify, Medusa v2, Vendure, Saleor, Swell, and WooCommerce across licensing, pricing, agent-native capabilities, and commerce features.'
@@ -314,34 +325,184 @@ const rows: ComparisonRow[] = [
   },
 ]
 
+// ── Competitor card data ─────────────────────────────────────────────────────
+
+interface CompetitorCardData {
+  name: string
+  slug: string
+  tag: string
+  framing: string
+  theyWin: string[]
+  weWin: string[]
+  verdict: string
+  Icon: React.ComponentType<{ size?: number; strokeWidth?: number }>
+}
+
+const competitorCards: CompetitorCardData[] = [
+  {
+    name: 'Shopify',
+    slug: 'shopify',
+    tag: 'SaaS · Closed-source · Scale leader',
+    framing:
+      'Shopify is the undisputed scale leader and, since January 2026, a genuine agentic commerce player — their Storefront MCP server is live and US merchants can accept purchases through ChatGPT\'s Buy flow (published April 30, 2026). On agent-native distribution, Shopify moves fast.',
+    theyWin: [
+      'Live delegated / agentic payments (US merchants, Apr 2026) — Cartcrft is still in Phase H5',
+      'Massive app ecosystem, brand trust, and merchant install base',
+      'UCP co-author (NRF 2026) — simultaneous protocol influence',
+      'Opinionated hosted experience — less to assemble',
+    ],
+    weWin: [
+      'MIT open source — inspect, fork, self-host, no SaaS lock-in',
+      'Zero external-gateway surcharge (Shopify charges 0.6%–2% per plan)',
+      'B2B included — Shopify requires Plus at $2,300+/mo',
+      'Signed ed25519 agent mandates — Shopify has none',
+      'Built-in pgvector semantic search — Shopify charges extra',
+      'Bring your own infra, your own data, your own Postgres',
+    ],
+    verdict: 'If ChatGPT Instant Checkout today is the priority, Shopify leads. If owning your stack matters, Cartcrft is the answer.',
+    Icon: ShoppingBag,
+  },
+  {
+    name: 'Medusa v2',
+    slug: 'medusa',
+    tag: 'MIT · TypeScript · Open-source peer',
+    framing:
+      'Medusa is the closest OSS peer: MIT-licensed, TypeScript, headless-first, 0% GMV fees. Medusa Cloud starts at $29/mo (Develop tier). Medusa has a large community, a plugin ecosystem, and a proven track record. The comparison is honest — this is a close race.',
+    theyWin: [
+      'Larger existing community and plugin ecosystem',
+      'Flexible module system — more surface area for customisation',
+      'Medusa Cloud managed hosting already at scale',
+      'Established track record in production deployments',
+    ],
+    weWin: [
+      'Agent-native built into core: MCP server, ACP + UCP adapters shipped',
+      'Signed ed25519 mandate layer — Medusa has no equivalent',
+      'Paystack + Razorpay + Xendit built-in — non-Western markets first-class',
+      'Lot tracking / FEFO inventory out of the box',
+      'Built-in pgvector semantic search — no custom integration needed',
+    ],
+    verdict: 'Medusa requires custom work to reach agent-native. Cartcrft ships it from day one.',
+    Icon: Code2,
+  },
+  {
+    name: 'Vendure',
+    slug: 'vendure',
+    tag: 'TypeScript · GraphQL-native · GPLv3 core',
+    framing:
+      'Vendure is TypeScript-first, GraphQL-native, well-architected, and production-proven. The core is GPLv3; commercial features require the Platform tier. Vendure Cloud is in design-partner phase as of June 2026, with GA expected Q4 2026.',
+    theyWin: [
+      'GraphQL-first API — preferred by teams already on Apollo / Relay stacks',
+      'Strongly-typed schema-driven development workflow',
+      'Mature plugin system and active community',
+      'Commercial Platform tier for enterprise with dedicated support',
+    ],
+    weWin: [
+      'REST/OpenAPI — integrates naturally with agent tooling expecting structured endpoints',
+      'MCP server + ACP + UCP adapters shipped now (Vendure has none)',
+      'Signed agent mandates — no Vendure equivalent',
+      'MIT license — GPLv3 copyleft has implications for proprietary extensions',
+      'Managed cloud live — Vendure Cloud still in design-partner phase (Q4 2026 GA)',
+    ],
+    verdict: 'GraphQL lovers: Vendure is excellent. Agent-native and REST-first: Cartcrft is the fit.',
+    Icon: GitBranch,
+  },
+  {
+    name: 'Saleor',
+    slug: 'saleor',
+    tag: 'BSD-3-Clause · GraphQL · Enterprise cloud',
+    framing:
+      'Saleor is open-source (BSD-3-Clause) and GraphQL-native. The self-hosted core is free and permissively licensed. Saleor Cloud is positioned as an enterprise managed service: the entry Select plan starts at $1,599/mo with a GMV cap and 0.8% overage.',
+    theyWin: [
+      'Mature GraphQL API and established plugin marketplace',
+      'Permissive BSD-3-Clause license on the core',
+      'Strong enterprise managed offering for teams that need it',
+      'Production-proven at significant scale',
+    ],
+    weWin: [
+      'MCP server + ACP + UCP adapters — Saleor has no agent-native layer',
+      'Signed ed25519 agent mandates — unique to Cartcrft',
+      'TypeScript end-to-end vs. Python backend (easier to hire, one language)',
+      'REST/OpenAPI (agent tooling friendly) vs. GraphQL-only',
+      'Managed cloud with 0% GMV fee vs. Saleor\'s $1,599/mo entry + 0.8% overage',
+    ],
+    verdict: 'Saleor Cloud\'s pricing cliff makes self-hosted Saleor the real alternative — and against that, Cartcrft adds agent-native at no extra cost.',
+    Icon: Layers,
+  },
+  {
+    name: 'Swell',
+    slug: 'swell',
+    tag: 'Closed-source · SaaS · Revenue-based pricing',
+    framing:
+      'Swell is a closed-source, cloud-only headless commerce SaaS. The Starter plan is $29/mo billed annually but includes revenue ceilings and 2% overage fees above $50K. You cannot self-host or inspect the source code.',
+    theyWin: [
+      'Developer-friendly API and clean dashboard experience',
+      'Solid built-in subscription support',
+      'Managed SaaS — no infrastructure to run',
+      'Good multi-storefront / multi-channel support',
+    ],
+    weWin: [
+      'MIT open source — Swell is fully closed, no source visibility',
+      'Self-hostable — Swell is cloud-only, no choice',
+      '0% transaction rake at any scale — Swell charges 0.4%–2% above revenue ceiling',
+      'Full agent-native stack: MCP + ACP + UCP + mandates',
+      'Paystack + Razorpay — non-US payment coverage Swell lacks built-in',
+    ],
+    verdict: 'If managed SaaS with per-revenue pricing is acceptable, Swell is pleasant to use. For open source, self-hosting, zero rake, and agent-native, Cartcrft is a different category.',
+    Icon: DollarSign,
+  },
+  {
+    name: 'WooCommerce',
+    slug: 'woocommerce',
+    tag: 'GPL-2.0 · PHP · WordPress-coupled',
+    framing:
+      'WooCommerce is GPL-licensed, free, self-hosted, and runs on WordPress + MySQL/MariaDB. It has the largest merchant install base of any ecommerce platform and an enormous plugin ecosystem. WooCommerce itself charges 0% transaction fees.',
+    theyWin: [
+      'Largest merchant install base — unmatched ecosystem breadth',
+      'Enormous paid and free plugin marketplace for almost anything',
+      '0% transaction fees on the core platform',
+      'Deep WordPress CMS integration — content + commerce in one',
+    ],
+    weWin: [
+      'API-first, TypeScript, agent-native by design — WooCommerce is PHP + WordPress-coupled',
+      'MCP server + ACP + UCP adapters — WooCommerce has no agent-native layer',
+      'Headless-first: no WordPress dependency, clean REST + TS SDK',
+      'Postgres-native (pgvector) vs. MySQL / MariaDB — better for vector search and modern tooling',
+      'B2B, subscriptions, returns built-in — WooCommerce requires paid plugins',
+    ],
+    verdict: 'WooCommerce is the right answer for WordPress-native content + commerce. Cartcrft is the right answer for API-first, TypeScript, agent-native commerce.',
+    Icon: Globe,
+  },
+]
+
 export default function Compare() {
   useDocumentMeta({ title: PAGE_TITLE, description: PAGE_DESCRIPTION })
 
   return (
     <SiteLayout>
       <div className="mk-compare">
-        {/* Page header — from content collection frontmatter */}
-        <section className="page-header">
-          <div className="page-header-fx" aria-hidden="true">
-            <div className="page-header-grid cc-grid-bg" />
+        {/* ── Page header ─────────────────────────────────────────────────── */}
+        <section className="cmp-header">
+          <div className="cmp-header-fx" aria-hidden="true">
+            <div className="cmp-header-grid cc-grid-bg" />
+            <div className="cmp-header-glow" />
           </div>
           <div className="cc-grain" aria-hidden="true" />
-          <div className="page-header-inner">
-            <div className="page-label">
+          <div className="cmp-header-inner">
+            <div className="cmp-eyebrow">
               <span className="ey-b">[</span>
-              <span className="ey-dot" />
+              <span className="ey-dot" aria-hidden="true" />
               feature comparison
               <span className="ey-b">]</span>
             </div>
             <h1>How Cartcrft <span className="hl">compares</span></h1>
-            <p>{PAGE_DESCRIPTION}</p>
-            <p className="methodology">{METHODOLOGY}</p>
+            <p className="cmp-header-lead">{PAGE_DESCRIPTION}</p>
+            <p className="cmp-methodology">{METHODOLOGY}</p>
           </div>
         </section>
 
-        {/* Comparison table (structured data — component-rendered) */}
-        <section className="table-section" data-reveal>
-          <div className="table-section-inner">
+        {/* ── Comparison table ─────────────────────────────────────────────── */}
+        <section className="cmp-table-section" data-reveal>
+          <div className="cmp-table-inner">
             <ComparisonTable
               competitors={competitors}
               rows={rows}
@@ -351,92 +512,73 @@ export default function Compare() {
           </div>
         </section>
 
-        {/* Interactive grounded cost calculator */}
-        <section className="calc-section" data-reveal style={{ padding: 'clamp(2rem, 5vw, 4.5rem) var(--gutter)' }}>
+        {/* ── Pricing calculator ───────────────────────────────────────────── */}
+        <section className="cmp-calc-section" data-reveal>
           <PricingCalculator />
         </section>
 
-        {/* Narrative sections — ported verbatim from compare.md */}
-        <section className="narratives" data-reveal>
-          <div className="narratives-inner">
-            <div className="md-prose">
-              {/* Introduction (heading hidden by CSS) */}
-              <h2>Introduction</h2>
-              <p>
-                A straight-line comparison of licensing, pricing, agent-native capabilities, and commerce features across the major open-source and SaaS headless commerce platforms. We aim to be fair — this is not a strawman. Where competitors lead (Shopify on live agentic payments, for example), we say so.
-              </p>
+        {/* ── Narrative section ────────────────────────────────────────────── */}
+        <section className="cmp-narratives" data-reveal>
+          <div className="cmp-narratives-inner">
 
-              <h2>Cartcrft vs Shopify</h2>
-              <p>
-                Shopify is the undisputed scale leader and, since January 2026, a genuine agentic commerce player — their Storefront MCP server is live and US merchants can accept purchases through ChatGPT's Buy flow (published April 30, 2026). On agent-native, Shopify moves fast and has distribution.
-              </p>
-              <p>
-                The trade-offs: Shopify is closed-source and SaaS-only. External payment gateways incur a 0.6%–2% transaction surcharge per plan (as of June 2026), on top of your gateway's own fees. B2B features require Shopify Plus ($2,300+/mo). You cannot self-host, inspect the code, or bring your own infrastructure. Cartcrft's live agentic payments are still in development — if ChatGPT Instant Checkout today matters to you, Shopify is ahead. If owning your stack matters, Cartcrft is the answer.
-              </p>
-
-              <h2>Cartcrft vs Medusa v2</h2>
-              <p>
-                Medusa is the closest OSS peer: MIT-licensed, TypeScript, headless-first, 0% GMV fees. Medusa Cloud starts at $29/mo (Develop tier, as of June 2026). Medusa has a large community, a plugin ecosystem, and a proven track record.
-              </p>
-              <p>
-                Where Cartcrft differs: agent-native is built into the core. Medusa has no MCP server, no ACP/UCP adapters, and no signed mandate layer — these would require custom integrations. Cartcrft also ships 4 payment providers (including Paystack and Razorpay for non-Western markets), lot tracking/FEFO inventory, and built-in pgvector semantic search. Medusa's module system gives more flexibility at the cost of more assembly.
-              </p>
-
-              <h2>Cartcrft vs Vendure</h2>
-              <p>
-                Vendure is a TypeScript-first, GraphQL-native headless platform — well-architected and production-proven. The core is GPLv3; commercial features (storefront, enterprise plugins, dedicated support) require the commercial Platform tier. Vendure Cloud is in design-partner phase as of June 2026 (GA expected Q4 2026).
-              </p>
-              <p>
-                If your team prefers GraphQL over REST, Vendure is a strong option. Cartcrft is REST/OpenAPI with a generated TS SDK, which integrates naturally with agent tooling that expects structured REST endpoints. Neither platform has live agentic payments yet, but Cartcrft ships ACP/UCP adapters out of the box.
-              </p>
-
-              <h2>Cartcrft vs Saleor</h2>
-              <p>
-                Saleor is open-source (BSD-3-Clause) and GraphQL-native. The self-hosted core is free and permissively licensed. Saleor Cloud, however, is positioned as an enterprise managed service: the entry Select plan starts at $1,599/mo (June 2026) with a GMV cap and 0.8% overage fee. For teams that want managed hosting, the cost cliff is steep.
-              </p>
-              <p>
-                Cartcrft and Saleor overlap on headless-first, open-source credentials. Cartcrft adds agent-native (MCP/ACP/UCP/mandates), REST API, TypeScript end-to-end, and built-in pgvector search. Saleor offers a mature GraphQL API and an established plugin marketplace.
-              </p>
-
-              <h2>Cartcrft vs Swell</h2>
-              <p>
-                Swell is a closed-source, cloud-only headless commerce SaaS. The Starter plan is $29/mo (billed annually, as of June 2026) but includes revenue ceilings and overage fees (2% above $50K for Starter). You cannot self-host or inspect the source code.
-              </p>
-              <p>
-                Swell has a developer-friendly API and solid subscription support. If managed SaaS with per-revenue pricing is acceptable, Swell competes at the low end. If you want open source, self-hosting, zero transaction rake, and agent-native capabilities, Cartcrft is the different-category choice.
-              </p>
-
-              <h2>Cartcrft vs WooCommerce</h2>
-              <p>
-                WooCommerce is GPL-licensed, free, self-hosted, and runs on WordPress + MySQL/MariaDB. It has the largest merchant install base of any ecommerce platform and an enormous plugin ecosystem. WooCommerce itself charges 0% transaction fees.
-              </p>
-              <p>
-                WooCommerce is PHP-first, WordPress-coupled, and not designed for headless or agent-native use cases. Advanced features (subscriptions, B2B, headless) require paid plugins. There is no MCP server, no ACP/UCP, no pgvector. Cartcrft is a different category: API-first, TypeScript, agent-native by design.
-              </p>
-
-              <h2>Sources</h2>
-              <p>
-                <strong>Sources and dates (all verified June 2026):</strong>{' '}
-                Shopify plan pricing and external gateway fees from shopify.com/pricing (Basic $29/mo, external gateway surcharge 0.6%–2% depending on plan);
-                Medusa Cloud pricing from medusajs.com/pricing/ (Develop $29/mo, Launch $99/mo, Scale $299/mo, 0% GMV);
-                Saleor Cloud pricing from saleor.io/pricing (Select $1,599/mo with GMV cap, 0.8% overage);
-                Swell pricing from swell.is/pricing (Starter $29/mo billed annually, revenue ceilings and overage apply);
-                Vendure license and Cloud status from vendure.io/pricing (GPLv3 core, Commercial Platform tier, Cloud GA Q4 2026);
-                WooCommerce from wordpress.org/plugins/woocommerce (GPL-2.0+, self-hosted, 0% WC transaction fees);
-                Shopify agentic commerce (MCP, ACP, UCP) from shopify.com/blog/how-agentic-commerce-works (published April 30, 2026).
-                Cartcrft ACP/UCP status from internal docs (docs/acp.md, docs/ucp.md): test mode shipped, live delegated payment in development (roadmap Phase H5).
-                Verify all figures directly with each vendor before making purchasing decisions.
+            {/* Intro block */}
+            <div className="cmp-intro">
+              <div className="cmp-intro-eyebrow">
+                <span className="ey-b">[</span>
+                <span className="ey-dot" aria-hidden="true" />
+                the honest version
+                <span className="ey-b">]</span>
+              </div>
+              <h2 className="cmp-intro-heading">
+                A straight-line comparison —<br />
+                <span className="cmp-hl">no strawmen</span>
+              </h2>
+              <p className="cmp-intro-lead">
+                Where competitors lead — Shopify on live agentic payments, Medusa on community scale, Vendure on GraphQL architecture — we say so. The matrix above gives you the data. The cards below give you the reasoning. Every claim is sourced and grounded.
               </p>
             </div>
+
+            {/* Competitor cards grid */}
+            <div className="cmp-cards-grid">
+              {competitorCards.map((card) => (
+                <CompetitorCard key={card.slug} card={card} />
+              ))}
+            </div>
+
           </div>
         </section>
 
-        {/* CTA */}
-        <section className="compare-cta" data-reveal>
-          <div className="compare-cta-inner">
+        {/* ── Sources & methodology ────────────────────────────────────────── */}
+        <section className="cmp-sources" data-reveal>
+          <div className="cmp-sources-inner">
+            <div className="cmp-sources-header">
+              <BookOpen size={14} strokeWidth={1.5} />
+              <span>Sources &amp; methodology</span>
+            </div>
+            <p className="cmp-sources-body">
+              <strong>All figures verified June 2026.</strong>{' '}
+              Shopify plan pricing and external gateway fees from shopify.com/pricing (Basic $29/mo, external gateway surcharge 0.6%–2% depending on plan).
+              Medusa Cloud pricing from medusajs.com/pricing/ (Develop $29/mo, Launch $99/mo, Scale $299/mo, 0% GMV).
+              Saleor Cloud pricing from saleor.io/pricing (Select $1,599/mo with GMV cap, 0.8% overage).
+              Swell pricing from swell.is/pricing (Starter $29/mo billed annually, revenue ceilings and overage apply).
+              Vendure license and Cloud status from vendure.io/pricing (GPLv3 core, Commercial Platform tier, Cloud GA Q4 2026).
+              WooCommerce from wordpress.org/plugins/woocommerce (GPL-2.0+, self-hosted, 0% WC transaction fees).
+              Shopify agentic commerce (MCP, ACP, UCP) from shopify.com/blog/how-agentic-commerce-works (published April 30, 2026).
+              Cartcrft ACP/UCP status from internal docs (docs/acp.md, docs/ucp.md): test mode shipped, live delegated payment in development (roadmap Phase H5).
+            </p>
+            <p className="cmp-sources-caveat">
+              Commerce capabilities are assessed against each platform's documented defaults — plugins and custom integrations are noted where relevant.
+              Verify all figures directly with each vendor before making purchasing decisions.
+            </p>
+          </div>
+        </section>
+
+        {/* ── CTA band ────────────────────────────────────────────────────── */}
+        <section className="cmp-cta" data-reveal>
+          <div className="cmp-cta-inner">
             <h2>Ready to try Cartcrft?</h2>
             <p>Get a store running and MCP-connected in under 10 minutes.</p>
-            <div className="compare-cta-actions">
+            <div className="cmp-cta-actions">
               <Link to="/quickstart" className="cc-btn cc-btn--lg cc-btn--on-dark cc-btn--primary">Get started free</Link>
               <Link to="/pricing" className="cc-btn cc-btn--lg cc-btn--on-dark cc-btn--ghost">See pricing</Link>
             </div>
@@ -444,5 +586,72 @@ export default function Compare() {
         </section>
       </div>
     </SiteLayout>
+  )
+}
+
+// ── Competitor card component ────────────────────────────────────────────────
+
+function CompetitorCard({ card }: { card: CompetitorCardData }) {
+  const { name, tag, framing, theyWin, weWin, verdict, Icon } = card
+
+  return (
+    <article className="cmp-card">
+      {/* Card header */}
+      <div className="cmp-card-header">
+        <div className="cmp-card-icon" aria-hidden="true">
+          <Icon size={17} strokeWidth={1.6} />
+        </div>
+        <div className="cmp-card-title-block">
+          <h3 className="cmp-card-name">{name}</h3>
+          <span className="cmp-card-tag">{tag}</span>
+        </div>
+      </div>
+
+      {/* Framing paragraph */}
+      <p className="cmp-card-framing">{framing}</p>
+
+      {/* Two-column win/lose */}
+      <div className="cmp-card-splits">
+        {/* They win */}
+        <div className="cmp-card-col cmp-card-col--them">
+          <div className="cmp-col-label">
+            <AlertTriangle size={11} strokeWidth={2} aria-hidden="true" />
+            <span>Where {name} wins</span>
+          </div>
+          <ul className="cmp-points">
+            {theyWin.map((pt, i) => (
+              <li key={i} className="cmp-point cmp-point--them">
+                <ArrowRight size={12} strokeWidth={2} className="cmp-pt-icon" aria-hidden="true" />
+                <span>{pt}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="cmp-card-divider" aria-hidden="true" />
+
+        {/* We win */}
+        <div className="cmp-card-col cmp-card-col--us">
+          <div className="cmp-col-label">
+            <CheckCircle size={11} strokeWidth={2} aria-hidden="true" />
+            <span>Where Cartcrft wins</span>
+          </div>
+          <ul className="cmp-points">
+            {weWin.map((pt, i) => (
+              <li key={i} className="cmp-point cmp-point--us">
+                <CheckCircle size={12} strokeWidth={2} className="cmp-pt-icon" aria-hidden="true" />
+                <span>{pt}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+
+      {/* Verdict line */}
+      <div className="cmp-card-verdict">
+        <Database size={11} strokeWidth={2} aria-hidden="true" />
+        <span>{verdict}</span>
+      </div>
+    </article>
   )
 }

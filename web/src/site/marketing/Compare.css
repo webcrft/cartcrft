@@ -1,5 +1,10 @@
-/* ── Page header (Agentic Terminal — left-aligned, mono eyebrow) ──────────── */
-.mk-compare .page-header {
+/* ── Compare page — Agentic Terminal redesign ──────────────────────────────
+ * Page flow: header → table → calculator → narrative (intro + cards) → sources → CTA
+ * Tokens only — no hardcoded colors except where token is unavailable.
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+/* ── Page header ─────────────────────────────────────────────────────────── */
+.mk-compare .cmp-header {
   position: relative;
   overflow: hidden;
   padding: clamp(3.5rem, 6vw, 5.5rem) var(--gutter) clamp(2.25rem, 4vw, 3rem);
@@ -7,8 +12,14 @@
   background: var(--bg);
 }
 
-.mk-compare .page-header-fx { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
-.mk-compare .page-header-grid {
+.mk-compare .cmp-header-fx {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.mk-compare .cmp-header-grid {
   position: absolute;
   inset: -1px;
   -webkit-mask-image: radial-gradient(ellipse 60% 70% at 20% 0%, #000 8%, transparent 70%);
@@ -16,14 +27,25 @@
   opacity: 0.6;
 }
 
-.mk-compare .page-header-inner {
+.mk-compare .cmp-header-glow {
+  position: absolute;
+  top: -200px;
+  right: -100px;
+  width: 480px;
+  height: 480px;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--brand) 14%, transparent), transparent 65%);
+  filter: blur(30px);
+}
+
+.mk-compare .cmp-header-inner {
   position: relative;
   z-index: 1;
   max-width: var(--maxw);
   margin: 0 auto;
 }
 
-.mk-compare .page-label {
+.mk-compare .cmp-eyebrow {
   display: inline-flex;
   align-items: center;
   gap: 0.55rem;
@@ -35,7 +57,8 @@
   color: var(--brand);
   margin-bottom: 1.25rem;
 }
-.mk-compare .page-label .ey-b { color: var(--ink-subtle); }
+.mk-compare .cmp-eyebrow .ey-b { color: var(--ink-subtle); }
+
 .mk-compare .ey-dot {
   width: 7px;
   height: 7px;
@@ -46,7 +69,7 @@
 }
 @keyframes cmp-blink { 0%, 60% { opacity: 1; } 61%, 100% { opacity: 0.25; } }
 
-.mk-compare .page-header h1 {
+.mk-compare .cmp-header h1 {
   font-family: var(--font-display);
   font-size: clamp(2.2rem, 5vw, 3.4rem);
   font-weight: 700;
@@ -56,9 +79,9 @@
   line-height: 1.0;
   text-wrap: balance;
 }
-.mk-compare .page-header h1 .hl { color: var(--brand); }
+.mk-compare .cmp-header h1 .hl { color: var(--brand); }
 
-.mk-compare .page-header p {
+.mk-compare .cmp-header-lead {
   font-size: 1.05rem;
   color: var(--ink-muted);
   line-height: 1.7;
@@ -66,145 +89,383 @@
   max-width: 60ch;
 }
 
-.mk-compare .methodology {
+.mk-compare .cmp-methodology {
   font-family: var(--font-mono);
-  font-size: 0.78rem !important;
-  color: var(--ink-subtle) !important;
+  font-size: 0.78rem;
+  color: var(--ink-subtle);
   border-top: 1px solid var(--line);
   padding-top: 0.95rem;
   margin-top: 1.25rem;
   max-width: 80ch;
-  line-height: 1.65 !important;
+  line-height: 1.65;
 }
 
-/* ── Table section ────────────────────────────────────────────────────────── */
-.mk-compare .table-section {
+/* ── Table section ───────────────────────────────────────────────────────── */
+.mk-compare .cmp-table-section {
   padding: clamp(2rem, 4vw, 3rem) var(--gutter) clamp(3rem, 6vw, 4rem);
 }
 
-.mk-compare .table-section-inner {
+.mk-compare .cmp-table-inner {
   max-width: var(--maxw);
   margin: 0 auto;
 }
 
-/* ── Narrative / prose section (dark cards, hairlines, lime hover) ─────────── */
-.mk-compare .narratives {
-  padding: clamp(3rem, 6vw, 5rem) var(--gutter);
+/* ── Calculator section ──────────────────────────────────────────────────── */
+.mk-compare .cmp-calc-section {
+  padding: clamp(2rem, 5vw, 4.5rem) var(--gutter);
+  border-top: 1px solid var(--line);
+}
+
+/* ── Narrative section ───────────────────────────────────────────────────── */
+.mk-compare .cmp-narratives {
+  padding: clamp(4rem, 7vw, 6rem) var(--gutter);
   background: var(--bg-subtle);
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
 }
 
-.mk-compare .narratives-inner {
+.mk-compare .cmp-narratives-inner {
   max-width: var(--maxw);
   margin: 0 auto;
 }
 
-/* Display the narrative cards in a 2-col grid (except Sources) */
-.mk-compare .md-prose {
+/* ── Intro block ─────────────────────────────────────────────────────────── */
+.mk-compare .cmp-intro {
+  max-width: 720px;
+  margin-bottom: clamp(3rem, 5vw, 4.5rem);
+}
+
+.mk-compare .cmp-intro-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--brand);
+  margin-bottom: 1.1rem;
+}
+.mk-compare .cmp-intro-eyebrow .ey-b { color: var(--ink-subtle); }
+
+.mk-compare .cmp-intro-heading {
+  font-family: var(--font-display);
+  font-size: clamp(1.9rem, 3.5vw, 2.8rem);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  color: var(--ink);
+  line-height: 1.08;
+  margin-bottom: 1rem;
+  text-wrap: balance;
+}
+
+.mk-compare .cmp-hl { color: var(--brand); }
+
+.mk-compare .cmp-intro-lead {
+  font-size: clamp(1rem, 1.3vw, 1.1rem);
+  color: var(--ink-muted);
+  line-height: 1.72;
+  margin: 0;
+  max-width: 56ch;
+}
+
+/* ── Competitor cards grid ───────────────────────────────────────────────── */
+.mk-compare .cmp-cards-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 1.25rem;
+}
+
+@media (max-width: 900px) {
+  .mk-compare .cmp-cards-grid { grid-template-columns: 1fr; }
+}
+
+/* ── Individual competitor card ─────────────────────────────────────────── */
+.mk-compare .cmp-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  padding: 1.75rem 1.75rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  position: relative;
+  transition:
+    border-color 0.24s ease,
+    box-shadow 0.28s ease,
+    background 0.24s ease;
+}
+
+.mk-compare .cmp-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 1px 0 0 color-mix(in srgb, var(--ink) 5%, transparent);
+  pointer-events: none;
+}
+
+.mk-compare .cmp-card:hover {
+  border-color: color-mix(in srgb, var(--brand) 38%, var(--line));
+  background: color-mix(in srgb, var(--brand) 3%, var(--surface));
+  box-shadow:
+    var(--shadow-md),
+    0 0 0 1px color-mix(in srgb, var(--brand) 20%, transparent);
+}
+
+/* ── Card header ─────────────────────────────────────────────────────────── */
+.mk-compare .cmp-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.95rem;
+}
+
+.mk-compare .cmp-card-icon {
+  flex-shrink: 0;
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: var(--r-sm);
+  background: var(--brand-tint);
+  color: var(--brand);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.24s ease, color 0.24s ease, box-shadow 0.24s ease;
+  margin-top: 0.1rem;
+}
+
+.mk-compare .cmp-card:hover .cmp-card-icon {
+  background: var(--brand);
+  color: var(--brand-ink);
+  box-shadow: 0 0 20px color-mix(in srgb, var(--brand) 40%, transparent);
+}
+
+.mk-compare .cmp-card-title-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.mk-compare .cmp-card-name {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+  margin: 0;
+  line-height: 1.1;
+}
+
+.mk-compare .cmp-card-tag {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-subtle);
+  line-height: 1.4;
+}
+
+/* ── Framing paragraph ───────────────────────────────────────────────────── */
+.mk-compare .cmp-card-framing {
+  font-size: 0.9rem;
+  color: var(--ink-muted);
+  line-height: 1.72;
+  margin: 0;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--line);
+}
+
+/* ── Two-column splits ───────────────────────────────────────────────────── */
+.mk-compare .cmp-card-splits {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 0 1.25rem;
   align-items: start;
 }
 
-@media (max-width: 768px) {
-  .mk-compare .md-prose { grid-template-columns: 1fr; }
+.mk-compare .cmp-card-divider {
+  width: 1px;
+  background: var(--line);
+  align-self: stretch;
+  min-height: 2rem;
 }
 
-.mk-compare .md-prose p {
-  font-size: 0.92rem;
-  color: var(--ink-muted);
-  line-height: 1.7;
-  margin-bottom: 0.85rem;
+.mk-compare .cmp-card-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
-/* Each h2 + its following p tags render as a card */
-.mk-compare .md-prose h2 {
-  border-top: none !important;
-  padding-top: 0 !important;
-  margin-top: 0 !important;
-  font-family: var(--font-display);
-  font-size: 1.1rem;
+/* Column labels */
+.mk-compare .cmp-col-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
   font-weight: 600;
-  letter-spacing: -0.02em;
-  color: var(--ink);
-  padding: 1.4rem 1.6rem 0;
-  border-radius: var(--r-md) var(--r-md) 0 0;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-bottom: none;
-  margin-bottom: 0;
-  transition: border-color 0.22s ease, background 0.22s ease;
-}
-
-/* Hide the h2 "Introduction" heading (it's implied by context) */
-.mk-compare .md-prose h2:first-of-type {
-  display: none;
-}
-
-.mk-compare .md-prose p:not(:last-child) {
-  background: var(--surface);
-  border-left: 1px solid var(--line);
-  border-right: 1px solid var(--line);
-  padding: 0 1.6rem;
-  margin-bottom: 0;
-  transition: border-color 0.22s ease, background 0.22s ease;
-}
-
-.mk-compare .md-prose p:last-of-type {
-  background: var(--surface);
-  border-left: 1px solid var(--line);
-  border-right: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
-  border-radius: 0 0 var(--r-md) var(--r-md);
-  padding: 0 1.6rem 1.4rem;
-  margin-bottom: 0;
-  transition: border-color 0.22s ease, background 0.22s ease;
-}
-
-/* Sources section — full width card */
-.mk-compare .md-prose h2:last-of-type {
-  grid-column: 1 / -1;
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
-  font-weight: 500;
+  letter-spacing: 0.09em;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
+  margin-bottom: 0.15rem;
+}
+
+.mk-compare .cmp-card-col--them .cmp-col-label {
   color: var(--ink-subtle);
-  background: var(--surface-2);
 }
 
-.mk-compare .md-prose h2:last-of-type + p {
-  grid-column: 1 / -1;
+.mk-compare .cmp-card-col--us .cmp-col-label {
+  color: var(--brand);
+}
+
+/* Bullet lists */
+.mk-compare .cmp-points {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.mk-compare .cmp-point {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.mk-compare .cmp-pt-icon {
+  flex-shrink: 0;
+  margin-top: 0.2rem;
+}
+
+.mk-compare .cmp-point--them {
+  color: var(--ink-muted);
+}
+
+.mk-compare .cmp-point--them .cmp-pt-icon {
+  color: var(--ink-subtle);
+}
+
+.mk-compare .cmp-point--us {
+  color: var(--ink-body);
+}
+
+.mk-compare .cmp-point--us .cmp-pt-icon {
+  color: var(--brand);
+}
+
+/* ── Verdict line ────────────────────────────────────────────────────────── */
+.mk-compare .cmp-card-verdict {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
   font-family: var(--font-mono);
-  font-size: 0.76rem !important;
-  color: var(--ink-subtle) !important;
-  line-height: 1.7 !important;
-  border-radius: 0 0 var(--r-md) var(--r-md) !important;
-  background: var(--surface-2);
+  font-size: 0.78rem;
+  color: var(--ink-subtle);
+  line-height: 1.55;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+  margin-top: auto;
+  transition: color 0.22s ease;
 }
 
-.mk-compare .md-prose strong {
+.mk-compare .cmp-card-verdict svg {
+  flex-shrink: 0;
+  margin-top: 0.2rem;
+  color: var(--accent);
+}
+
+.mk-compare .cmp-card:hover .cmp-card-verdict {
+  color: var(--ink-body);
+}
+
+/* Responsive: collapse splits to vertical on narrow cards */
+@media (max-width: 560px) {
+  .mk-compare .cmp-card-splits {
+    grid-template-columns: 1fr;
+  }
+  .mk-compare .cmp-card-divider {
+    width: 100%;
+    height: 1px;
+    align-self: auto;
+    min-height: auto;
+  }
+}
+
+/* ── Sources block ───────────────────────────────────────────────────────── */
+.mk-compare .cmp-sources {
+  padding: clamp(2.5rem, 4vw, 3.5rem) var(--gutter);
+  border-bottom: 1px solid var(--line);
+  background: var(--bg);
+}
+
+.mk-compare .cmp-sources-inner {
+  max-width: var(--maxw);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.mk-compare .cmp-sources-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.69rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-subtle);
+}
+
+.mk-compare .cmp-sources-header svg {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.mk-compare .cmp-sources-body {
+  font-family: var(--font-mono);
+  font-size: 0.77rem;
+  color: var(--ink-subtle);
+  line-height: 1.75;
+  margin: 0;
+  max-width: 90ch;
+}
+
+.mk-compare .cmp-sources-body strong {
   color: var(--ink-body);
   font-weight: 600;
 }
 
-.mk-compare .md-prose h2:last-of-type + p strong { color: var(--brand); }
+.mk-compare .cmp-sources-caveat {
+  font-family: var(--font-mono);
+  font-size: 0.73rem;
+  color: color-mix(in srgb, var(--ink-subtle) 80%, transparent);
+  line-height: 1.65;
+  margin: 0;
+  max-width: 80ch;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--line);
+  font-style: italic;
+}
 
-/* ── CTA band (full-bleed lime) ───────────────────────────────────────────── */
-.mk-compare .compare-cta {
+/* ── CTA band (full-bleed lime) ──────────────────────────────────────────── */
+.mk-compare .cmp-cta {
   background:
     radial-gradient(60% 120% at 0% 0%, color-mix(in srgb, var(--brand-bright) 50%, transparent), transparent 60%),
     linear-gradient(135deg, var(--brand-strong) 0%, var(--brand) 100%);
   padding: clamp(4rem, 7vw, 6rem) var(--gutter);
   color: var(--brand-ink);
-  margin-top: clamp(3rem, 6vw, 5rem);
   position: relative;
   overflow: hidden;
 }
 
-.mk-compare .compare-cta-inner {
+.mk-compare .cmp-cta-inner {
   max-width: var(--maxw);
   margin: 0 auto;
   display: flex;
@@ -215,7 +476,7 @@
   z-index: 1;
 }
 
-.mk-compare .compare-cta h2 {
+.mk-compare .cmp-cta h2 {
   font-family: var(--font-display);
   font-size: clamp(1.8rem, 3.5vw, 2.6rem);
   font-weight: 700;
@@ -226,19 +487,23 @@
   line-height: 1.0;
 }
 
-.mk-compare .compare-cta p {
+.mk-compare .cmp-cta p {
   font-size: 1.05rem;
   color: color-mix(in srgb, var(--brand-ink) 82%, transparent);
   margin: 0;
 }
 
-.mk-compare .compare-cta-actions {
+.mk-compare .cmp-cta-actions {
   display: flex;
   gap: 0.75rem;
   flex-wrap: wrap;
   margin-top: 0.4rem;
 }
 
+/* ── Reduced motion ──────────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
-  .mk-compare .ey-dot { animation: none !important; }
+  .mk-compare .ey-dot { animation: none !important; opacity: 1; }
+  .mk-compare .cmp-card,
+  .mk-compare .cmp-card-icon,
+  .mk-compare .cmp-card-verdict { transition: none; }
 }
