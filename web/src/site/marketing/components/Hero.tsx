@@ -1,0 +1,210 @@
+import './Hero.css'
+
+/**
+ * Hero — landing page hero section.
+ * Includes an inline SVG illustration of an agent/MCP/store graph.
+ */
+export interface HeroProps {
+  headline: string
+  subheadline: string
+  ctaPrimary: { label: string; href: string }
+  ctaSecondary?: { label: string; href: string }
+  badge?: string
+}
+
+export default function Hero({ headline, subheadline, ctaPrimary, ctaSecondary, badge }: HeroProps) {
+  return (
+    <section className="hero">
+      {/* Gradient glow orb */}
+      <div className="hero-glow" aria-hidden="true"></div>
+
+      <div className="hero-inner">
+        <div className="hero-content">
+          {badge && (
+            <div className="hero-badge">
+              <span className="badge-dot" aria-hidden="true"></span>
+              <span>{badge}</span>
+            </div>
+          )}
+
+          <h1 className="hero-headline" dangerouslySetInnerHTML={{ __html: headline }} />
+
+          <p className="hero-subheadline">{subheadline}</p>
+
+          <div className="hero-actions">
+            <a href={ctaPrimary.href} className="btn-primary">
+              {ctaPrimary.label}
+              <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false">
+                <path fill="currentColor" d="M6.22 3.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L9.94 8 6.22 4.28a.75.75 0 0 1 0-1.06z" />
+              </svg>
+            </a>
+            {ctaSecondary && (
+              <a
+                href={ctaSecondary.href}
+                className="btn-secondary"
+                target={ctaSecondary.href.startsWith('http') ? '_blank' : undefined}
+                rel={ctaSecondary.href.startsWith('http') ? 'noopener noreferrer' : undefined}
+              >
+                {/* GitHub icon for GitHub links */}
+                {ctaSecondary.href.includes('github') && (
+                  <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+                    <path
+                      fill="currentColor"
+                      d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0 0 22 12.017C22 6.484 17.522 2 12 2z"
+                    />
+                  </svg>
+                )}
+                {ctaSecondary.label}
+              </a>
+            )}
+          </div>
+
+          {/* Protocol status pills */}
+          <div className="proto-pills" role="list" aria-label="Protocol status">
+            <span className="pill pill--shipped" role="listitem">MCP shipped</span>
+            <span className="pill pill--test" role="listitem">ACP test mode</span>
+            <span className="pill pill--test" role="listitem">UCP test mode</span>
+            <span className="pill pill--shipped" role="listitem">ed25519 mandates</span>
+            <span className="pill pill--shipped" role="listitem">pgvector search</span>
+          </div>
+        </div>
+
+        {/* Hero illustration: abstract agent→MCP→store diagram */}
+        <div className="hero-illustration" aria-hidden="true">
+          <svg
+            viewBox="0 0 480 340"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            className="hero-svg"
+            role="img"
+            aria-label="Diagram showing an AI agent connecting through an MCP server to a Cartcrft store, signing a mandate, and completing a checkout"
+          >
+            <defs>
+              <linearGradient id="h-grad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="#6366f1" />
+                <stop offset="100%" stopColor="#14b8a6" />
+              </linearGradient>
+              <linearGradient id="h-grad-h" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stopColor="#6366f1" />
+                <stop offset="100%" stopColor="#14b8a6" />
+              </linearGradient>
+              <radialGradient id="h-glow-ind" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stopColor="#6366f1" stopOpacity="0.25" />
+                <stop offset="100%" stopColor="#6366f1" stopOpacity="0" />
+              </radialGradient>
+              <radialGradient id="h-glow-teal" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stopColor="#14b8a6" stopOpacity="0.25" />
+                <stop offset="100%" stopColor="#14b8a6" stopOpacity="0" />
+              </radialGradient>
+              <filter id="h-blur" x="-40%" y="-40%" width="180%" height="180%">
+                <feGaussianBlur in="SourceGraphic" stdDeviation="12" />
+              </filter>
+              <filter id="node-shadow" x="-30%" y="-30%" width="160%" height="160%">
+                <feDropShadow dx="0" dy="2" stdDeviation="4" floodColor="#6366f1" floodOpacity="0.2" />
+              </filter>
+            </defs>
+
+            {/* Background subtle glow blobs */}
+            <ellipse cx="100" cy="170" rx="80" ry="80" fill="url(#h-glow-ind)" filter="url(#h-blur)" />
+            <ellipse cx="380" cy="170" rx="80" ry="80" fill="url(#h-glow-teal)" filter="url(#h-blur)" />
+
+            {/* ── AGENT NODE (left) ── */}
+            <g transform="translate(52, 130)">
+              <circle cx="48" cy="48" r="46" stroke="#6366f1" strokeWidth="1.5" strokeDasharray="5 3" opacity="0.5" />
+              <circle cx="48" cy="48" r="38" fill="#1e1b4b" filter="url(#node-shadow)" />
+              <circle cx="48" cy="48" r="37" stroke="#6366f1" strokeWidth="1.5" />
+              <g transform="translate(26, 24)">
+                <circle cx="10" cy="10" r="3.5" fill="#818cf8" />
+                <circle cx="34" cy="10" r="3.5" fill="#818cf8" />
+                <circle cx="10" cy="28" r="3.5" fill="#6366f1" />
+                <circle cx="34" cy="28" r="3.5" fill="#6366f1" />
+                <circle cx="22" cy="18" r="5" fill="url(#h-grad)" />
+                <line x1="13.5" y1="10" x2="18.5" y2="14" stroke="#6366f1" strokeWidth="1.5" />
+                <line x1="30.5" y1="10" x2="25.5" y2="14" stroke="#6366f1" strokeWidth="1.5" />
+                <line x1="13.5" y1="28" x2="18.5" y2="22" stroke="#818cf8" strokeWidth="1.5" />
+                <line x1="30.5" y1="28" x2="25.5" y2="22" stroke="#818cf8" strokeWidth="1.5" />
+              </g>
+              <text x="48" y="98" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="9" fill="#818cf8" fontWeight="600" letterSpacing="0.05em">AI AGENT</text>
+            </g>
+
+            {/* ── CONNECTING LINE: AGENT → MCP ── */}
+            <path d="M152 178 C190 178, 190 170, 228 170" stroke="url(#h-grad-h)" strokeWidth="1.5" strokeDasharray="6 4" opacity="0.8">
+              <animate attributeName="stroke-dashoffset" from="0" to="-20" dur="2s" repeatCount="indefinite" />
+            </path>
+            <polygon points="224,166 232,170 224,174" fill="#6366f1" opacity="0.9" />
+            <text x="192" y="163" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="7.5" fill="#64748b">MCP connect</text>
+
+            {/* ── MCP SERVER NODE (center) ── */}
+            <g transform="translate(228, 122)">
+              <polygon points="52,0 104,26 104,78 52,104 0,78 0,26" fill="#1e293b" stroke="url(#h-grad)" strokeWidth="1.5" filter="url(#node-shadow)" />
+              <g transform="translate(22, 22) scale(0.48)">
+                <path d="M8 18 H24 L37.5 81 a9 9 0 0 0 8.8 7 h47.4 a9 9 0 0 0 8.8 -7 L114 34 H30" fill="none" stroke="url(#h-grad)" strokeWidth="9" strokeLinecap="round" strokeLinejoin="round" />
+                <circle cx="48" cy="110" r="7.5" fill="#6366f1" />
+                <circle cx="94" cy="110" r="7.5" fill="#14b8a6" />
+                <path d="M52 64 L72 50 L92 64" fill="none" stroke="url(#h-grad)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" opacity="0.9" />
+                <circle cx="52" cy="64" r="5.5" fill="#6366f1" />
+                <circle cx="72" cy="50" r="6.5" fill="url(#h-grad)" />
+                <circle cx="92" cy="64" r="5.5" fill="#14b8a6" />
+              </g>
+              <text x="52" y="92" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="8.5" fill="#a5b4fc" fontWeight="700" letterSpacing="0.04em">MCP</text>
+            </g>
+
+            {/* ── CONNECTING LINE: MCP → STORE ── */}
+            <path d="M332 170 C366 170, 366 178, 398 178" stroke="url(#h-grad-h)" strokeWidth="1.5" strokeDasharray="6 4" opacity="0.8">
+              <animate attributeName="stroke-dashoffset" from="0" to="-20" dur="2s" repeatCount="indefinite" begin="0.4s" />
+            </path>
+            <polygon points="394,174 402,178 394,182" fill="#14b8a6" opacity="0.9" />
+            <text x="368" y="163" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="7.5" fill="#64748b">checkout</text>
+
+            {/* ── STORE NODE (right) ── */}
+            <g transform="translate(376, 130)">
+              <circle cx="48" cy="48" r="46" stroke="#14b8a6" strokeWidth="1.5" strokeDasharray="5 3" opacity="0.5" />
+              <circle cx="48" cy="48" r="38" fill="#0d2a2a" filter="url(#node-shadow)" />
+              <circle cx="48" cy="48" r="37" stroke="#14b8a6" strokeWidth="1.5" />
+              <g transform="translate(20, 22)">
+                <rect x="4" y="16" width="48" height="28" rx="2" fill="#0d9488" opacity="0.4" />
+                <rect x="4" y="16" width="48" height="28" rx="2" stroke="#14b8a6" strokeWidth="1.5" />
+                <path d="M2 16 L4 6 H52 L54 16" fill="#0d9488" opacity="0.5" />
+                <path d="M2 16 L4 6 H52 L54 16" stroke="#2dd4bf" strokeWidth="1.5" strokeLinejoin="round" />
+                <rect x="21" y="26" width="14" height="18" rx="1" fill="#14b8a6" opacity="0.6" />
+                <rect x="7" y="20" width="10" height="10" rx="1" fill="#2dd4bf" opacity="0.5" />
+                <rect x="39" y="20" width="10" height="10" rx="1" fill="#2dd4bf" opacity="0.5" />
+              </g>
+              <text x="48" y="98" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="9" fill="#2dd4bf" fontWeight="600" letterSpacing="0.05em">YOUR STORE</text>
+            </g>
+
+            {/* ── MANDATE VERIFICATION ARC (bottom) ── */}
+            <path d="M100 225 Q240 295 424 225" fill="none" stroke="url(#h-grad-h)" strokeWidth="1" strokeDasharray="5 4" opacity="0.45">
+              <animate attributeName="stroke-dashoffset" from="0" to="-18" dur="3s" repeatCount="indefinite" />
+            </path>
+            <g transform="translate(218, 258)">
+              <rect x="0" y="8" width="28" height="20" rx="3" fill="#1e293b" stroke="url(#h-grad)" strokeWidth="1.5" />
+              <path d="M7 8 V5 a7 7 0 0 1 14 0 V8" fill="none" stroke="url(#h-grad)" strokeWidth="1.5" strokeLinecap="round" />
+              <circle cx="14" cy="18" r="2.5" fill="url(#h-grad)" />
+              <line x1="14" y1="20.5" x2="14" y2="25" stroke="url(#h-grad)" strokeWidth="1.5" />
+            </g>
+            <text x="240" y="300" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="8" fill="#6366f1" opacity="0.8" fontWeight="600">ed25519 mandate verified</text>
+
+            {/* ── PRODUCT NODES floating above ── */}
+            <g opacity="0.7">
+              <rect x="160" y="28" width="60" height="38" rx="6" fill="#1e293b" stroke="#6366f1" strokeWidth="1" strokeOpacity="0.6" />
+              <rect x="166" y="34" width="16" height="16" rx="3" fill="#6366f1" opacity="0.4" />
+              <line x1="188" y1="37" x2="214" y2="37" stroke="#475569" strokeWidth="1.5" strokeLinecap="round" />
+              <line x1="188" y1="42" x2="208" y2="42" stroke="#475569" strokeWidth="1.5" strokeLinecap="round" />
+              <line x1="188" y1="47" x2="202" y2="47" stroke="#6366f1" strokeWidth="1" strokeLinecap="round" />
+
+              <rect x="260" y="22" width="60" height="38" rx="6" fill="#1e293b" stroke="#14b8a6" strokeWidth="1" strokeOpacity="0.6" />
+              <rect x="266" y="28" width="16" height="16" rx="3" fill="#14b8a6" opacity="0.35" />
+              <line x1="288" y1="31" x2="314" y2="31" stroke="#475569" strokeWidth="1.5" strokeLinecap="round" />
+              <line x1="288" y1="36" x2="308" y2="36" stroke="#475569" strokeWidth="1.5" strokeLinecap="round" />
+              <line x1="288" y1="41" x2="298" y2="41" stroke="#14b8a6" strokeWidth="1" strokeLinecap="round" />
+            </g>
+
+            <line x1="190" y1="66" x2="190" y2="138" stroke="#6366f1" strokeWidth="1" strokeDasharray="3 4" opacity="0.3" />
+            <line x1="290" y1="60" x2="290" y2="138" stroke="#14b8a6" strokeWidth="1" strokeDasharray="3 4" opacity="0.3" />
+          </svg>
+        </div>
+      </div>
+    </section>
+  )
+}

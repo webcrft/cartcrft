@@ -1,0 +1,261 @@
+.mk-compare .page-header {
+  padding: 5rem 1.5rem 3rem;
+  text-align: center;
+  background: radial-gradient(
+    ellipse 70% 40% at 50% 0%,
+    color-mix(in srgb, #6366f1 10%, transparent),
+    transparent 60%
+  );
+}
+
+.mk-compare .page-header-inner {
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.mk-compare .page-label {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #6366f1;
+  margin-bottom: 1rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  .mk-compare .page-label { color: #818cf8; }
+}
+
+.mk-compare .page-header h1 {
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: #0f172a;
+  margin-bottom: 1rem;
+  line-height: 1.15;
+}
+
+@media (prefers-color-scheme: dark) {
+  .mk-compare .page-header h1 { color: #f8fafc; }
+}
+
+.mk-compare .page-header p {
+  font-size: 1rem;
+  color: #475569;
+  line-height: 1.7;
+  margin-bottom: 0.75rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  .mk-compare .page-header p { color: #94a3b8; }
+}
+
+.mk-compare .methodology {
+  font-size: 0.85rem !important;
+  color: #64748b !important;
+  font-style: italic;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  .mk-compare .methodology {
+    color: #64748b !important;
+    border-top-color: #1e293b;
+  }
+}
+
+.mk-compare .table-section {
+  padding: 2rem 1.5rem 3rem;
+}
+
+.mk-compare .table-section-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+/* Narrative / prose section — renders markdown Content */
+.mk-compare .narratives {
+  padding: 3rem 1.5rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.mk-compare .narratives-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+/* Display the narrative cards in a 2-col grid (except Sources) */
+.mk-compare .md-prose {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (max-width: 768px) {
+  .mk-compare .md-prose { grid-template-columns: 1fr; }
+}
+
+.mk-compare .md-prose p {
+  font-size: 0.9rem;
+  color: #475569;
+  line-height: 1.7;
+  margin-bottom: 0.75rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  .mk-compare .md-prose p { color: #94a3b8; }
+}
+
+/* Each h2 + its following p tags render as a card */
+.mk-compare .md-prose h2 {
+  border-top: none !important;
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+  /* card header */
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+  padding: 1.25rem 1.5rem 0;
+  border-radius: 0.75rem 0.75rem 0 0;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+@media (prefers-color-scheme: dark) {
+  .mk-compare .md-prose h2 {
+    color: #f1f5f9;
+    background: #0d1426;
+    border-color: #1e293b;
+  }
+}
+
+/* Hide the h2 "Introduction" heading (it's implied by context) */
+.mk-compare .md-prose h2:first-of-type {
+  display: none;
+}
+
+.mk-compare .md-prose p:not(:last-child) {
+  background: #f8fafc;
+  border-left: 1px solid #e2e8f0;
+  border-right: 1px solid #e2e8f0;
+  padding: 0 1.5rem;
+  margin-bottom: 0;
+}
+
+.mk-compare .md-prose p:last-of-type {
+  background: #f8fafc;
+  border-left: 1px solid #e2e8f0;
+  border-right: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
+  border-radius: 0 0 0.75rem 0.75rem;
+  padding: 0 1.5rem 1.25rem;
+  margin-bottom: 0;
+}
+
+@media (prefers-color-scheme: dark) {
+  .mk-compare .md-prose p:not(:last-child),
+  .mk-compare .md-prose p:last-of-type {
+    background: #0d1426;
+    border-color: #1e293b;
+  }
+}
+
+/* Sources section — full width card */
+.mk-compare .md-prose h2:last-of-type {
+  grid-column: 1 / -1;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #64748b;
+}
+
+@media (prefers-color-scheme: dark) {
+  .mk-compare .md-prose h2:last-of-type { color: #64748b; }
+}
+
+.mk-compare .md-prose h2:last-of-type + p {
+  grid-column: 1 / -1;
+  font-size: 0.78rem !important;
+  color: #64748b !important;
+  font-style: italic;
+  border-radius: 0 0 0.75rem 0.75rem !important;
+}
+
+/* CTA */
+.mk-compare .compare-cta {
+  background: linear-gradient(135deg, #6366f1 0%, #14b8a6 100%);
+  padding: 5rem 1.5rem;
+  text-align: center;
+  color: #fff;
+  margin-top: 4rem;
+}
+
+.mk-compare .compare-cta-inner {
+  max-width: 560px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.mk-compare .compare-cta h2 {
+  font-size: clamp(1.5rem, 3vw, 2.25rem);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+}
+
+.mk-compare .compare-cta p {
+  font-size: 1rem;
+  opacity: 0.9;
+}
+
+.mk-compare .compare-cta-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.mk-compare .btn-primary {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.75rem 1.75rem;
+  background: #fff;
+  color: #6366f1;
+  font-weight: 700;
+  font-size: 1rem;
+  border-radius: 0.5rem;
+  text-decoration: none;
+  transition: opacity 0.15s, transform 0.1s;
+}
+
+.mk-compare .btn-primary:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+
+.mk-compare .btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.75rem 1.75rem;
+  border: 1.5px solid rgba(255, 255, 255, 0.6);
+  color: #fff;
+  font-weight: 600;
+  font-size: 1rem;
+  border-radius: 0.5rem;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+
+.mk-compare .btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.12);
+}

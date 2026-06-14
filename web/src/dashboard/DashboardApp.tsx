@@ -47,11 +47,10 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * DashboardApp — the admin SPA, mounted as a client-only Astro island under
- * /dashboard. The whole admin router lives beneath the `/dashboard` basename so
- * routes like `/dashboard/products` resolve to the Products page. Astro renders
- * a static HTML shell and this component boots the SPA on the client
- * (`client:only="react"`), so there are no SSR/SEO concerns.
+ * DashboardApp — the admin SPA, mounted by the zone router (src/Root.tsx) for
+ * any `/dashboard*` URL. The whole admin router lives beneath the `/dashboard`
+ * basename so routes like `/dashboard/products` resolve to the Products page.
+ * Client-only SPA, so there are no SSR/SEO concerns.
  *
  * Auth (P3/item-1): the access token lives in memory only; persistence across
  * reloads comes from the httpOnly refresh cookie restored by AuthBoot. No

@@ -1,13 +1,16 @@
 # Cartcrft SPA fallback rules
 # Processed by Netlify and Cloudflare Pages (and compatible hosts).
 #
-# The dashboard is a client-side React SPA mounted at /dashboard.
-# Any deep link (e.g. /dashboard/products, /dashboard/orders/123) must
-# serve the SPA shell so React Router can handle the route client-side.
-# Without this rule, a hard refresh or a direct link to a sub-path returns 404.
+# The whole site is now a single client-rendered Vite + React SPA. Every route
+# — marketing (/, /compare, /pricing, /legal/*), docs (/quickstart, /acp, …),
+# the merchant dashboard (/dashboard/*), and the operator console
+# (/superadmin/*) — is resolved by React Router in the browser. So ANY path
+# must serve the one SPA shell (index.html); the zone router in src/Root.tsx
+# then mounts the correct sub-app from the URL.
+#
+# Without a catch-all rewrite, a hard refresh or direct deep link returns 404.
 #
 # Format: source  destination  HTTP-status
 #   200 = "serve destination content without redirecting" (rewrite, not redirect)
-#   301/302 would break the URL — the browser would show /dashboard/index.html
 
-/dashboard/*  /dashboard/index.html  200
+/*  /index.html  200

@@ -1,8 +1,8 @@
-/// <reference types="astro/client" />
+/// <reference types="vite/client" />
 
 /**
- * Extends Astro's ImportMeta with Cartcrft-specific PUBLIC_* environment variables.
- * These are inlined at build time by Vite/Astro.
+ * Cartcrft-specific PUBLIC_* environment variables, inlined at build time by
+ * Vite (envPrefix includes PUBLIC_ — see vite.config.ts).
  */
 interface ImportMetaEnv {
   /** Base URL of the Cartcrft backend API. Defaults to http://localhost:8080 in code. */

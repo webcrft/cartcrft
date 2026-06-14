@@ -1,8 +1,8 @@
 /**
- * SuperAdminApp — the operator console SPA, mounted as a client-only Astro
- * island under /superadmin. Mirrors the DashboardApp pattern with a separate
- * BrowserRouter (basename="/superadmin"), its own providers, and a distinct
- * visual identity.
+ * SuperAdminApp — the operator console SPA, mounted by the zone router
+ * (src/Root.tsx) for any /superadmin* URL. Mirrors the DashboardApp pattern with
+ * a separate BrowserRouter (basename="/superadmin"), its own providers, and a
+ * distinct visual identity.
  *
  * Auth:
  *   - The super-JWT is stored IN MEMORY (AuthContext React state) — NEVER in
