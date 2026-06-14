@@ -1,86 +1,482 @@
 ---
 /**
  * Compare page — /compare
- * TODO(comparison-agent): replace ALL placeholder data below with real competitor research.
- * The ComparisonTable component accepts competitors[] and rows[]. See component props.
- * Also add a prose section above explaining methodology, and a CTA at the bottom.
+ * Grounded comparison. All competitor facts are dated and sourced.
+ * Sources (all verified June 2026):
+ *  - Shopify pricing/fees: shopify.com/pricing — Basic $29/mo; Grow $95/mo; Advanced $360/mo;
+ *    external gateway surcharge: Basic 2%, Grow 1%, Advanced 0.6%, Plus 0.2%
+ *  - Medusa Cloud pricing: medusajs.com/pricing/ — Develop $29/mo; Launch $99/mo; Scale $299/mo; 0% GMV
+ *  - Saleor Cloud pricing: saleor.io/pricing — Select $1,599/mo; Volume $3,999/mo; GMV cap + overage
+ *  - Swell pricing: swell.is/pricing — Starter $29/mo (billed annually); revenue ceilings + overage fees
+ *  - Vendure: vendure.io/pricing + github.com/vendure-ecommerce/vendure — GPLv3 core; Cloud GA Q4 2026
+ *  - WooCommerce: wordpress.org/plugins/woocommerce — GPL-2.0+; self-hosted; 0% txn fees from WC itself
+ *  - Shopify agentic commerce: shopify.com/blog/how-agentic-commerce-works (published April 30, 2026)
  */
 import MarketingLayout from '../layouts/MarketingLayout.astro';
 import ComparisonTable from '../components/ComparisonTable.astro';
 
-// TODO(comparison-agent): update competitors list (confirm correct names/versions)
-const competitors = ['Cartcrft', 'Medusa v2', 'Saleor', 'Shopify'];
+const competitors = ['Cartcrft', 'Shopify', 'Medusa v2', 'Vendure', 'Saleor', 'Swell', 'WooCommerce'];
 
-// TODO(comparison-agent): verify every value against official docs / source code
 const rows = [
-  // ── Core model ──────────────────────────────────────────────────
-  { category: 'Core model', feature: 'Open-source (MIT)',       values: { 'Cartcrft': true,   'Medusa v2': true,  'Saleor': true,  'Shopify': false }, highlight: true },
-  { category: 'Core model', feature: 'Self-hostable',           values: { 'Cartcrft': true,   'Medusa v2': true,  'Saleor': true,  'Shopify': false } },
-  { category: 'Core model', feature: 'Zero take rate',          values: { 'Cartcrft': true,   'Medusa v2': true,  'Saleor': true,  'Shopify': false }, highlight: true },
-  { category: 'Core model', feature: 'REST API',                values: { 'Cartcrft': true,   'Medusa v2': true,  'Saleor': false, 'Shopify': true } },
-  { category: 'Core model', feature: 'GraphQL API',             values: { 'Cartcrft': false,  'Medusa v2': true,  'Saleor': true,  'Shopify': true } },
+  // License and ownership
+  {
+    category: 'License & ownership',
+    feature: 'Core license',
+    values: {
+      'Cartcrft':    'MIT',
+      'Shopify':     'Closed / SaaS',
+      'Medusa v2':   'MIT',
+      'Vendure':     'GPLv3 (core)',
+      'Saleor':      'BSD-3-Clause',
+      'Swell':       'Closed / SaaS',
+      'WooCommerce': 'GPL-2.0+',
+    },
+    highlight: true,
+  },
+  {
+    category: 'License & ownership',
+    feature: 'Self-hostable',
+    values: {
+      'Cartcrft':    true,
+      'Shopify':     false,
+      'Medusa v2':   true,
+      'Vendure':     true,
+      'Saleor':      true,
+      'Swell':       false,
+      'WooCommerce': true,
+    },
+  },
+  {
+    category: 'License & ownership',
+    feature: 'Source available / open',
+    values: {
+      'Cartcrft':    true,
+      'Shopify':     false,
+      'Medusa v2':   true,
+      'Vendure':     true,
+      'Saleor':      true,
+      'Swell':       false,
+      'WooCommerce': true,
+    },
+  },
 
-  // ── Agent-native ────────────────────────────────────────────────
-  { category: 'Agent-native', feature: 'MCP server built-in',  values: { 'Cartcrft': true,   'Medusa v2': false, 'Saleor': false, 'Shopify': false }, highlight: true },
-  { category: 'Agent-native', feature: 'ACP adapter',          values: { 'Cartcrft': true,   'Medusa v2': false, 'Saleor': false, 'Shopify': false }, highlight: true },
-  { category: 'Agent-native', feature: 'UCP adapter',          values: { 'Cartcrft': true,   'Medusa v2': false, 'Saleor': false, 'Shopify': false }, highlight: true },
-  { category: 'Agent-native', feature: 'Semantic / pgvector search', values: { 'Cartcrft': true, 'Medusa v2': false, 'Saleor': false, 'Shopify': 'Paid' } },
+  // Pricing and fees
+  {
+    category: 'Pricing & fees',
+    feature: 'Transaction fee (external gateway)',
+    values: {
+      'Cartcrft':    '0%',
+      'Shopify':     '0.6%–2% (varies by plan)',
+      'Medusa v2':   '0%',
+      'Vendure':     '0%',
+      'Saleor':      '0%',
+      'Swell':       '0%',
+      'WooCommerce': '0%',
+    },
+    highlight: true,
+  },
+  {
+    category: 'Pricing & fees',
+    feature: 'Managed cloud entry price',
+    values: {
+      'Cartcrft':    'Flat fee (contact)',
+      'Shopify':     '$29/mo (Basic)',
+      'Medusa v2':   '$29/mo (Develop)',
+      'Vendure':     'GA Q4 2026 (design partners)',
+      'Saleor':      '$1,599/mo (Select)',
+      'Swell':       '$29/mo (Starter, billed annually)',
+      'WooCommerce': 'N/A (self-host only)',
+    },
+  },
+  {
+    category: 'Pricing & fees',
+    feature: 'GMV / revenue percentage',
+    values: {
+      'Cartcrft':    '0%',
+      'Shopify':     null,
+      'Medusa v2':   '0%',
+      'Vendure':     '0% (flat Platform fee)',
+      'Saleor':      '0.4%–0.8% overage above GMV cap',
+      'Swell':       '0.4%–2% overage above revenue ceiling',
+      'WooCommerce': '0%',
+    },
+  },
 
-  // ── Payments ─────────────────────────────────────────────────────
-  { category: 'Payments', feature: 'BYO payment provider',     values: { 'Cartcrft': true,   'Medusa v2': true,  'Saleor': true,  'Shopify': 'Limited' } },
-  { category: 'Payments', feature: 'Paystack support',         values: { 'Cartcrft': true,   'Medusa v2': 'Plugin', 'Saleor': 'Plugin', 'Shopify': 'Plugin' } },
+  // Agent-native
+  {
+    category: 'Agent-native',
+    feature: 'MCP server (built-in)',
+    values: {
+      'Cartcrft':    'Shipped',
+      'Shopify':     'Shipped (Storefront MCP, Apr 2026)',
+      'Medusa v2':   false,
+      'Vendure':     false,
+      'Saleor':      false,
+      'Swell':       false,
+      'WooCommerce': false,
+    },
+    highlight: true,
+  },
+  {
+    category: 'Agent-native',
+    feature: 'ACP adapter (Agentic Commerce Protocol)',
+    values: {
+      'Cartcrft':    'Shipped (test mode)',
+      'Shopify':     'Via ChatGPT Buy / ACP standard',
+      'Medusa v2':   false,
+      'Vendure':     false,
+      'Saleor':      false,
+      'Swell':       false,
+      'WooCommerce': false,
+    },
+    highlight: true,
+  },
+  {
+    category: 'Agent-native',
+    feature: 'UCP adapter (Universal Commerce Protocol)',
+    values: {
+      'Cartcrft':    'Shipped (test mode)',
+      'Shopify':     'Shipped (UCP co-author, NRF 2026)',
+      'Medusa v2':   false,
+      'Vendure':     false,
+      'Saleor':      false,
+      'Swell':       false,
+      'WooCommerce': false,
+    },
+    highlight: true,
+  },
+  {
+    category: 'Agent-native',
+    feature: 'Live delegated / agentic payment',
+    values: {
+      'Cartcrft':    'In development (Phase H5)',
+      'Shopify':     'Live (US merchants, Apr 2026)',
+      'Medusa v2':   false,
+      'Vendure':     false,
+      'Saleor':      false,
+      'Swell':       false,
+      'WooCommerce': false,
+    },
+  },
+  {
+    category: 'Agent-native',
+    feature: 'Signed agent mandates (ed25519)',
+    values: {
+      'Cartcrft':    true,
+      'Shopify':     false,
+      'Medusa v2':   false,
+      'Vendure':     false,
+      'Saleor':      false,
+      'Swell':       false,
+      'WooCommerce': false,
+    },
+    highlight: true,
+  },
+  {
+    category: 'Agent-native',
+    feature: 'Semantic / vector search (built-in)',
+    values: {
+      'Cartcrft':    true,
+      'Shopify':     'Paid add-on',
+      'Medusa v2':   false,
+      'Vendure':     false,
+      'Saleor':      false,
+      'Swell':       false,
+      'WooCommerce': false,
+    },
+  },
 
-  // ── Infrastructure ───────────────────────────────────────────────
-  { category: 'Infrastructure', feature: 'Single Docker image', values: { 'Cartcrft': true,  'Medusa v2': false, 'Saleor': false, 'Shopify': null } },
-  { category: 'Infrastructure', feature: 'Postgres-native',    values: { 'Cartcrft': true,   'Medusa v2': true,  'Saleor': true,  'Shopify': null } },
-  { category: 'Infrastructure', feature: 'Node.js runtime',    values: { 'Cartcrft': true,   'Medusa v2': true,  'Saleor': false, 'Shopify': null } },
+  // API and architecture
+  {
+    category: 'API & architecture',
+    feature: 'REST API',
+    values: {
+      'Cartcrft':    true,
+      'Shopify':     true,
+      'Medusa v2':   true,
+      'Vendure':     false,
+      'Saleor':      false,
+      'Swell':       true,
+      'WooCommerce': true,
+    },
+  },
+  {
+    category: 'API & architecture',
+    feature: 'GraphQL API',
+    values: {
+      'Cartcrft':    false,
+      'Shopify':     true,
+      'Medusa v2':   false,
+      'Vendure':     true,
+      'Saleor':      true,
+      'Swell':       true,
+      'WooCommerce': 'Plugin',
+    },
+  },
+  {
+    category: 'API & architecture',
+    feature: 'Fully headless (API-only core)',
+    values: {
+      'Cartcrft':    true,
+      'Shopify':     true,
+      'Medusa v2':   true,
+      'Vendure':     true,
+      'Saleor':      true,
+      'Swell':       true,
+      'WooCommerce': 'Via plugin',
+    },
+  },
+  {
+    category: 'API & architecture',
+    feature: 'Primary language',
+    values: {
+      'Cartcrft':    'TypeScript',
+      'Shopify':     'Ruby / closed',
+      'Medusa v2':   'TypeScript',
+      'Vendure':     'TypeScript',
+      'Saleor':      'Python',
+      'Swell':       'Closed / Node.js',
+      'WooCommerce': 'PHP',
+    },
+  },
+  {
+    category: 'API & architecture',
+    feature: 'Postgres-native',
+    values: {
+      'Cartcrft':    true,
+      'Shopify':     null,
+      'Medusa v2':   true,
+      'Vendure':     true,
+      'Saleor':      true,
+      'Swell':       null,
+      'WooCommerce': 'MySQL / MariaDB',
+    },
+  },
+
+  // Commerce features
+  {
+    category: 'Commerce features',
+    feature: 'B2B (companies, credit, quotes)',
+    values: {
+      'Cartcrft':    true,
+      'Shopify':     'Shopify Plus only ($2,300+/mo)',
+      'Medusa v2':   true,
+      'Vendure':     'Platform tier',
+      'Saleor':      true,
+      'Swell':       true,
+      'WooCommerce': 'Plugin',
+    },
+  },
+  {
+    category: 'Commerce features',
+    feature: 'Subscriptions',
+    values: {
+      'Cartcrft':    true,
+      'Shopify':     'App/plugin',
+      'Medusa v2':   'In progress',
+      'Vendure':     'Plugin',
+      'Saleor':      'App',
+      'Swell':       true,
+      'WooCommerce': 'Paid plugin',
+    },
+  },
+  {
+    category: 'Commerce features',
+    feature: 'Returns / RMA',
+    values: {
+      'Cartcrft':    true,
+      'Shopify':     true,
+      'Medusa v2':   true,
+      'Vendure':     'Plugin',
+      'Saleor':      true,
+      'Swell':       true,
+      'WooCommerce': 'Plugin',
+    },
+  },
+  {
+    category: 'Commerce features',
+    feature: 'Multi-payment providers (BYO)',
+    values: {
+      'Cartcrft':    'Stripe, Paystack, Razorpay, Xendit',
+      'Shopify':     'Limited (surcharge if not Shopify Payments)',
+      'Medusa v2':   true,
+      'Vendure':     true,
+      'Saleor':      true,
+      'Swell':       true,
+      'WooCommerce': true,
+    },
+  },
 ];
 ---
 
 <MarketingLayout
-  title="Compare Cartcrft"
-  description="See how Cartcrft compares to Medusa, Saleor, and Shopify across pricing, features, and agent-native capabilities."
+  title="How Cartcrft compares"
+  description="A grounded comparison of Cartcrft vs Shopify, Medusa v2, Vendure, Saleor, Swell, and WooCommerce across licensing, pricing, agent-native capabilities, and commerce features."
 >
-  <!-- ─── Page header ─────────────────────────────────────────── -->
+  <!-- Page header -->
   <section class="page-header">
     <div class="page-header-inner">
-      <!-- TODO(comparison-agent): refine headline and intro paragraph -->
+      <div class="page-label">Feature comparison</div>
       <h1>How Cartcrft compares</h1>
       <p>
-        A straight-line comparison of features, pricing model, and agent-native capabilities.
-        <!-- TODO(comparison-agent): add methodology note + last-verified date -->
-        [Methodology and last-verified date go here]
+        A straight-line comparison of licensing, pricing, agent-native capabilities, and commerce
+        features across the major open-source and SaaS headless commerce platforms. We aim to be
+        fair — this is not a strawman. Where competitors lead (Shopify on live agentic payments,
+        for example), we say so.
+      </p>
+      <p class="methodology">
+        Pricing and feature status verified June 2026 from official pricing pages and documentation.
+        Commerce capabilities are assessed against each platform's documented defaults — plugins and
+        custom integrations are noted where relevant. Verify current figures before making decisions.
       </p>
     </div>
   </section>
 
-  <!-- ─── Comparison table ────────────────────────────────────── -->
+  <!-- Comparison table -->
   <section class="table-section">
     <div class="table-section-inner">
       <ComparisonTable
         competitors={competitors}
         rows={rows}
         ourName="Cartcrft"
-        caption="TODO(comparison-agent): verify all values. Last updated: [date]"
+        caption="Figures as of June 2026. Verify with official sources before making purchasing decisions."
       />
     </div>
   </section>
 
-  <!-- ─── Narrative detail placeholder ───────────────────────── -->
-  <!-- TODO(comparison-agent): add prose sections per competitor with deeper analysis -->
-  <section class="narrative-placeholder">
-    <div class="narrative-inner">
-      <p class="placeholder-note">
-        [TODO(comparison-agent): Add per-competitor deep-dive sections here — e.g.
-        "Cartcrft vs Medusa", "Cartcrft vs Saleor", "Why not Shopify?"]
+  <!-- Narrative sections -->
+  <section class="narratives">
+    <div class="narratives-inner">
+
+      <div class="narrative-card">
+        <h2>Cartcrft vs Shopify</h2>
+        <p>
+          Shopify is the undisputed scale leader and, since January 2026, a genuine agentic commerce
+          player — their Storefront MCP server is live and US merchants can accept purchases through
+          ChatGPT's Buy flow (published April 30, 2026). On agent-native, Shopify moves fast and has
+          distribution.
+        </p>
+        <p>
+          The trade-offs: Shopify is closed-source and SaaS-only. External payment gateways incur a
+          0.6%–2% transaction surcharge per plan (as of June 2026), on top of your gateway's own fees.
+          B2B features require Shopify Plus ($2,300+/mo). You cannot self-host, inspect the code, or
+          bring your own infrastructure. Cartcrft's live agentic payments are still in development —
+          if ChatGPT Instant Checkout today matters to you, Shopify is ahead. If owning your stack
+          matters, Cartcrft is the answer.
+        </p>
+      </div>
+
+      <div class="narrative-card">
+        <h2>Cartcrft vs Medusa v2</h2>
+        <p>
+          Medusa is the closest OSS peer: MIT-licensed, TypeScript, headless-first, 0% GMV fees.
+          Medusa Cloud starts at $29/mo (Develop tier, as of June 2026). Medusa has a large community,
+          a plugin ecosystem, and a proven track record.
+        </p>
+        <p>
+          Where Cartcrft differs: agent-native is built into the core. Medusa has no MCP server,
+          no ACP/UCP adapters, and no signed mandate layer — these would require custom integrations.
+          Cartcrft also ships 4 payment providers (including Paystack and Razorpay for non-Western
+          markets), lot tracking/FEFO inventory, and built-in pgvector semantic search. Medusa's
+          module system gives more flexibility at the cost of more assembly.
+        </p>
+      </div>
+
+      <div class="narrative-card">
+        <h2>Cartcrft vs Vendure</h2>
+        <p>
+          Vendure is a TypeScript-first, GraphQL-native headless platform — well-architected and
+          production-proven. The core is GPLv3; commercial features (storefront, enterprise plugins,
+          dedicated support) require the commercial Platform tier. Vendure Cloud is in design-partner
+          phase as of June 2026 (GA expected Q4 2026).
+        </p>
+        <p>
+          If your team prefers GraphQL over REST, Vendure is a strong option. Cartcrft is REST/OpenAPI
+          with a generated TS SDK, which integrates naturally with agent tooling that expects
+          structured REST endpoints. Neither platform has live agentic payments yet, but Cartcrft
+          ships ACP/UCP adapters out of the box.
+        </p>
+      </div>
+
+      <div class="narrative-card">
+        <h2>Cartcrft vs Saleor</h2>
+        <p>
+          Saleor is open-source (BSD-3-Clause) and GraphQL-native. The self-hosted core is free
+          and permissively licensed. Saleor Cloud, however, is positioned as an enterprise managed
+          service: the entry Select plan starts at $1,599/mo (June 2026) with a GMV cap and 0.8%
+          overage fee. For teams that want managed hosting, the cost cliff is steep.
+        </p>
+        <p>
+          Cartcrft and Saleor overlap on headless-first, open-source credentials. Cartcrft adds
+          agent-native (MCP/ACP/UCP/mandates), REST API, TypeScript end-to-end, and built-in
+          pgvector search. Saleor offers a mature GraphQL API and an established plugin marketplace.
+        </p>
+      </div>
+
+      <div class="narrative-card">
+        <h2>Cartcrft vs Swell</h2>
+        <p>
+          Swell is a closed-source, cloud-only headless commerce SaaS. The Starter plan is $29/mo
+          (billed annually, as of June 2026) but includes revenue ceilings and overage fees (2%
+          above $50K for Starter). You cannot self-host or inspect the source code.
+        </p>
+        <p>
+          Swell has a developer-friendly API and solid subscription support. If managed SaaS with
+          per-revenue pricing is acceptable, Swell competes at the low end. If you want open source,
+          self-hosting, zero transaction rake, and agent-native capabilities, Cartcrft is the
+          different-category choice.
+        </p>
+      </div>
+
+      <div class="narrative-card">
+        <h2>Cartcrft vs WooCommerce</h2>
+        <p>
+          WooCommerce is GPL-licensed, free, self-hosted, and runs on WordPress + MySQL/MariaDB.
+          It has the largest merchant install base of any ecommerce platform and an enormous
+          plugin ecosystem. WooCommerce itself charges 0% transaction fees.
+        </p>
+        <p>
+          WooCommerce is PHP-first, WordPress-coupled, and not designed for headless or agent-native
+          use cases. Advanced features (subscriptions, B2B, headless) require paid plugins. There
+          is no MCP server, no ACP/UCP, no pgvector. Cartcrft is a different category: API-first,
+          TypeScript, agent-native by design.
+        </p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Footnote -->
+  <section class="footnote-section">
+    <div class="footnote-inner">
+      <p>
+        <strong>Sources and dates (all verified June 2026):</strong>
+        Shopify plan pricing and external gateway fees from shopify.com/pricing (Basic $29/mo,
+        external gateway surcharge 0.6%–2% depending on plan);
+        Medusa Cloud pricing from medusajs.com/pricing/ (Develop $29/mo, Launch $99/mo, Scale $299/mo, 0% GMV);
+        Saleor Cloud pricing from saleor.io/pricing (Select $1,599/mo with GMV cap, 0.8% overage);
+        Swell pricing from swell.is/pricing (Starter $29/mo billed annually, revenue ceilings and overage apply);
+        Vendure license and Cloud status from vendure.io/pricing (GPLv3 core, Commercial Platform tier, Cloud GA Q4 2026);
+        WooCommerce from wordpress.org/plugins/woocommerce (GPL-2.0+, self-hosted, 0% WC transaction fees);
+        Shopify agentic commerce (MCP, ACP, UCP) from shopify.com/blog/how-agentic-commerce-works
+        (published April 30, 2026).
+        Cartcrft ACP/UCP status from internal docs (docs/acp.md, docs/ucp.md): test mode shipped,
+        live delegated payment in development (roadmap Phase H5).
+        Verify all figures directly with each vendor before making purchasing decisions.
       </p>
     </div>
   </section>
 
-  <!-- ─── CTA ─────────────────────────────────────────────────── -->
+  <!-- CTA -->
   <section class="compare-cta">
-    <a href="/docs/quickstart" class="btn-primary">Try Cartcrft in 5 minutes →</a>
-    <a href="/pricing" class="btn-secondary">See pricing</a>
+    <div class="compare-cta-inner">
+      <h2>Ready to try Cartcrft?</h2>
+      <p>Get a store running and MCP-connected in under 10 minutes.</p>
+      <div class="compare-cta-actions">
+        <a href="/docs/quickstart" class="btn-primary">Get started free</a>
+        <a href="/pricing" class="btn-secondary">See pricing</a>
+      </div>
+    </div>
   </section>
 </MarketingLayout>
 
@@ -96,8 +492,22 @@ const rows = [
   }
 
   .page-header-inner {
-    max-width: 680px;
+    max-width: 720px;
     margin: 0 auto;
+  }
+
+  .page-label {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #6366f1;
+    margin-bottom: 1rem;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .page-label { color: #818cf8; }
   }
 
   .page-header h1 {
@@ -113,13 +523,30 @@ const rows = [
   }
 
   .page-header p {
-    font-size: 1.1rem;
+    font-size: 1rem;
     color: #475569;
-    line-height: 1.6;
+    line-height: 1.7;
+    margin-bottom: 0.75rem;
   }
 
   @media (prefers-color-scheme: dark) {
     .page-header p { color: #94a3b8; }
+  }
+
+  .methodology {
+    font-size: 0.85rem !important;
+    color: #64748b !important;
+    font-style: italic;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 0.75rem;
+    margin-top: 0.75rem;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .methodology {
+      color: #64748b !important;
+      border-top-color: #1e293b;
+    }
   }
 
   .table-section {
@@ -127,47 +554,131 @@ const rows = [
   }
 
   .table-section-inner {
-    max-width: 1100px;
+    max-width: 1200px;
     margin: 0 auto;
   }
 
-  .narrative-placeholder {
-    padding: 2rem 1.5rem;
-    max-width: 1100px;
+  .narratives {
+    padding: 3rem 1.5rem;
+    max-width: 1200px;
     margin: 0 auto;
   }
 
-  .narrative-inner {
-    border: 1px dashed #e2e8f0;
-    border-radius: 0.5rem;
-    padding: 2rem;
-    text-align: center;
+  .narratives-inner {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+  }
+
+  @media (max-width: 768px) {
+    .narratives-inner { grid-template-columns: 1fr; }
+  }
+
+  .narrative-card {
+    padding: 1.75rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.75rem;
+    background: #f8fafc;
   }
 
   @media (prefers-color-scheme: dark) {
-    .narrative-inner { border-color: #1e293b; }
+    .narrative-card {
+      border-color: #1e293b;
+      background: #0f172a;
+    }
   }
 
-  .placeholder-note {
-    font-size: 0.85rem;
-    color: #94a3b8;
-    font-style: italic;
+  .narrative-card h2 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 0.75rem;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .narrative-card h2 { color: #f1f5f9; }
+  }
+
+  .narrative-card p {
+    font-size: 0.9rem;
+    color: #475569;
+    line-height: 1.7;
+    margin-bottom: 0.75rem;
+  }
+
+  .narrative-card p:last-child { margin-bottom: 0; }
+
+  @media (prefers-color-scheme: dark) {
+    .narrative-card p { color: #94a3b8; }
+  }
+
+  .footnote-section {
+    padding: 2rem 1.5rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .footnote-inner {
+    border: 1px solid #e2e8f0;
+    border-radius: 0.5rem;
+    padding: 1.25rem 1.5rem;
+    background: #f8fafc;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .footnote-inner {
+      border-color: #1e293b;
+      background: #0f172a;
+    }
+  }
+
+  .footnote-inner p {
+    font-size: 0.8rem;
+    color: #64748b;
+    line-height: 1.7;
   }
 
   .compare-cta {
+    background: linear-gradient(135deg, #4f46e5 0%, #0d9488 100%);
+    padding: 5rem 1.5rem;
+    text-align: center;
+    color: #fff;
+    margin-top: 4rem;
+  }
+
+  .compare-cta-inner {
+    max-width: 560px;
+    margin: 0 auto;
     display: flex;
-    gap: 1rem;
-    justify-content: center;
-    padding: 3rem 1.5rem 6rem;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.25rem;
+  }
+
+  .compare-cta h2 {
+    font-size: clamp(1.5rem, 3vw, 2.25rem);
+    font-weight: 800;
+    letter-spacing: -0.025em;
+  }
+
+  .compare-cta p {
+    font-size: 1rem;
+    opacity: 0.9;
+  }
+
+  .compare-cta-actions {
+    display: flex;
+    gap: 0.75rem;
     flex-wrap: wrap;
+    justify-content: center;
   }
 
   .btn-primary {
     display: inline-flex;
     align-items: center;
     padding: 0.75rem 1.75rem;
-    background: linear-gradient(135deg, #6366f1 0%, #14b8a6 100%);
-    color: #fff;
+    background: #fff;
+    color: #4f46e5;
     font-weight: 700;
     font-size: 1rem;
     border-radius: 0.5rem;
@@ -176,7 +687,7 @@ const rows = [
   }
 
   .btn-primary:hover {
-    opacity: 0.9;
+    opacity: 0.92;
     transform: translateY(-1px);
   }
 
@@ -184,8 +695,8 @@ const rows = [
     display: inline-flex;
     align-items: center;
     padding: 0.75rem 1.75rem;
-    border: 1.5px solid #6366f1;
-    color: #6366f1;
+    border: 1.5px solid rgba(255, 255, 255, 0.6);
+    color: #fff;
     font-weight: 600;
     font-size: 1rem;
     border-radius: 0.5rem;
@@ -194,10 +705,6 @@ const rows = [
   }
 
   .btn-secondary:hover {
-    background: color-mix(in srgb, #6366f1 8%, transparent);
-  }
-
-  @media (prefers-color-scheme: dark) {
-    .btn-secondary { border-color: #818cf8; color: #818cf8; }
+    background: rgba(255, 255, 255, 0.12);
   }
 </style>

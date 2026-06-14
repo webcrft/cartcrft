@@ -1,121 +1,564 @@
 ---
 /**
  * Landing page — /
- * TODO(landing-agent): replace ALL placeholder content below with final marketing copy.
- * Structure is fixed; swap text, update feature list, add social proof section, etc.
- * Components available: Hero, FeatureGrid, PricingCard (see src/components/).
+ * Grounded marketing copy. Claims match README + docs. See docs/agent-native.md,
+ * docs/acp.md, docs/ucp.md, and roadmap.md for honest feature status.
  */
 import MarketingLayout from '../layouts/MarketingLayout.astro';
 import Hero from '../components/Hero.astro';
 import FeatureGrid from '../components/FeatureGrid.astro';
 
-// TODO(landing-agent): replace with real feature list
-const features = [
+// ── Agent-native features ─────────────────────────────────────────────────────
+const agentFeatures = [
   {
-    icon: '🤖',
-    title: 'Agent-native by design',
-    description: 'MCP server, ACP + UCP protocol adapters, and semantic search built in. AI agents can shop, cart, and checkout out of the box.',
+    icon: '🔌',
+    title: 'MCP server — shipped',
+    description: 'Every store exposes a Model Context Protocol server by default. Any MCP-capable agent — Claude, a custom LLM, your own orchestrator — can browse and purchase in minutes, not months.',
     href: '/docs/agent-native',
   },
   {
-    icon: '🔑',
-    title: 'Zero take rate, BYO keys',
-    description: 'Bring your own Paystack, Stripe, or any provider. No platform percentage. Every credential lives in your infra.',
-    href: '/docs/byo-keys',
+    icon: '🤝',
+    title: 'ACP adapter — test mode',
+    description: 'First-class Agentic Commerce Protocol adapter (spec pin: 2026-04). Agentic checkout sessions work end-to-end in test mode. Live delegated payment is in active development (Phase H5).',
+    href: '/docs/acp',
   },
   {
-    icon: '🚀',
-    title: 'Headless REST API',
-    description: '105+ endpoints covering products, variants, carts, orders, discounts, shipping, and inventory — fully parity with webcrft-mono.',
+    icon: '🌐',
+    title: 'UCP adapter — test mode',
+    description: 'Universal Commerce Protocol (Google surfaces / NRF 2026-01 baseline). Catalog entities, checkout create/update/submit work in test mode. Live payment token passthrough is in active development.',
+    href: '/docs/ucp',
+  },
+  {
+    icon: '🔏',
+    title: 'Signed agent mandates',
+    description: 'Verifiable consent chain: intent to cart to payment. Each link is ed25519-signed by the agent and audit-logged. Configurable spend limits per agent, per time window.',
+    href: '/docs/agent-native',
+  },
+  {
+    icon: '🔍',
+    title: 'Semantic catalog search',
+    description: 'pgvector + Reciprocal Rank Fusion on top of Postgres full-text. BYO OpenAI-compatible embeddings key. Natural-language queries like "warm merino hoodie under $100" just work.',
+    href: '/docs/agent-native',
+  },
+  {
+    icon: '🏪',
+    title: 'Agent-readable storefront',
+    description: 'Structured product data, variant options, inventory status, shipping rates, and pricing — all machine-readable and consistently shaped for AI agents to reason over.',
+    href: '/docs/api-overview',
+  },
+];
+
+// ── Commerce core features ────────────────────────────────────────────────────
+const commerceFeatures = [
+  {
+    icon: '📦',
+    title: 'Catalog and inventory',
+    description: 'Products (simple, bundle, configurable, digital, service, subscription, rental), unlimited variants, collections, metafields, i18n. Warehouses, lot tracking, FEFO, reorder points.',
     href: '/docs/api-overview',
   },
   {
-    icon: '🐘',
-    title: 'Postgres-native',
-    description: 'pgvector semantic search, 18 migrations, 105+ tables. No external search dependency. Full-text fallback when pgvector is absent.',
+    icon: '🛒',
+    title: 'Carts, checkout and orders',
+    description: 'Atomic CompleteByID with price re-validation, inventory decrement, and discount burn in a single transaction. Order lifecycle state machines, cancel, notes, abandoned cart recovery.',
+    href: '/docs/api-overview',
+  },
+  {
+    icon: '💳',
+    title: '4 payment providers, BYO',
+    description: 'Stripe, Paystack, Razorpay, and Xendit — bring your own credentials. AES-256-GCM secret encryption. Inbound webhook router with replay protection. Zero percent platform rake.',
+    href: '/docs/byo-keys',
+  },
+  {
+    icon: '🏢',
+    title: 'B2B and subscriptions',
+    description: 'Companies, credit limits, net terms, quotes/RFQ lifecycle, purchase orders, and customer group pricing. Subscription plans with trial, pause/resume, and generated orders.',
+    href: '/docs/api-overview',
+  },
+  {
+    icon: '↩️',
+    title: 'Returns, gift cards and more',
+    description: 'Full RMA flow (refund/exchange/store credit/repair), restock. Gift card transactions, store credit ledger. Shipping zones, live rates (BobGo), collection points (PUDO).',
+    href: '/docs/api-overview',
+  },
+  {
+    icon: '🔐',
+    title: 'Customer auth and feeds',
+    description: 'Register, login, magic link, OAuth (Google, Microsoft, Discord). Google Shopping XML and Facebook Catalog feeds. GA4 server-side purchase events.',
+    href: '/docs/api-overview',
+  },
+];
+
+// ── DX features ───────────────────────────────────────────────────────────────
+const dxFeatures = [
+  {
+    icon: '🟦',
+    title: 'TypeScript end-to-end',
+    description: 'The backend is TypeScript on Fastify + zod + plain pg. The generated @cartcrft/sdk is typed from the same OpenAPI 3.1 spec that drives your REST API.',
+    href: '/docs/api-overview',
+  },
+  {
+    icon: '⚡',
+    title: 'One-command quickstart',
+    description: 'Clone, pnpm install, pnpm migrate, pnpm seed, pnpm dev. A seeded demo store with 12 products at localhost:3000 in under five minutes.',
     href: '/docs/quickstart',
   },
   {
-    icon: '🛡️',
-    title: 'Security first',
-    description: 'AES-256-GCM credential encryption, argon2id password hashing, JWT + HMAC auth, rate limiting, CORS hardening.',
-    href: '/docs/security',
+    icon: '🐳',
+    title: 'Single Docker image',
+    description: 'One image, three subcommands: serve, worker, migrate. Deploy on any VPS, Fly.io, Railway, or Render. Or run the full stack with docker compose up.',
+    href: '/docs/self-host',
   },
   {
-    icon: '📦',
-    title: 'One Docker image',
-    description: 'Single image, three subcommands: serve, worker, migrate. Deploy on any VPS, Fly.io, Railway, or Render in minutes.',
-    href: '/docs/self-host',
+    icon: '✅',
+    title: 'Tested core',
+    description: 'Backend ships with ~830 tests across 45 suites using Vitest and simulated-time billing tests. Suites cover catalog, carts, orders, payments, B2B, subscriptions, and more.',
+    href: '/docs/testing',
   },
 ];
 ---
 
 <MarketingLayout
-  title="Headless commerce for agent-native storefronts"
-  description="Cartcrft is an open-source headless commerce backend. Zero take rate, BYO keys, AI-agent ready. Deploy in minutes."
+  title="The open-source, agent-native commerce backend"
+  description="Cartcrft is an open-source headless commerce backend built for the agentic era. MCP server, ACP/UCP adapters, signed mandates, 4 payment providers. MIT licensed, zero take rate, self-host or cloud."
 >
-  <!-- ─── Hero ─────────────────────────────────────────────────── -->
-  <!-- TODO(landing-agent): update headline, subheadline, badge, and CTA copy -->
+  <!-- Hero -->
   <Hero
-    badge="Open source · MIT licensed"
-    headline='Headless commerce for <span class="gradient">agent-native</span> storefronts.'
-    subheadline="Cartcrft gives your AI agents a full commerce stack — products, carts, orders, and payments — out of the box. Zero take rate. BYO keys. Self-host or cloud."
-    ctaPrimary={{ label: 'Get started free', href: '/docs/quickstart' }}
+    badge="Open source · MIT licensed · TypeScript"
+    headline='The <span class="gradient">open-source, agent-native</span> commerce backend.'
+    subheadline="Make your store reachable by every AI agent — owned by no single platform. MCP server shipped by default. ACP + UCP adapters. Signed agent mandates. Zero take rate. BYO keys. Self-host or cloud."
+    ctaPrimary={{ label: 'Get started', href: '/docs/quickstart' }}
     ctaSecondary={{ label: 'View on GitHub', href: 'https://github.com/webcrftsystems/cartcrft' }}
   />
 
-  <!-- ─── Features ─────────────────────────────────────────────── -->
-  <!-- TODO(landing-agent): update heading + subheading copy -->
+  <!-- Why-now section -->
+  <section class="why-now">
+    <div class="why-now-inner">
+      <div class="why-now-label">Why now</div>
+      <h2>Agentic commerce is not a future roadmap item.</h2>
+      <p>
+        AI agents already browse, compare, and purchase on behalf of humans. MCP, ACP, and UCP are
+        shipping standards in 2025 and 2026 — not hypotheticals. But every major commerce platform treats
+        agent access as an afterthought: a webhook here, a plugin there.
+      </p>
+      <p>
+        Merchants face a new dilemma: surrender to Shopify's closed ecosystem, or hand control to
+        OpenAI and Google's native checkout surfaces. Cartcrft is the neutral, open layer you own —
+        the Switzerland of agentic commerce. Implement the protocols once; reach every agent platform.
+      </p>
+      <div class="protocol-pills">
+        <span class="pill pill--shipped">MCP — shipped</span>
+        <span class="pill pill--test">ACP 2026-04 — test mode</span>
+        <span class="pill pill--test">UCP 2026-01 — test mode</span>
+        <span class="pill pill--shipped">ed25519 mandates — shipped</span>
+        <span class="pill pill--shipped">Semantic search — shipped</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Agent-native features -->
   <FeatureGrid
-    heading="Everything you need. Nothing you don't."
-    subheading="Built for developers and the AI agents they're shipping. No bloat, no lock-in."
-    features={features}
+    heading="Agent-native in the core, not bolted on."
+    subheading="Every Cartcrft store is MCP-accessible by default. ACP and UCP protocol adapters are isolated so spec churn never touches your commerce data model."
+    features={agentFeatures}
     columns={3}
   />
 
-  <!-- ─── Social proof placeholder ────────────────────────────── -->
-  <!-- TODO(landing-agent): add real testimonials / logos / GitHub stars here -->
-  <section class="social-proof-placeholder">
-    <p class="placeholder-note">
-      <!-- TODO(landing-agent): replace this section with social proof (logos, stars, quotes) -->
-      [Social proof section — GitHub stars, testimonials, or "used by" logos]
-    </p>
+  <!-- How it works -->
+  <section class="how-it-works">
+    <div class="how-it-works-inner">
+      <h2>How an agent buys from your store</h2>
+      <p class="how-subtitle">5 steps. No custom integration. Any MCP-capable agent.</p>
+      <ol class="steps">
+        <li>
+          <span class="step-num">1</span>
+          <div>
+            <strong>Agent connects</strong> — point any MCP client at
+            <code>POST /mcp/&lt;storeId&gt;</code> with a <code>cc_pub_</code> key.
+          </div>
+        </li>
+        <li>
+          <span class="step-num">2</span>
+          <div>
+            <strong>Agent searches</strong> — <code>search_products</code> runs hybrid
+            semantic + full-text search over your catalog.
+          </div>
+        </li>
+        <li>
+          <span class="step-num">3</span>
+          <div>
+            <strong>Agent carts</strong> — <code>create_cart</code> then
+            <code>add_to_cart</code> with variant and quantity.
+          </div>
+        </li>
+        <li>
+          <span class="step-num">4</span>
+          <div>
+            <strong>Agent checks out</strong> — <code>start_checkout</code> calculates tax +
+            shipping; <code>complete_checkout</code> places the order atomically.
+          </div>
+        </li>
+        <li>
+          <span class="step-num">5</span>
+          <div>
+            <strong>Mandate verified</strong> — if configured, the ed25519 intent to cart to payment
+            chain is verified before funds move.
+          </div>
+        </li>
+      </ol>
+      <p class="how-note">
+        Full 9-step walkthrough with verified tool-call transcripts in
+        <a href="/docs/quickstart-mcp">docs/quickstart-mcp</a>.
+        Test mode requires no payment credentials.
+      </p>
+    </div>
   </section>
 
-  <!-- ─── CTA band ─────────────────────────────────────────────── -->
-  <!-- TODO(landing-agent): refine copy and confirm CTA destination -->
+  <!-- Commerce core features -->
+  <FeatureGrid
+    heading="A complete commerce stack under the agent layer."
+    subheading="Catalog, orders, payments, shipping, tax, discounts, B2B, subscriptions, returns — all shipped, all tested. Not a prototype."
+    features={commerceFeatures}
+    columns={3}
+  />
+
+  <!-- Fair and open section -->
+  <section class="fair-open">
+    <div class="fair-open-inner">
+      <div class="fair-open-grid">
+        <div class="fair-card">
+          <div class="fair-icon">📜</div>
+          <h3>MIT licensed</h3>
+          <p>
+            Everything outside the cloud layer is MIT. No copyleft, no open-core feature paywalls,
+            no delayed conversion. Fork it, build on it, ship it.
+          </p>
+        </div>
+        <div class="fair-card">
+          <div class="fair-icon">🔑</div>
+          <h3>BYO keys, zero rake</h3>
+          <p>
+            Your Stripe, Paystack, Razorpay, or Xendit credentials. Your OpenAI-compatible
+            embeddings key. Cartcrft takes 0% of your revenue — ever.
+          </p>
+        </div>
+        <div class="fair-card">
+          <div class="fair-icon">🖥️</div>
+          <h3>Self-host or fair cloud</h3>
+          <p>
+            One Docker image, three subcommands. Deploy anywhere. Or use Cartcrft Cloud — a
+            flat fee, no GMV percentage, no lock-in. Self-hosting requires nothing from
+            the cloud layer.
+          </p>
+        </div>
+        <div class="fair-card">
+          <div class="fair-icon">🛡️</div>
+          <h3>Security by design</h3>
+          <p>
+            AES-256-GCM credential encryption, argon2id password hashing, JWT + HMAC auth,
+            multi-tenant isolation, CORS hardening, rate limiting.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DX section -->
+  <FeatureGrid
+    heading="Developer experience as a retention moat."
+    subheading="TypeScript end-to-end. Generated SDK. OpenAPI 3.1. One-command setup. Tested core. No magic, no black boxes."
+    features={dxFeatures}
+    columns={4}
+  />
+
+  <!-- CTA band -->
   <section class="cta-band">
     <div class="cta-band-inner">
-      <h2>Ready to build?</h2>
-      <p>Get a Cartcrft server running locally in under five minutes.</p>
-      <a href="/docs/quickstart" class="btn-primary">Read the quickstart →</a>
+      <h2>Your store, reachable by every agent.</h2>
+      <p>
+        Get a Cartcrft server running and MCP-connected in under 10 minutes.
+        No payment credentials required for test mode.
+      </p>
+      <div class="cta-band-actions">
+        <a href="/docs/quickstart" class="btn-primary">Read the quickstart</a>
+        <a href="/docs/quickstart-mcp" class="btn-secondary">Agent quickstart (MCP)</a>
+      </div>
+      <p class="cta-compare-link">
+        See how Cartcrft compares to Shopify, Medusa, Vendure, Saleor, and others —
+        <a href="/compare">feature comparison</a>.
+      </p>
     </div>
   </section>
 </MarketingLayout>
 
 <style>
-  .social-proof-placeholder {
-    max-width: 1200px;
+  .why-now {
+    padding: 5rem 1.5rem;
+    background: radial-gradient(
+      ellipse 80% 60% at 50% 50%,
+      color-mix(in srgb, #6366f1 6%, transparent),
+      transparent 70%
+    );
+  }
+
+  .why-now-inner {
+    max-width: 760px;
     margin: 0 auto;
-    padding: 2rem 1.5rem;
     text-align: center;
   }
 
-  .placeholder-note {
-    font-size: 0.85rem;
-    color: #94a3b8;
-    font-style: italic;
-    border: 1px dashed #e2e8f0;
-    padding: 2rem;
-    border-radius: 0.5rem;
+  .why-now-label {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #6366f1;
+    margin-bottom: 1.25rem;
   }
 
   @media (prefers-color-scheme: dark) {
-    .placeholder-note { border-color: #1e293b; }
+    .why-now-label { color: #818cf8; }
+  }
+
+  .why-now h2 {
+    font-size: clamp(1.6rem, 3vw, 2.25rem);
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    color: #0f172a;
+    margin-bottom: 1.25rem;
+    line-height: 1.15;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .why-now h2 { color: #f8fafc; }
+  }
+
+  .why-now p {
+    font-size: 1.05rem;
+    color: #475569;
+    line-height: 1.7;
+    margin-bottom: 1rem;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .why-now p { color: #94a3b8; }
+  }
+
+  .protocol-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center;
+    margin-top: 2rem;
+  }
+
+  .pill {
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 0.3rem 0.85rem;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+
+  .pill--shipped {
+    background: color-mix(in srgb, #10b981 12%, transparent);
+    color: #059669;
+    border: 1px solid color-mix(in srgb, #10b981 30%, transparent);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .pill--shipped {
+      color: #34d399;
+      border-color: color-mix(in srgb, #10b981 40%, transparent);
+    }
+  }
+
+  .pill--test {
+    background: color-mix(in srgb, #f59e0b 10%, transparent);
+    color: #b45309;
+    border: 1px solid color-mix(in srgb, #f59e0b 30%, transparent);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .pill--test {
+      color: #fbbf24;
+      border-color: color-mix(in srgb, #f59e0b 40%, transparent);
+    }
+  }
+
+  .how-it-works {
+    padding: 4rem 1.5rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .how-it-works-inner {
+    max-width: 680px;
+    margin: 0 auto;
+  }
+
+  .how-it-works h2 {
+    font-size: clamp(1.5rem, 2.5vw, 2rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: #0f172a;
+    margin-bottom: 0.5rem;
+    text-align: center;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .how-it-works h2 { color: #f8fafc; }
+  }
+
+  .how-subtitle {
+    text-align: center;
+    font-size: 1rem;
+    color: #64748b;
+    margin-bottom: 2.5rem;
+  }
+
+  .steps {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .steps li {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+
+  .step-num {
+    flex-shrink: 0;
+    width: 2rem;
+    height: 2rem;
+    background: linear-gradient(135deg, #6366f1, #14b8a6);
+    color: #fff;
+    font-size: 0.8rem;
+    font-weight: 800;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .steps li div {
+    font-size: 0.95rem;
+    color: #334155;
+    line-height: 1.6;
+    padding-top: 0.25rem;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .steps li div { color: #cbd5e1; }
+  }
+
+  .steps code {
+    font-family: ui-monospace, 'Cascadia Code', monospace;
+    font-size: 0.85em;
+    background: color-mix(in srgb, #6366f1 10%, transparent);
+    color: #4f46e5;
+    padding: 0.1em 0.35em;
+    border-radius: 0.25rem;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .steps code {
+      color: #a5b4fc;
+      background: color-mix(in srgb, #6366f1 18%, transparent);
+    }
+  }
+
+  .how-note {
+    margin-top: 2rem;
+    font-size: 0.85rem;
+    color: #64748b;
+    text-align: center;
+    line-height: 1.6;
+  }
+
+  .how-note a {
+    color: #6366f1;
+    text-decoration: none;
+  }
+
+  .how-note a:hover { text-decoration: underline; }
+
+  @media (prefers-color-scheme: dark) {
+    .how-note a { color: #818cf8; }
+  }
+
+  .fair-open {
+    padding: 4rem 1.5rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .fair-open-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .fair-open-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.25rem;
+  }
+
+  @media (max-width: 900px) {
+    .fair-open-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  @media (max-width: 560px) {
+    .fair-open-grid { grid-template-columns: 1fr; }
+  }
+
+  .fair-card {
+    padding: 1.5rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.75rem;
+    background: #f8fafc;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .fair-card {
+      border-color: #1e293b;
+      background: #0f172a;
+    }
+  }
+
+  .fair-icon {
+    font-size: 1.75rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .fair-card h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 0.5rem;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .fair-card h3 { color: #f1f5f9; }
+  }
+
+  .fair-card p {
+    font-size: 0.875rem;
+    color: #475569;
+    line-height: 1.6;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .fair-card p { color: #94a3b8; }
   }
 
   .cta-band {
-    background: linear-gradient(135deg, #6366f1 0%, #14b8a6 100%);
+    background: linear-gradient(135deg, #4f46e5 0%, #0d9488 100%);
     padding: 5rem 1.5rem;
     text-align: center;
     color: #fff;
@@ -123,7 +566,7 @@ const features = [
   }
 
   .cta-band-inner {
-    max-width: 640px;
+    max-width: 680px;
     margin: 0 auto;
     display: flex;
     flex-direction: column;
@@ -138,8 +581,16 @@ const features = [
   }
 
   .cta-band p {
-    font-size: 1.1rem;
+    font-size: 1.05rem;
     opacity: 0.9;
+    line-height: 1.6;
+  }
+
+  .cta-band-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    justify-content: center;
   }
 
   .btn-primary {
@@ -147,7 +598,7 @@ const features = [
     align-items: center;
     padding: 0.75rem 1.75rem;
     background: #fff;
-    color: #6366f1;
+    color: #4f46e5;
     font-weight: 700;
     font-size: 1rem;
     border-radius: 0.5rem;
@@ -158,5 +609,32 @@ const features = [
   .btn-primary:hover {
     opacity: 0.92;
     transform: translateY(-1px);
+  }
+
+  .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.75rem 1.75rem;
+    border: 1.5px solid rgba(255, 255, 255, 0.6);
+    color: #fff;
+    font-weight: 600;
+    font-size: 1rem;
+    border-radius: 0.5rem;
+    text-decoration: none;
+    transition: background 0.15s;
+  }
+
+  .btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.12);
+  }
+
+  .cta-compare-link {
+    font-size: 0.875rem;
+    opacity: 0.8;
+  }
+
+  .cta-compare-link a {
+    color: #fff;
+    text-decoration: underline;
   }
 </style>
