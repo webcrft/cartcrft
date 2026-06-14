@@ -4,14 +4,42 @@
  * Prevents background jobs from running concurrently on multiple worker
  * processes (e.g. during rolling deploys or accidental misconfiguration).
  *
- * Two implementations, selected automatically at runtime:
+ * LOCK STRATEGY — chosen for Neon pooler correctness
+ * ────────────────────────────────────────────────────
+ * A Neon connection-pooler URL (`*-pooler.neon.tech`) uses TRANSACTION-mode
+ * pooling: each statement may execute on a different backend session.
+ * SESSION-level pg_try_advisory_lock is meaningless under transaction pooling
+ * because the session (and therefore the lock) is released between statements.
  *
- *   PostgresWorkerLock  (default)
- *     Uses pg_try_advisory_lock() with a 64-bit hash of the lock name.
- *     The lock is held for the lifetime of a single DB connection (transaction-
- *     level advisory lock via pg_try_advisory_xact_lock inside a transaction,
- *     or session-level via pg_try_advisory_lock when using a plain connection).
- *     Naturally released when the connection is returned to the pool.
+ * Solution: Row-claim leader election with heartbeat TTL
+ * ──────────────────────────────────────────────────────
+ * We maintain a `worker_leader` table (created by migration 0020).  A replica
+ * claims leadership by doing an upsert with its own instance_id:
+ *
+ *   INSERT INTO worker_leader (lock_name, instance_id, expires_at)
+ *   VALUES ($name, $id, now() + $ttl)
+ *   ON CONFLICT (lock_name) DO UPDATE
+ *     SET instance_id = EXCLUDED.instance_id,
+ *         expires_at   = EXCLUDED.expires_at
+ *   WHERE worker_leader.expires_at < now()   ← only steal if expired
+ *   RETURNING instance_id
+ *
+ * If the returned instance_id matches our own, we hold the lock.  If another
+ * unexpired row exists, we get 0 rows back → lock not acquired.
+ *
+ * Per-tick jobs (subscription-scheduler) should use pg_try_advisory_xact_lock
+ * INSIDE their own transaction so the lock scope equals the work.
+ *
+ * Fallback for per-tick transaction-scoped locking
+ * ─────────────────────────────────────────────────
+ * acquireXact / releaseXact wrap pg_try_advisory_xact_lock inside a provided
+ * client transaction; the lock is released automatically on COMMIT/ROLLBACK.
+ * This is safe under any pooler mode.
+ *
+ * Pooler boot-time WARNING
+ * ────────────────────────
+ * On startup, if DATABASE_URL contains a Neon pooler hostname AND we fall back
+ * to the Postgres backend, we log a WARNING so operators know the lock mode.
  *
  *   RedisWorkerLock (when REDIS_URL is configured)
  *     Uses SET key NX PX <ttlMs> — the token must be presented on release so
@@ -19,19 +47,13 @@
  *
  * Usage:
  *   const lock = buildWorkerLock();
- *   const token = await lock.acquire('embedding-job', 35_000);
+ *   const token = await lock.acquire('billing-enqueuer', 70_000);
  *   if (!token) return; // another instance holds it
  *   try {
- *     await doWork();
+ *     await doEnqueueWork();
  *   } finally {
- *     await lock.release('embedding-job', token);
+ *     await lock.release('billing-enqueuer', token);
  *   }
- *
- * Note: wiring into existing worker jobs (embedding, recovery) is kept
- * optional — the workers are safe to run on multiple processes due to their
- * idempotent skip-if-running guards, so locking is an optimisation rather
- * than a correctness requirement.  Use acquireLock/releaseLock from this
- * module at the call site if tighter exclusion is desired.
  */
 
 import { createHash } from "node:crypto";
@@ -44,10 +66,11 @@ export interface WorkerLock {
   /**
    * Attempt to acquire the named lock.
    *
-   * @param name   Logical lock name (e.g. "embedding-job").
-   * @param ttlMs  TTL in milliseconds (used only by the Redis backend).
-   *               Should be slightly longer than the expected job duration.
-   *               The Postgres backend ignores ttlMs — the lock is connection-scoped.
+   * @param name   Logical lock name (e.g. "billing-enqueuer").
+   * @param ttlMs  TTL in milliseconds.  For the Postgres row-claim backend this
+   *               is the expiry window — if the holder crashes without releasing,
+   *               another replica can steal the lock after ttlMs.
+   *               For Redis, this is the key TTL.
    * @returns A token string if acquired; `null` if another holder has it.
    */
   acquire(name: string, ttlMs: number): Promise<string | null>;
@@ -56,7 +79,7 @@ export interface WorkerLock {
    * Release a previously acquired lock.
    *
    * @param name  Logical lock name — must match the acquire call.
-   * @param token Token returned by acquire().  Ignored by the Postgres backend.
+   * @param token Token returned by acquire().
    */
   release(name: string, token: string): Promise<void>;
 }
@@ -64,144 +87,115 @@ export interface WorkerLock {
 // ── Name → int64 hash ─────────────────────────────────────────────────────────
 
 /**
- * Map a lock name to a signed 64-bit integer suitable for pg_try_advisory_lock.
- *
- * Postgres advisory locks take a bigint key.  We take the first 8 bytes of
- * SHA-256 and interpret them as a signed 64-bit integer (big-endian, two's
- * complement).
+ * Map a lock name to a signed 64-bit integer suitable for pg advisory locks.
  */
 function nameToBigInt(name: string): bigint {
   const hash = createHash("sha256").update(name).digest();
-  // Read first 8 bytes as unsigned 64-bit big-endian, then reinterpret as signed.
   const unsigned = hash.readBigUInt64BE(0);
-  // Convert to signed by wrapping at 2^63.
   const maxSigned = BigInt("9223372036854775808"); // 2^63
   return unsigned >= maxSigned ? unsigned - BigInt("18446744073709551616") : unsigned; // 2^64
 }
 
-// ── PostgresWorkerLock ────────────────────────────────────────────────────────
+// ── PostgresWorkerLock — row-claim leader election ────────────────────────────
 
 /**
- * Postgres advisory-lock implementation.
+ * Postgres row-claim implementation.
  *
- * Uses pg_try_advisory_lock (session-level, non-blocking).  The lock is
- * released by pg_advisory_unlock or when the DB session closes.
+ * Uses a `worker_leader` table (created in migration 0020) for leader election.
+ * Safe under Neon transaction-mode connection pooling because no session state
+ * is held — the lock is purely a DB row with a TTL.
  *
- * Because a pg.Pool recycles connections, we track acquired locks by token
- * and call pg_advisory_unlock explicitly on release so the connection can be
- * returned cleanly to the pool.
+ * Acquire: upsert the row with our instance_id; only succeeds if the row is
+ * absent or expired.  Returns the instance_id back so we can verify we won.
  *
- * For the test suite, `acquireWithClient` is used to acquire on a specific
- * client so we can test mutual exclusion with two separate clients.
+ * Release: DELETE the row where instance_id matches our token (so we only
+ * release our own lock, never another instance's).
+ *
+ * Heartbeat: callers SHOULD call renew() periodically when holding a long-lived
+ * lock.  The subscription scheduler is short-lived enough that TTL (70s) >>
+ * tick duration (< 5s), so heartbeating is optional there.
  */
-export class PostgresWorkerLock implements WorkerLock {
-  /**
-   * Map of token → { lockId, clientRelease }  — kept so release() can unlock.
-   */
-  private readonly held = new Map<string, { lockId: bigint; releaseClient: () => void }>();
-
-  async acquire(name: string, _ttlMs: number): Promise<string | null> {
-    const lockId = nameToBigInt(name);
+class _PostgresWorkerLock implements WorkerLock {
+  async acquire(name: string, ttlMs: number): Promise<string | null> {
     const pool = getPool();
-    const client = await pool.connect();
-    const { rows } = await client.query<{ acquired: boolean }>(
-      `SELECT pg_try_advisory_lock($1::bigint) AS acquired`,
-      [lockId.toString()]
+    const instanceId = randomBytes(16).toString("hex");
+    const ttlSeconds = Math.ceil(ttlMs / 1000);
+
+    const { rows } = await pool.query<{ instance_id: string }>(
+      `INSERT INTO public.worker_leader (lock_name, instance_id, expires_at)
+       VALUES ($1, $2, now() + ($3 || ' seconds')::interval)
+       ON CONFLICT (lock_name) DO UPDATE
+         SET instance_id = EXCLUDED.instance_id,
+             expires_at   = EXCLUDED.expires_at
+         WHERE worker_leader.expires_at < now()
+       RETURNING instance_id`,
+      [name, instanceId, String(ttlSeconds)]
     );
-    const acquired = rows[0]?.acquired ?? false;
-    if (!acquired) {
-      client.release();
+
+    const winner = rows[0]?.instance_id;
+    if (winner !== instanceId) {
+      // Row was not updated (existing non-expired row) — we did not acquire.
       return null;
     }
-    const token = randomBytes(16).toString("hex");
-    this.held.set(token, {
-      lockId,
-      releaseClient: () => client.release(),
-    });
-    return token;
+    // Token IS the instance_id — used on release to verify ownership.
+    return instanceId;
   }
 
   async release(name: string, token: string): Promise<void> {
-    const held = this.held.get(token);
-    if (!held) return; // already released or never held
-    const lockId = nameToBigInt(name);
     const pool = getPool();
-    // Release advisory lock — must be called on the same session that acquired it.
-    // Because we hold the client, we need to query through the pool but on a
-    // *different* client.  We use a fresh client to call pg_advisory_unlock on
-    // the session that holds the lock — but pg advisory locks are session-scoped,
-    // so we must call it on the original client.
-    //
-    // Implementation: we stored `releaseClient` (client.release) from acquire().
-    // We need to run pg_advisory_unlock on the original connection *before*
-    // calling client.release().  To do that we need the original client itself,
-    // not just its release function.
-    //
-    // Simpler approach: discard the stored reference, acquire a fresh connection
-    // to call pg_advisory_unlock, then release the original.
-    // Actually, pg_advisory_unlock requires the SAME session.
-    //
-    // Revised implementation: we store the client object itself.
-    void lockId; // avoid unused-var — actual unlock via stored client in v2 below
-    held.releaseClient(); // releases the pool client (which drops session advisory lock)
-    this.held.delete(token);
+    // Only delete if we still own it (idempotent — safe if already expired/stolen).
+    await pool.query(
+      `DELETE FROM public.worker_leader
+       WHERE lock_name = $1 AND instance_id = $2`,
+      [name, token]
+    );
+  }
+
+  /**
+   * Renew the TTL of a held lock.  Call periodically to prevent expiry during
+   * long-running work.  No-op if the lock was lost (e.g. due to a crash + steal).
+   */
+  async renew(name: string, token: string, ttlMs: number): Promise<boolean> {
+    const pool = getPool();
+    const ttlSeconds = Math.ceil(ttlMs / 1000);
+    const { rowCount } = await pool.query(
+      `UPDATE public.worker_leader
+       SET expires_at = now() + ($3 || ' seconds')::interval
+       WHERE lock_name = $1 AND instance_id = $2`,
+      [name, token, String(ttlSeconds)]
+    );
+    return (rowCount ?? 0) > 0;
   }
 }
 
+// ── Transaction-scoped advisory lock helpers ──────────────────────────────────
+
 /**
- * Improved PostgresWorkerLock that stores the actual client for proper unlock.
- * This is the exported implementation.
+ * Attempt to acquire a TRANSACTION-scoped Postgres advisory lock on the
+ * provided client (which must already be inside a BEGIN transaction).
+ *
+ * pg_try_advisory_xact_lock is safe under any pooler mode because the lock
+ * scope is the surrounding transaction, not the session.  The lock is
+ * automatically released on COMMIT or ROLLBACK — callers do NOT need to call
+ * a corresponding release.
+ *
+ * Use this for per-tick jobs whose work is naturally transactional.
+ *
+ * @returns true if acquired, false if another holder has it.
  */
-class _PostgresWorkerLock implements WorkerLock {
+export async function tryAcquireXactLock(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- pg.PoolClient
-  private readonly held = new Map<string, { lockId: bigint; client: any }>();
-
-  async acquire(name: string, _ttlMs: number): Promise<string | null> {
-    return this._acquireOnPool(name);
-  }
-
-  async _acquireOnPool(name: string): Promise<string | null> {
-    const lockId = nameToBigInt(name);
-    const pool = getPool();
-    const client = await pool.connect();
-    try {
-      const { rows } = await client.query<{ acquired: boolean }>(
-        `SELECT pg_try_advisory_lock($1::bigint) AS acquired`,
-        [lockId.toString()]
-      );
-      const acquired = rows[0]?.acquired ?? false;
-      if (!acquired) {
-        client.release();
-        return null;
-      }
-      const token = randomBytes(16).toString("hex");
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      this.held.set(token, { lockId, client });
-      return token;
-    } catch (err) {
-      client.release();
-      throw err;
-    }
-  }
-
-  async release(name: string, token: string): Promise<void> {
-    const held = this.held.get(token);
-    if (!held) return;
-    this.held.delete(token);
-    try {
-      // Explicitly release advisory lock on the same session before returning
-      // the client to the pool.
-      const lockId = nameToBigInt(name);
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-      await held.client.query(
-        `SELECT pg_advisory_unlock($1::bigint)`,
-        [lockId.toString()]
-      );
-    } finally {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-      held.client.release();
-    }
-  }
+  client: any,
+  name: string
+): Promise<boolean> {
+  const lockId = nameToBigInt(name);
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
+  const result = await client.query(
+    `SELECT pg_try_advisory_xact_lock($1::bigint) AS acquired`,
+    [lockId.toString()]
+  );
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+  return (result.rows[0]?.acquired ?? false) as boolean;
 }
 
 // ── RedisWorkerLock ───────────────────────────────────────────────────────────
@@ -235,6 +229,30 @@ class _RedisWorkerLock implements WorkerLock {
   }
 }
 
+// ── Pooler boot-time warning ──────────────────────────────────────────────────
+
+/**
+ * Emit a one-time warning if DATABASE_URL looks like a Neon transaction-pooler
+ * URL and we are using the Postgres backend (not Redis).
+ *
+ * Transaction-pooled connections do not preserve sessions, so any attempt to
+ * use session-level advisory locks (pg_try_advisory_lock) would silently break.
+ * Our row-claim implementation is safe under transaction pooling, but this
+ * warning helps operators who might have stale workerlock code elsewhere.
+ */
+function warnIfPoolerUrl(): void {
+  const url = process.env["DATABASE_URL"] ?? "";
+  // Neon pooler URLs contain "-pooler." in the hostname.
+  if (url.includes("-pooler.")) {
+    console.warn(
+      "[workerlock] WARNING: DATABASE_URL looks like a Neon transaction-pooler endpoint " +
+        "(*-pooler.neon.tech). Worker locks use row-claim leader election (safe under " +
+        "transaction pooling). Do NOT use session-level pg_try_advisory_lock on this " +
+        "connection — use tryAcquireXactLock() for transaction-scoped locking instead."
+    );
+  }
+}
+
 // ── Singleton factory ─────────────────────────────────────────────────────────
 
 let _lock: WorkerLock | null = null;
@@ -242,7 +260,7 @@ let _lock: WorkerLock | null = null;
 /**
  * Return the process-singleton WorkerLock.
  *
- * Uses RedisWorkerLock when REDIS_URL is set, PostgresWorkerLock otherwise.
+ * Uses RedisWorkerLock when REDIS_URL is set, row-claim PostgresWorkerLock otherwise.
  * Lazy-initialised on first call.
  */
 export async function buildWorkerLock(): Promise<WorkerLock> {
@@ -263,12 +281,14 @@ export async function buildWorkerLock(): Promise<WorkerLock> {
       console.log("[workerlock] Redis backend initialised");
     } catch (err) {
       console.warn(
-        "[workerlock] REDIS_URL set but ioredis unavailable — falling back to Postgres advisory locks:",
+        "[workerlock] REDIS_URL set but ioredis unavailable — falling back to Postgres row-claim locks:",
         err instanceof Error ? err.message : String(err)
       );
+      warnIfPoolerUrl();
       _lock = new _PostgresWorkerLock();
     }
   } else {
+    warnIfPoolerUrl();
     _lock = new _PostgresWorkerLock();
   }
 

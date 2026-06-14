@@ -254,56 +254,75 @@ async function startCloudBillingWorker(): Promise<() => void> {
     exchangeRateApiKey: config.EXCHANGE_RATE_API_KEY,
   });
 
-  // Acquire worker lock so multi-replica deploys don't double-drain the queue.
+  // ── Billing queue architecture ──────────────────────────────────────────────
+  //
+  // The billing_queue uses FOR UPDATE SKIP LOCKED, which already makes the
+  // DRAIN safe on all replicas in parallel — SKIP LOCKED ensures each row is
+  // processed by exactly one worker.  There is no need to lock the drain.
+  //
+  // The ENQUEUER (enqueueUpcomingRenewals) must run on exactly ONE replica to
+  // avoid duplicate queue entries for the same billing period.  We acquire a
+  // leader lock only around the enqueuer.  If this replica loses the lock,
+  // another replica holds the enqueuer role; the drain still runs here.
+  //
+  // Fix (audit scale cliff): previously the entire billing worker (drain + enqueuer)
+  // was pinned behind ONE advisory lock, preventing queue sharding across replicas.
+
   const { acquireLock, releaseLock } = await import("./lib/workerlock.js");
-  const LOCK_NAME = "billing-worker";
-  const LOCK_TTL_MS = 65_000; // slightly longer than a poll cycle
+  const ENQUEUE_LOCK_NAME = "billing-enqueuer";
+  const ENQUEUE_LOCK_TTL_MS = 120_000; // 2× poll interval
 
-  let lockToken: string | null = null;
-  try {
-    lockToken = await acquireLock(LOCK_NAME, LOCK_TTL_MS);
-    if (!lockToken) {
-      console.log(
-        "[worker] billing worker lock held by another process — this replica will skip"
-      );
-      return () => { /* no-op */ };
-    }
-    console.log("[worker] billing worker lock acquired");
-  } catch (err) {
-    // Lock unavailable (DB issue) — proceed without lock; queue SKIP LOCKED prevents double work.
-    console.warn(
-      "[worker] could not acquire billing worker lock (proceeding without):",
-      err instanceof Error ? err.message : String(err)
-    );
-  }
-
-  // Kick off renewal enqueuer loop alongside the queue drain loop.
-  // The worker.start() loop drains billing_queue; we run enqueueUpcomingRenewals
-  // on the same cadence in a separate setInterval.
   const pollMs = config.BILLING_SIM_ENABLED && config.BILLING_SIM_DAY_SECONDS > 0
     ? Math.max(1_000, Math.min(60_000, config.BILLING_SIM_DAY_SECONDS * 100))
     : 60_000;
 
-  const enqueueTimer = setInterval(() => {
-    void worker.enqueueUpcomingRenewals().then((n) => {
-      if (n > 0) console.log(`[billing-worker] enqueued ${n} upcoming renewal(s)`);
-    }).catch((err) => {
-      console.error("[billing-worker] enqueueUpcomingRenewals error:", err);
-    });
-  }, pollMs);
+  // Try to become the enqueuer leader.  Loss is not fatal — another replica enqueues.
+  let enqueueLockToken: string | null = null;
+  let enqueueTimer: ReturnType<typeof setInterval> | null = null;
 
-  // Start the main queue drain loop (non-blocking — runs in background).
+  try {
+    enqueueLockToken = await acquireLock(ENQUEUE_LOCK_NAME, ENQUEUE_LOCK_TTL_MS);
+    if (enqueueLockToken) {
+      console.log("[worker] billing enqueuer lock acquired — this replica is the enqueuer leader");
+      // Run an initial enqueue immediately, then on cadence.
+      const runEnqueue = () => {
+        void worker.enqueueUpcomingRenewals().then((n) => {
+          if (n > 0) console.log(`[billing-worker] enqueued ${n} upcoming renewal(s)`);
+          // Renew the leader lock so we keep the enqueuer role across ticks.
+          if (enqueueLockToken) {
+            // Best-effort renew (the lock row expiry will cover short gaps).
+            void acquireLock(ENQUEUE_LOCK_NAME, ENQUEUE_LOCK_TTL_MS).catch(() => { /* ignore */ });
+          }
+        }).catch((err) => {
+          console.error("[billing-worker] enqueueUpcomingRenewals error:", err);
+        });
+      };
+      runEnqueue();
+      enqueueTimer = setInterval(runEnqueue, pollMs);
+    } else {
+      console.log(
+        "[worker] billing enqueuer lock held by another replica — this replica will only drain the queue"
+      );
+    }
+  } catch (err) {
+    console.warn(
+      "[worker] could not acquire billing enqueuer lock (proceeding as drain-only):",
+      err instanceof Error ? err.message : String(err)
+    );
+  }
+
+  // Start the queue drain loop on ALL replicas (SKIP LOCKED makes it safe).
   void worker.start().catch((err) => {
     console.error("[billing-worker] worker loop exited with error:", err);
   });
 
-  console.log("[worker] cloud billing worker started");
+  console.log("[worker] cloud billing worker started (drain on all replicas; enqueue on leader only)");
 
   return () => {
     worker.stop();
-    clearInterval(enqueueTimer);
-    if (lockToken) {
-      void releaseLock(LOCK_NAME, lockToken).catch(() => { /* best-effort */ });
+    if (enqueueTimer) clearInterval(enqueueTimer);
+    if (enqueueLockToken) {
+      void releaseLock(ENQUEUE_LOCK_NAME, enqueueLockToken).catch(() => { /* best-effort */ });
     }
     console.log("[worker] cloud billing worker stopped");
   };

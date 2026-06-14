@@ -31,13 +31,33 @@ const { Pool } = pg;
 
 let _pool: pg.Pool | null = null;
 
+/**
+ * Maximum pool connections per process.
+ *
+ * DB_POOL_MAX env override (default: 10).  Important for Neon tiers:
+ * (replicas + workers) × DB_POOL_MAX must stay under the project connection
+ * ceiling.  Lower this (e.g. DB_POOL_MAX=3) on small/free Neon tiers with
+ * multiple worker replicas.
+ */
+function resolvePoolMax(): number {
+  const raw = process.env["DB_POOL_MAX"];
+  if (raw) {
+    const parsed = parseInt(raw, 10);
+    if (!isNaN(parsed) && parsed > 0) return parsed;
+    console.warn(`[db/pool] DB_POOL_MAX="${raw}" is not a positive integer — using default 10`);
+  }
+  return 10;
+}
+
 /** Return the singleton pool, creating it on first call. */
 export function getPool(): pg.Pool {
   if (!_pool) {
     _pool = new Pool({
       connectionString: config.DATABASE_URL,
-      // Sane defaults — tightened per subsystem in future tasks.
-      max: 10,
+      // DB_POOL_MAX env override (default: 10).
+      // Tune down on small Neon tiers: (replicas + workers) × DB_POOL_MAX
+      // must stay under the project connection ceiling.
+      max: resolvePoolMax(),
       idleTimeoutMillis: 30_000,
       connectionTimeoutMillis: 5_000,
     });
