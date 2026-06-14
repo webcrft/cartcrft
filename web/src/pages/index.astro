@@ -275,8 +275,30 @@ const dxFeatures = [
     ctaSecondary={{ label: 'View on GitHub', href: 'https://github.com/webcrft/cartcrft' }}
   />
 
+  <!-- Stats / proof band -->
+  <section class="stats-band" aria-label="At a glance" data-reveal>
+    <div class="stats-inner">
+      <div class="stat">
+        <div class="stat-num gradient-num">0%</div>
+        <div class="stat-label">Platform take rate</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num gradient-num">3</div>
+        <div class="stat-label">Agent protocols<br/>MCP · ACP · UCP</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num gradient-num">4</div>
+        <div class="stat-label">Payment providers<br/>bring your own keys</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num gradient-num">MIT</div>
+        <div class="stat-label">License · self-host<br/>or fair cloud</div>
+      </div>
+    </div>
+  </section>
+
   <!-- Why-now section -->
-  <section class="why-now">
+  <section class="why-now" data-reveal>
     <div class="why-now-inner">
       <div class="why-now-label">Why now</div>
       <h2>Agentic commerce is not a future roadmap item.</h2>
@@ -309,7 +331,7 @@ const dxFeatures = [
   />
 
   <!-- How it works — with a connecting line illustration -->
-  <section class="how-it-works">
+  <section class="how-it-works" data-reveal>
     <div class="how-it-works-inner">
       <h2>How an agent buys from your store</h2>
       <p class="how-subtitle">5 steps. No custom integration. Any MCP-capable agent.</p>
@@ -393,7 +415,7 @@ const dxFeatures = [
   />
 
   <!-- Fair and open section -->
-  <section class="fair-open">
+  <section class="fair-open" data-reveal>
     <div class="fair-open-inner">
       <!-- Section header -->
       <div class="fair-open-header">
@@ -473,7 +495,7 @@ const dxFeatures = [
   />
 
   <!-- Compare teaser -->
-  <section class="compare-teaser">
+  <section class="compare-teaser" data-reveal>
     <div class="compare-teaser-inner">
       <div class="compare-teaser-text">
         <div class="section-label">Platform comparison</div>
@@ -540,7 +562,7 @@ const dxFeatures = [
   </section>
 
   <!-- CTA band -->
-  <section class="cta-band">
+  <section class="cta-band" data-reveal>
     <div class="cta-band-inner">
       <!-- decorative SVG circles -->
       <div class="cta-deco" aria-hidden="true">
@@ -589,6 +611,77 @@ const dxFeatures = [
 
   @media (prefers-color-scheme: dark) {
     .section-label { color: #818cf8; }
+  }
+
+  /* ─── Stats / proof band ──────────────────────────────────────── */
+  .stats-band {
+    max-width: 1100px;
+    margin: 1rem auto 0;
+    padding: 0 1.5rem;
+  }
+
+  .stats-inner {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: #e2e8f0;
+    border: 1px solid #e2e8f0;
+    border-radius: 1rem;
+    overflow: hidden;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .stats-inner {
+      background: #1e293b;
+      border-color: #1e293b;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .stats-inner { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  .stat {
+    background: #fff;
+    padding: 1.6rem 1rem;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+    transition: background 0.2s;
+  }
+
+  .stat:hover { background: color-mix(in srgb, #6366f1 4%, #fff); }
+
+  @media (prefers-color-scheme: dark) {
+    .stat { background: #0d1426; }
+    .stat:hover { background: color-mix(in srgb, #6366f1 10%, #0d1426); }
+  }
+
+  .stat-num {
+    font-size: clamp(1.9rem, 4vw, 2.6rem);
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.03em;
+  }
+
+  .gradient-num {
+    background: linear-gradient(135deg, #6366f1 0%, #14b8a6 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .stat-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #64748b;
+    line-height: 1.45;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .stat-label { color: #94a3b8; }
   }
 
   /* ─── Why-now section ─────────────────────────────────────────── */

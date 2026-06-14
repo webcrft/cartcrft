@@ -293,6 +293,45 @@ const {
     .proto-pills { justify-content: center; }
   }
 
+  /* ── Entrance animation: staggered rise on load ── */
+  .hero-content > * {
+    animation: hero-rise 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .hero-content > *:nth-child(1) { animation-delay: 0.05s; }
+  .hero-content > *:nth-child(2) { animation-delay: 0.14s; }
+  .hero-content > *:nth-child(3) { animation-delay: 0.23s; }
+  .hero-content > *:nth-child(4) { animation-delay: 0.32s; }
+  .hero-content > *:nth-child(5) { animation-delay: 0.41s; }
+
+  @keyframes hero-rise {
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  /* Illustration: soft fade-in then a perpetual gentle float */
+  .hero-illustration {
+    animation:
+      hero-fade 1s ease 0.3s both,
+      hero-float 7s ease-in-out 1.3s infinite;
+  }
+
+  @keyframes hero-fade {
+    from { opacity: 0; transform: translateY(10px) scale(0.985); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  @keyframes hero-float {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-10px); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero-content > *,
+    .hero-illustration {
+      animation: none !important;
+    }
+  }
+
   /* ── Badge ── */
   .hero-badge {
     display: inline-flex;

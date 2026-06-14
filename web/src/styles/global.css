@@ -37,3 +37,39 @@ img, svg {
   outline: 2px solid #6366f1;
   outline-offset: 2px;
 }
+
+/* ─── Scroll-reveal animation utility ───────────────────────────────
+ * Elements tagged with [data-reveal] start slightly lowered + transparent
+ * and ease into place when the IntersectionObserver in MarketingLayout adds
+ * `.is-revealed`. Per-element stagger via inline --reveal-delay.
+ * Honours prefers-reduced-motion: instant show, no motion.
+ */
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(22px);
+  transition:
+    opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  transition-delay: var(--reveal-delay, 0ms);
+  will-change: opacity, transform;
+}
+
+[data-reveal].is-revealed {
+  opacity: 1;
+  transform: none;
+}
+
+/* JS-disabled fallback: never leave content hidden. */
+.no-js [data-reveal] {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  [data-reveal] {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}

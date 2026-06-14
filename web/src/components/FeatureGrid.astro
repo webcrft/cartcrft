@@ -35,7 +35,7 @@ const {
 } = Astro.props as FeatureGridProps;
 ---
 
-<section class="feature-grid-section">
+<section class="feature-grid-section" data-reveal>
   {(heading || subheading) && (
     <div class="section-header">
       {heading && <h2 class="section-heading">{heading}</h2>}
@@ -177,6 +177,15 @@ const {
     flex-shrink: 0;
     font-size: 1.1rem;
     line-height: 1;
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .feature-card:hover .feature-icon {
+    transform: scale(1.08) rotate(-3deg);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .feature-card:hover .feature-icon { transform: none; }
   }
 
   .feature-icon :global(svg) {
