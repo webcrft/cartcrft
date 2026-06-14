@@ -17,6 +17,7 @@ import { buildApp } from "./http/app.js";
 import { startEmbeddingWorkerJob } from "./agent/search/indexer.js";
 import { startRecoveryWorkerJob } from "./modules/recovery/worker.js";
 import { startSubscriptionScheduler } from "./modules/subscriptions/scheduler.js";
+import { startIcalPullWorkerJob } from "./modules/bookings/ical-pull.js";
 import { startFxRefreshJob } from "./modules/exchange-rates/fx-refresh.js";
 import { ConsoleMailer } from "./lib/mailer/console.js";
 import { SesMailer } from "./lib/mailer/ses.js";
@@ -164,6 +165,12 @@ async function runWorker(): Promise<void> {
     console.log("[worker] subscription scheduler registered (no lock — fallback mode)");
   }
 
+  // H5.2 — Scheduled iCal pull worker.
+  // Periodically fetches remote iCal URLs for active import feeds and applies
+  // them via importICalFeed(). acquireLock guards against multi-replica double-pull.
+  const stopIcalPull = startIcalPullWorkerJob({});
+  console.log("[worker] ical pull job registered");
+
   // H2.3 — Exchange-rate refresh job.
   // Fetches USD-base rates from ExchangeRate-API and upserts into exchange_rates.
   // Graceful no-op when EXCHANGE_RATE_API_KEY is absent.
@@ -184,6 +191,7 @@ async function runWorker(): Promise<void> {
       stopEmbedding();
       stopRecovery();
       stopSubscriptionScheduler();
+      stopIcalPull();
       stopFxRefresh();
       if (subLockToken) {
         void releaseLock(SUB_LOCK_NAME, subLockToken).catch(() => { /* best-effort */ });

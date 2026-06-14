@@ -189,6 +189,30 @@ function notFound(msg: string): Error {
   return e;
 }
 
+// ── Injectable fetch (for tests) ─────────────────────────────────────────────
+//
+// The outbound ARI HTTP calls go through `otaFetch` rather than the global
+// `fetch` directly, so tests can inject a stub without monkey-patching the
+// global fetch used by the test HTTP client. setOtaFetchForTesting(null)
+// restores the real global fetch.
+
+type FetchFn = typeof fetch;
+
+let _otaFetch: FetchFn = (...args) => fetch(...args);
+
+/** The fetch used for outbound OTA/ARI HTTP. Tests can override via setOtaFetchForTesting. */
+function otaFetch(...args: Parameters<FetchFn>): ReturnType<FetchFn> {
+  return _otaFetch(...args);
+}
+
+/**
+ * Override the fetch used for outbound OTA ARI HTTP calls. Pass null to restore
+ * the real global fetch. Test-only.
+ */
+export function setOtaFetchForTesting(fn: FetchFn | null): void {
+  _otaFetch = fn ?? ((...args) => fetch(...args));
+}
+
 function secretsKey(): string {
   return config.AUTH_SECRETS_KEY ?? "";
 }
@@ -978,7 +1002,7 @@ export async function pushARIToProvider(
     let availRespBody = "";
 
     try {
-      const resp = await fetch(availUrl, {
+      const resp = await otaFetch(availUrl, {
         method: "POST",
         headers,
         body: availPayload,
@@ -1042,7 +1066,7 @@ export async function pushARIToProvider(
     let rateRespBody = "";
 
     try {
-      const resp = await fetch(rateUrl, {
+      const resp = await otaFetch(rateUrl, {
         method: "POST",
         headers,
         body: ratePayload,

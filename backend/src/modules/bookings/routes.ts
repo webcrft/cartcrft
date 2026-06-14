@@ -136,6 +136,7 @@ import {
   updateChannelListing,
   deleteChannelListing,
   pushChannelSync,
+  pushARIToProvider,
   logWebhook,
   listSyncJobs,
   enqueueSyncJob,
@@ -208,6 +209,11 @@ const StoreProviderParams = z.object({
 const StoreResourceListingParams = z.object({
   storeId: z.string().uuid(),
   resourceId: z.string().uuid(),
+  listingId: z.string().uuid(),
+});
+
+const StoreListingParams = z.object({
+  storeId: z.string().uuid(),
   listingId: z.string().uuid(),
 });
 
@@ -1324,6 +1330,35 @@ export const bookingsPlugin: FastifyPluginAsync = async (app) => {
       void resourceId;
       try {
         const result = await pushChannelSync(storeId, listingId);
+        return reply.send(result);
+      } catch (err) {
+        const { status, code, message } = httpError(err);
+        return reply.status(status).send({ error: { code, message } });
+      }
+    }
+  );
+
+  // Direct ARI push for a window — drives the generic OTA ARI adapter
+  // (pushARIToProvider) for an explicit date window + optional provider override.
+  app.post(
+    "/commerce/stores/:storeId/booking-channel-listings/:listingId/push-ari",
+    { preHandler: storeAuthWrite },
+    async (request, reply) => {
+      const { storeId, listingId } = StoreListingParams.parse(request.params);
+      const Body = z.object({
+        window_start: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        window_end: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        provider_id: z.string().uuid().optional(),
+      });
+      const body = Body.parse(request.body);
+      try {
+        const result = await pushARIToProvider(
+          storeId,
+          listingId,
+          body.window_start,
+          body.window_end,
+          body.provider_id
+        );
         return reply.send(result);
       } catch (err) {
         const { status, code, message } = httpError(err);
