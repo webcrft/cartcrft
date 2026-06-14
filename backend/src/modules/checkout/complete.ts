@@ -43,6 +43,7 @@ import type pg from "pg";
 import { withTx } from "../../db/pool.js";
 import { round2 } from "../../lib/money.js";
 import type { AgentHeaderCtx } from "../agents/types.js";
+import { dispatchStoreEvent } from "../notifications/service.js";
 
 // ── Result type ───────────────────────────────────────────────────────────────
 
@@ -188,7 +189,7 @@ export async function completeCheckout(
   checkoutId: string,
   agentCtx?: AgentHeaderCtx | undefined
 ): Promise<CompleteResult> {
-  return withTx(async (client) => {
+  const result = await withTx(async (client) => {
     // ── Step 1: Burn discount atomically (before conversion) ─────────────
     await burnCheckoutDiscount(client, storeId, checkoutId);
 
@@ -560,4 +561,16 @@ export async function completeCheckout(
       itemCount,
     };
   });
+
+  // Fire-and-forget outbound notification (H2.1 audit fix).
+  // Called AFTER the transaction commits so a notification failure cannot
+  // roll back the order.
+  dispatchStoreEvent(storeId, "order.created", {
+    order_id: result.orderId,
+    order_number: result.orderNumber,
+    currency: result.currency,
+    total: String(result.total),
+  });
+
+  return result;
 }

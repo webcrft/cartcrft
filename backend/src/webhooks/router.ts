@@ -41,6 +41,7 @@ import { config } from "../config/config.js";
 import { decodeSecretValue } from "../lib/secrets.js";
 import { completeCheckout } from "../modules/checkout/complete.js";
 import { trackEcommerce } from "../lib/analytics.js";
+import { dispatchStoreEvent } from "../modules/notifications/service.js";
 
 import {
   verifyAndParseStripe,
@@ -1120,6 +1121,8 @@ async function recordPaymentSuccess(
       orderId, providerType,
     });
 
+    const paymentId = insertedRows[0].id;
+
     // Fire analytics purchase event (fire-and-forget).
     trackEcommerce(storeId, "order_completed", {
       order_id: orderId,
@@ -1130,6 +1133,13 @@ async function recordPaymentSuccess(
 
     // Fire GA4 server-side purchase event (H2.2 — fire-and-forget).
     void fireGA4Purchase(storeId, orderId, amount, currency);
+
+    // Fire outbound notification (H2.1 audit fix — fire-and-forget after COMMIT).
+    dispatchStoreEvent(storeId, "payment.captured", {
+      order_id: orderId,
+      payment_id: paymentId,
+      amount: String(amount),
+    });
   } catch (err) {
     await client.query("ROLLBACK").catch(() => undefined);
     console.error(`recordPaymentSuccess: failed`, {
