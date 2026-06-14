@@ -1,88 +1,335 @@
 ---
 /**
  * Pricing page — /pricing
- * TODO(pricing-agent): replace ALL placeholder pricing with real tiers, prices (USD + ZAR),
- * and feature lists. Billing via Paystack; USD→ZAR FX conversion from cloud/billing.
- * See cloud/billing package for subscription logic.
- * The PricingCard component accepts: name, price, priceSub, description, features[], cta, highlighted, badge.
+ * Grounded, transparent pricing with real cost comparison.
+ * Tiers are illustrative; final prices TBD. See preview disclaimer below.
+ *
+ * Sources / date anchors (as of June 2026):
+ *  - Shopify Basic: $39/mo (monthly) or $29/mo (annual) + 2.0% external-gateway fee
+ *    Source: shopify.com/pricing + websitebuilderexpert.com
+ *  - Medusa Cloud: Develop $29, Launch $99, Scale $299, Enterprise custom
+ *    Source: docs.medusajs.com/cloud/pricing
+ *  - Paystack SA: 2.9% + R1/transaction (local cards)
+ *    Source: paystack.com/pricing, confirmed via billingmodel/costs.py
+ *  - Self-host infra estimate: ~$40/mo (VPS + managed Postgres minimal config)
+ *    Roadmap cites $2,400-$7,200/yr for modest self-host.
  */
 import MarketingLayout from '../layouts/MarketingLayout.astro';
 import PricingCard from '../components/PricingCard.astro';
+import ComparisonTable from '../components/ComparisonTable.astro';
 
-// TODO(pricing-agent): define real tier data (prices, features, billing period)
+// ---- Tier definitions -------------------------------------------------------
+// Illustrative tiers anchored to Medusa Cloud Scale (~$299) as ceiling.
+// Positioned clearly under to create defensible room.
+// Final numbers subject to change before GA.
+
 const tiers = [
   {
-    name: 'Self-host',
+    name: 'Open Source',
     price: 'Free',
     priceSub: 'forever',
-    description: 'Run everything yourself. MIT licensed, no usage fees, no call-home.',
+    description:
+      'MIT licensed. You run it, you own it. No call-home, no usage fees, no vendor lock-in.',
     features: [
-      'Full REST API (105+ endpoints)',
-      'Postgres + pgvector search',
-      'MCP server (agent-native)',
-      'ACP + UCP adapters',
-      'Docker image, single binary',
-      'Community support',
+      'Full REST API (160+ endpoints)',
+      'Postgres + pgvector semantic search',
+      'MCP server — agent-native by default',
+      'ACP + UCP protocol adapters',
+      'Signed agent mandates + audit log',
+      'Stripe, Paystack, Razorpay, Xendit',
+      'B2B, subscriptions, returns, gift cards',
+      'Admin dashboard + TypeScript SDK',
+      'Docker image (serve | worker | migrate)',
+      'Community support (GitHub)',
     ],
     cta: { label: 'Read self-host docs', href: '/docs/self-host' },
     highlighted: false,
+    badge: undefined as string | undefined,
   },
   {
-    name: 'Cloud',
-    price: '$TODO', // TODO(pricing-agent): set real price
+    name: 'Cloud Starter',
+    price: '$79',
     priceSub: '/mo',
-    description: 'Managed hosting, automatic updates, Bunny CDN, and cloud billing via Paystack.',
+    description:
+      'Managed infra, one-click deploy, automatic backups and upgrades. Zero percent rake — you pay Stripe/Paystack directly at cost.',
     features: [
-      'Everything in Self-host',
-      'Managed Postgres + backups',
-      'Bunny CDN delivery',
-      'Paystack USD→ZAR billing',
-      'Email support',
-      '[TODO(pricing-agent): add cloud-only features]',
+      'Everything in Open Source',
+      'Managed Postgres + pgvector (included)',
+      'Automated daily backups',
+      'One-click deploy + zero-downtime upgrades',
+      'Agent-surface onboarding wizard',
+      'Managed SSL + custom domain',
+      '1 store, up to 3 team seats',
+      'Email support (next business day)',
+      '0% GMV rake — flat fee only',
+      'Billed in USD via Paystack or Stripe',
     ],
-    cta: { label: 'Join waitlist', href: 'mailto:hello@webcrft.systems?subject=Cloud+waitlist' },
+    cta: {
+      label: 'Join the waitlist',
+      href: 'mailto:hello@webcrft.systems?subject=Cloud+Starter+waitlist',
+    },
     highlighted: true,
-    badge: 'Coming soon',
+    badge: 'Preview pricing',
+  },
+  {
+    name: 'Cloud Scale',
+    price: '$199',
+    priceSub: '/mo',
+    description:
+      'More resources, more seats, multi-store support. Still flat — no percentage of your revenue.',
+    features: [
+      'Everything in Cloud Starter',
+      'Up to 5 stores',
+      'Up to 10 team seats',
+      'Higher compute + storage allocation',
+      'Priority email support',
+      'SLA: 99.9% monthly uptime target',
+      'Dedicated onboarding session',
+      '0% GMV rake — flat fee only',
+    ],
+    cta: {
+      label: 'Join the waitlist',
+      href: 'mailto:hello@webcrft.systems?subject=Cloud+Scale+waitlist',
+    },
+    highlighted: false,
+    badge: 'Preview pricing',
   },
   {
     name: 'Enterprise',
     price: 'Custom',
     priceSub: '',
-    description: 'SLA, on-prem or cloud, dedicated support, custom integrations.',
+    description:
+      'On-prem or cloud. Custom SLAs, SSO, dedicated support, and volume discounts negotiated directly.',
     features: [
-      'Everything in Cloud',
-      'SLA + dedicated support',
-      'On-prem or cloud deployment',
-      'Custom integrations',
-      '[TODO(pricing-agent): add enterprise features]',
+      'Everything in Cloud Scale',
+      'On-prem or private cloud deployment',
+      'Custom SLA + dedicated support',
+      'SSO / SAML integration',
+      'Custom integrations + professional services',
+      'Audit log export + compliance reports',
+      'Volume pricing for extra stores',
     ],
-    cta: { label: 'Contact us', href: 'mailto:hello@webcrft.systems?subject=Enterprise' },
+    cta: {
+      label: 'Talk to us',
+      href: 'mailto:hello@webcrft.systems?subject=Enterprise+inquiry',
+    },
     highlighted: false,
+    badge: undefined as string | undefined,
   },
 ];
 
-// TODO(pricing-agent): add FAQ items
+// ---- Feature comparison rows -----------------------------------------------
+const compRows = [
+  {
+    category: 'Pricing model',
+    feature: 'Monthly platform fee',
+    values: {
+      'Cartcrft Cloud': '$79-$199 flat',
+      'Shopify Basic': '$39/mo',
+      'Medusa Cloud': '$99-$299/mo',
+      'Self-host': '~$20-$60 infra',
+    },
+    highlight: true,
+  },
+  {
+    category: 'Pricing model',
+    feature: 'GMV rake / transaction fee',
+    values: {
+      'Cartcrft Cloud': '0%',
+      'Shopify Basic': '2.0% external',
+      'Medusa Cloud': '0%',
+      'Self-host': '0%',
+    },
+    highlight: true,
+  },
+  {
+    category: 'Pricing model',
+    feature: 'Open source / self-hostable',
+    values: {
+      'Cartcrft Cloud': true,
+      'Shopify Basic': false,
+      'Medusa Cloud': true,
+      'Self-host': true,
+    },
+  },
+  {
+    category: 'Agent-native',
+    feature: 'MCP server (out of the box)',
+    values: {
+      'Cartcrft Cloud': true,
+      'Shopify Basic': false,
+      'Medusa Cloud': false,
+      'Self-host': true,
+    },
+    highlight: true,
+  },
+  {
+    category: 'Agent-native',
+    feature: 'ACP + UCP protocol adapters',
+    values: {
+      'Cartcrft Cloud': true,
+      'Shopify Basic': false,
+      'Medusa Cloud': false,
+      'Self-host': true,
+    },
+    highlight: true,
+  },
+  {
+    category: 'Agent-native',
+    feature: 'Signed agent mandates',
+    values: {
+      'Cartcrft Cloud': true,
+      'Shopify Basic': false,
+      'Medusa Cloud': false,
+      'Self-host': true,
+    },
+  },
+  {
+    category: 'Agent-native',
+    feature: 'Semantic search (pgvector, BYO key)',
+    values: {
+      'Cartcrft Cloud': true,
+      'Shopify Basic': 'Paid app',
+      'Medusa Cloud': true,
+      'Self-host': true,
+    },
+  },
+  {
+    category: 'Payments',
+    feature: 'BYO payment provider keys',
+    values: {
+      'Cartcrft Cloud': true,
+      'Shopify Basic': 'Partial',
+      'Medusa Cloud': true,
+      'Self-host': true,
+    },
+  },
+  {
+    category: 'Payments',
+    feature: 'Paystack (SA-native)',
+    values: {
+      'Cartcrft Cloud': true,
+      'Shopify Basic': 'Paid app',
+      'Medusa Cloud': 'Plugin',
+      'Self-host': true,
+    },
+  },
+  {
+    category: 'Commerce features',
+    feature: 'B2B / net terms / quotes',
+    values: {
+      'Cartcrft Cloud': true,
+      'Shopify Basic': 'Plus only',
+      'Medusa Cloud': true,
+      'Self-host': true,
+    },
+  },
+  {
+    category: 'Commerce features',
+    feature: 'Subscriptions',
+    values: {
+      'Cartcrft Cloud': true,
+      'Shopify Basic': 'Paid app',
+      'Medusa Cloud': true,
+      'Self-host': true,
+    },
+  },
+  {
+    category: 'Commerce features',
+    feature: 'Returns / RMA',
+    values: {
+      'Cartcrft Cloud': true,
+      'Shopify Basic': true,
+      'Medusa Cloud': true,
+      'Self-host': true,
+    },
+  },
+  {
+    category: 'Infrastructure',
+    feature: 'Managed Postgres + backups',
+    values: {
+      'Cartcrft Cloud': true,
+      'Shopify Basic': 'N/A (SaaS)',
+      'Medusa Cloud': true,
+      'Self-host': 'You manage it',
+    },
+  },
+  {
+    category: 'Infrastructure',
+    feature: 'Zero-downtime upgrades',
+    values: {
+      'Cartcrft Cloud': true,
+      'Shopify Basic': 'N/A (SaaS)',
+      'Medusa Cloud': true,
+      'Self-host': 'You manage it',
+    },
+  },
+];
+
+// ---- FAQ data ---------------------------------------------------------------
 const faqs: { q: string; a: string }[] = [
-  { q: 'Is Cartcrft really free to self-host?', a: 'TODO(pricing-agent): answer here.' },
-  { q: 'What payment providers are supported?', a: 'TODO(pricing-agent): answer here.' },
-  { q: 'How does cloud billing work?', a: 'TODO(pricing-agent): answer here (Paystack, USD→ZAR).' },
+  {
+    q: 'Is Cartcrft really free to self-host?',
+    a: 'Yes. Everything outside the cloud/ directory is MIT licensed — use it, modify it, ship it, build commercial products on it. No call-home, no license check, no usage metering. The cloud/ billing layer is source-visible under a separate license and is only needed if you run the cartcrft.com hosted service.',
+  },
+  {
+    q: 'What does "0% GMV rake" actually mean?',
+    a: "It means Cartcrft takes zero percentage of your revenue. When a customer pays $100, $100 lands in your Stripe or Paystack account (minus what Stripe/Paystack charges — typically 2.9% + $0.30 for Stripe, 2.9% + R1 for Paystack SA). Cartcrft's flat monthly fee is the same whether you do $1,000 or $1,000,000 in sales that month.",
+  },
+  {
+    q: "How does payment processing work if Cartcrft doesn't touch payments?",
+    a: 'You configure your own Stripe, Paystack, Razorpay, or Xendit credentials directly in Cartcrft via the API. Cartcrft stores your keys encrypted (AES-256-GCM) and routes webhooks — but the actual charges, settlements, and payouts happen entirely between your store and your payment provider. Cartcrft never holds or touches funds.',
+  },
+  {
+    q: 'What is the LLM key for semantic search?',
+    a: 'Cartcrft uses pgvector for semantic product search. To enable it, you supply your own OpenAI-compatible embeddings key (any /v1/embeddings endpoint). You pay that provider directly at cost. No Cartcrft markup. Full-text search via Postgres works without an LLM key.',
+  },
+  {
+    q: 'How does cloud billing work?',
+    a: 'Cloud subscriptions are billed in USD via Paystack (card) or Stripe. The cloud billing layer handles FX conversion to ZAR internally for invoicing. You see USD prices on this page; your invoice reflects ZAR at the rate at billing time. USD pricing is the fixed reference.',
+  },
+  {
+    q: 'Why are Cloud tiers marked "preview"?',
+    a: "Cartcrft Cloud is in active development. The tier structure and prices shown here are illustrative and grounded in our cost model, but are not final. We're being upfront rather than publishing a price sheet and changing it later. Waitlist members will be notified of final pricing before billing starts.",
+  },
+  {
+    q: 'Can I switch from self-host to Cloud Starter later?',
+    a: 'Yes. The MIT backend and the cloud-hosted backend are the same codebase. You can self-host while you evaluate, then migrate your Postgres database to the managed cloud instance when ready. No data lock-in, no proprietary format.',
+  },
+  {
+    q: 'What happens to self-hosters if cloud pricing changes?',
+    a: 'Nothing. Self-hosting is MIT and always free. Cloud price changes only affect cloud subscribers. The self-host path will never require a paid license.',
+  },
 ];
 ---
 
 <MarketingLayout
   title="Pricing"
-  description="Cartcrft is free to self-host forever. Cloud hosting with managed infrastructure coming soon."
+  description="Cartcrft is free to self-host forever (MIT). Cloud hosting charges a flat fee with 0% GMV rake. Transparent cost comparison vs Shopify and Medusa included."
 >
-  <!-- ─── Page header ─────────────────────────────────────────── -->
+  <!-- ---- Preview banner -------------------------------------------------- -->
+  <div class="preview-banner" role="note">
+    <span class="preview-icon" aria-hidden="true">i</span>
+    <span>
+      <strong>Cloud pricing is in preview.</strong>
+      Tier structure and final prices are illustrative — not yet locked in. Self-host is free, forever.
+      <a href="mailto:hello@webcrft.systems?subject=Cloud+waitlist">Join the waitlist</a> to be notified before billing starts.
+    </span>
+  </div>
+
+  <!-- ---- Page header ------------------------------------------------------ -->
   <section class="page-header">
     <div class="page-header-inner">
-      <!-- TODO(pricing-agent): refine headline and subheadline -->
-      <h1>Simple, transparent pricing</h1>
-      <p>Self-host free. Pay for managed hosting when you're ready to scale.</p>
+      <div class="header-badge">MIT open source &middot; 0% GMV rake &middot; BYO keys</div>
+      <h1>No Shopify tax. Ever.</h1>
+      <p>
+        Self-host free. Or pay a flat monthly fee for managed infra.
+        Either way, Cartcrft takes <strong>zero percent</strong> of your revenue.
+      </p>
     </div>
   </section>
 
-  <!-- ─── Pricing grid ────────────────────────────────────────── -->
+  <!-- ---- Pricing grid ----------------------------------------------------- -->
   <section class="pricing-section">
     <div class="pricing-grid">
       {tiers.map((t) => (
@@ -100,11 +347,254 @@ const faqs: { q: string; a: string }[] = [
     </div>
   </section>
 
-  <!-- ─── FAQ ─────────────────────────────────────────────────── -->
+  <!-- ---- Where your money goes -------------------------------------------- -->
+  <section class="money-section">
+    <div class="money-inner">
+      <h2>Where your money goes</h2>
+      <p class="money-sub">
+        Cloud Starter at $79/mo. Merchant using Paystack SA doing $10k/mo GMV over ~200 orders.
+      </p>
+
+      <div class="money-grid">
+        <div class="money-card money-card--cartcrft">
+          <div class="money-amount">$79</div>
+          <div class="money-label">Cartcrft flat fee</div>
+          <div class="money-desc">
+            Managed Postgres + pgvector, backups, upgrades, SSL, support.
+            <em>Fixed — same at $1k or $1M GMV.</em>
+          </div>
+        </div>
+        <div class="money-card money-card--provider">
+          <div class="money-amount">~$295</div>
+          <div class="money-label">Paystack (goes to Paystack, at cost)</div>
+          <div class="money-desc">
+            2.9% + R1/txn x ~200 orders = 2.9% x $10,000 + ~$5 flat fees.
+            <em>Paystack's fee — you're in the contract with them directly.</em>
+          </div>
+        </div>
+        <div class="money-card money-card--llm">
+          <div class="money-amount">$0–$20</div>
+          <div class="money-label">LLM / semantic search (optional, BYO)</div>
+          <div class="money-desc">
+            OpenAI text-embedding-3-small: ~$0.02/1M tokens. Light workload costs a few dollars.
+            <em>BYO key — Cartcrft never sees this bill.</em>
+          </div>
+        </div>
+      </div>
+
+      <p class="money-note">
+        <strong>The anti-Shopify comparison:</strong> Shopify Basic at $39/mo + 2.0% external-gateway fee on $10k GMV
+        = $39 + $200 = $239/mo before any paid apps. Cartcrft Cloud Starter: $79 flat + $295 Paystack at cost = $374/mo
+        total — but Paystack's cut goes to Paystack, not us. At $50k/mo GMV, Shopify's rake alone is $1,000/mo
+        extra on top of the $39 plan. Cartcrft: still $79 flat.
+      </p>
+    </div>
+  </section>
+
+  <!-- ---- Cost comparison -------------------------------------------------- -->
+  <section class="compare-section">
+    <div class="compare-inner">
+      <h2>Real cost comparison</h2>
+      <p class="compare-sub">
+        Worked example: $10,000/mo GMV &middot; ~200 orders &middot; avg order $50 &middot; external payment gateway.
+        All assumptions are stated below the table.
+      </p>
+
+      <div class="cost-table-wrapper">
+        <table class="cost-table" aria-label="Monthly cost comparison at $10k GMV">
+          <thead>
+            <tr>
+              <th class="th-platform">Platform</th>
+              <th>Plan fee</th>
+              <th>Platform rake</th>
+              <th>Payment processing</th>
+              <th class="th-total">Total est./mo</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="td-platform">
+                <strong>Shopify Basic</strong>
+                <span class="td-note">Monthly billing</span>
+              </td>
+              <td>$39</td>
+              <td>
+                <span class="rake-bad">$200</span>
+                <span class="rake-pct">(2.0% of $10k)</span>
+              </td>
+              <td>Waived with Shopify Payments; 2.0% if external</td>
+              <td class="td-total">
+                <strong class="total-bad">$239+</strong>
+                <span class="td-note">plus app fees for subscriptions, B2B</span>
+              </td>
+            </tr>
+            <tr>
+              <td class="td-platform">
+                <strong>Medusa Cloud</strong>
+                <span class="td-note">Launch $99 / Scale $299</span>
+              </td>
+              <td>$99–$299</td>
+              <td>
+                <span class="rake-good">$0</span>
+                <span class="rake-pct">(0% rake)</span>
+              </td>
+              <td>Stripe/Paystack at cost (~$290)</td>
+              <td class="td-total">
+                <strong>$389–$589</strong>
+                <span class="td-note">plus infra add-ons</span>
+              </td>
+            </tr>
+            <tr>
+              <td class="td-platform">
+                <strong>Self-host Cartcrft</strong>
+                <span class="td-note">MIT, you operate it</span>
+              </td>
+              <td>
+                $0 software
+                <span class="td-note">+ ~$40/mo infra</span>
+              </td>
+              <td>
+                <span class="rake-good">$0</span>
+                <span class="rake-pct">(0% rake)</span>
+              </td>
+              <td>Paystack/Stripe at cost (~$290)</td>
+              <td class="td-total">
+                <strong>~$330</strong>
+                <span class="td-note">ops overhead not counted</span>
+              </td>
+            </tr>
+            <tr class="row-ours">
+              <td class="td-platform">
+                <strong>Cartcrft Cloud Starter</strong>
+                <span class="td-note">Preview · managed infra</span>
+              </td>
+              <td>$79 flat</td>
+              <td>
+                <span class="rake-good">$0</span>
+                <span class="rake-pct">(0% rake)</span>
+              </td>
+              <td>Paystack/Stripe at cost (~$290)</td>
+              <td class="td-total">
+                <strong class="total-good">~$369</strong>
+                <span class="td-note">managed infra, backups, upgrades included</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="assumptions-box">
+        <h3>
+          Assumptions &amp; sources
+          <span class="as-of">as of June 2026</span>
+        </h3>
+        <ul>
+          <li>
+            <strong>Shopify Basic:</strong> $39/mo (monthly billing) + 2.0% external-gateway fee on GMV.
+            Source: <a href="https://www.shopify.com/pricing" target="_blank" rel="noopener noreferrer">shopify.com/pricing</a>.
+            External-gateway fee waived with Shopify Payments; modelled here with an external provider.
+          </li>
+          <li>
+            <strong>Medusa Cloud:</strong> Launch $99/mo, Scale $299/mo. 0% GMV rake confirmed across all plans.
+            Source: <a href="https://docs.medusajs.com/cloud/pricing" target="_blank" rel="noopener noreferrer">docs.medusajs.com/cloud/pricing</a>.
+          </li>
+          <li>
+            <strong>Self-host infra:</strong> ~$40/mo estimate (Hetzner CX21 ~$5 + managed Postgres on Neon/Supabase ~$25-$35).
+            Roadmap cites $2,400-$7,200/yr (~$200-$600/mo) for a more capable setup with DevOps tooling.
+            $40 is a minimal-viable configuration. Does not include your operational time.
+          </li>
+          <li>
+            <strong>Paystack SA fees:</strong> 2.9% + R1 per successful local-card transaction.
+            At $10,000 GMV / 200 orders: 2.9% x $10,000 = $290 + 200 x R1 = ~$295.
+            Source: <a href="https://paystack.com/pricing" target="_blank" rel="noopener noreferrer">paystack.com/pricing</a>
+            and <code>billingmodel/costs.py</code> (paystack_pct=0.029, paystack_flat_zar=1.0).
+          </li>
+          <li>
+            <strong>Cartcrft Cloud Starter:</strong> $79/mo illustrative flat fee (preview, subject to change before GA).
+            0% GMV rake. Payment processing goes to Paystack/Stripe at cost.
+          </li>
+          <li>
+            <strong>Honest caveat:</strong> Self-hosting is cheapest at scale if you have ops capacity.
+            Cartcrft Cloud wins on total platform cost vs Shopify when using an external gateway at any GMV.
+            Vs self-host, Cloud adds ~$40/mo for managed infra convenience.
+            If you have a DevOps team and prefer to run your own infra, self-host is cheaper.
+          </li>
+        </ul>
+      </div>
+
+      <div class="breakeven-callout">
+        <h3 class="breakeven-heading">The rake compounds with GMV</h3>
+        <div class="breakeven-grid">
+          <div class="breakeven-item">
+            <div class="breakeven-gmv">$10k/mo GMV</div>
+            <div class="breakeven-row">
+              <span class="breakeven-label-sm">Shopify 2% rake:</span>
+              <strong class="rake-bad">$200/mo</strong>
+            </div>
+            <div class="breakeven-row">
+              <span class="breakeven-label-sm">Cartcrft flat:</span>
+              <strong class="rake-good">$79/mo</strong>
+            </div>
+          </div>
+          <div class="breakeven-arrow" aria-hidden="true">&#8594;</div>
+          <div class="breakeven-item">
+            <div class="breakeven-gmv">$50k/mo GMV</div>
+            <div class="breakeven-row">
+              <span class="breakeven-label-sm">Shopify 2% rake:</span>
+              <strong class="rake-bad">$1,000/mo</strong>
+            </div>
+            <div class="breakeven-row">
+              <span class="breakeven-label-sm">Cartcrft flat:</span>
+              <strong class="rake-good">$79/mo</strong>
+            </div>
+          </div>
+          <div class="breakeven-arrow" aria-hidden="true">&#8594;</div>
+          <div class="breakeven-item">
+            <div class="breakeven-gmv">$200k/mo GMV</div>
+            <div class="breakeven-row">
+              <span class="breakeven-label-sm">Shopify 2% rake:</span>
+              <strong class="rake-bad">$4,000/mo</strong>
+            </div>
+            <div class="breakeven-row">
+              <span class="breakeven-label-sm">Cartcrft flat:</span>
+              <strong class="rake-good">$79/mo</strong>
+            </div>
+          </div>
+        </div>
+        <p class="breakeven-note">
+          Shopify rake figures are the platform fee only; your payment processor (Stripe, Paystack) charges
+          additionally on top. Upgrade to Shopify Advanced to reduce rake to 0.6% at $299/mo.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---- Feature comparison table ---------------------------------------- -->
+  <section class="feature-compare-section">
+    <div class="feature-compare-inner">
+      <h2>Feature comparison</h2>
+      <p class="feature-compare-sub">
+        Key differentiators across platforms. Cartcrft brings agent-native features
+        that require plugins or are not available elsewhere.
+      </p>
+      <ComparisonTable
+        competitors={['Cartcrft Cloud', 'Shopify Basic', 'Medusa Cloud', 'Self-host']}
+        rows={compRows}
+        ourName="Cartcrft Cloud"
+        caption="Feature comparison: Cartcrft Cloud vs Shopify Basic, Medusa Cloud, and self-hosted Cartcrft"
+      />
+      <p class="table-note">
+        Data sourced from platform documentation as of June 2026.
+        Self-host column refers to Cartcrft self-hosted (MIT), which has feature parity with Cloud
+        except for managed infra and support. Medusa plugin availability varies by version.
+      </p>
+    </div>
+  </section>
+
+  <!-- ---- FAQ -------------------------------------------------------------- -->
   <section class="faq-section">
     <div class="faq-inner">
       <h2>Frequently asked questions</h2>
-      <!-- TODO(pricing-agent): expand FAQ with real answers -->
       <dl class="faq-list">
         {faqs.map((f) => (
           <div class="faq-item">
@@ -116,14 +606,68 @@ const faqs: { q: string; a: string }[] = [
     </div>
   </section>
 
-  <!-- ─── CTA ─────────────────────────────────────────────────── -->
-  <section class="pricing-cta">
-    <a href="/docs/quickstart" class="btn-primary">Get started free →</a>
-    <a href="/compare" class="btn-secondary">Compare features</a>
+  <!-- ---- CTA band --------------------------------------------------------- -->
+  <section class="pricing-cta-band">
+    <div class="pricing-cta-inner">
+      <h2>Start free. Move to cloud when you are ready.</h2>
+      <p>Same codebase. No data lock-in. Flat fee only, ever.</p>
+      <div class="cta-buttons">
+        <a href="/docs/quickstart" class="btn-primary">Get started free</a>
+        <a href="mailto:hello@webcrft.systems?subject=Cloud+waitlist" class="btn-secondary">
+          Join cloud waitlist
+        </a>
+      </div>
+    </div>
   </section>
 </MarketingLayout>
 
 <style>
+  /* ---- Preview banner ---------------------------------------------------- */
+  .preview-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    background: #fffbeb;
+    border-bottom: 1px solid #fbbf24;
+    padding: 0.75rem 1.5rem;
+    font-size: 0.875rem;
+    color: #78350f;
+    line-height: 1.5;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .preview-banner {
+      background: #1c1a0a;
+      border-color: #92400e;
+      color: #fcd34d;
+    }
+  }
+
+  .preview-icon {
+    font-size: 1rem;
+    font-weight: 700;
+    flex-shrink: 0;
+    width: 1.25rem;
+    height: 1.25rem;
+    border: 1.5px solid currentColor;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-style: normal;
+    margin-top: 0.05rem;
+  }
+
+  .preview-banner a {
+    color: #92400e;
+    font-weight: 600;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .preview-banner a { color: #fcd34d; }
+  }
+
+  /* ---- Page header ------------------------------------------------------- */
   .page-header {
     padding: 5rem 1.5rem 3rem;
     text-align: center;
@@ -135,16 +679,30 @@ const faqs: { q: string; a: string }[] = [
   }
 
   .page-header-inner {
-    max-width: 640px;
+    max-width: 700px;
     margin: 0 auto;
   }
 
+  .header-badge {
+    display: inline-block;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #6366f1;
+    background: color-mix(in srgb, #6366f1 10%, transparent);
+    padding: 0.3rem 0.9rem;
+    border-radius: 999px;
+    margin-bottom: 1.25rem;
+  }
+
   .page-header h1 {
-    font-size: clamp(2rem, 4vw, 3rem);
-    font-weight: 800;
-    letter-spacing: -0.03em;
+    font-size: clamp(2.25rem, 5vw, 3.5rem);
+    font-weight: 900;
+    letter-spacing: -0.04em;
     color: #0f172a;
     margin-bottom: 1rem;
+    line-height: 1.1;
   }
 
   @media (prefers-color-scheme: dark) {
@@ -152,35 +710,546 @@ const faqs: { q: string; a: string }[] = [
   }
 
   .page-header p {
-    font-size: 1.1rem;
+    font-size: 1.15rem;
     color: #475569;
+    line-height: 1.65;
+  }
+
+  .page-header strong {
+    color: #0f172a;
   }
 
   @media (prefers-color-scheme: dark) {
     .page-header p { color: #94a3b8; }
+    .page-header strong { color: #f1f5f9; }
   }
 
+  /* ---- Pricing grid ------------------------------------------------------ */
   .pricing-section {
     padding: 2rem 1.5rem 4rem;
   }
 
   .pricing-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
     gap: 1.5rem;
-    max-width: 1100px;
+    max-width: 1200px;
     margin: 0 auto;
     align-items: start;
   }
 
-  /* FAQ */
+  /* ---- Where your money goes --------------------------------------------- */
+  .money-section {
+    padding: 3rem 1.5rem 2rem;
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .money-section {
+      background: #0a0f1a;
+      border-color: #1e293b;
+    }
+  }
+
+  .money-inner {
+    max-width: 960px;
+    margin: 0 auto;
+  }
+
+  .money-inner h2 {
+    font-size: 1.75rem;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    color: #0f172a;
+    margin-bottom: 0.5rem;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .money-inner h2 { color: #f8fafc; }
+  }
+
+  .money-sub {
+    font-size: 0.9rem;
+    color: #64748b;
+    margin-bottom: 2rem;
+  }
+
+  .money-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .money-card {
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    border: 1.5px solid transparent;
+  }
+
+  .money-card--cartcrft {
+    border-color: #6366f1;
+    background: color-mix(in srgb, #6366f1 5%, #fff);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .money-card--cartcrft {
+      background: color-mix(in srgb, #6366f1 10%, #0f172a);
+    }
+  }
+
+  .money-card--provider {
+    border-color: #14b8a6;
+    background: color-mix(in srgb, #14b8a6 5%, #fff);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .money-card--provider {
+      background: color-mix(in srgb, #14b8a6 10%, #0f172a);
+    }
+  }
+
+  .money-card--llm {
+    border-color: #e2e8f0;
+    background: #fff;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .money-card--llm {
+      border-color: #1e293b;
+      background: #0f172a;
+    }
+  }
+
+  .money-amount {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: #0f172a;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.25rem;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .money-amount { color: #f8fafc; }
+  }
+
+  .money-label {
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: #64748b;
+    margin-bottom: 0.75rem;
+  }
+
+  .money-desc {
+    font-size: 0.875rem;
+    color: #475569;
+    line-height: 1.55;
+  }
+
+  .money-desc em {
+    display: block;
+    margin-top: 0.5rem;
+    font-style: italic;
+    color: #64748b;
+    font-size: 0.82rem;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .money-desc { color: #94a3b8; }
+    .money-desc em { color: #64748b; }
+  }
+
+  .money-note {
+    font-size: 0.875rem;
+    color: #475569;
+    line-height: 1.65;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.5rem;
+    padding: 1.25rem;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .money-note {
+      background: #0f172a;
+      border-color: #1e293b;
+      color: #94a3b8;
+    }
+  }
+
+  .money-note strong {
+    color: #0f172a;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .money-note strong { color: #f1f5f9; }
+  }
+
+  /* ---- Cost comparison --------------------------------------------------- */
+  .compare-section {
+    padding: 3rem 1.5rem 2rem;
+  }
+
+  .compare-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .compare-inner h2 {
+    font-size: 1.75rem;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    color: #0f172a;
+    margin-bottom: 0.5rem;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .compare-inner h2 { color: #f8fafc; }
+  }
+
+  .compare-sub {
+    font-size: 0.9rem;
+    color: #64748b;
+    margin-bottom: 2rem;
+  }
+
+  .cost-table-wrapper {
+    overflow-x: auto;
+    border-radius: 0.75rem;
+    border: 1px solid #e2e8f0;
+    margin-bottom: 1.75rem;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .cost-table-wrapper { border-color: #1e293b; }
+  }
+
+  .cost-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+    background: #fff;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .cost-table { background: #0f172a; }
+  }
+
+  .cost-table thead th {
+    padding: 0.875rem 1.1rem;
+    font-weight: 700;
+    font-size: 0.8rem;
+    text-align: left;
+    border-bottom: 2px solid #e2e8f0;
+    background: #f8fafc;
+    color: #475569;
+    white-space: nowrap;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .cost-table thead th {
+      background: #1e293b;
+      border-bottom-color: #334155;
+      color: #94a3b8;
+    }
+  }
+
+  .cost-table tbody td {
+    padding: 0.875rem 1.1rem;
+    border-top: 1px solid #f1f5f9;
+    vertical-align: top;
+    color: #334155;
+    line-height: 1.5;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .cost-table tbody td {
+      border-top-color: #1e293b;
+      color: #cbd5e1;
+    }
+  }
+
+  .th-platform {
+    min-width: 180px;
+  }
+
+  .th-total {
+    min-width: 160px;
+  }
+
+  .td-platform {
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .td-platform { color: #f1f5f9; }
+  }
+
+  .td-note {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 400;
+    color: #64748b;
+    margin-top: 0.15rem;
+  }
+
+  .rake-bad {
+    font-weight: 700;
+    color: #ef4444;
+    margin-right: 0.3rem;
+  }
+
+  .rake-good {
+    font-weight: 700;
+    color: #10b981;
+    margin-right: 0.3rem;
+  }
+
+  .rake-pct {
+    font-size: 0.78rem;
+    color: #64748b;
+  }
+
+  .td-total {
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .total-bad { color: #ef4444; }
+  .total-good { color: #10b981; }
+
+  .row-ours td {
+    background: color-mix(in srgb, #6366f1 4%, transparent);
+  }
+
+  .row-ours td:first-child {
+    border-left: 3px solid #6366f1;
+  }
+
+  /* ---- Assumptions box --------------------------------------------------- */
+  .assumptions-box {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .assumptions-box {
+      background: #0a0f1a;
+      border-color: #1e293b;
+    }
+  }
+
+  .assumptions-box h3 {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .assumptions-box h3 { color: #f1f5f9; }
+  }
+
+  .as-of {
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: #64748b;
+  }
+
+  .assumptions-box ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+
+  .assumptions-box li {
+    font-size: 0.85rem;
+    color: #475569;
+    line-height: 1.6;
+    padding-left: 1rem;
+    border-left: 2px solid #e2e8f0;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .assumptions-box li {
+      color: #94a3b8;
+      border-left-color: #1e293b;
+    }
+  }
+
+  .assumptions-box li strong {
+    color: #0f172a;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .assumptions-box li strong { color: #e2e8f0; }
+  }
+
+  .assumptions-box a {
+    color: #6366f1;
+  }
+
+  .assumptions-box code {
+    font-family: monospace;
+    font-size: 0.82em;
+    background: #e2e8f0;
+    padding: 0.1em 0.35em;
+    border-radius: 3px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .assumptions-box code {
+      background: #1e293b;
+      color: #cbd5e1;
+    }
+  }
+
+  /* ---- Breakeven callout ------------------------------------------------- */
+  .breakeven-callout {
+    background: color-mix(in srgb, #6366f1 5%, #fff);
+    border: 1.5px solid #6366f1;
+    border-radius: 1rem;
+    padding: 1.75rem;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .breakeven-callout {
+      background: color-mix(in srgb, #6366f1 12%, #0f172a);
+    }
+  }
+
+  .breakeven-heading {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 1.25rem;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .breakeven-heading { color: #f1f5f9; }
+  }
+
+  .breakeven-grid {
+    display: flex;
+    align-items: flex-start;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+  }
+
+  .breakeven-item {
+    flex: 1;
+    min-width: 160px;
+  }
+
+  .breakeven-gmv {
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: #6366f1;
+    margin-bottom: 0.4rem;
+  }
+
+  .breakeven-row {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 0.2rem;
+  }
+
+  .breakeven-label-sm {
+    font-size: 0.8rem;
+    color: #64748b;
+    white-space: nowrap;
+  }
+
+  .breakeven-arrow {
+    color: #6366f1;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+    padding-top: 1.5rem;
+  }
+
+  @media (max-width: 600px) {
+    .breakeven-arrow { display: none; }
+    .breakeven-item { min-width: 100%; }
+  }
+
+  .breakeven-note {
+    font-size: 0.8rem;
+    color: #64748b;
+    line-height: 1.55;
+    margin: 0;
+  }
+
+  /* ---- Feature comparison table ----------------------------------------- */
+  .feature-compare-section {
+    padding: 3rem 1.5rem 2rem;
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .feature-compare-section {
+      background: #0a0f1a;
+      border-color: #1e293b;
+    }
+  }
+
+  .feature-compare-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .feature-compare-inner h2 {
+    font-size: 1.75rem;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    color: #0f172a;
+    margin-bottom: 0.5rem;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .feature-compare-inner h2 { color: #f8fafc; }
+  }
+
+  .feature-compare-sub {
+    font-size: 0.9rem;
+    color: #64748b;
+    margin-bottom: 1.75rem;
+  }
+
+  .table-note {
+    margin-top: 1rem;
+    font-size: 0.8rem;
+    color: #64748b;
+    line-height: 1.55;
+  }
+
+  /* ---- FAQ --------------------------------------------------------------- */
   .faq-section {
     padding: 3rem 1.5rem 2rem;
     max-width: 760px;
     margin: 0 auto;
   }
 
-  .faq-section h2 {
+  .faq-inner h2 {
     font-size: 1.75rem;
     font-weight: 800;
     letter-spacing: -0.02em;
@@ -190,13 +1259,13 @@ const faqs: { q: string; a: string }[] = [
   }
 
   @media (prefers-color-scheme: dark) {
-    .faq-section h2 { color: #f8fafc; }
+    .faq-inner h2 { color: #f8fafc; }
   }
 
   .faq-list {
     display: flex;
     flex-direction: column;
-    gap: 1.25rem;
+    gap: 1rem;
   }
 
   .faq-item {
@@ -213,6 +1282,7 @@ const faqs: { q: string; a: string }[] = [
     font-weight: 700;
     color: #0f172a;
     margin-bottom: 0.5rem;
+    font-size: 0.95rem;
   }
 
   @media (prefers-color-scheme: dark) {
@@ -220,29 +1290,60 @@ const faqs: { q: string; a: string }[] = [
   }
 
   .faq-item dd {
-    font-size: 0.9rem;
+    font-size: 0.875rem;
     color: #475569;
-    line-height: 1.6;
+    line-height: 1.65;
+    margin: 0;
   }
 
   @media (prefers-color-scheme: dark) {
     .faq-item dd { color: #94a3b8; }
   }
 
-  .pricing-cta {
+  /* ---- CTA band ---------------------------------------------------------- */
+  .pricing-cta-band {
+    background: linear-gradient(135deg, #6366f1 0%, #14b8a6 100%);
+    padding: 5rem 1.5rem;
+    text-align: center;
+    color: #fff;
+    margin-top: 4rem;
+  }
+
+  .pricing-cta-inner {
+    max-width: 640px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.25rem;
+  }
+
+  .pricing-cta-inner h2 {
+    font-size: clamp(1.75rem, 3vw, 2.5rem);
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    margin: 0;
+  }
+
+  .pricing-cta-inner p {
+    font-size: 1.1rem;
+    opacity: 0.9;
+    margin: 0;
+  }
+
+  .cta-buttons {
     display: flex;
     gap: 1rem;
-    justify-content: center;
-    padding: 2rem 1.5rem 6rem;
     flex-wrap: wrap;
+    justify-content: center;
   }
 
   .btn-primary {
     display: inline-flex;
     align-items: center;
     padding: 0.75rem 1.75rem;
-    background: linear-gradient(135deg, #6366f1 0%, #14b8a6 100%);
-    color: #fff;
+    background: #fff;
+    color: #6366f1;
     font-weight: 700;
     font-size: 1rem;
     border-radius: 0.5rem;
@@ -250,14 +1351,17 @@ const faqs: { q: string; a: string }[] = [
     transition: opacity 0.15s, transform 0.1s;
   }
 
-  .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+  .btn-primary:hover {
+    opacity: 0.92;
+    transform: translateY(-1px);
+  }
 
   .btn-secondary {
     display: inline-flex;
     align-items: center;
     padding: 0.75rem 1.75rem;
-    border: 1.5px solid #6366f1;
-    color: #6366f1;
+    border: 1.5px solid rgba(255, 255, 255, 0.6);
+    color: #fff;
     font-weight: 600;
     font-size: 1rem;
     border-radius: 0.5rem;
@@ -265,9 +1369,7 @@ const faqs: { q: string; a: string }[] = [
     transition: background 0.15s;
   }
 
-  .btn-secondary:hover { background: color-mix(in srgb, #6366f1 8%, transparent); }
-
-  @media (prefers-color-scheme: dark) {
-    .btn-secondary { border-color: #818cf8; color: #818cf8; }
+  .btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.1);
   }
 </style>

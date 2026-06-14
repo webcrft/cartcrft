@@ -67,7 +67,6 @@ export default defineConfig({
           label: 'Project',
           items: [
             { slug: 'contributing' },
-            { slug: 'readme', label: 'Docs Overview' },
           ],
         },
       ],
