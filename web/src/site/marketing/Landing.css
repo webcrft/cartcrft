@@ -650,13 +650,35 @@
 
 /* ─── Product showcase ─────────────────────────────────────────── */
 .mk-landing .product-showcase {
-  padding: clamp(4rem, 7vw, 6rem) var(--gutter);
-  background: var(--bg-subtle);
+  padding: clamp(5rem, 8vw, 7.5rem) var(--gutter);
+  background: var(--bg);
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Subtle radial glow anchored top-right */
+.mk-landing .product-showcase::before {
+  content: '';
+  position: absolute;
+  top: -200px;
+  right: -180px;
+  width: 680px;
+  height: 680px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--brand) 7%, transparent),
+    transparent 62%
+  );
+  pointer-events: none;
+  z-index: 0;
 }
 
 .mk-landing .product-showcase-inner {
+  position: relative;
+  z-index: 1;
   max-width: var(--maxw);
   margin: 0 auto;
 }
@@ -677,54 +699,86 @@
   color: var(--ink-muted);
   max-width: 52em;
   line-height: 1.65;
-  margin: 0 0 2.75rem;
+  margin: 0 0 3rem;
 }
 
-/* 2-column grid; first item spans both columns */
+/*
+ * Layout: featured shot full-width on top, then a 3-column grid of the rest.
+ * The featured frame uses a distinct inner shadow to anchor it visually.
+ */
 .mk-landing .showcase-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1.25rem;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
 }
 
-@media (max-width: 840px) {
-  .mk-landing .showcase-grid {
-    grid-template-columns: 1fr;
-  }
-  .mk-landing .showcase-frame--wide {
-    grid-column: 1 !important;
-  }
-}
-
-.mk-landing .showcase-frame--wide {
+.mk-landing .showcase-frame--featured {
   grid-column: 1 / -1;
 }
 
+@media (max-width: 900px) {
+  .mk-landing .showcase-grid {
+    grid-template-columns: 1fr;
+  }
+  .mk-landing .showcase-frame--featured {
+    grid-column: 1;
+  }
+}
+
+/* ── Frame shell ─────────────────────────────────────────────── */
+
 .mk-landing .showcase-frame {
   margin: 0;
-  border-radius: var(--r-lg);
+  border-radius: var(--r-xl);
   border: 1px solid var(--line-strong);
   overflow: hidden;
   background: var(--bg-sunken);
-  box-shadow: var(--shadow-lg);
+  box-shadow:
+    var(--shadow-lg),
+    inset 0 1px 0 color-mix(in srgb, var(--ink) 6%, transparent);
   display: flex;
   flex-direction: column;
-  transition: box-shadow 0.28s ease, border-color 0.28s ease;
+  transition: box-shadow 0.32s ease, border-color 0.32s ease, transform 0.32s ease;
 }
 
 .mk-landing .showcase-frame:hover {
-  border-color: color-mix(in srgb, var(--brand) 35%, var(--line-strong));
-  box-shadow: var(--shadow-xl), 0 0 0 1px color-mix(in srgb, var(--brand) 18%, transparent);
+  border-color: color-mix(in srgb, var(--brand) 28%, var(--line-strong));
+  box-shadow:
+    var(--shadow-xl),
+    0 0 0 1px color-mix(in srgb, var(--brand) 14%, transparent),
+    var(--glow-brand);
+  transform: translateY(-2px);
 }
 
-/* Browser chrome strip */
+.mk-landing .showcase-frame--featured {
+  border-color: color-mix(in srgb, var(--brand) 22%, var(--line-strong));
+  box-shadow:
+    var(--shadow-xl),
+    0 0 0 1px color-mix(in srgb, var(--brand) 12%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--ink) 8%, transparent);
+}
+
+.mk-landing .showcase-frame--featured:hover {
+  border-color: color-mix(in srgb, var(--brand) 40%, var(--line-strong));
+  transform: translateY(-3px);
+}
+
+/* ── Browser chrome ──────────────────────────────────────────── */
+
 .mk-landing .browser-chrome {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.55rem 0.85rem;
+  gap: 0.35rem;
+  padding: 0.6rem 0.9rem;
   background: var(--surface-2);
   border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+}
+
+.mk-landing .bc-dots {
+  display: flex;
+  align-items: center;
+  gap: 0.38rem;
   flex-shrink: 0;
 }
 
@@ -738,16 +792,42 @@
 .mk-landing .bc-dot--amber { background: #febc2e; }
 .mk-landing .bc-dot--green { background: #28c840; }
 
+/* Address bar pill */
+.mk-landing .bc-bar {
+  flex: 1;
+  min-width: 0;
+  margin-left: 0.6rem;
+  background: color-mix(in srgb, var(--bg) 70%, transparent);
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  padding: 0.22rem 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  overflow: hidden;
+}
+
+/* Lock icon */
+.mk-landing .bc-lock {
+  flex-shrink: 0;
+  width: 8px;
+  height: 10px;
+  opacity: 0.45;
+  color: var(--ink-subtle);
+}
+
 .mk-landing .bc-address {
   font-family: var(--font-mono);
-  font-size: 0.68rem;
+  font-size: 0.67rem;
   color: var(--ink-subtle);
-  margin-left: 0.55rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   min-width: 0;
+  letter-spacing: 0.01em;
 }
+
+/* ── Screenshot image ────────────────────────────────────────── */
 
 .mk-landing .showcase-img {
   display: block;
@@ -756,14 +836,25 @@
   object-fit: cover;
   object-position: top left;
   flex: 1;
+  /* Subtle inner shadow at the bottom so the image bleeds cleanly into caption */
+  mask-image: linear-gradient(to bottom, #000 90%, rgba(0, 0, 0, 0.6) 100%);
 }
 
-/* Caption bar */
+/* The featured image gets a fixed height so wide screenshots don't blow up the layout */
+.mk-landing .showcase-frame--featured .showcase-img {
+  max-height: 520px;
+  object-fit: cover;
+  object-position: top left;
+  mask-image: none;
+}
+
+/* ── Caption bar ─────────────────────────────────────────────── */
+
 .mk-landing .showcase-caption {
   display: flex;
   align-items: baseline;
   gap: 0.75rem;
-  padding: 0.7rem 1rem;
+  padding: 0.65rem 1rem;
   border-top: 1px solid var(--line);
   background: var(--surface);
   flex-shrink: 0;
@@ -771,25 +862,39 @@
 
 .mk-landing .cap-label {
   font-family: var(--font-mono);
-  font-size: 0.68rem;
+  font-size: 0.65rem;
   font-weight: 600;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--brand);
   white-space: nowrap;
   flex-shrink: 0;
 }
 
+/* separator hairline between label and text */
+.mk-landing .cap-sep {
+  width: 1px;
+  height: 0.75em;
+  background: var(--line-strong);
+  flex-shrink: 0;
+  align-self: center;
+}
+
 .mk-landing .cap-text {
-  font-size: 0.8rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
   color: var(--ink-muted);
   line-height: 1.5;
+  letter-spacing: 0.01em;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .mk-landing .showcase-frame,
-  .mk-landing .showcase-frame:hover {
+  .mk-landing .showcase-frame:hover,
+  .mk-landing .showcase-frame--featured,
+  .mk-landing .showcase-frame--featured:hover {
     transition: none;
+    transform: none;
   }
 }
 

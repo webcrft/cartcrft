@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
-  timeout: 30_000,
+  timeout: 60_000,
   retries: 1,
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
@@ -20,7 +20,14 @@ export default defineConfig({
       name: 'screenshots',
       testDir: '.',
       testMatch: /screenshots\.ts/,
-      use: { ...devices['Desktop Chrome'] },
+      use: {
+        ...devices['Desktop Chrome'],
+        // Retina-quality captures: 2× pixel density, clean 16:10 viewport,
+        // forced dark scheme to match the Agentic Terminal aesthetic.
+        deviceScaleFactor: 2,
+        viewport: { width: 1512, height: 982 },
+        colorScheme: 'dark',
+      },
     },
   ],
 });

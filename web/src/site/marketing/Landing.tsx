@@ -583,94 +583,137 @@ export default function Landing() {
               The same backend — every surface. Admin dashboard for merchants, hosted checkout for
               buyers, platform console for operators. All Agentic Terminal.
             </p>
+
             <div className="showcase-grid">
-              <figure className="showcase-frame showcase-frame--wide">
+
+              {/* ── Featured: dashboard overview (full-width) ── */}
+              <figure className="showcase-frame showcase-frame--featured">
                 <div className="browser-chrome" aria-hidden="true">
-                  <span className="bc-dot bc-dot--red" />
-                  <span className="bc-dot bc-dot--amber" />
-                  <span className="bc-dot bc-dot--green" />
-                  <span className="bc-address">dashboard / overview</span>
+                  <div className="bc-dots">
+                    <span className="bc-dot bc-dot--red" />
+                    <span className="bc-dot bc-dot--amber" />
+                    <span className="bc-dot bc-dot--green" />
+                  </div>
+                  <div className="bc-bar">
+                    <svg className="bc-lock" viewBox="0 0 8 10" fill="currentColor" aria-hidden="true">
+                      <rect x="1" y="4.5" width="6" height="5" rx="1" />
+                      <path d="M2 4.5V3a2 2 0 1 1 4 0v1.5" fill="none" stroke="currentColor" strokeWidth="1.1" />
+                    </svg>
+                    <span className="bc-address">cartcrft.dev / dashboard</span>
+                  </div>
                 </div>
                 <img
                   src="/screenshots/dashboard-overview.png"
-                  alt="Cartcrft admin dashboard — store overview with multi-store switcher and full nav"
-                  width="1280"
-                  height="720"
+                  alt="Cartcrft admin dashboard — store overview with revenue metrics, recent orders, and full nav"
+                  width="1512"
+                  height="900"
                   loading="lazy"
                   decoding="async"
                   className="showcase-img"
                 />
                 <figcaption className="showcase-caption">
                   <span className="cap-label">admin / overview</span>
-                  <span className="cap-text">Multi-store switcher, catalog, sales, B2B, subscriptions — one sidebar.</span>
+                  <span className="cap-sep" aria-hidden="true" />
+                  <span className="cap-text">Revenue, orders, AOV, customers — plus full catalog, B2B, and subscriptions nav in a single sidebar.</span>
                 </figcaption>
               </figure>
 
+              {/* ── Grid: products ── */}
               <figure className="showcase-frame">
                 <div className="browser-chrome" aria-hidden="true">
-                  <span className="bc-dot bc-dot--red" />
-                  <span className="bc-dot bc-dot--amber" />
-                  <span className="bc-dot bc-dot--green" />
-                  <span className="bc-address">dashboard / products</span>
+                  <div className="bc-dots">
+                    <span className="bc-dot bc-dot--red" />
+                    <span className="bc-dot bc-dot--amber" />
+                    <span className="bc-dot bc-dot--green" />
+                  </div>
+                  <div className="bc-bar">
+                    <svg className="bc-lock" viewBox="0 0 8 10" fill="currentColor" aria-hidden="true">
+                      <rect x="1" y="4.5" width="6" height="5" rx="1" />
+                      <path d="M2 4.5V3a2 2 0 1 1 4 0v1.5" fill="none" stroke="currentColor" strokeWidth="1.1" />
+                    </svg>
+                    <span className="bc-address">cartcrft.dev / dashboard / products</span>
+                  </div>
                 </div>
                 <img
                   src="/screenshots/dashboard-products.png"
-                  alt="Cartcrft admin dashboard — product catalog view"
-                  width="1280"
-                  height="720"
+                  alt="Cartcrft admin dashboard — product catalog list with variants and pricing"
+                  width="1512"
+                  height="900"
                   loading="lazy"
                   decoding="async"
                   className="showcase-img"
                 />
                 <figcaption className="showcase-caption">
-                  <span className="cap-label">catalog management</span>
-                  <span className="cap-text">Products, collections, variants, and digital files — no plugin required.</span>
+                  <span className="cap-label">catalog</span>
+                  <span className="cap-sep" aria-hidden="true" />
+                  <span className="cap-text">Products, variants, collections, digital files — no plugin required.</span>
                 </figcaption>
               </figure>
 
+              {/* ── Grid: operator analytics ── */}
               <figure className="showcase-frame">
                 <div className="browser-chrome" aria-hidden="true">
-                  <span className="bc-dot bc-dot--red" />
-                  <span className="bc-dot bc-dot--amber" />
-                  <span className="bc-dot bc-dot--green" />
-                  <span className="bc-address">operator / analytics</span>
+                  <div className="bc-dots">
+                    <span className="bc-dot bc-dot--red" />
+                    <span className="bc-dot bc-dot--amber" />
+                    <span className="bc-dot bc-dot--green" />
+                  </div>
+                  <div className="bc-bar">
+                    <svg className="bc-lock" viewBox="0 0 8 10" fill="currentColor" aria-hidden="true">
+                      <rect x="1" y="4.5" width="6" height="5" rx="1" />
+                      <path d="M2 4.5V3a2 2 0 1 1 4 0v1.5" fill="none" stroke="currentColor" strokeWidth="1.1" />
+                    </svg>
+                    <span className="bc-address">cartcrft.dev / superadmin / analytics</span>
+                  </div>
                 </div>
                 <img
                   src="/screenshots/superadmin-analytics.png"
-                  alt="Cartcrft operator console — system analytics, organisations, tenant management"
-                  width="1280"
-                  height="720"
+                  alt="Cartcrft operator console — system analytics with timeseries chart and platform metrics"
+                  width="1512"
+                  height="900"
                   loading="lazy"
                   decoding="async"
                   className="showcase-img"
                 />
                 <figcaption className="showcase-caption">
-                  <span className="cap-label">operator console</span>
-                  <span className="cap-text">Cloud platform view: system analytics, organisations, stores, audit log.</span>
+                  <span className="cap-label">operator</span>
+                  <span className="cap-sep" aria-hidden="true" />
+                  <span className="cap-text">Platform GMV, orgs, stores, and system health — the god-mode console.</span>
                 </figcaption>
               </figure>
 
+              {/* ── Grid: hosted checkout ── */}
               <figure className="showcase-frame">
                 <div className="browser-chrome" aria-hidden="true">
-                  <span className="bc-dot bc-dot--red" />
-                  <span className="bc-dot bc-dot--amber" />
-                  <span className="bc-dot bc-dot--green" />
-                  <span className="bc-address">pay.cartcrft.dev / pay / cl_...</span>
+                  <div className="bc-dots">
+                    <span className="bc-dot bc-dot--red" />
+                    <span className="bc-dot bc-dot--amber" />
+                    <span className="bc-dot bc-dot--green" />
+                  </div>
+                  <div className="bc-bar">
+                    <svg className="bc-lock" viewBox="0 0 8 10" fill="currentColor" aria-hidden="true">
+                      <rect x="1" y="4.5" width="6" height="5" rx="1" />
+                      <path d="M2 4.5V3a2 2 0 1 1 4 0v1.5" fill="none" stroke="currentColor" strokeWidth="1.1" />
+                    </svg>
+                    <span className="bc-address">pay.cartcrft.dev / pay / cl_…</span>
+                  </div>
                 </div>
                 <img
                   src="/screenshots/checkout.png"
-                  alt="Cartcrft hosted checkout — branded payment page for Lekki Threads, ZAR 319.00"
-                  width="1280"
-                  height="856"
+                  alt="Cartcrft hosted checkout — branded payment page with line items and total"
+                  width="1512"
+                  height="982"
                   loading="lazy"
                   decoding="async"
                   className="showcase-img"
                 />
                 <figcaption className="showcase-caption">
-                  <span className="cap-label">checkout links</span>
-                  <span className="cap-text">Shareable, hosted checkout — no storefront code. One API call, one URL, done.</span>
+                  <span className="cap-label">checkout</span>
+                  <span className="cap-sep" aria-hidden="true" />
+                  <span className="cap-text">Shareable hosted checkout — one API call, one URL, no storefront code.</span>
                 </figcaption>
               </figure>
+
             </div>
           </div>
         </section>
