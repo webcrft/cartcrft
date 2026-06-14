@@ -63,10 +63,11 @@ begin
 end;
 $$;
 
--- ---- Allow neondb_owner to SET ROLE cartcrft_app within transactions -------
--- This GRANT makes cartcrft_app a "member" of neondb_owner's reachable roles.
--- Without it, SET LOCAL ROLE cartcrft_app would fail with "permission denied".
-grant cartcrft_app to neondb_owner;
+-- ---- Allow the connecting role to SET ROLE cartcrft_app in transactions ----
+-- This GRANT makes cartcrft_app a "member" of the application's connecting role
+-- (neondb_owner on Neon, the DB owner locally) so SET LOCAL ROLE cartcrft_app
+-- succeeds. CURRENT_USER keeps the migration portable across environments.
+grant cartcrft_app to current_user;
 
 -- ---- Schema access ---------------------------------------------------------
 grant usage on schema public to cartcrft_app;
