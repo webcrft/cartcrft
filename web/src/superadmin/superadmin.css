@@ -1,0 +1,21 @@
+/**
+ * Super-admin Tailwind entry point — imported by SuperAdminApp.tsx.
+ *
+ * Mirrors dashboard.css isolation strategy: scoped under #superadmin-root
+ * to avoid colliding with marketing / Starlight styles.
+ *
+ * CSP note: no inline styles from untrusted sources are used; all styles
+ * come from this compiled stylesheet. See the Astro page for the CSP meta tag.
+ */
+@import "tailwindcss";
+
+@layer base {
+  #superadmin-root *,
+  #superadmin-root *::before,
+  #superadmin-root *::after {
+    box-sizing: border-box;
+    border-width: 0;
+    border-style: solid;
+    border-color: theme(--color-zinc-700);
+  }
+}

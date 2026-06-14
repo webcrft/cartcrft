@@ -1,0 +1,105 @@
+---
+/**
+ * Super-admin console catch-all route.
+ *
+ * Every /superadmin/* path renders the same static HTML shell, which boots the
+ * operator console SPA as a client-only React island. react-router (BrowserRouter
+ * with basename="/superadmin", see SuperAdminApp.tsx) takes over on the client.
+ *
+ * Static generation: one shell per known SPA route (derived from ROUTE_ENTRIES,
+ * plus root and /login). Unknown deep paths 404 statically; all real routes resolve.
+ *
+ * CSP:
+ *   The Content-Security-Policy meta tag below restricts what this page can load:
+ *     - default-src 'self'            → only same-origin by default
+ *     - script-src 'self'             → no inline scripts, no eval
+ *     - style-src  'self' 'unsafe-inline' → Tailwind injects inline styles at runtime;
+ *                                           unsafe-inline is required for Tailwind v4's
+ *                                           runtime utilities. This is acceptable because
+ *                                           the risk vector (XSS-injected style) is lower
+ *                                           than script injection, and no user content is
+ *                                           rendered as HTML.
+ *     - connect-src 'self' $apiOrigin → restricts fetch() to same-origin + the API server
+ *     - img-src 'self' data:          → allow inline SVG data URIs (icons, chart)
+ *     - font-src 'self'               → system fonts only
+ *     - frame-ancestors 'none'        → no embedding in iframes (clickjacking protection)
+ *     - object-src 'none'             → no plugins
+ *     - base-uri 'self'               → prevent base-tag injection
+ *
+ *   The API origin is read from PUBLIC_API_URL at build time. Falls back to
+ *   http://localhost:8080 for local dev.
+ *
+ * This page is NOT gated by PUBLIC_CARTCRFT_CLOUD — the super-admin console is
+ * operator infrastructure that ships in BOTH OSS and cloud builds.
+ */
+import SuperAdminApp from '../../superadmin/SuperAdminApp.tsx';
+import { ROUTE_ENTRIES } from '../../superadmin/routes/index.tsx';
+
+export const prerender = true;
+
+export function getStaticPaths() {
+  const paths = new Set<string>(['login']);
+  for (const entry of ROUTE_ENTRIES) {
+    const p = entry.path.replace(/^\//, '');
+    if (p) paths.add(p);
+  }
+  return [
+    // /superadmin root shell
+    { params: { slug: undefined } },
+    // /superadmin/<route> shells
+    ...[...paths].map((slug) => ({ params: { slug } })),
+  ];
+}
+
+// API origin for CSP connect-src — build-time substitution.
+const API_ORIGIN: string = (() => {
+  try {
+    const url = import.meta.env.PUBLIC_API_URL ?? 'http://localhost:8080';
+    return new URL(url).origin;
+  } catch {
+    return 'http://localhost:8080';
+  }
+})();
+
+const CSP = [
+  "default-src 'self'",
+  "script-src 'self'",
+  "style-src 'self' 'unsafe-inline'",
+  `connect-src 'self' ${API_ORIGIN}`,
+  "img-src 'self' data:",
+  "font-src 'self'",
+  "frame-ancestors 'none'",
+  "object-src 'none'",
+  "base-uri 'self'",
+].join('; ');
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+
+    <!--
+      Content-Security-Policy for the super-admin console.
+      See the file-level comment above for the policy rationale and
+      the connect-src origin derivation from PUBLIC_API_URL.
+    -->
+    <meta http-equiv="Content-Security-Policy" content={CSP} />
+
+    <!--
+      Additional security headers expressed as meta tags where possible.
+      Note: X-Frame-Options and other response-header-only policies should
+      also be set at the reverse-proxy / CDN layer for full enforcement.
+    -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
+
+    <title>Cartcrft Operator Console</title>
+  </head>
+  <body>
+    <SuperAdminApp client:only="react" />
+  </body>
+</html>
