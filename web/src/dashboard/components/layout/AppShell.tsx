@@ -1,8 +1,7 @@
 import React, { useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useStore } from '../../context/StoreContext'
-import { clearToken } from '../../lib/auth'
-import { resetSdk } from '../../lib/sdk'
+import { accountLogout } from '../../lib/sdk'
 import { NAV_SECTIONS } from '../../routes/index'
 import CreateStoreModal from '../CreateStoreModal'
 import { Btn } from '../ui/index'
@@ -13,12 +12,14 @@ export default function AppShell() {
   const [showCreateStore, setShowCreateStore] = useState(false)
   const navigate = useNavigate()
 
-  const handleSignOut = () => {
-    clearToken()
-    localStorage.removeItem('cc_admin_apikey')
-    resetSdk()
+  const handleSignOut = async () => {
+    // Revoke the server-side refresh session + clear the httpOnly cookie and
+    // in-memory creds, then return to the login screen.
+    await accountLogout()
     void navigate('/login')
   }
+
+  const onSignOutClick = () => { void handleSignOut() }
 
   const handleStoreCreated = async (newStoreId: string) => {
     setShowCreateStore(false)
@@ -101,7 +102,7 @@ export default function AppShell() {
         {/* Footer */}
         <div className="px-3 py-3 border-t border-white/[0.06]">
           <button
-            onClick={handleSignOut}
+            onClick={onSignOutClick}
             className="w-full text-left px-2.5 py-2 text-xs text-slate-500 hover:text-red-400 transition rounded-lg hover:bg-white/[0.04]"
           >
             Sign out

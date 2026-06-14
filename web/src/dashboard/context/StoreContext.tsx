@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getSdk, setOn401Handler, resetSdk } from '../lib/sdk'
-import { getActiveStoreId, setActiveStoreId, clearToken } from '../lib/auth'
+import { getSdk, setOn401Handler, resetSdk, guardedCall } from '../lib/sdk'
+import { getActiveStoreId, setActiveStoreId, clearAllAuth, clearActiveStoreId } from '../lib/auth'
 import { CartcrftApiError } from '@cartcrft/sdk'
 
 interface Store {
@@ -43,8 +43,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const reload = useCallback(async (selectId?: string) => {
     setLoading(true)
     try {
-      const sdk = getSdk()
-      const res = await sdk.stores.list()
+      // guardedCall (thunk form) transparently attempts ONE /account/refresh on
+      // a 401 — rotating the httpOnly cookie + minting a fresh in-memory access
+      // token — before giving up. So an expired-but-refreshable session recovers
+      // here instead of bouncing the user to /login.
+      const res = await guardedCall(() => getSdk().stores.list())
       const list = res.stores ?? []
       setStores(list)
       const savedId = selectId ?? getActiveStoreId()
@@ -52,18 +55,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       setActiveStoreState(found)
       if (found) setActiveStoreId(found.id)
     } catch (err) {
-      // 401 → the global sdk handler (registered above via setOn401Handler) will
-      // fire the navigate-to-login callback.  Distinguish it from a transient
-      // network error so we don't silently swallow auth-expiry as "empty list".
+      // A 401 that survived the refresh attempt → clear creds + redirect. The
+      // guardedCall on401 handler (registered via setOn401Handler) also fires;
+      // we redirect here as well to be robust.
       if (err instanceof CartcrftApiError && err.status === 401) {
-        // Clear stale auth so the redirect lands on a clean login screen.
-        clearToken()
-        localStorage.removeItem('cc_admin_apikey')
-        localStorage.removeItem('cc_admin_store')
+        clearAllAuth()
+        clearActiveStoreId()
         resetSdk()
-        // The setOn401Handler callback fires asynchronously from within guardedCall
-        // when called through the SDK wrapper, but direct sdk.stores.list() calls
-        // bypass guardedCall, so we fire the redirect here too.
         void navigate('/login', { replace: true })
       }
       // Other errors (network, 5xx): leave stores empty; the UI shows an empty

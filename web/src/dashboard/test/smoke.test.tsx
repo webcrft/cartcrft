@@ -285,16 +285,26 @@ function MOCK_STORE() {
 
 let _on401Registered: (() => void) | null = null
 
+// Auth is now in-memory (P3/item-1): seed via setToken, not localStorage.
+import { setToken as _setMemToken, clearAllAuth as _clearAllAuth } from '../lib/auth'
+
 vi.mock('../lib/sdk', async () => {
   const { Cartcrft, CartcrftApiError } = await import('@cartcrft/sdk')
   const _sdk = new Cartcrft({ baseUrl: 'http://mock' })
 
   return {
+    BASE_URL: 'http://mock',
     getSdk: () => _sdk,
     createSdk: () => _sdk,
     resetSdk: vi.fn(),
     setOn401Handler: vi.fn((fn: () => void) => { _on401Registered = fn }),
-    guardedCall: vi.fn((p: Promise<unknown>) => p),
+    // guardedCall accepts a thunk or a bare promise (new signature).
+    guardedCall: vi.fn((w: Promise<unknown> | (() => Promise<unknown>)) =>
+      typeof w === 'function' ? (w as () => Promise<unknown>)() : w),
+    // Account auth API (P3/item-1) — mocked so no real network calls happen.
+    accountLogin: vi.fn().mockResolvedValue({ id: 'u1', org_id: 'org1', email: 'owner@test.com', role: 'owner' }),
+    accountRefresh: vi.fn().mockResolvedValue(null),
+    accountLogout: vi.fn().mockResolvedValue(undefined),
     // re-export CartcrftApiError so pages' instanceof checks still work
     CartcrftApiError,
   }
@@ -303,13 +313,13 @@ vi.mock('../lib/sdk', async () => {
 // ── Auth helpers ──────────────────────────────────────────────────────────────
 
 function seedAuth() {
-  localStorage.setItem('cc_admin_token', 'eyJ.mock.token')
+  // Access token lives in memory (not localStorage) under the new model.
+  _setMemToken('eyJ.mock.token')
   localStorage.setItem('cc_admin_store', 'store-test-1')
 }
 
 function clearAuth() {
-  localStorage.removeItem('cc_admin_token')
-  localStorage.removeItem('cc_admin_apikey')
+  _clearAllAuth()
   localStorage.removeItem('cc_admin_store')
 }
 
@@ -342,7 +352,7 @@ import Login from '../pages/Login'
 describe('Login screen', () => {
   beforeEach(() => clearAuth())
 
-  it('renders the JWT (Staff JWT) mode tab', () => {
+  it('renders the primary Email & Password mode by default', () => {
     render(
       <MemoryRouter>
         <ToastProvider>
@@ -350,12 +360,13 @@ describe('Login screen', () => {
         </ToastProvider>
       </MemoryRouter>,
     )
-    expect(screen.getByText('Staff JWT')).toBeInTheDocument()
-    // Bearer token input label
-    expect(screen.getByText('Bearer Token')).toBeInTheDocument()
+    expect(screen.getByText('Email & Password')).toBeInTheDocument()
+    // Email + Password labels for the default flow.
+    expect(screen.getByText('Email')).toBeInTheDocument()
+    expect(screen.getByText('Password')).toBeInTheDocument()
   })
 
-  it('renders the API Key (cc_prv_) mode tab', async () => {
+  it('offers an Advanced / CI (cc_prv_) mode with a powerful-credential warning', async () => {
     render(
       <MemoryRouter>
         <ToastProvider>
@@ -363,11 +374,13 @@ describe('Login screen', () => {
         </ToastProvider>
       </MemoryRouter>,
     )
-    const apiKeyTab = screen.getByText(/API Key/)
-    apiKeyTab.click()
+    const advancedTab = screen.getByText(/Advanced/)
+    advancedTab.click()
     await waitFor(() =>
       expect(screen.getByText('Private API Key')).toBeInTheDocument(),
     )
+    // Warns that the cc_prv_ key is powerful.
+    expect(screen.getByText(/Powerful credential/)).toBeInTheDocument()
   })
 })
 
@@ -562,18 +575,18 @@ describe('401 handling', () => {
     expect(notAuth.status).not.toBe(401)
   })
 
-  it('clearToken removes auth from localStorage on 401', async () => {
-    seedAuth()
-    expect(localStorage.getItem('cc_admin_token')).toBe('eyJ.mock.token')
+  it('clearAllAuth wipes the in-memory access token (no token in localStorage)', async () => {
+    const { setToken, getToken, clearAllAuth, hasAuth } = await import('../lib/auth')
+    setToken('eyJ.mock.token')
+    expect(getToken()).toBe('eyJ.mock.token')
+    // The access token must NEVER be in localStorage under the new model.
+    expect(localStorage.getItem('cc_admin_token')).toBeNull()
 
-    // Simulate what guardedCall does on 401
-    const { clearToken } = await import('../lib/auth')
-    clearToken()
-    localStorage.removeItem('cc_admin_apikey')
+    clearAllAuth()
     localStorage.removeItem('cc_admin_store')
 
-    expect(localStorage.getItem('cc_admin_token')).toBeNull()
-    expect(localStorage.getItem('cc_admin_apikey')).toBeNull()
+    expect(getToken()).toBeNull()
+    expect(hasAuth()).toBe(false)
     expect(localStorage.getItem('cc_admin_store')).toBeNull()
   })
 

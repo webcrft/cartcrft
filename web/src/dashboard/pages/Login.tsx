@@ -1,40 +1,67 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { setToken, setApiKey } from '../lib/auth'
-import { getSdk, resetSdk } from '../lib/sdk'
+import { setApiKey } from '../lib/auth'
+import { accountLogin, getSdk, resetSdk } from '../lib/sdk'
 import { Btn } from '../components/ui/index'
 
+/**
+ * Login — the org dashboard sign-in (P3 / audit item 1).
+ *
+ * Primary flow: email + password → POST /account/login. The backend returns a
+ * SHORT-LIVED access JWT (held in memory, see lib/auth) and sets an httpOnly
+ * refresh cookie (unreadable by JS) for persistence across reloads. This
+ * replaces the old "paste a JWT / cc_prv_ key into localStorage" model the
+ * audit flagged (XSS could exfiltrate full commerce:admin creds).
+ *
+ * Advanced (CI) flow: a cc_prv_ API key, kept ONLY in memory by default (opt-in
+ * tab-scoped sessionStorage), clearly labelled as powerful. Not the default.
+ */
 export default function Login() {
   const navigate = useNavigate()
-  const [mode, setMode] = useState<'jwt' | 'apikey'>('jwt')
-  const [value, setValue] = useState('')
+  const [mode, setMode] = useState<'password' | 'advanced'>('password')
+
+  // password mode
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+
+  // advanced (cc_prv_) mode
+  const [apiKey, setApiKeyValue] = useState('')
+  const [remember, setRemember] = useState(false)
+
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handlePassword = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!value.trim()) return
+    if (!email.trim() || !password) return
     setError('')
     setLoading(true)
     try {
-      if (mode === 'apikey') {
-        if (!value.startsWith('cc_prv_') && !value.startsWith('cc_pub_')) {
-          setError('API key must start with cc_prv_ or cc_pub_')
-          setLoading(false)
-          return
-        }
-        setApiKey(value.trim())
-      } else {
-        setToken(value.trim())
-      }
-      resetSdk()
-      const sdk = getSdk()
-      await sdk.stores.list()
+      await accountLogin(email.trim(), password)
       void navigate('/')
     } catch {
-      setError('Invalid credentials or cannot reach API.')
-      if (mode === 'apikey') { localStorage.removeItem('cc_admin_apikey') }
-      else { localStorage.removeItem('cc_admin_token') }
+      setError('Invalid email or password, or cannot reach the API.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleAdvanced = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!apiKey.trim()) return
+    setError('')
+    if (!apiKey.startsWith('cc_prv_')) {
+      setError('Advanced login requires a cc_prv_ (server-side) key.')
+      return
+    }
+    setLoading(true)
+    try {
+      setApiKey(apiKey.trim(), { remember })
+      resetSdk()
+      await getSdk().stores.list()
+      void navigate('/')
+    } catch {
+      setError('Invalid API key or cannot reach the API.')
     } finally {
       setLoading(false)
     }
@@ -49,37 +76,79 @@ export default function Login() {
         </div>
         <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-6">
           <div className="flex rounded-lg border border-white/[0.08] bg-white/[0.02] p-1 mb-5">
-            {(['jwt', 'apikey'] as const).map(m => (
+            {([
+              ['password', 'Email & Password'],
+              ['advanced', 'Advanced / CI'],
+            ] as const).map(([m, label]) => (
               <button
                 key={m}
-                onClick={() => setMode(m)}
+                type="button"
+                onClick={() => { setMode(m); setError('') }}
                 className={`flex-1 rounded-md py-2 text-xs font-medium transition ${mode === m ? 'bg-violet-600 text-white' : 'text-slate-400 hover:text-white'}`}
               >
-                {m === 'jwt' ? 'Staff JWT' : 'API Key (cc_prv_)'}
+                {label}
               </button>
             ))}
           </div>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1.5">
-                {mode === 'jwt' ? 'Bearer Token' : 'Private API Key'}
+
+          {mode === 'password' ? (
+            <form onSubmit={handlePassword} className="space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-1.5">Email</label>
+                <input
+                  type="email"
+                  autoComplete="username"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  placeholder="you@company.com"
+                  className="w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2.5 text-sm text-white placeholder:text-slate-500 focus:border-violet-500/40 focus:outline-none focus:ring-1 focus:ring-violet-500/20 transition"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-1.5">Password</label>
+                <input
+                  type="password"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2.5 text-sm text-white placeholder:text-slate-500 focus:border-violet-500/40 focus:outline-none focus:ring-1 focus:ring-violet-500/20 transition"
+                />
+              </div>
+              {error && <p className="text-xs text-red-400">{error}</p>}
+              <Btn type="submit" loading={loading} className="w-full justify-center">
+                Sign in
+              </Btn>
+            </form>
+          ) : (
+            <form onSubmit={handleAdvanced} className="space-y-4">
+              <div className="rounded-lg border border-amber-500/20 bg-amber-500/[0.06] px-3 py-2.5">
+                <p className="text-[11px] leading-relaxed text-amber-300/90">
+                  <strong>Powerful credential.</strong> A cc_prv_ key carries full
+                  commerce:admin access. Use it only for CI / automation. It is held
+                  in memory and never written to localStorage.
+                </p>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-1.5">Private API Key</label>
+                <input
+                  type="password"
+                  value={apiKey}
+                  onChange={e => setApiKeyValue(e.target.value)}
+                  placeholder="cc_prv_..."
+                  className="w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2.5 text-sm text-white placeholder:text-slate-500 focus:border-violet-500/40 focus:outline-none focus:ring-1 focus:ring-violet-500/20 transition font-mono"
+                />
+              </div>
+              <label className="flex items-center gap-2 text-[11px] text-slate-500 select-none">
+                <input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)} />
+                Remember on this tab only (sessionStorage, cleared on close)
               </label>
-              <input
-                type="password"
-                value={value}
-                onChange={e => setValue(e.target.value)}
-                placeholder={mode === 'jwt' ? 'eyJ...' : 'cc_prv_...'}
-                className="w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2.5 text-sm text-white placeholder:text-slate-500 focus:border-violet-500/40 focus:outline-none focus:ring-1 focus:ring-violet-500/20 transition font-mono"
-              />
-              <p className="mt-1 text-[11px] text-slate-600">
-                {mode === 'jwt' ? 'Paste a management JWT from your backend.' : 'Use a cc_prv_ key with commerce:admin scope.'}
-              </p>
-            </div>
-            {error && <p className="text-xs text-red-400">{error}</p>}
-            <Btn type="submit" loading={loading} className="w-full justify-center">
-              Sign in
-            </Btn>
-          </form>
+              {error && <p className="text-xs text-red-400">{error}</p>}
+              <Btn type="submit" loading={loading} className="w-full justify-center">
+                Use API key
+              </Btn>
+            </form>
+          )}
         </div>
       </div>
     </div>

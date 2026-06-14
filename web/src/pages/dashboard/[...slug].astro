@@ -33,6 +33,54 @@ export function getStaticPaths() {
     ...[...paths].map((slug) => ({ params: { slug } })),
   ];
 }
+
+// ── Strict Content-Security-Policy for the dashboard (P3 / audit item 1) ─────
+//
+// The audit flagged: a dashboard XSS could exfiltrate admin credentials. The
+// auth rework moves the access token into memory + an httpOnly refresh cookie;
+// this CSP is the second half — it stops injected script from running and locks
+// network egress to our own origins so a stolen token can't be POSTed out.
+//
+//   default-src 'none'          — deny everything not explicitly allowed.
+//   script-src  'self' <hashes> — only our bundled JS + the Astro island
+//                                 runtime bootstrap (hashed; NO 'unsafe-inline'
+//                                 script — that is the core XSS protection).
+//   style-src   'self' 'unsafe-inline' — Tailwind/React inject inline styles;
+//                                 inline style cannot execute JS, so this is a
+//                                 low-risk allowance that keeps the UI intact.
+//   connect-src 'self' <API>    — fetch/XHR only to our own origin and the API
+//                                 (PUBLIC_API_URL) — blocks token exfiltration.
+//   img/font/manifest-src 'self' data:  — local assets + data: icons.
+//   frame-ancestors 'none' / base-uri 'none' / form-action 'self'.
+//
+// Inline-script hashes are the Astro `client:only` island bootstrap + the
+// `astro-island{display:contents}` style. They are stable per Astro version.
+// Regenerate after an Astro upgrade with:
+//   node -e 'const fs=require("fs"),c=require("crypto");const h=fs.readFileSync("dist/dashboard/index.html","utf8");for(const re of [/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g]){let m;while((m=re.exec(h)))console.log("sha256-"+c.createHash("sha256").update(m[1]).digest("base64"))}'
+const ASTRO_ISLAND_SCRIPT_HASHES = [
+  "'sha256-eIXWvAmxkr251LJZkjniEK5LcPF3NkapbJepohwYRIc='",
+  "'sha256-U7a72oKuFFz8D7GUHLA1NZ0ciymHmDOc9T9aVDg2rWU='",
+];
+
+// API origin for connect-src — derived from PUBLIC_API_URL (same value the SDK
+// uses). Falls back to localhost:8080. We add the origin only (CSP host-source).
+function apiOrigin(): string {
+  const raw = import.meta.env.PUBLIC_API_URL ?? 'http://localhost:8080';
+  try { return new URL(raw).origin; } catch { return 'http://localhost:8080'; }
+}
+
+const csp = [
+  "default-src 'none'",
+  `script-src 'self' ${ASTRO_ISLAND_SCRIPT_HASHES.join(' ')}`,
+  "style-src 'self' 'unsafe-inline'",
+  `connect-src 'self' ${apiOrigin()}`,
+  "img-src 'self' data:",
+  "font-src 'self' data:",
+  "manifest-src 'self'",
+  "base-uri 'none'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+].join('; ');
 ---
 
 <!doctype html>
@@ -42,6 +90,7 @@ export function getStaticPaths() {
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="robots" content="noindex" />
+    <meta http-equiv="Content-Security-Policy" content={csp} />
     <title>Cartcrft Dashboard</title>
   </head>
   <body>
