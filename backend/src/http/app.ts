@@ -60,6 +60,7 @@ import { recoveryPlugin } from "../modules/recovery/routes.js";
 import { catalogCsvPlugin } from "../modules/catalog/csv-routes.js";
 import { bookingsPlugin } from "../modules/bookings/index.js";
 import { setAnalyticsSink, PgAnalyticsSink } from "../lib/analytics.js";
+import { x402Plugin } from "../lib/x402/index.js";
 
 const VERSION = process.env["npm_package_version"] ?? "0.0.0";
 const OPENAPI_VERSION = "2026-06-12";
@@ -387,6 +388,9 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
 
   // ── T6.1 — Bookings, resources, availability, price rules, iCal, OTA ─────────
   await app.register(bookingsPlugin);
+
+  // ── C-10b — x402 machine-payment demo (off by default; X402_ENABLED=true to gate) ──
+  await app.register(x402Plugin);
 
   // ── Static: drop-in storefront.js bundle ───────────────────────────────────
   await app.register(staticPlugin);

@@ -123,36 +123,16 @@ async function runMigrationsForTest(
   const migrationsDir = path.join(backendRoot, "migrations");
 
   // Ensure the tracking table exists in the test schema.
-  // Use explicit schema qualification to ensure the table lands in the test
-  // schema, not public — even when public.schema_migrations already exists in
-  // the dev DB (which would confuse the unqualified IF NOT EXISTS check).
-  // We first try to create using the search_path (unqualified) in a transaction
-  // that uses SET LOCAL search_path so that we are guaranteed to target the
-  // test schema only.
-  const client0 = await pool.connect();
-  try {
-    // SET LOCAL only takes effect inside a transaction block; without the
-    // BEGIN/COMMIT wrapper Postgres ignores it and the CREATE TABLE lands in
-    // the connection's default search_path (public) instead of the test
-    // schema, which later makes the qualified
-    // "<schema>".schema_migrations reads/writes fail.
-    await client0.query("BEGIN");
-    await client0.query(`SET LOCAL search_path = "${schemaName}"`);
-    await client0.query(`
-      CREATE TABLE IF NOT EXISTS "${schemaName}".schema_migrations (
-        name       TEXT        PRIMARY KEY,
-        applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
-      )`);
-    await client0.query("COMMIT");
-  } catch (err) {
-    await client0.query("ROLLBACK").catch(() => undefined);
-    throw err;
-  } finally {
-    client0.release();
-  }
+  // The pool's search_path is set to `test_<id>,public` so unqualified
+  // CREATE TABLE / SELECT / INSERT all land in the test schema (first in path).
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS schema_migrations (
+      name       TEXT        PRIMARY KEY,
+      applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )`);
 
   const { rows } = await pool.query<{ name: string }>(
-    `SELECT name FROM "${schemaName}".schema_migrations`
+    "SELECT name FROM schema_migrations"
   );
   const applied = new Set(rows.map((r) => r.name));
 
@@ -194,7 +174,7 @@ async function runMigrationsForTest(
       await client.query("BEGIN");
       await client.query(sql);
       await client.query(
-        `INSERT INTO "${schemaName}".schema_migrations (name) VALUES ($1)`,
+        "INSERT INTO schema_migrations (name) VALUES ($1)",
         [filename]
       );
       await client.query("COMMIT");

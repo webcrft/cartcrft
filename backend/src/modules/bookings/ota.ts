@@ -632,6 +632,502 @@ export async function deleteChannelListing(
   if (!rowCount) throw notFound("channel listing not found");
 }
 
+// ── OTA ARI Push (Availability, Rates, Inventory) ─────────────────────────────
+//
+// Implements a generic ARI push adapter compatible with common channel manager
+// APIs (e.g. Booking.com Connectivity API v2 / SiteMinder-style endpoints).
+//
+// The "direct_ota" provider_type uses a REST ARI push model where you send:
+//   POST <base_url>/availability  — date-by-date open/closed + min-stay
+//   POST <base_url>/rates         — date-range rate updates
+//
+// CREDENTIAL SETUP (to go live):
+//   Create a booking_channel_providers row with:
+//     channel:    "booking_com" (or any non-iCal channel)
+//     provider_type: "direct_ota"
+//     api_key:    Your OTA property/hotel ID (e.g. Booking.com hotel_id)
+//     api_secret: Your OTA API secret / Basic-auth password
+//     config.base_url: The channel's ARI endpoint base URL, e.g.
+//                 "https://supply-xml.booking.com/hotels/ota/1.0"
+//                 (Booking.com Connectivity XML API)
+//                 OR a generic JSON ARI gateway URL for a channel manager
+//     config.room_type_id: Channel-side room/rate-plan identifier
+//
+//   The provider credentials are AES-256-GCM encrypted at rest
+//   (AUTH_SECRETS_KEY required in prod). Call createChannelProvider() via
+//   POST /commerce/stores/:storeId/booking-channel-providers to store them.
+//
+// ARI PUSH API SHAPE (JSON / REST variant — matches Booking.com Partner API v2
+// and generic channel-manager ARI endpoints):
+//
+//   POST {base_url}/availability
+//   Authorization: Basic base64(api_key:api_secret)
+//   Content-Type: application/json
+//   {
+//     "hotel_id": "<api_key>",
+//     "room_type_id": "<config.room_type_id>",
+//     "updates": [
+//       { "date": "2024-06-01", "available": true, "min_stay": 1 },
+//       { "date": "2024-06-02", "available": false }
+//     ]
+//   }
+//   → 200 { "status": "ok" }
+//
+//   POST {base_url}/rates
+//   Authorization: Basic base64(api_key:api_secret)
+//   {
+//     "hotel_id": "<api_key>",
+//     "room_type_id": "<config.room_type_id>",
+//     "rate_plan_id": "<config.rate_plan_id>",
+//     "updates": [
+//       { "date": "2024-06-01", "amount": "150.00", "currency": "USD" }
+//     ]
+//   }
+//   → 200 { "status": "ok" }
+
+export interface ARIAvailabilityUpdate {
+  date: string;
+  available: boolean;
+  min_stay?: number | undefined;
+}
+
+export interface ARIRateUpdate {
+  date: string;
+  amount: string;
+  currency: string;
+}
+
+export interface PushARIResult {
+  status: "ok" | "credential_missing" | "error";
+  message: string;
+  push_log_id?: string | undefined;
+  availability_updated?: number | undefined;
+  rates_updated?: number | undefined;
+}
+
+/**
+ * Push ARI (Availability, Rates, Inventory) to a direct-OTA channel provider
+ * for a specific window of dates.
+ *
+ * This is the core implementation for the generic ARI push adapter. It reads
+ * availability and price data from the DB, builds the OTA-shaped payloads,
+ * makes the HTTP calls, and records results in booking_channel_push_log.
+ */
+export async function pushARIToProvider(
+  storeId: string,
+  listingId: string,
+  windowStart: string,
+  windowEnd: string,
+  providerId?: string | undefined
+): Promise<PushARIResult> {
+  const pool = getPool();
+
+  // ── 1. Load listing + resource ─────────────────────────────────────────────
+  const { rows: listingRows } = await pool.query<{
+    id: string;
+    channel: string;
+    resource_id: string;
+    store_id: string;
+    channel_listing_id: string | null;
+    channel_property_id: string | null;
+    sync_rates: boolean;
+    sync_availability: boolean;
+    markup_pct: string | null;
+    managed_by_provider_id: string | null;
+  }>(
+    `SELECT cl.id::text, cl.channel, cl.resource_id::text,
+            r.store_id::text, cl.channel_listing_id, cl.channel_property_id,
+            cl.sync_rates, cl.sync_availability, cl.markup_pct::text,
+            cl.managed_by_provider_id::text
+     FROM booking_channel_listings cl
+     JOIN booking_resources r ON r.id = cl.resource_id
+     WHERE cl.id = $1::uuid AND r.store_id = $2::uuid`,
+    [listingId, storeId]
+  );
+  if (!listingRows[0]) throw notFound("channel listing not found");
+  const listing = listingRows[0];
+
+  // ── 2. Resolve provider (explicit or via managed_by_provider_id) ───────────
+  const resolvedProviderId = providerId ?? listing.managed_by_provider_id;
+  if (!resolvedProviderId) {
+    return {
+      status: "credential_missing",
+      message: "No provider configured for this listing. Set managed_by_provider_id or pass providerId.",
+    };
+  }
+
+  const { rows: providerRows } = await pool.query<{
+    id: string;
+    provider_type: string;
+    channel: string;
+    api_key: string | null;
+    api_secret: string | null;
+    status: string;
+    config: Record<string, unknown>;
+  }>(
+    `SELECT id::text, provider_type, channel, api_key, api_secret, status, config
+     FROM booking_channel_providers
+     WHERE id = $1::uuid AND store_id = $2::uuid`,
+    [resolvedProviderId, storeId]
+  );
+  if (!providerRows[0]) {
+    return { status: "credential_missing", message: "Provider not found or not in this store." };
+  }
+  const provider = providerRows[0];
+
+  if (provider.status !== "active") {
+    return { status: "credential_missing", message: `Provider status is '${provider.status}'; must be 'active' to push.` };
+  }
+
+  const apiKey = decryptCred(provider.api_key);
+  const apiSecret = decryptCred(provider.api_secret);
+  if (!apiKey) {
+    return { status: "credential_missing", message: "Provider api_key is missing. Set credentials via PUT /booking-channel-providers/:id." };
+  }
+
+  const baseUrl = (provider.config["base_url"] as string | undefined) ?? "";
+  if (!baseUrl) {
+    return { status: "credential_missing", message: "Provider config.base_url is missing. Configure the OTA ARI endpoint URL." };
+  }
+
+  const roomTypeId = (provider.config["room_type_id"] as string | undefined) ?? apiKey;
+  const ratePlanId = (provider.config["rate_plan_id"] as string | undefined) ?? roomTypeId;
+
+  // ── 3. Load resource base info (currency etc.) ─────────────────────────────
+  const { rows: resourceRows } = await pool.query<{
+    base_price: string;
+    currency: string;
+    min_duration: number;
+  }>(
+    `SELECT r.base_price::text, s.currency, r.min_duration
+     FROM booking_resources r
+     JOIN stores s ON s.id = r.store_id
+     WHERE r.id = $1::uuid`,
+    [listing.resource_id]
+  );
+  const resource = resourceRows[0];
+  const currency = resource?.currency ?? "USD";
+  const globalMinStay = resource?.min_duration ?? 1;
+
+  // ── 4. Gather availability rows for the window ─────────────────────────────
+  const { rows: availRows } = await pool.query<{
+    date: string;
+    is_available: boolean;
+    custom_price: string | null;
+    min_duration: number | null;
+  }>(
+    `SELECT date::text, is_available, custom_price::text, min_duration
+     FROM booking_availability
+     WHERE resource_id = $1::uuid AND date BETWEEN $2::date AND $3::date`,
+    [listing.resource_id, windowStart, windowEnd]
+  );
+  const availMap = new Map(availRows.map((r) => [r.date, r]));
+
+  // ── 5. Gather price rules and confirmed bookings ───────────────────────────
+  const { rows: priceRuleRows } = await pool.query<{
+    starts_at: string | null;
+    ends_at: string | null;
+    adjustment_type: string;
+    adjustment_value: string;
+    priority: number;
+    type: string;
+    days_of_week: number[] | null;
+  }>(
+    `SELECT starts_at::text, ends_at::text, adjustment_type,
+            adjustment_value::text, priority, type, days_of_week
+     FROM booking_price_rules
+     WHERE resource_id = $1::uuid AND is_active = true
+       AND (starts_at IS NULL OR starts_at <= $3::date)
+       AND (ends_at IS NULL OR ends_at >= $2::date)`,
+    [listing.resource_id, windowStart, windowEnd]
+  );
+
+  // ── 6. Gather confirmed bookings in the window (blocked dates) ─────────────
+  const { rows: bookingRows } = await pool.query<{
+    check_in: string;
+    check_out: string;
+  }>(
+    `SELECT check_in::text, check_out::text
+     FROM bookings
+     WHERE resource_id = $1::uuid
+       AND status IN ('confirmed','checked_in','checked_out')
+       AND check_in <= $3::date AND check_out > $2::date
+       AND deleted_at IS NULL`,
+    [listing.resource_id, windowStart, windowEnd]
+  );
+
+  // Build set of booked dates
+  const bookedDates = new Set<string>();
+  for (const b of bookingRows) {
+    const start = new Date(b.check_in + "T00:00:00Z");
+    const end = new Date(b.check_out + "T00:00:00Z");
+    for (let d = start.getTime(); d < end.getTime(); d += 86_400_000) {
+      bookedDates.add(new Date(d).toISOString().slice(0, 10));
+    }
+  }
+
+  // ── 7. Build update arrays day-by-day ─────────────────────────────────────
+  const availUpdates: ARIAvailabilityUpdate[] = [];
+  const rateUpdates: ARIRateUpdate[] = [];
+
+  const markupPct = listing.markup_pct ? parseFloat(listing.markup_pct) : 0;
+  const basePrice = parseFloat(resource?.base_price ?? "0");
+
+  const start = new Date(windowStart + "T00:00:00Z");
+  const end = new Date(windowEnd + "T00:00:00Z");
+
+  for (let d = start.getTime(); d <= end.getTime(); d += 86_400_000) {
+    const dateStr = new Date(d).toISOString().slice(0, 10);
+    const avail = availMap.get(dateStr);
+    const booked = bookedDates.has(dateStr);
+
+    const isAvailable = !booked && (avail ? avail.is_available : true);
+    const minStay = avail?.min_duration ?? globalMinStay;
+
+    if (listing.sync_availability) {
+      const upd: ARIAvailabilityUpdate = { date: dateStr, available: isAvailable };
+      if (minStay > 1) upd.min_stay = minStay;
+      availUpdates.push(upd);
+    }
+
+    if (listing.sync_rates && isAvailable) {
+      // Use custom_price override, then apply price rules, then apply markup
+      let price = avail?.custom_price ? parseFloat(avail.custom_price) : basePrice;
+
+      // Apply the highest-priority matching price rule
+      const dayOfWeek = new Date(d).getUTCDay(); // 0=Sun ... 6=Sat
+      let bestPriority = -Infinity;
+      let bestAdj: { type: string; value: number } | undefined;
+
+      for (const rule of priceRuleRows) {
+        // Date range check
+        if (rule.starts_at && dateStr < rule.starts_at) continue;
+        if (rule.ends_at && dateStr > rule.ends_at) continue;
+        // Day-of-week check
+        if (rule.days_of_week && !rule.days_of_week.includes(dayOfWeek)) continue;
+
+        const priority = rule.priority;
+        if (priority > bestPriority) {
+          bestPriority = priority;
+          bestAdj = { type: rule.adjustment_type, value: parseFloat(rule.adjustment_value) };
+        }
+      }
+
+      if (bestAdj) {
+        if (bestAdj.type === "percentage") {
+          price = price * (1 + bestAdj.value / 100);
+        } else {
+          price = price + bestAdj.value;
+        }
+      }
+
+      // Apply channel markup
+      if (markupPct !== 0) {
+        price = price * (1 + markupPct / 100);
+      }
+
+      price = Math.max(0, price);
+      rateUpdates.push({ date: dateStr, amount: price.toFixed(2), currency });
+    }
+  }
+
+  // ── 8. Build auth header ───────────────────────────────────────────────────
+  const basicAuth = Buffer.from(`${apiKey}:${apiSecret ?? ""}`).toString("base64");
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "Authorization": `Basic ${basicAuth}`,
+    "Accept": "application/json",
+    "User-Agent": "Cartcrft-OTA-Push/1.0",
+  };
+
+  const hotelId = listing.channel_property_id ?? apiKey;
+  let syncJobId: string | undefined;
+
+  // ── 9. Create sync job record ──────────────────────────────────────────────
+  const { rows: jobRows } = await pool.query<{ id: string }>(
+    `INSERT INTO booking_channel_sync_jobs
+       (store_id, channel_listing_id, provider_id, channel, job_type,
+        window_start, window_end, status, priority, payload)
+     VALUES ($1::uuid, $2::uuid, $3::uuid, $4, 'full_refresh',
+             $5::date, $6::date, 'running', 0, $7::jsonb)
+     RETURNING id::text`,
+    [
+      storeId, listingId, resolvedProviderId, listing.channel,
+      windowStart, windowEnd,
+      JSON.stringify({ availability_count: availUpdates.length, rate_count: rateUpdates.length }),
+    ]
+  );
+  syncJobId = jobRows[0]?.id;
+
+  // ── 10. Push availability ──────────────────────────────────────────────────
+  let availLogId: string | undefined;
+  let availSuccess = false;
+  let availError: string | undefined;
+  let availHttpStatus: number | undefined;
+  let availDuration: number | undefined;
+
+  if (listing.sync_availability && availUpdates.length > 0) {
+    const availPayload = JSON.stringify({
+      hotel_id: hotelId,
+      room_type_id: roomTypeId,
+      updates: availUpdates,
+    });
+
+    const availUrl = `${baseUrl}/availability`;
+    const t0 = Date.now();
+    let availRespBody = "";
+
+    try {
+      const resp = await fetch(availUrl, {
+        method: "POST",
+        headers,
+        body: availPayload,
+        signal: AbortSignal.timeout(30_000),
+      });
+      availHttpStatus = resp.status;
+      availRespBody = (await resp.text()).slice(0, 32_768);
+      availSuccess = resp.ok;
+      if (!resp.ok) {
+        availError = `HTTP ${resp.status}: ${availRespBody.slice(0, 200)}`;
+      }
+    } catch (err) {
+      availError = err instanceof Error ? err.message : String(err);
+      availHttpStatus = 0;
+    }
+
+    availDuration = Date.now() - t0;
+
+    // Record push log
+    const { rows: logRows } = await pool.query<{ id: string }>(
+      `INSERT INTO booking_channel_push_log
+         (store_id, sync_job_id, channel_listing_id, provider_id, channel,
+          operation, request_url, request_body, http_status, response_body,
+          success, error_code, error_message, duration_ms,
+          dates_affected)
+       VALUES ($1::uuid, $2, $3::uuid, $4::uuid, $5,
+               'availability_update', $6, $7, $8, $9,
+               $10, $11, $12, $13,
+               daterange($14::date, $15::date, '[]'))
+       RETURNING id::text`,
+      [
+        storeId, syncJobId ?? null, listingId, resolvedProviderId, listing.channel,
+        availUrl, availPayload.slice(0, 32_768), availHttpStatus, availRespBody,
+        availSuccess,
+        availSuccess ? null : "HTTP_ERROR",
+        availError ?? null,
+        availDuration,
+        windowStart, windowEnd,
+      ]
+    );
+    availLogId = logRows[0]?.id;
+  }
+
+  // ── 11. Push rates ─────────────────────────────────────────────────────────
+  let rateLogId: string | undefined;
+  let rateSuccess = false;
+  let rateError: string | undefined;
+  let rateHttpStatus: number | undefined;
+  let rateDuration: number | undefined;
+
+  if (listing.sync_rates && rateUpdates.length > 0) {
+    const ratePayload = JSON.stringify({
+      hotel_id: hotelId,
+      room_type_id: roomTypeId,
+      rate_plan_id: ratePlanId,
+      updates: rateUpdates,
+    });
+
+    const rateUrl = `${baseUrl}/rates`;
+    const t0 = Date.now();
+    let rateRespBody = "";
+
+    try {
+      const resp = await fetch(rateUrl, {
+        method: "POST",
+        headers,
+        body: ratePayload,
+        signal: AbortSignal.timeout(30_000),
+      });
+      rateHttpStatus = resp.status;
+      rateRespBody = (await resp.text()).slice(0, 32_768);
+      rateSuccess = resp.ok;
+      if (!resp.ok) {
+        rateError = `HTTP ${resp.status}: ${rateRespBody.slice(0, 200)}`;
+      }
+    } catch (err) {
+      rateError = err instanceof Error ? err.message : String(err);
+      rateHttpStatus = 0;
+    }
+
+    rateDuration = Date.now() - t0;
+
+    const { rows: logRows } = await pool.query<{ id: string }>(
+      `INSERT INTO booking_channel_push_log
+         (store_id, sync_job_id, channel_listing_id, provider_id, channel,
+          operation, request_url, request_body, http_status, response_body,
+          success, error_code, error_message, duration_ms,
+          dates_affected)
+       VALUES ($1::uuid, $2, $3::uuid, $4::uuid, $5,
+               'rate_update', $6, $7, $8, $9,
+               $10, $11, $12, $13,
+               daterange($14::date, $15::date, '[]'))
+       RETURNING id::text`,
+      [
+        storeId, syncJobId ?? null, listingId, resolvedProviderId, listing.channel,
+        rateUrl, ratePayload.slice(0, 32_768), rateHttpStatus, rateRespBody,
+        rateSuccess,
+        rateSuccess ? null : "HTTP_ERROR",
+        rateError ?? null,
+        rateDuration,
+        windowStart, windowEnd,
+      ]
+    );
+    rateLogId = logRows[0]?.id;
+  }
+
+  // ── 12. Update sync job status ─────────────────────────────────────────────
+  const overallSuccess = (availUpdates.length === 0 || availSuccess) &&
+                         (rateUpdates.length === 0 || rateSuccess);
+  const overallError = [availError, rateError].filter(Boolean).join("; ");
+
+  if (syncJobId) {
+    await pool.query(
+      `UPDATE booking_channel_sync_jobs
+       SET status = $1, finished_at = now(), error = $2, updated_at = now()
+       WHERE id = $3::uuid`,
+      [overallSuccess ? "success" : "failed", overallError || null, syncJobId]
+    );
+  }
+
+  // ── 13. Update listing last_pushed_at ──────────────────────────────────────
+  if (overallSuccess) {
+    await pool.query(
+      `UPDATE booking_channel_listings
+       SET last_pushed_at = now(), updated_at = now(),
+           status = 'active', error_message = null
+       WHERE id = $1::uuid`,
+      [listingId]
+    );
+  } else {
+    await pool.query(
+      `UPDATE booking_channel_listings
+       SET error_message = $1, updated_at = now()
+       WHERE id = $2::uuid`,
+      [overallError.slice(0, 500), listingId]
+    );
+  }
+
+  return {
+    status: overallSuccess ? "ok" : "error",
+    message: overallSuccess
+      ? `ARI push succeeded: ${availUpdates.length} availability + ${rateUpdates.length} rate updates`
+      : `ARI push failed: ${overallError}`,
+    push_log_id: availLogId ?? rateLogId,
+    availability_updated: availUpdates.length,
+    rates_updated: rateUpdates.length,
+  };
+}
+
 // ── Channel Sync Push ──────────────────────────────────────────────────────────
 
 export async function pushChannelSync(
@@ -640,8 +1136,14 @@ export async function pushChannelSync(
 ): Promise<{ status: string; message: string; feed_url?: string | undefined }> {
   const pool = getPool();
 
-  const { rows } = await pool.query<{ id: string; channel: string; resource_id: string }>(
-    `SELECT cl.id::text, cl.channel, cl.resource_id::text
+  const { rows } = await pool.query<{
+    id: string;
+    channel: string;
+    resource_id: string;
+    managed_by_provider_id: string | null;
+  }>(
+    `SELECT cl.id::text, cl.channel, cl.resource_id::text,
+            cl.managed_by_provider_id::text
      FROM booking_channel_listings cl
      JOIN booking_resources r ON r.id = cl.resource_id
      WHERE cl.id = $1::uuid AND r.store_id = $2::uuid`,
@@ -650,13 +1152,32 @@ export async function pushChannelSync(
   if (!rows[0]) throw notFound("channel listing not found");
   const listing = rows[0];
 
-  // For iCal-based channels: return feed URL stub
-  // For direct OTA API channels: NOT_IMPLEMENTED stub
-  const icalChannels = ["airbnb", "booking_com", "vrbo", "expedia", "hotels_com", "tripadvisor", "google_vacation_rentals", "google_reserve"];
+  // Decision logic:
+  // 1. If the listing has a managed_by_provider_id (ARI credential configured),
+  //    always attempt a direct ARI push — regardless of channel type. This is the
+  //    most correct path: the operator has explicitly configured an API integration.
+  // 2. If no provider configured, fall back to iCal feed URL for direct OTA channels
+  //    that support iCal (Airbnb, Booking.com, VRBO, etc.).
+  // 3. Channel managers (Guesty, Hostaway, SiteMinder, etc.) REQUIRE a provider;
+  //    without one, return credential_missing.
+
+  if (listing.managed_by_provider_id) {
+    // Direct ARI push via configured provider. Default window: today + 365 days.
+    const today = new Date().toISOString().slice(0, 10);
+    const yearOut = new Date(Date.now() + 365 * 86_400_000).toISOString().slice(0, 10);
+    const result = await pushARIToProvider(storeId, listingId, today, yearOut, listing.managed_by_provider_id);
+    return { status: result.status, message: result.message };
+  }
+
+  // No provider: for direct OTA channels that support iCal, return the feed URL.
+  // The OTA polls this URL to pull availability — no direct push from our side needed.
+  const icalChannels = [
+    "airbnb", "booking_com", "vrbo", "expedia", "hotels_com",
+    "tripadvisor", "google_vacation_rentals", "google_reserve",
+  ];
 
   if (icalChannels.includes(listing.channel)) {
     const feedUrl = `/storefront/${storeId}/booking-resources/${listing.resource_id}/ical.ics`;
-    // Update last_pushed_at
     await pool.query(
       `UPDATE booking_channel_listings SET last_pushed_at = now(), updated_at = now() WHERE id = $1::uuid`,
       [listingId]
@@ -664,15 +1185,11 @@ export async function pushChannelSync(
     return { status: "ok", message: "iCal feed URL ready", feed_url: feedUrl };
   }
 
-  // Direct OTA: log not implemented
-  await pool.query(
-    `INSERT INTO booking_channel_sync_jobs
-       (store_id, channel_listing_id, channel, job_type, status, scheduled_at, error)
-     VALUES ($1::uuid, $2::uuid, $3, 'push_rates', 'failed', now(), 'NOT_IMPLEMENTED')`,
-    [storeId, listingId, listing.channel]
-  );
-
-  return { status: "not_implemented", message: "Direct OTA push not yet implemented for this channel" };
+  // Channel manager without ARI credentials → credential_missing.
+  return {
+    status: "credential_missing",
+    message: "No provider configured for this channel manager listing. Set managed_by_provider_id via PUT channel-listings/:id.",
+  };
 }
 
 // ── Webhook Logging ────────────────────────────────────────────────────────────
