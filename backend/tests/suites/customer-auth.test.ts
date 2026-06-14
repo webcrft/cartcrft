@@ -146,18 +146,13 @@ describe("Customer auth — lockout after failed attempts", () => {
     mailer.clear();
     const setup = await setupStore(orgId, userId);
     storeId = setup.storeId;
-
-    // Create verified customer directly
-    const email2 = `lockout-${Date.now()}@example.com`;
-    await ctx.pool.query(
-      `INSERT INTO customers (store_id, email, password_hash, auth_provider, is_active, email_verified)
-       VALUES ($1::uuid, $2, 'pbkdf2:fakesalt:fakehash', 'email', true, true)`,
-      [storeId, email2]
-    );
+    // The lockout customer is created inside the test body with a unique email;
+    // no seed needed here (the previous seed used a Date.now() email that could
+    // collide with the test-body insert in the same millisecond → duplicate key).
   });
 
   it("gets 423 after 10 failed login attempts", async () => {
-    const email2 = `lockout-${Date.now()}@example.com`;
+    const email2 = `lockout-${randomUUID()}@example.com`;
     // Insert a customer first
     const hashResult = await ctx.pool.query<{ id: string }>(
       `INSERT INTO customers (store_id, email, password_hash, auth_provider, is_active, email_verified)

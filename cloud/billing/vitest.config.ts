@@ -13,5 +13,15 @@ export default defineConfig({
     // Generous timeouts for DB integration tests
     hookTimeout: 60_000,
     testTimeout: 30_000,
+
+    // Cap concurrent forks.  Each integration suite creates a per-run schema
+    // with the full ~60-table billing/commerce DDL; dropping several at once
+    // (DROP SCHEMA CASCADE) under the default max_locks_per_transaction (64)
+    // exhausted shared lock memory ("out of shared memory") during teardown.
+    // Bounding forks keeps concurrent lock pressure under that ceiling.
+    pool: 'forks',
+    poolOptions: {
+      forks: { maxForks: 4, minForks: 1 },
+    },
   },
 });

@@ -21,6 +21,7 @@
  *   error.
  */
 
+import { randomUUID } from "node:crypto";
 import pg from "pg";
 import type { TestCtx, RequestResult } from "./ctx.js";
 
@@ -160,6 +161,20 @@ export function isErrorEnvelope(result: RequestResult): boolean {
 const PG_UNDEFINED_TABLE = "42P01";
 
 /**
+ * Best-effort extraction of the missing relation name from a Postgres 42P01
+ * error.  `pg` populates `err.table` for some errors but for "relation X does
+ * not exist" the relation name only appears in the message, so we parse it.
+ * Returns undefined when no relation can be derived.
+ */
+function missingRelationFromError(err: Error): string | undefined {
+  const withTable = err as Error & { table?: string };
+  if (withTable.table) return withTable.table;
+  // Postgres message form: relation "foo" does not exist
+  const m = /relation "([^"]+)" does not exist/i.exec(err.message);
+  return m?.[1];
+}
+
+/**
  * Wraps a fixture-building async function.  If the DB throws 42P01
  * (relation/table does not exist — a required migration is missing),
  * this throws a hard error with a clear message so the failure is
@@ -168,15 +183,19 @@ const PG_UNDEFINED_TABLE = "42P01";
  * H6.4: Changed from test.skip() to throw — a missing table is a
  * configuration error that must be fixed, not silently skipped.
  *
+ * The thrown message names the ACTUAL missing relation derived from the
+ * Postgres error (rather than a hardcoded guess), so the diagnostic points
+ * at the real gap instead of a stale "Wave 1 migrations not applied" string.
+ *
  * Usage:
- *   const orgId = await resilientFixture(
- *     () => insertOrg(ctx.pool, { name: 'Test Org' }),
- *     'organizations table missing — Wave 1 migrations not applied'
+ *   const store = await resilientFixture(
+ *     () => insertStore(ctx.pool, { orgId }),
+ *     'stores fixture'
  *   );
  */
 export async function resilientFixture<T>(
   fn: () => Promise<T>,
-  errorMessage: string
+  context: string
 ): Promise<T> {
   try {
     return await fn();
@@ -187,10 +206,14 @@ export async function resilientFixture<T>(
       (err as NodeJS.ErrnoException).code === PG_UNDEFINED_TABLE
     ) {
       // Hard failure — missing table is a configuration error, not a
-      // graceful condition.  Throw so the suite fails visibly.
+      // graceful condition.  Derive the real missing relation from the error
+      // so the message is accurate rather than a hardcoded guess.
+      const relation = missingRelationFromError(err);
+      const detail = relation
+        ? `relation "${relation}" does not exist — the migration that creates it has not been applied to the test schema`
+        : `a required relation does not exist`;
       throw new Error(
-        `[resilientFixture] Required table missing — ${errorMessage}. ` +
-          `Original error: ${err.message}`
+        `[resilientFixture] ${context}: ${detail}. Original error: ${err.message}`
       );
     }
     throw err;
@@ -236,51 +259,29 @@ export interface CustomerFixture {
 // yet.  They are resilient to missing tables (Wave 1 not landed).
 
 /**
- * Insert a minimal organization row.
+ * Mint a synthetic organization id.
  *
- * Requires: Wave 1 migration (0001_commerce.sql) — no organizations table
- * exists yet in Wave 0.  If the table is missing the calling test is skipped.
+ * Cartcrft is headless: there is NO `organizations` table.  `organization_id`
+ * is a plain uuid on `stores` (and the JWT `org` claim) with no FK to any
+ * platform org table.  Earlier this fixture INSERTed into an `organizations`
+ * table that only existed as a leftover on a shared Neon DB — against the real
+ * cartcrft schema it threw 42P01 and skipped ~18 suites.
  *
- * TODO T2.1: Once the organizations table lands, remove the TODO comment and
- * align column names with the final schema.  For now the fixture targets the
- * expected column names from the webcrft-mono port plan.
+ * This now simply generates an org id (no DB write).  Callers thread the
+ * returned `id` into both `stores.organization_id` and the JWT `org` claim so
+ * that the API-key / JWT org and the store's org match (required for RLS
+ * tenant isolation — see 0019_rls_tenant_isolation.sql).
+ *
+ * Signature/return shape (`{ id, name }`) is unchanged so existing callers
+ * that read `org.id` keep working.
  */
 export async function insertOrg(
-  pool: pg.Pool,
+  _pool: pg.Pool,
   opts: { name?: string; slug?: string } = {}
 ): Promise<OrgFixture> {
   const name = opts.name ?? `Test Org ${Date.now()}`;
-  const slug =
-    opts.slug ??
-    `test-org-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-  return resilientFixture(async () => {
-    // Try inserting with slug (required in most deployments).
-    // Fall back to name-only insert if the slug column doesn't exist.
-    let res: { rows: { id: string; name: string }[] };
-    try {
-      res = await pool.query<{ id: string; name: string }>(
-        `INSERT INTO organizations (name, slug) VALUES ($1, $2) RETURNING id::text, name`,
-        [name, slug]
-      );
-    } catch (err: unknown) {
-      // If slug column doesn't exist, try without it
-      if (
-        err instanceof Error &&
-        err.message.includes("slug") &&
-        err.message.includes("column")
-      ) {
-        res = await pool.query<{ id: string; name: string }>(
-          `INSERT INTO organizations (name) VALUES ($1) RETURNING id::text, name`,
-          [name]
-        );
-      } else {
-        throw err;
-      }
-    }
-    const row = res.rows[0];
-    if (!row) throw new Error("insertOrg: no row returned");
-    return { id: row.id, name: row.name };
-  }, `organizations table missing — Wave 1 migrations (0001_commerce.sql) not applied yet`);
+  // No table to write to — the org is a plain uuid identity.
+  return { id: randomUUID(), name };
 }
 
 /**
@@ -316,7 +317,7 @@ export async function insertStore(
       name: row.name,
       slug: row.slug,
     };
-  }, `stores table missing — Wave 1 migrations (0001_commerce.sql) not applied yet`);
+  }, `insertStore fixture`);
 }
 
 /**
@@ -349,7 +350,7 @@ export async function insertProduct(
     const row = res.rows[0];
     if (!row) throw new Error("insertProduct: no row returned");
     return { id: row.id, storeId: row.store_id, title: row.title };
-  }, `products table missing — Wave 1 migrations (0001_commerce.sql) not applied yet`);
+  }, `insertProduct fixture`);
 }
 
 /**
@@ -383,7 +384,7 @@ export async function insertVariant(
       title: row.title,
       price: row.price,
     };
-  }, `product_variants table missing — Wave 1 migrations (0001_commerce.sql) not applied yet`);
+  }, `insertVariant fixture`);
 }
 
 /**
@@ -411,7 +412,7 @@ export async function insertCustomer(
     const row = res.rows[0];
     if (!row) throw new Error("insertCustomer: no row returned");
     return { id: row.id, storeId: row.store_id, email: row.email };
-  }, `customers table missing — Wave 1 migrations (0001_commerce.sql) not applied yet`);
+  }, `insertCustomer fixture`);
 }
 
 // ── Auth fixtures (implemented in T2.1) ──────────────────────────────────────

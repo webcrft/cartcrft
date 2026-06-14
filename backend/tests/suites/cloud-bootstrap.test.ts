@@ -30,7 +30,7 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { randomBytes } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import fs from 'node:fs';
@@ -222,15 +222,11 @@ async function seedBillingScenario(
   pool: pg.Pool,
   clock: { now(): Date },
 ): Promise<{ orgId: string; subscriptionId: string }> {
-  // Organization
-  const orgRes = await pool.query<{ id: string }>(
-    `INSERT INTO organizations (name, slug) VALUES ($1, $2) RETURNING id`,
-    [
-      'Bootstrap Test Org',
-      `bt-org-${randomBytes(4).toString('hex')}`,
-    ],
-  );
-  const orgId = orgRes.rows[0]!.id;
+  // Organization — cartcrft is headless: there is NO `organizations` table.
+  // organization_id is a plain uuid on every billing table (no FK), so we mint
+  // an id rather than insert a row (the old INSERT targeted a leftover Neon
+  // table and threw 42P01 against the real schema).
+  const orgId = randomUUID();
 
   // Billing tier (paid) — unique name per call to avoid unique constraint collisions
   const tierSuffix = randomBytes(3).toString('hex');

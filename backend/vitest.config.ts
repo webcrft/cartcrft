@@ -10,6 +10,19 @@ export default defineConfig({
     // so it is always clear and not accidentally overridden.
     pool: "forks",
 
+    // Cap concurrent forks.  Each fork opens its own pg.Pool against the dev DB
+    // and creates a per-run schema; unbounded forks exhausted Postgres
+    // connections + advisory locks and leaked schemas (post-unification audit).
+    // 4 keeps throughput while staying under the connection ceiling. Override
+    // on the CLI with --poolOptions.forks.maxForks=N.
+    poolOptions: {
+      forks: { maxForks: 4, minForks: 1 },
+    },
+
+    // Sweep leaked `test_*` schemas before + after the whole run so a crashed
+    // fork can't pollute the dev DB.
+    globalSetup: ["./tests/shared/global-teardown.ts"],
+
     // Each test file gets its own process — no shared module-level state
     // bleeds between suites.
     isolate: true,
