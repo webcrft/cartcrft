@@ -16,6 +16,7 @@ import {
   storeAuthRead,
   storeAuthWrite,
   storeAuthAdmin,
+  requireScope,
 } from "../../lib/auth/middleware.js";
 import {
   listProducts,
@@ -533,10 +534,12 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // ══════════════════════════════════════════════════════════════════════════
 
   // GET /commerce/stores/:storeId/products
+  // OAuth tokens must additionally carry catalog:read (requireScope is a no-op
+  // for non-OAuth principals, so cc_pub_/cc_prv_/JWT auth is unaffected).
   app.get(
     "/commerce/stores/:storeId/products",
     {
-      preHandler: [storeAuthRead],
+      preHandler: [storeAuthRead, requireScope("catalog:read")],
       schema: { params: StoreParams, querystring: ProductsQuery },
     },
     async (request, reply) => {
@@ -551,7 +554,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.post(
     "/commerce/stores/:storeId/products",
     {
-      preHandler: [storeAuthWrite],
+      preHandler: [storeAuthWrite, requireScope("catalog:write")],
       schema: { params: StoreParams, body: CreateProductBody },
     },
     async (request, reply) => {

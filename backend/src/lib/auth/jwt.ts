@@ -42,6 +42,14 @@ export interface CartcrftJwtClaims extends JWTPayload {
   sub: string;   // userId
   org: string;   // orgId
   email?: string;
+  /**
+   * OAuth2 access-token claims (present ONLY on tokens minted by the OAuth
+   * authorization server — modules/oauth). When set, the request is acting as a
+   * third-party app on behalf of a merchant; the scope-enforcement layer
+   * (requireScope) asserts these scopes. Absent on dashboard/management JWTs.
+   */
+  scope?: string;       // space-delimited granted scopes
+  oauth_app?: string;   // the oauth_apps.id the token was issued to
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

@@ -44,6 +44,7 @@ import { notificationsPlugin } from "../modules/notifications/routes.js";
 import { analyticsPlugin } from "../modules/analytics/routes.js";
 import { superadminPlugin } from "../modules/superadmin/routes.js";
 import { accountPlugin } from "../modules/account/routes.js";
+import { oauthPlugin } from "../modules/oauth/routes.js";
 import { mcpHttpPlugin } from "../agent/mcp/http.js";
 import { searchPlugin } from "../agent/search/routes.js";
 import { agentsPlugin } from "../modules/agents/routes.js";
@@ -339,6 +340,13 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
   // ── Platform-account auth (P3/item-1) — dashboard email+password login ────
   // Short-lived access JWT (org-middleware compatible) + httpOnly refresh cookie.
   await app.register(accountPlugin);
+
+  // ── OAuth2 authorization server + app platform (T-OAuth) ──────────────────
+  // App management under /account/oauth-apps (requireJwt) + the public /oauth
+  // authorize/token/revoke/userinfo endpoints. Access tokens are JWTs the
+  // existing /commerce middleware already accepts (iss/aud/org match), with
+  // added scope/oauth_app claims that requireScope() enforces.
+  await app.register(oauthPlugin);
 
   // ── MCP server (agent-native layer) ───────────────────────────────────────
   await app.register(mcpHttpPlugin);

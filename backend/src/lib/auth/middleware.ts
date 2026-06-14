@@ -43,6 +43,7 @@ import { storeExistsInOrg } from "../../modules/stores/service.js";
 import { config } from "../../config/config.js";
 import { buildKv, getKvSync, MemoryKv } from "../cache/kv.js";
 import { setRequestCtx } from "../request-ctx.js";
+import { scopeSatisfies } from "../oauth/scopes.js";
 
 // ── Request decoration ────────────────────────────────────────────────────────
 
@@ -52,6 +53,15 @@ export interface AuthContext {
   orgId: string;
   userId?: string | undefined;
   authType: "jwt" | "api-key";
+  /**
+   * OAuth principal (T-OAuth): set ONLY when the bearer JWT carries the
+   * `oauth_app` + `scope` claims minted by the authorization server. When
+   * present, requireScope() asserts the token holds a route's required scope.
+   * Absent for normal dashboard JWTs and API keys, so existing auth is
+   * unchanged — OAuth is an ADDITIONAL principal type.
+   */
+  oauthApp?: string | undefined;
+  oauthScopes?: string[] | undefined;
 }
 
 declare module "fastify" {
@@ -271,11 +281,21 @@ async function resolveStoreAuth(
     return sendNotFound(reply, "store not found");
   }
 
+  // OAuth access tokens carry oauth_app + scope claims. They authenticate
+  // exactly like a JWT here (org/store-bound), and additionally surface their
+  // granted scopes so requireScope() can gate individual routes.
+  const oauthApp = typeof claims.oauth_app === "string" ? claims.oauth_app : undefined;
+  const oauthScopes = oauthApp
+    ? (typeof claims.scope === "string" ? claims.scope.split(" ").filter(Boolean) : [])
+    : undefined;
+
   request.auth = {
     storeId,
     orgId,
     userId,
     authType: "jwt",
+    oauthApp,
+    oauthScopes,
   };
 
   // Populate AsyncLocalStorage so withTx can set the RLS GUC.
@@ -348,6 +368,37 @@ export const storeAuthAdmin: preHandlerHookHandler = async (
 ) => {
   return resolveStoreAuth(request, reply, "admin", false);
 };
+
+// ── OAuth scope enforcement ─────────────────────────────────────────────────
+
+/**
+ * requireScope(scope) — assert an OAuth access token carries `scope`.
+ *
+ * Designed to run AFTER a storeAuth* tier preHandler (which has already
+ * authenticated the request and populated request.auth). It is a no-op for
+ * non-OAuth principals — normal dashboard JWTs and cc_pub_/cc_prv_ API keys are
+ * NOT scope-restricted here, preserving every existing auth path. Only when the
+ * token is an OAuth access token (request.auth.oauthApp is set) does it enforce
+ * that the granted scope list satisfies the required scope; otherwise it returns
+ * 403 INSUFFICIENT_SCOPE.
+ *
+ * `:write` on a resource implies `:read` (see scopeSatisfies()).
+ */
+export function requireScope(scope: string): preHandlerHookHandler {
+  return async (request, reply) => {
+    const auth = request.auth;
+    // Not an OAuth principal → existing auth already authorised this route.
+    if (!auth || !auth.oauthApp) return;
+    if (!scopeSatisfies(auth.oauthScopes ?? [], scope)) {
+      return reply.status(403).send({
+        error: {
+          code: "INSUFFICIENT_SCOPE",
+          message: `this OAuth token is missing the required scope: ${scope}`,
+        },
+      });
+    }
+  };
+}
 
 // ── Fastify plugin (registers decorators) ────────────────────────────────────
 
