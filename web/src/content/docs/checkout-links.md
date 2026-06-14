@@ -198,6 +198,10 @@ Errors:
 
 ## Hosted checkout page — /pay/:token
 
+![Cartcrft hosted checkout — branded payment page](/screenshots/checkout.png)
+
+*The hosted checkout page: store-branded, no storefront code required. Customers land here directly from the shareable link.*
+
 The hosted page (`/pay/<token>`) is a self-contained React app that:
 
 1. Calls `GET /storefront/checkout-links/:token` to load the store branding,

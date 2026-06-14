@@ -567,6 +567,126 @@ export default function Landing() {
           </div>
         </section>
 
+        {/* Product showcase */}
+        <section className="product-showcase" data-reveal aria-label="Product screenshots">
+          <div className="product-showcase-inner">
+            <div className="mk-eyebrow">
+              <span className="ey-b">[</span>
+              <span className="ey-dot" />
+              see it in action
+              <span className="ey-b">]</span>
+            </div>
+            <h2>
+              Built for <span className="hl">real stores</span>. Ready on day one.
+            </h2>
+            <p className="showcase-sub">
+              The same backend — every surface. Admin dashboard for merchants, hosted checkout for
+              buyers, platform console for operators. All Agentic Terminal.
+            </p>
+            <div className="showcase-grid">
+              <figure className="showcase-frame showcase-frame--wide">
+                <div className="browser-chrome" aria-hidden="true">
+                  <span className="bc-dot bc-dot--red" />
+                  <span className="bc-dot bc-dot--amber" />
+                  <span className="bc-dot bc-dot--green" />
+                  <span className="bc-address">dashboard / overview</span>
+                </div>
+                <img
+                  src="/screenshots/dashboard-overview.png"
+                  alt="Cartcrft admin dashboard — store overview with multi-store switcher and full nav"
+                  width="1280"
+                  height="720"
+                  loading="lazy"
+                  decoding="async"
+                  className="showcase-img"
+                />
+                <figcaption className="showcase-caption">
+                  <span className="cap-label">admin / overview</span>
+                  <span className="cap-text">Multi-store switcher, catalog, sales, B2B, subscriptions — one sidebar.</span>
+                </figcaption>
+              </figure>
+
+              <figure className="showcase-frame">
+                <div className="browser-chrome" aria-hidden="true">
+                  <span className="bc-dot bc-dot--red" />
+                  <span className="bc-dot bc-dot--amber" />
+                  <span className="bc-dot bc-dot--green" />
+                  <span className="bc-address">dashboard / products</span>
+                </div>
+                <img
+                  src="/screenshots/dashboard-products.png"
+                  alt="Cartcrft admin dashboard — product catalog view"
+                  width="1280"
+                  height="720"
+                  loading="lazy"
+                  decoding="async"
+                  className="showcase-img"
+                />
+                <figcaption className="showcase-caption">
+                  <span className="cap-label">catalog management</span>
+                  <span className="cap-text">Products, collections, variants, and digital files — no plugin required.</span>
+                </figcaption>
+              </figure>
+
+              <figure className="showcase-frame">
+                <div className="browser-chrome" aria-hidden="true">
+                  <span className="bc-dot bc-dot--red" />
+                  <span className="bc-dot bc-dot--amber" />
+                  <span className="bc-dot bc-dot--green" />
+                  <span className="bc-address">operator / analytics</span>
+                </div>
+                <img
+                  src="/screenshots/superadmin-analytics.png"
+                  alt="Cartcrft operator console — system analytics, organisations, tenant management"
+                  width="1280"
+                  height="720"
+                  loading="lazy"
+                  decoding="async"
+                  className="showcase-img"
+                />
+                <figcaption className="showcase-caption">
+                  <span className="cap-label">operator console</span>
+                  <span className="cap-text">Cloud platform view: system analytics, organisations, stores, audit log.</span>
+                </figcaption>
+              </figure>
+
+              <figure className="showcase-frame">
+                <div className="browser-chrome" aria-hidden="true">
+                  <span className="bc-dot bc-dot--red" />
+                  <span className="bc-dot bc-dot--amber" />
+                  <span className="bc-dot bc-dot--green" />
+                  <span className="bc-address">pay.cartcrft.dev / pay / cl_...</span>
+                </div>
+                <img
+                  src="/screenshots/checkout.png"
+                  alt="Cartcrft hosted checkout — branded payment page for Lekki Threads, ZAR 319.00"
+                  width="1280"
+                  height="856"
+                  loading="lazy"
+                  decoding="async"
+                  className="showcase-img"
+                />
+                <figcaption className="showcase-caption">
+                  <span className="cap-label">checkout links</span>
+                  <span className="cap-text">Shareable, hosted checkout — no storefront code. One API call, one URL, done.</span>
+                </figcaption>
+              </figure>
+            </div>
+          </div>
+        </section>
+
+        {/* Part of Webcrft Systems */}
+        <section className="webcrft-band" data-reveal>
+          <a className="webcrft-band-inner" href="https://webcrft.systems" target="_blank" rel="noopener noreferrer">
+            <img src="/webcrft.svg" alt="" width={44} height={44} />
+            <div className="webcrft-band-text">
+              <span className="webcrft-eyebrow">[ part of the family ]</span>
+              <p>A <strong>Webcrft Systems</strong> project — built by the team behind the webcrft platform.</p>
+            </div>
+            <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" className="webcrft-arrow"><path fill="currentColor" d="M6.22 3.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 1 1-1.06-1.06L9.94 8 6.22 4.28a.75.75 0 0 1 0-1.06z" /></svg>
+          </a>
+        </section>
+
         {/* CTA band */}
         <section className="cta-band" data-reveal>
           <div className="cta-band-inner">

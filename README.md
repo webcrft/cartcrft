@@ -10,6 +10,25 @@
 
 ---
 
+## Screenshots
+
+<p align="center">
+  <img src="docs/screenshots/dashboard-overview.png" width="720" alt="Cartcrft admin dashboard — Overview (Agentic Terminal theme)" />
+</p>
+<p align="center"><em>Admin dashboard — multi-store switcher, full catalog and sales nav.</em></p>
+
+<p align="center">
+  <img src="docs/screenshots/checkout.png" width="720" alt="Cartcrft hosted checkout — Lekki Threads store, ZAR 319.00" />
+</p>
+<p align="center"><em>Hosted checkout link — branded, no-storefront-required payment page.</em></p>
+
+<p align="center">
+  <img src="docs/screenshots/landing.png" width="720" alt="Cartcrft marketing landing page" />
+</p>
+<p align="center"><em>Marketing site — agent-native commerce landing (1440-wide, Agentic Terminal theme).</em></p>
+
+---
+
 ## Why Cartcrft?
 
 Agents are the new buyers. AI assistants, autonomous shopping agents, and LLM-powered
@@ -100,8 +119,8 @@ cartcrft/
 │   └── tests/                 # vitest suites: pnpm suite <name>
 ├── mcp/                       # MCP usage docs + conformance examples (MIT)
 ├── sdk/                       # @cartcrft/sdk (generated from OpenAPI) + storefront.js (MIT)
-├── web/                       # unified Astro app: marketing + Starlight docs + React admin
-│   │                         #   dashboard SPA mounted at /dashboard (client-only island) (MIT)
+├── web/                       # Vite + React 19 app: marketing site + docs + admin dashboard (MIT)
+│   │                         #   SPA with react-router; dashboard at /dashboard, docs at /docs
 │   └── src/dashboard/         # React 19 admin SPA (react-router under basename=/dashboard)
 ├── cloud/                     # thin cloud layer (Cartcrft Cloud License — source-visible, not MIT)
 │   ├── LICENSE

@@ -148,9 +148,10 @@ export default function SiteLayout({ children }: { children: ReactNode }) {
               <GitHubIcon size={18} />
               Star on GitHub
             </a>
-            <p className="footer-attribution">
-              A <a href="https://webcrft.systems" target="_blank" rel="noopener noreferrer">Webcrft Systems</a> project.
-            </p>
+            <a className="footer-webcrft" href="https://webcrft.systems" target="_blank" rel="noopener noreferrer">
+              <img src="/webcrft.svg" alt="" width={20} height={20} />
+              <span>A <strong>Webcrft Systems</strong> project</span>
+            </a>
           </div>
 
           <div className="footer-links">
