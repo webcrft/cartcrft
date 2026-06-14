@@ -1,11 +1,13 @@
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
+import react from '@astrojs/react';
 
 // https://astro.build/config
 export default defineConfig({
   site: 'https://cartcrft.dev',
   output: 'static',
   integrations: [
+    react(),
     starlight({
       title: 'Cartcrft',
       description: 'Headless commerce for agent-native storefronts',

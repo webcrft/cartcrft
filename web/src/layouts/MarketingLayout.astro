@@ -54,7 +54,8 @@ const pageTitle = `${title} | Cartcrft`;
         </nav>
 
         <div class="header-cta">
-          <a href="/docs/quickstart" class="cc-btn-primary">Get started</a>
+          <a href="/dashboard" class="header-login">Log in</a>
+          <a href="/dashboard" class="cc-btn-primary">Get started</a>
         </div>
       </div>
     </header>
@@ -81,6 +82,7 @@ const pageTitle = `${title} | Cartcrft`;
               <li><a href="/pricing">Pricing</a></li>
               <li><a href="/compare">Compare</a></li>
               <li><a href="/docs/quickstart">Quickstart</a></li>
+              <li><a href="/dashboard">Dashboard</a></li>
             </ul>
           </div>
           <div class="footer-col">
@@ -174,6 +176,29 @@ const pageTitle = `${title} | Cartcrft`;
   @media (prefers-color-scheme: dark) {
     .header-nav a { color: #94a3b8; }
     .header-nav a:hover { color: #818cf8; }
+  }
+
+  .header-cta {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .header-login {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #475569;
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+
+  .header-login:hover {
+    color: #6366f1;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .header-login { color: #94a3b8; }
+    .header-login:hover { color: #818cf8; }
   }
 
   .cc-btn-primary {

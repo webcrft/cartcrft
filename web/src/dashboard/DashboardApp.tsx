@@ -1,5 +1,4 @@
 import React, { Suspense } from 'react'
-import ReactDOM from 'react-dom/client'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { StoreProvider } from './context/StoreContext'
 import { ToastProvider } from './context/ToastContext'
@@ -15,12 +14,21 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
-const root = document.getElementById('root') as HTMLElement
-ReactDOM.createRoot(root).render(
-  <React.StrictMode>
+/**
+ * DashboardApp — the admin SPA, mounted as a client-only Astro island under
+ * /dashboard. The whole admin router lives beneath the `/dashboard` basename so
+ * routes like `/dashboard/products` resolve to the Products page. Astro renders
+ * a static HTML shell and this component boots the SPA on the client
+ * (`client:only="react"`), so there are no SSR/SEO concerns.
+ *
+ * StoreProvider sits inside BrowserRouter because StoreContext relies on
+ * react-router's useNavigate (to redirect to /login on a 401).
+ */
+export default function DashboardApp() {
+  return (
     <ToastProvider>
-      <StoreProvider>
-        <BrowserRouter>
+      <BrowserRouter basename="/dashboard">
+        <StoreProvider>
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route
@@ -45,8 +53,8 @@ ReactDOM.createRoot(root).render(
               ))}
             </Route>
           </Routes>
-        </BrowserRouter>
-      </StoreProvider>
+        </StoreProvider>
+      </BrowserRouter>
     </ToastProvider>
-  </React.StrictMode>
-)
+  )
+}

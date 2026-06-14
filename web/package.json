@@ -7,12 +7,31 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "typecheck": "astro check",
+    "test": "vitest run"
   },
   "dependencies": {
+    "@astrojs/react": "^4.2.0",
     "@astrojs/starlight": "^0.34.1",
+    "@cartcrft/sdk": "workspace:*",
     "astro": "^5.9.0",
+    "lucide-react": "^0.475.0",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "react-router-dom": "^6.28.0",
     "sharp": "^0.34.0"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.4",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.2",
+    "jsdom": "^29.1.1",
+    "typescript": "^5.8.0",
+    "vitest": "^4.1.8"
   },
   "engines": {
     "node": ">=22"

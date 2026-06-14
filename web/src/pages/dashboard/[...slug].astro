@@ -1,0 +1,50 @@
+---
+/**
+ * Dashboard catch-all route.
+ *
+ * Every /dashboard/* path renders the same static HTML shell, which boots the
+ * admin SPA as a client-only React island. react-router (BrowserRouter with
+ * basename="/dashboard", see DashboardApp.tsx) takes over routing on the
+ * client, so this single Astro route backs the entire dashboard.
+ *
+ * Because output is 'static', a deep link like /dashboard/products needs its
+ * own pre-rendered shell file or a refresh/direct-nav would 404. We therefore
+ * generate one shell per known SPA route (derived from ROUTE_ENTRIES, plus the
+ * root and /login). The shell is identical everywhere — react-router decides
+ * what to render on the client. Unknown deep paths still 404 statically, but
+ * all real dashboard routes resolve. The island is client:only, so there is no
+ * SSR/SEO concern.
+ */
+import DashboardApp from '../../dashboard/DashboardApp.tsx';
+import { ROUTE_ENTRIES } from '../../dashboard/routes/index.tsx';
+
+export const prerender = true;
+
+export function getStaticPaths() {
+  const paths = new Set<string>(['login']);
+  for (const entry of ROUTE_ENTRIES) {
+    const p = entry.path.replace(/^\//, '');
+    if (p) paths.add(p);
+  }
+  return [
+    // /dashboard root shell
+    { params: { slug: undefined } },
+    // /dashboard/<route> shells
+    ...[...paths].map((slug) => ({ params: { slug } })),
+  ];
+}
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <title>Cartcrft Dashboard</title>
+  </head>
+  <body>
+    <DashboardApp client:only="react" />
+  </body>
+</html>

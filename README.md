@@ -71,8 +71,9 @@ Cartcrft is fully headless. The backend exposes:
 - **MCP server** — agent-native tool surface, ships by default on every store.
 - **Generated TS SDK** — `@cartcrft/sdk`, auto-generated from OpenAPI.
 
-The admin dashboard (`admin/`) is a React SPA that speaks the same public API with a
-`cc_prv_` key. Storefronts are your problem — or an agent's.
+The admin dashboard is a React SPA bundled into the web app (`web/src/dashboard/`, served
+at `/dashboard`) that speaks the same public API with a `cc_prv_` key. Storefronts are your
+problem — or an agent's.
 
 Self-hosting requires nothing from `cloud/`. The cloud layer (`cloud/`) is metering +
 billing + tenant provisioning for cartcrft.com only.
@@ -99,7 +100,9 @@ cartcrft/
 │   └── tests/                 # vitest suites: pnpm suite <name>
 ├── mcp/                       # MCP usage docs + conformance examples (MIT)
 ├── sdk/                       # @cartcrft/sdk (generated from OpenAPI) + storefront.js (MIT)
-├── admin/                     # React 19 + Vite admin dashboard SPA (MIT)
+├── web/                       # unified Astro app: marketing + Starlight docs + React admin
+│   │                         #   dashboard SPA mounted at /dashboard (client-only island) (MIT)
+│   └── src/dashboard/         # React 19 admin SPA (react-router under basename=/dashboard)
 ├── cloud/                     # thin cloud layer (Cartcrft Cloud License — source-visible, not MIT)
 │   ├── LICENSE
 │   └── billing/               # plans, Paystack, USD→ZAR fx snapshots, wallet, billingsim

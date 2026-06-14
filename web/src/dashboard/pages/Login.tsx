@@ -83,7 +83,7 @@ export default function Login() {
         </div>
         <p className="text-center text-[11px] text-slate-600 mt-4">
           {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-          VITE_API_URL: {(import.meta as any).env?.['VITE_API_URL'] ?? 'http://localhost:3000'}
+          PUBLIC_API_URL: {(import.meta as any).env?.['PUBLIC_API_URL'] ?? 'http://localhost:8080'}
         </p>
       </div>
     </div>
