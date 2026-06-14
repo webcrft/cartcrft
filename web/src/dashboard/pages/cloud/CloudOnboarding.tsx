@@ -1,147 +1,439 @@
-import React, { useState } from 'react'
-import { PageHeader, Card, Btn, Badge } from '../../components/ui/index'
+import React, { useCallback, useEffect, useState } from 'react'
+import {
+  PageHeader, Card, Btn, Badge, Spinner, Modal, FormInput, LoadError,
+} from '../../components/ui/index'
+import { useStore } from '../../context/StoreContext'
+import { useToast } from '../../context/ToastContext'
+import { getToken, getApiKey } from '../../lib/auth'
 
-interface OnboardingStep {
-  id: string
-  label: string
-  description: string
-  status: 'complete' | 'active' | 'pending'
-  action?: string
-  actionHref?: string
+// ── Agent surfaces ──────────────────────────────────────────────────────────
+
+type Surface = 'google_merchant' | 'chatgpt_acp'
+
+interface SurfaceMeta {
+  surface: Surface
+  name: string
+  blurb: string
+  accountLabel: string
+  accountPlaceholder: string
 }
 
-/**
- * Cloud Onboarding page — guides the user through connecting their store to
- * Cartcrft Cloud. This is a placeholder/wizard surface; full implementation
- * ships with the cloud billing backend (CARTCRFT_CLOUD gate).
- */
-export default function CloudOnboardingPage() {
-  const [steps] = useState<OnboardingStep[]>([
-    {
-      id: 'account',
-      label: 'Account created',
-      description: 'Your Cartcrft Cloud account is active.',
-      status: 'complete',
-    },
-    {
-      id: 'store',
-      label: 'Connect a store',
-      description:
-        'Link your Cartcrft store to your Cloud account. Your store data stays in the managed Postgres instance.',
-      status: 'active',
-      action: 'Configure store',
-      actionHref: '/settings',
-    },
-    {
-      id: 'payments',
-      label: 'Configure payment provider',
-      description:
-        'Add your Paystack or Stripe credentials. Payments go directly to your provider — Cartcrft never touches funds.',
-      status: 'pending',
-      action: 'Add payment provider',
-      actionHref: '/payment-providers',
-    },
-    {
-      id: 'mcp',
-      label: 'Enable MCP (agent surface)',
-      description:
-        'Your store MCP endpoint is live at /mcp/<storeId>. Point any MCP-capable agent at it with your cc_pub_ key.',
-      status: 'pending',
-      action: 'View API keys',
-      actionHref: '/api-keys',
-    },
-    {
-      id: 'domain',
-      label: 'Set up custom domain',
-      description:
-        'Add a CNAME for your store API. SSL is provisioned automatically.',
-      status: 'pending',
-      action: 'Configure domain',
-      actionHref: '/settings',
-    },
-  ])
+const SURFACE_META: Record<Surface, SurfaceMeta> = {
+  google_merchant: {
+    surface: 'google_merchant',
+    name: 'Google AI Shopping',
+    blurb:
+      'Publish your catalog to Google Merchant Center so it surfaces in Google’s AI shopping & Shopping Graph.',
+    accountLabel: 'Merchant Center account ID',
+    accountPlaceholder: 'e.g. 1234567',
+  },
+  chatgpt_acp: {
+    surface: 'chatgpt_acp',
+    name: 'ChatGPT (ACP)',
+    blurb:
+      'Register your live ACP product feed with OpenAI so ChatGPT shopping agents can discover & buy from your store.',
+    accountLabel: 'OpenAI merchant ID',
+    accountPlaceholder: 'e.g. merch_abc123',
+  },
+}
 
-  const stepBadgeColor = (status: OnboardingStep['status']) => {
-    if (status === 'complete') return 'emerald'
-    if (status === 'active') return 'violet'
-    return 'slate'
+interface Connection {
+  id: string
+  store_id: string
+  surface: Surface
+  status: 'disconnected' | 'pending' | 'connected' | 'error'
+  external_account_id: string | null
+  has_credentials: boolean
+  config: Record<string, unknown>
+  last_sync_at: string | null
+  created_at: string
+}
+
+interface ConnectInfo {
+  surface: Surface
+  authorize_url: string | null
+  instructions: string[]
+  mock_available: boolean
+  required_to_go_live: string[]
+}
+
+interface FeedResult {
+  surface: Surface
+  ok: boolean
+  item_count: number
+  submission_id: string | null
+  endpoint: string
+  error?: string
+}
+
+// ── Raw API helper (onboarding endpoints aren't in the typed SDK) ───────────
+
+const BASE_URL: string =
+  (import.meta as unknown as { env: Record<string, string> }).env
+    .PUBLIC_API_URL ?? 'http://localhost:8080'
+
+async function api<T>(
+  storeId: string,
+  path: string,
+  init: RequestInit = {},
+): Promise<T> {
+  const headers: Record<string, string> = {
+    'content-type': 'application/json',
+    ...((init.headers as Record<string, string>) ?? {}),
+  }
+  const apiKey = getApiKey()
+  const token = getToken()
+  if (apiKey) headers['authorization'] = `Bearer ${apiKey}`
+  else if (token) headers['authorization'] = `Bearer ${token}`
+
+  const res = await fetch(
+    `${BASE_URL}/commerce/stores/${storeId}/agent-surfaces${path}`,
+    { ...init, headers },
+  )
+  const json = (await res.json().catch(() => ({}))) as unknown
+  if (!res.ok) {
+    const err = json as { error?: { message?: string; code?: string } }
+    throw new Error(err.error?.message ?? `Request failed (${res.status})`)
+  }
+  return json as T
+}
+
+// ── Presentational helpers ──────────────────────────────────────────────────
+
+function statusBadge(status: Connection['status']) {
+  switch (status) {
+    case 'connected':
+      return <Badge color="emerald">Connected</Badge>
+    case 'pending':
+      return <Badge color="amber">Pending</Badge>
+    case 'error':
+      return <Badge color="red">Error</Badge>
+    default:
+      return <Badge color="slate">Not connected</Badge>
+  }
+}
+
+function fmtTime(iso: string | null): string {
+  if (!iso) return 'never'
+  const d = new Date(iso)
+  return Number.isNaN(d.getTime()) ? 'never' : d.toLocaleString()
+}
+
+// ── Page ────────────────────────────────────────────────────────────────────
+
+export default function CloudOnboardingPage() {
+  const { activeStore } = useStore()
+  const { toast } = useToast()
+  const storeId = activeStore?.id ?? ''
+
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [connections, setConnections] = useState<Connection[]>([])
+  const [busy, setBusy] = useState<string | null>(null)
+
+  const [connectModal, setConnectModal] = useState<{
+    surface: Surface
+    info: ConnectInfo
+  } | null>(null)
+  const [accountId, setAccountId] = useState('')
+  const [credential, setCredential] = useState('')
+
+  const bySurface = (s: Surface) => connections.find((c) => c.surface === s)
+
+  const load = useCallback(() => {
+    if (!storeId) return
+    setLoading(true)
+    setLoadError(null)
+    api<{ connections: Connection[] }>(storeId, '')
+      .then((r) => setConnections(r.connections))
+      .catch((e: Error) => setLoadError(e.message))
+      .finally(() => setLoading(false))
+  }, [storeId])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  async function openConnect(surface: Surface) {
+    setBusy(`connect:${surface}`)
+    try {
+      const r = await api<{ connect: ConnectInfo }>(
+        storeId,
+        `/${surface}/connect`,
+      )
+      setAccountId(bySurface(surface)?.external_account_id ?? '')
+      setCredential('')
+      setConnectModal({ surface, info: r.connect })
+    } catch (e) {
+      toast((e as Error).message, 'error')
+    } finally {
+      setBusy(null)
+    }
   }
 
-  const stepBadgeLabel = (status: OnboardingStep['status']) => {
-    if (status === 'complete') return 'Done'
-    if (status === 'active') return 'In progress'
-    return 'Pending'
+  async function submitConnect() {
+    if (!connectModal) return
+    const { surface, info } = connectModal
+    setBusy('save')
+    try {
+      // Real OAuth surfaces (Google) hand off to the provider when configured.
+      if (info.authorize_url) {
+        window.location.href = info.authorize_url
+        return
+      }
+      // Dev mock connector, or manual credential entry.
+      if (info.mock_available && !credential) {
+        await api(storeId, `/${surface}/mock-connect`, {
+          method: 'POST',
+          body: JSON.stringify({
+            external_account_id: accountId || `mock-${surface}`,
+          }),
+        })
+      } else {
+        await api(storeId, '', {
+          method: 'POST',
+          body: JSON.stringify({
+            surface,
+            external_account_id: accountId || undefined,
+            credentials: credential || undefined,
+          }),
+        })
+      }
+      toast(`${SURFACE_META[surface].name} connected`, 'success')
+      setConnectModal(null)
+      load()
+    } catch (e) {
+      toast((e as Error).message, 'error')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  async function disconnect(conn: Connection) {
+    if (!window.confirm(`Disconnect ${SURFACE_META[conn.surface].name}?`)) return
+    setBusy(`disc:${conn.id}`)
+    try {
+      await api(storeId, `/${conn.id}`, { method: 'DELETE' })
+      toast('Disconnected', 'success')
+      load()
+    } catch (e) {
+      toast((e as Error).message, 'error')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  async function submitFeed(conn: Connection) {
+    setBusy(`feed:${conn.id}`)
+    try {
+      const r = await api<{ result: FeedResult }>(
+        storeId,
+        `/${conn.id}/submit-feed`,
+        { method: 'POST', body: '{}' },
+      )
+      if (r.result.ok) {
+        toast(
+          `Submitted ${r.result.item_count} product(s) to ${SURFACE_META[conn.surface].name}`,
+          'success',
+        )
+      } else {
+        toast(r.result.error ?? 'Feed submission failed', 'error')
+      }
+      load()
+    } catch (e) {
+      toast((e as Error).message, 'error')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  if (!storeId) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="Agent Surfaces"
+          description="Connect your store to AI shopping surfaces."
+        />
+        <Card>
+          <p className="text-sm text-slate-400">
+            Select a store to manage its agent surfaces.
+          </p>
+        </Card>
+      </div>
+    )
   }
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Cloud Onboarding"
-        description="Follow these steps to get your store fully configured on Cartcrft Cloud."
+        title="Agent Surfaces"
+        description="Make your store discoverable & buyable on AI shopping surfaces in two clicks."
       />
 
-      <Card title="Setup checklist">
-        <ol className="space-y-4">
-          {steps.map((step, i) => (
-            <li key={step.id} className="flex gap-4 items-start">
-              {/* Step number */}
-              <div
-                className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold
-                  ${step.status === 'complete'
-                    ? 'bg-emerald-600/20 text-emerald-400'
-                    : step.status === 'active'
-                    ? 'bg-violet-600/20 text-violet-400'
-                    : 'bg-slate-700/40 text-slate-500'}`}
-              >
-                {step.status === 'complete' ? '✓' : i + 1}
-              </div>
-
-              {/* Content */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-0.5">
-                  <span className="text-sm font-medium text-white">{step.label}</span>
-                  <Badge color={stepBadgeColor(step.status)}>
-                    {stepBadgeLabel(step.status)}
-                  </Badge>
-                </div>
-                <p className="text-xs text-slate-400 leading-relaxed">{step.description}</p>
-                {step.action && step.status !== 'complete' && (
-                  <div className="mt-2">
-                    <Btn
-                      variant={step.status === 'active' ? 'primary' : 'secondary'}
-                      onClick={() => {
-                        if (step.actionHref) window.location.href = `/dashboard${step.actionHref}`
-                      }}
-                    >
-                      {step.action}
-                    </Btn>
-                  </div>
-                )}
-              </div>
-            </li>
-          ))}
-        </ol>
-      </Card>
-
-      <Card title="Need help?">
-        <p className="text-xs text-slate-400 mb-3">
-          Our team is here to help you get set up. Email us or check the docs.
-        </p>
-        <div className="flex gap-2">
-          <Btn
-            variant="secondary"
-            onClick={() => window.open('mailto:hello@webcrft.systems?subject=Onboarding+help', '_blank')}
-          >
-            Email support
-          </Btn>
-          <Btn
-            variant="secondary"
-            onClick={() => window.open('/cloud/onboarding', '_blank')}
-          >
-            View docs
-          </Btn>
+      {loading ? (
+        <div className="flex justify-center py-16">
+          <Spinner />
         </div>
-      </Card>
+      ) : loadError ? (
+        <LoadError message={loadError} onRetry={load} />
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2">
+          {(Object.keys(SURFACE_META) as Surface[]).map((surface) => {
+            const meta = SURFACE_META[surface]
+            const conn = bySurface(surface)
+            const connected = conn && conn.status === 'connected'
+            const lastCount = conn?.config?.['last_feed_item_count'] as
+              | number
+              | undefined
+            return (
+              <Card key={surface} title={meta.name}>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    {statusBadge(conn?.status ?? 'disconnected')}
+                    {conn?.external_account_id && (
+                      <span className="text-[11px] text-slate-500 font-mono">
+                        {conn.external_account_id}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    {meta.blurb}
+                  </p>
+
+                  {conn && (
+                    <div className="rounded-lg bg-white/[0.02] border border-white/[0.06] px-3 py-2 text-[11px] text-slate-400 space-y-1">
+                      <div className="flex justify-between">
+                        <span>Last feed sync</span>
+                        <span className="text-slate-300">
+                          {fmtTime(conn.last_sync_at)}
+                        </span>
+                      </div>
+                      {typeof lastCount === 'number' && (
+                        <div className="flex justify-between">
+                          <span>Products in last feed</span>
+                          <span className="text-slate-300">{lastCount}</span>
+                        </div>
+                      )}
+                      {conn.status === 'error' &&
+                        typeof conn.config?.['last_error'] === 'string' && (
+                          <div className="text-red-400 break-words">
+                            {String(conn.config['last_error'])}
+                          </div>
+                        )}
+                    </div>
+                  )}
+
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {!connected && (
+                      <Btn
+                        variant="primary"
+                        loading={busy === `connect:${surface}`}
+                        onClick={() => openConnect(surface)}
+                      >
+                        Connect
+                      </Btn>
+                    )}
+                    {connected && conn && (
+                      <>
+                        <Btn
+                          variant="green"
+                          loading={busy === `feed:${conn.id}`}
+                          onClick={() => submitFeed(conn)}
+                        >
+                          Submit feed now
+                        </Btn>
+                        <Btn
+                          variant="danger"
+                          loading={busy === `disc:${conn.id}`}
+                          onClick={() => disconnect(conn)}
+                        >
+                          Disconnect
+                        </Btn>
+                      </>
+                    )}
+                    {conn && conn.status !== 'connected' && (
+                      <Btn
+                        variant="danger"
+                        loading={busy === `disc:${conn.id}`}
+                        onClick={() => disconnect(conn)}
+                      >
+                        Remove
+                      </Btn>
+                    )}
+                  </div>
+                </div>
+              </Card>
+            )
+          })}
+        </div>
+      )}
+
+      {connectModal && (
+        <Modal
+          title={`Connect ${SURFACE_META[connectModal.surface].name}`}
+          onClose={() => setConnectModal(null)}
+        >
+          <div className="space-y-4">
+            <ol className="space-y-1.5 text-xs text-slate-400 list-decimal list-inside">
+              {connectModal.info.instructions.map((s, i) => (
+                <li key={i}>{s}</li>
+              ))}
+            </ol>
+
+            {connectModal.info.authorize_url ? (
+              <p className="text-xs text-slate-400">
+                You’ll be redirected to authorize Cartcrft, then returned here.
+              </p>
+            ) : (
+              <>
+                <FormInput
+                  label={SURFACE_META[connectModal.surface].accountLabel}
+                  value={accountId}
+                  onChange={setAccountId}
+                  placeholder={
+                    SURFACE_META[connectModal.surface].accountPlaceholder
+                  }
+                />
+                <FormInput
+                  label="API token / credential"
+                  value={credential}
+                  onChange={setCredential}
+                  placeholder={
+                    connectModal.info.mock_available
+                      ? 'optional in dev — leave blank to use the mock connector'
+                      : 'paste your surface API token'
+                  }
+                  type="password"
+                />
+              </>
+            )}
+
+            <div className="rounded-lg border border-amber-500/20 bg-amber-500/[0.04] px-3 py-2.5">
+              <p className="text-[11px] font-semibold text-amber-300 mb-1">
+                Required to go live
+              </p>
+              <ul className="text-[11px] text-slate-400 space-y-0.5 list-disc list-inside">
+                {connectModal.info.required_to_go_live.map((r, i) => (
+                  <li key={i}>{r}</li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-1">
+              <Btn variant="secondary" onClick={() => setConnectModal(null)}>
+                Cancel
+              </Btn>
+              <Btn
+                variant="primary"
+                loading={busy === 'save'}
+                onClick={submitConnect}
+              >
+                {connectModal.info.authorize_url ? 'Authorize' : 'Connect'}
+              </Btn>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   )
 }

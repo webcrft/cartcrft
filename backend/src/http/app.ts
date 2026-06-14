@@ -49,6 +49,7 @@ import { agentAttributionHook } from "../lib/agent-auth.js";
 import { webhooksPlugin } from "../webhooks/router.js";
 import { acpPlugin } from "../agent/acp/index.js";
 import { ucpPlugin } from "../agent/ucp/index.js";
+import { onboardingPlugin } from "../agent/onboarding/routes.js";
 import { b2bPlugin } from "../modules/b2b/routes.js";
 import { subscriptionsPlugin } from "../modules/subscriptions/routes.js";
 import { returnsPlugin } from "../modules/returns/routes.js";
@@ -342,6 +343,9 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
 
   // ── UCP adapter (T6.2) ────────────────────────────────────────────────────
   await app.register(ucpPlugin);
+
+  // ── Agent-surface onboarding (B7) ─────────────────────────────────────────
+  await app.register(onboardingPlugin);
 
   // ── Inbound payment webhook router ────────────────────────────────────────
   await app.register(webhooksPlugin);

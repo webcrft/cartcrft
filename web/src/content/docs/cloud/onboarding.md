@@ -59,6 +59,43 @@ https://<your-store>.cartcrft.cloud/mcp/<storeId>
 
 Point any MCP-capable agent at this URL with your `cc_pub_` key. See [Agent-native](/agent-native/) for agent connection instructions.
 
+### Register on agent shopping surfaces (2-click)
+
+Beyond protocol conformance, Cartcrft can register your catalog on the surfaces
+where AI shopping agents discover and transact — **Google AI shopping** (via
+Google Merchant Center) and **ChatGPT** (via ACP feed registration).
+
+Go to **Dashboard → Agent Surfaces**. For each surface:
+
+1. Click **Connect**. Cartcrft stores the connection and (for Google) walks you
+   through OAuth; for ChatGPT you paste your OpenAI merchant id + token.
+2. Click **Submit feed now**. Cartcrft generates your product feed and submits
+   it to the surface, then shows the connection status and last sync.
+
+Under the hood:
+
+- **Google AI Shopping** — your catalog is pushed to Google Merchant Center via
+  the [Content API for Shopping](https://developers.google.com/shopping-content)
+  (`products.custombatch` insert). This is the same product data as the Google
+  Shopping XML feed, in the Content API JSON product shape.
+- **ChatGPT (ACP)** — Cartcrft registers your live ACP feed
+  (`/acp/<storeId>/feed`) with OpenAI's commerce API. No catalog is copied; the
+  surface pulls from your feed endpoint.
+
+#### What's required to go live
+
+The connect/submit code paths are fully implemented; the outbound call to each
+surface is **credential-gated** — you must supply real credentials:
+
+| Surface | Required to go live |
+| --- | --- |
+| Google AI Shopping | A Google Merchant Center account (numeric `merchantId`); an OAuth 2.0 client with the `https://www.googleapis.com/auth/content` scope (`GOOGLE_OAUTH_CLIENT_ID` + `GOOGLE_OAUTH_CLIENT_SECRET`); Content API for Shopping enabled on the GCP project. The stored credential is the OAuth access/refresh token. |
+| ChatGPT (ACP) | OpenAI merchant onboarding (merchant/seller id); an OpenAI API token with commerce/feed-registration permission. The stored credential is that token. |
+
+Credentials are encrypted at rest with AES-256-GCM (`AUTH_SECRETS_KEY`). In
+development (`APP_ENV != production`) a **mock connector** lets you exercise the
+full connect → submit flow without real credentials.
+
 ## Step 4 — Custom domain
 
 1. Go to **Dashboard → Settings → Domains**.
