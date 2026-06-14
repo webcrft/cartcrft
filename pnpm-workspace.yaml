@@ -4,6 +4,7 @@ packages:
   - sdk/storefront
   - cloud/billing
   - web
+  - e2e
 
 onlyBuiltDependencies: []
 allowBuilds:
