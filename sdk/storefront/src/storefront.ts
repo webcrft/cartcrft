@@ -803,3 +803,162 @@ export class CartcrftAuth {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- global export
 (window as any)['CartcrftAuth'] = CartcrftAuth;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Section 3: Checkout links (shareable / hosted checkout — Stripe-Link-style)
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// A merchant (server-side, cc_prv_ key) creates a checkout link encoding a
+// prefilled cart. Anyone with the public token opens the cartcrft-hosted
+// /pay/<token> page (or an iframe embed) and pays. Two surfaces:
+//
+//   createCheckoutLink(input)  — MERCHANT-KEY (cc_prv_). Server-side only:
+//                                 never ship a private key to a browser.
+//   getCheckoutLink(token)     — PUBLIC. No key. Resolves branding + totals.
+//   checkoutLinkUrl(token, …)  — build the hosted /pay/<token> URL.
+//
+// All three resolve their API base from the <script src> origin (or an explicit
+// baseUrl), identical to CartcrftAuth.
+
+export interface CheckoutLinkLineItem {
+  variant_id: string;
+  quantity: number;
+}
+
+export interface CreateCheckoutLinkInput {
+  storeId: string;
+  /** A server-side cc_prv_ API key with commerce:write. NEVER a cc_pub_ key. */
+  merchantKey: string;
+  lineItems: CheckoutLinkLineItem[];
+  customerEmail?: string;
+  successUrl?: string;
+  cancelUrl?: string;
+  /** ISO 8601 timestamp; the link auto-expires after this. */
+  expiresAt?: string;
+  baseUrl?: string;
+}
+
+export interface CreateCheckoutLinkResult {
+  id: string;
+  token: string;
+  /** `${PUBLIC_CHECKOUT_BASE||''}/pay/<token>` as computed server-side. */
+  url: string;
+}
+
+export interface CheckoutLinkLineView {
+  variant_id: string;
+  qty: number;
+  unit_price: string;
+  line_total: string;
+  title: string;
+  sku: string;
+}
+
+export interface CheckoutLinkTotals {
+  subtotal: string;
+  tax_total: string;
+  shipping_total: string;
+  total: string;
+  currency: string;
+}
+
+export interface ResolvedCheckoutLink {
+  token: string;
+  status: 'open' | 'completed' | 'expired' | 'void';
+  store: { name: string };
+  line_items: CheckoutLinkLineView[];
+  totals: CheckoutLinkTotals;
+  customer_email: string | null;
+  success_url: string | null;
+  cancel_url: string | null;
+  expires_at: string | null;
+}
+
+function resolveBase(explicit?: string): string {
+  const base = (explicit ?? DERIVED_BASE).replace(/\/+$/, '');
+  if (!base) {
+    throw new Error(
+      'checkout-links: baseUrl is required when the SDK is not loaded via <script src>. ' +
+      "Pass { baseUrl: 'https://api.your-domain.com' }."
+    );
+  }
+  return base;
+}
+
+/**
+ * Create a checkout link (MERCHANT key — server-side only).
+ *
+ * Returns { id, token, url }. Do NOT call this from a public browser page with a
+ * private key; mint the link on your server and hand the customer the url.
+ */
+export function createCheckoutLink(
+  input: CreateCheckoutLinkInput
+): Promise<CreateCheckoutLinkResult> {
+  if (!input.storeId || !input.merchantKey) {
+    return Promise.reject(new Error('createCheckoutLink requires { storeId, merchantKey }.'));
+  }
+  if (!input.lineItems || input.lineItems.length === 0) {
+    return Promise.reject(new Error('createCheckoutLink requires at least one line item.'));
+  }
+  const base = resolveBase(input.baseUrl);
+  const body: Record<string, unknown> = {
+    line_items: input.lineItems.map((li) => ({ variant_id: li.variant_id, quantity: li.quantity })),
+  };
+  if (input.customerEmail) body['customer_email'] = input.customerEmail;
+  if (input.successUrl) body['success_url'] = input.successUrl;
+  if (input.cancelUrl) body['cancel_url'] = input.cancelUrl;
+  if (input.expiresAt) body['expires_at'] = input.expiresAt;
+
+  return postJSON(
+    base + '/commerce/stores/' + input.storeId + '/checkout-links',
+    body,
+    { Authorization: 'Bearer ' + input.merchantKey }
+  ).then((data) => data as unknown as CreateCheckoutLinkResult);
+}
+
+/**
+ * Resolve a checkout link by its public token (no key required).
+ * Returns branding + line items + computed totals + status.
+ */
+export function getCheckoutLink(
+  token: string,
+  opts?: { baseUrl?: string }
+): Promise<ResolvedCheckoutLink> {
+  if (!token) return Promise.reject(new Error('getCheckoutLink requires a token.'));
+  const base = resolveBase(opts?.baseUrl);
+  return fetch(base + '/storefront/checkout-links/' + encodeURIComponent(token))
+    .then((res) =>
+      res.json().then((data: Record<string, unknown>) => {
+        if (!res.ok) {
+          const err: ApiError = new Error(
+            ((data['error'] as { message?: string } | undefined)?.message) ?? `HTTP ${res.status}`
+          );
+          err.status = res.status;
+          err.detail = data;
+          throw err;
+        }
+        return data as unknown as ResolvedCheckoutLink;
+      })
+    );
+}
+
+/**
+ * Build the public hosted-checkout URL for a token.
+ *
+ * checkoutLinkUrl('cl_x')                              → '/pay/cl_x'
+ * checkoutLinkUrl('cl_x', { embed: true })             → '/pay/cl_x?embed=1'
+ * checkoutLinkUrl('cl_x', { base: 'https://pay.cc' })  → 'https://pay.cc/pay/cl_x'
+ */
+export function checkoutLinkUrl(
+  token: string,
+  opts?: { base?: string; embed?: boolean }
+): string {
+  const base = (opts?.base ?? '').replace(/\/+$/, '');
+  const q = opts?.embed ? '?embed=1' : '';
+  return base + '/pay/' + encodeURIComponent(token) + q;
+}
+
+// ── Expose checkout-link helpers as a global namespace ──────────────────────
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- global export
+(window as any)['CartcrftCheckoutLinks'] = { createCheckoutLink, getCheckoutLink, checkoutLinkUrl };

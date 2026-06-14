@@ -40,6 +40,7 @@ import { getPool } from "../db/pool.js";
 import { config } from "../config/config.js";
 import { decodeSecretValue } from "../lib/secrets.js";
 import { completeCheckout } from "../modules/checkout/complete.js";
+import { markLinkCompletedByCheckout } from "../modules/checkout-links/service.js";
 import { trackEcommerce } from "../lib/analytics.js";
 import { dispatchStoreEvent } from "../modules/notifications/service.js";
 
@@ -1140,6 +1141,10 @@ async function recordPaymentSuccess(
       payment_id: paymentId,
       amount: String(amount),
     });
+
+    // Mark any shareable checkout link backing this checkout 'completed'
+    // (no-op when the checkout did not originate from a link).
+    void markLinkCompletedByCheckout(checkoutId).catch(() => undefined);
   } catch (err) {
     await client.query("ROLLBACK").catch(() => undefined);
     console.error(`recordPaymentSuccess: failed`, {

@@ -22,7 +22,10 @@ var _CartcrftSDK = (() => {
   // src/storefront.ts
   var storefront_exports = {};
   __export(storefront_exports, {
-    CartcrftAuth: () => CartcrftAuth
+    CartcrftAuth: () => CartcrftAuth,
+    checkoutLinkUrl: () => checkoutLinkUrl,
+    createCheckoutLink: () => createCheckoutLink,
+    getCheckoutLink: () => getCheckoutLink
   });
   var DERIVED_BASE = (() => {
     var _a;
@@ -629,5 +632,60 @@ var _CartcrftSDK = (() => {
     }
   };
   window["CartcrftAuth"] = CartcrftAuth;
+  function resolveBase(explicit) {
+    const base = (explicit != null ? explicit : DERIVED_BASE).replace(/\/+$/, "");
+    if (!base) {
+      throw new Error(
+        "checkout-links: baseUrl is required when the SDK is not loaded via <script src>. Pass { baseUrl: 'https://api.your-domain.com' }."
+      );
+    }
+    return base;
+  }
+  function createCheckoutLink(input) {
+    if (!input.storeId || !input.merchantKey) {
+      return Promise.reject(new Error("createCheckoutLink requires { storeId, merchantKey }."));
+    }
+    if (!input.lineItems || input.lineItems.length === 0) {
+      return Promise.reject(new Error("createCheckoutLink requires at least one line item."));
+    }
+    const base = resolveBase(input.baseUrl);
+    const body = {
+      line_items: input.lineItems.map((li) => ({ variant_id: li.variant_id, quantity: li.quantity }))
+    };
+    if (input.customerEmail) body["customer_email"] = input.customerEmail;
+    if (input.successUrl) body["success_url"] = input.successUrl;
+    if (input.cancelUrl) body["cancel_url"] = input.cancelUrl;
+    if (input.expiresAt) body["expires_at"] = input.expiresAt;
+    return postJSON(
+      base + "/commerce/stores/" + input.storeId + "/checkout-links",
+      body,
+      { Authorization: "Bearer " + input.merchantKey }
+    );
+  }
+  function getCheckoutLink(token, opts) {
+    if (!token) return Promise.reject(new Error("getCheckoutLink requires a token."));
+    const base = resolveBase(opts == null ? void 0 : opts.baseUrl);
+    return fetch(base + "/storefront/checkout-links/" + encodeURIComponent(token)).then(
+      (res) => res.json().then((data) => {
+        var _a, _b;
+        if (!res.ok) {
+          const err = new Error(
+            (_b = (_a = data["error"]) == null ? void 0 : _a.message) != null ? _b : `HTTP ${res.status}`
+          );
+          err.status = res.status;
+          err.detail = data;
+          throw err;
+        }
+        return data;
+      })
+    );
+  }
+  function checkoutLinkUrl(token, opts) {
+    var _a;
+    const base = ((_a = opts == null ? void 0 : opts.base) != null ? _a : "").replace(/\/+$/, "");
+    const q = (opts == null ? void 0 : opts.embed) ? "?embed=1" : "";
+    return base + "/pay/" + encodeURIComponent(token) + q;
+  }
+  window["CartcrftCheckoutLinks"] = { createCheckoutLink, getCheckoutLink, checkoutLinkUrl };
   return __toCommonJS(storefront_exports);
 })();

@@ -19,10 +19,14 @@ import { Suspense, lazy } from 'react'
 const DashboardApp = lazy(() => import('./dashboard/DashboardApp'))
 const SuperAdminApp = lazy(() => import('./superadmin/SuperAdminApp'))
 const SiteApp = lazy(() => import('./site/SiteApp'))
+// Hosted checkout / shareable payment links (/pay/:token). Self-contained zone
+// with its own BrowserRouter + minimal "Agentic Terminal" styling.
+const CheckoutApp = lazy(() => import('./checkout/CheckoutApp'))
 
-function zoneFor(pathname: string): 'dashboard' | 'superadmin' | 'site' {
+function zoneFor(pathname: string): 'dashboard' | 'superadmin' | 'pay' | 'site' {
   if (pathname === '/dashboard' || pathname.startsWith('/dashboard/')) return 'dashboard'
   if (pathname === '/superadmin' || pathname.startsWith('/superadmin/')) return 'superadmin'
+  if (pathname === '/pay' || pathname.startsWith('/pay/')) return 'pay'
   return 'site'
 }
 
@@ -34,6 +38,8 @@ export default function Root() {
         <DashboardApp />
       ) : zone === 'superadmin' ? (
         <SuperAdminApp />
+      ) : zone === 'pay' ? (
+        <CheckoutApp />
       ) : (
         <SiteApp />
       )}

@@ -7,7 +7,7 @@
   "scripts": {
     "build": "node build.mjs",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run src/cart.test.ts"
+    "test": "vitest run"
   },
   "devDependencies": {
     "esbuild": "^0.25.0",

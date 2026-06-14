@@ -30,6 +30,7 @@ import { ordersPlugin } from "../modules/orders/routes.js";
 import { paymentsPlugin } from "../modules/payments/routes.js";
 import { cartsPlugin } from "../modules/carts/routes.js";
 import { checkoutPlugin } from "../modules/checkout/routes.js";
+import { checkoutLinksPlugin } from "../modules/checkout-links/routes.js";
 import { discountsPlugin } from "../modules/discounts/routes.js";
 import { walletPlugin } from "../modules/wallet/routes.js";
 import { catalogPlugin } from "../modules/catalog/routes.js";
@@ -320,6 +321,7 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
   await app.register(paymentsPlugin);
   await app.register(cartsPlugin);
   await app.register(checkoutPlugin);
+  await app.register(checkoutLinksPlugin);
   await app.register(discountsPlugin);
   await app.register(walletPlugin);
   await app.register(catalogPlugin);
