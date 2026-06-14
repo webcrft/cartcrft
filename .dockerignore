@@ -30,13 +30,17 @@ README.md
 roadmap.md
 tasks.md
 
-# ─── Admin / SDK (separate packages, not in the backend image) ────────────────
-admin/src
-admin/public
-admin/dist
+# ─── Web / SDK source (separate packages, not in the backend image) ───────────
+# Each package's package.json is still copied in the deps stage for workspace
+# resolution — only their source / build output is excluded here.  Do NOT
+# exclude the package directories wholesale or the deps-stage COPY would fail.
+web/src
+web/public
+web/dist
 sdk/src
 sdk/dist
-sdk/storefront
+sdk/storefront/src
+sdk/storefront/dist
 
 # ─── IDE / OS ─────────────────────────────────────────────────────────────────
 .vscode

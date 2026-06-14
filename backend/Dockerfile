@@ -13,12 +13,15 @@ WORKDIR /app
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY tsconfig.base.json ./
 
-# Copy every package's package.json.  We include admin/sdk/cloud stubs so that
-# pnpm workspace resolution is identical to the dev install.
+# Copy every workspace package's package.json so pnpm workspace resolution is
+# identical to the dev install.  The list MUST match pnpm-workspace.yaml:
+#   backend, sdk, sdk/storefront, cloud/billing, web
+# (The old `admin` package was unified into `web` and no longer exists.)
 COPY backend/package.json ./backend/
-COPY admin/package.json ./admin/
 COPY sdk/package.json ./sdk/
+COPY sdk/storefront/package.json ./sdk/storefront/
 COPY cloud/billing/package.json ./cloud/billing/
+COPY web/package.json ./web/
 
 # Fetch all packages into the pnpm store (network step — cached unless lockfile changes).
 RUN pnpm fetch --frozen-lockfile
