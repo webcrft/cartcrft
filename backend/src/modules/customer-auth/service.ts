@@ -21,6 +21,7 @@ import type pg from "pg";
 import { decodeSecretValue, encodeSecretValue } from "../../lib/secrets.js";
 import { ConsoleMailer } from "../../lib/mailer/console.js";
 import type { Mailer } from "../../lib/mailer/index.js";
+import { renderAuthEmail } from "../../lib/mailer/templates.js";
 
 // ── Module-level mailer (injectable for tests) ────────────────────────────────
 
@@ -745,56 +746,21 @@ interface EmailVars {
   name?: string;
 }
 
+/**
+ * Render a customer-auth email template.
+ *
+ * C-10c: delegates to lib/mailer/templates.ts renderAuthEmail() for branded,
+ * responsive HTML with inline CSS. All user-supplied values are XSS-escaped
+ * inside the renderer. Plain-text fallback is always included.
+ *
+ * External callers (e.g. createInvitation) use this function directly.
+ */
 export function renderAuthEmailTemplate(
   name: string,
   vars: EmailVars
 ): { subject: string; bodyText: string; bodyHtml: string } {
-  const storeName = vars.storeName ?? "Store";
-  const brandColor = vars.brandColor ?? "#4F46E5";
-  const link = vars.link ?? vars.token ?? "";
-  const logoUrl = vars.logoUrl ?? "";
-
-  const logoHtml = logoUrl
-    ? `<img src="${logoUrl}" alt="${storeName}" style="max-height:48px;margin-bottom:16px;" /><br>`
-    : "";
-
-  function wrap(body: string): string {
-    return `<!DOCTYPE html><html><body style="font-family:sans-serif;max-width:560px;margin:40px auto;padding:24px;">${logoHtml}<div style="background:#f9f9f9;border-radius:8px;padding:24px;">${body}</div><p style="color:#9ca3af;font-size:12px;margin-top:24px;">Powered by ${storeName}</p></body></html>`;
-  }
-
-  switch (name) {
-    case "customer.email_verify": {
-      return {
-        subject: `Verify your email — ${storeName}`,
-        bodyText: `Please verify your email address.\n\nVerification link:\n${link}\n\nThis link expires in 24 hours.`,
-        bodyHtml: wrap(`<h2 style="color:${brandColor}">Verify your email</h2><p>Click the link below to verify your email address:</p><p style="margin:24px 0;"><a href="${link}" style="background:${brandColor};color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold;">Verify Email</a></p><p style="color:#6b7280;font-size:14px;">Expires in 24 hours.</p>`),
-      };
-    }
-    case "customer.password_reset": {
-      return {
-        subject: `Reset your password — ${storeName}`,
-        bodyText: `You requested a password reset.\n\nReset link:\n${link}\n\nExpires in 1 hour.`,
-        bodyHtml: wrap(`<h2 style="color:${brandColor}">Reset your password</h2><p>Click below to reset your password:</p><p style="margin:24px 0;"><a href="${link}" style="background:${brandColor};color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold;">Reset Password</a></p><p style="color:#6b7280;font-size:14px;">Expires in 1 hour.</p>`),
-      };
-    }
-    case "customer.magic_link": {
-      return {
-        subject: `Sign in to ${storeName}`,
-        bodyText: `Click the link below to sign in:\n\n${link}\n\nExpires in 15 minutes.`,
-        bodyHtml: wrap(`<h2 style="color:${brandColor}">Sign in to ${storeName}</h2><p>Click the button below to sign in. Expires in 15 minutes.</p><p style="margin:24px 0;"><a href="${link}" style="background:${brandColor};color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold;">Sign In</a></p>`),
-      };
-    }
-    case "customer.invite": {
-      return {
-        subject: `You've been invited to ${storeName}`,
-        bodyText: `You've been invited to join ${storeName}.\n\nAccept invitation:\n${link}\n\nExpires in 7 days.`,
-        bodyHtml: wrap(`<h2 style="color:${brandColor}">You're invited to ${storeName}</h2><p>You've been invited to create an account.</p><p style="margin:24px 0;"><a href="${link}" style="background:${brandColor};color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold;">Accept Invitation</a></p><p style="color:#6b7280;font-size:14px;">Expires in 7 days.</p>`),
-      };
-    }
-    default: {
-      return { subject: `${storeName} notification`, bodyText: link, bodyHtml: wrap(`<p>${link}</p>`) };
-    }
-  }
+  const result = renderAuthEmail(name, vars);
+  return { subject: result.subject, bodyText: result.bodyText, bodyHtml: result.bodyHtml };
 }
 
 // ── Send customer email ───────────────────────────────────────────────────────

@@ -26,6 +26,7 @@ import { config } from "../../config/config.js";
 import { ConsoleMailer } from "../../lib/mailer/console.js";
 import { SesMailer } from "../../lib/mailer/ses.js";
 import type { Mailer } from "../../lib/mailer/index.js";
+import { renderEventEmail } from "../../lib/mailer/templates.js";
 import type {
   NotificationProviderRow,
   CreateNotificationProviderInput,
@@ -417,9 +418,13 @@ async function deliverWebhook(
  * Since main.ts cannot be touched in wave H2, no explicit boot wiring is needed —
  * the factory runs automatically when this module is first imported.
  *
- * The provider's config may carry: to_email, from_name, from_email.
- * The event payload is serialised as plain-text body for simplicity (full HTML
- * templates live in commerce_email.go and are a follow-up for H6).
+ * The provider's config may carry: to_email, from_name, from_email, store_name,
+ * brand_color, logo_url.
+ *
+ * C-10c: HTML templates are rendered by lib/mailer/templates.ts for known event
+ * types (order.created, payment.captured, shipment.created/delivered,
+ * payment.refunded). Unknown event types fall back to an escaped JSON body so no
+ * information is lost. All user-data values go through esc() inside the renderer.
  */
 async function deliverEmail(
   provider: ProviderRecord,
@@ -450,12 +455,39 @@ async function deliverEmail(
       ? provider.config["from_email"]
       : (config.EMAIL_FROM ?? "noreply@cartcrft.com");
 
-  const subject = `[${eventType}] Store notification`;
-  const bodyText = JSON.stringify(payload, null, 2);
-  const bodyHtml = `<pre style="font-family:monospace">${bodyText
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")}</pre>`;
+  // Brand vars from provider config (optional — store can customise)
+  const brandVars = {
+    storeName: typeof provider.config["store_name"] === "string"
+      ? provider.config["store_name"]
+      : fromName,
+    brandColor: typeof provider.config["brand_color"] === "string"
+      ? provider.config["brand_color"]
+      : undefined,
+    logoUrl: typeof provider.config["logo_url"] === "string"
+      ? provider.config["logo_url"]
+      : undefined,
+  };
+
+  // Try to render a branded HTML template for known event types
+  const rendered = renderEventEmail(eventType, payload, brandVars);
+
+  let subject: string;
+  let bodyHtml: string;
+  let bodyText: string;
+
+  if (rendered) {
+    subject = rendered.subject;
+    bodyHtml = rendered.bodyHtml;
+    bodyText = rendered.bodyText;
+  } else {
+    // Fallback: escaped JSON dump for unknown/internal event types
+    subject = `[${eventType}] Store notification`;
+    bodyText = JSON.stringify(payload, null, 2);
+    bodyHtml = `<pre style="font-family:monospace;font-size:13px;">${bodyText
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")}</pre>`;
+  }
 
   try {
     await _notifMailer.send({

@@ -497,7 +497,11 @@ describe("H2.1 — email provider dispatches via ConsoleMailer", () => {
     const msg = consoleMailer.sentMessages.at(-1)!;
     expect(msg.to).toBe("notify@example.com");
     expect(msg.fromName).toBe("Test Store");
-    expect(msg.subject).toContain("order.created");
+    // C-10c: subject is now a branded HTML template subject ("Order confirmed ...")
+    // rather than the old JSON-fallback "[order.created] Store notification".
+    expect(msg.subject.length).toBeGreaterThan(0);
+    expect(msg.bodyHtml).toContain("<!DOCTYPE html>");
+    expect(msg.bodyHtml.length).toBeGreaterThan(200);
   });
 });
 
