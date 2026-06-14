@@ -227,9 +227,16 @@ export default function Tenants() {
                     onChange={setReason}
                     placeholder="Explain why this action is being taken..."
                   />
-                  <p className="text-[11px] text-zinc-600 mt-1">
-                    This reason is permanently recorded in the audit log.
-                  </p>
+                  {!reason.trim() ? (
+                    <p className="text-[11px] text-red-400 mt-1 flex items-center gap-1">
+                      <AlertTriangle size={11} className="flex-shrink-0" />
+                      A reason is required before you can continue.
+                    </p>
+                  ) : (
+                    <p className="text-[11px] text-zinc-600 mt-1">
+                      This reason is permanently recorded in the audit log.
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -270,15 +277,30 @@ export default function Tenants() {
 
             <div>
               <label className="block text-xs font-medium text-zinc-400 mb-1.5">
-                Type <span className="font-mono text-amber-400">{confirmRequired}</span> to confirm
+                To confirm, type the exact phrase below:
               </label>
+              <div className="mb-2 rounded-lg border border-red-500/20 bg-red-500/[0.06] px-3 py-2 select-all">
+                <code className="text-sm font-mono font-semibold text-red-300 tracking-wide">
+                  {confirmRequired}
+                </code>
+              </div>
               <input
                 type="text"
                 value={confirmText}
                 onChange={e => setConfirmText(e.target.value)}
                 placeholder={confirmRequired}
-                className="w-full rounded-lg border border-white/[0.08] bg-zinc-800/60 px-3 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none font-mono"
+                aria-label={`Type ${confirmRequired} to confirm`}
+                className={`w-full rounded-lg border bg-zinc-800/60 px-3 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-2 transition font-mono ${
+                  confirmOk
+                    ? 'border-emerald-500/40 focus:ring-emerald-400/40'
+                    : 'border-red-500/30 focus:border-red-400 focus:ring-red-400/40'
+                }`}
               />
+              {!confirmOk && (
+                <p className="text-[11px] text-red-400 mt-1.5">
+                  The phrase must match exactly to enable the {ACTION_META[selectedAction].label.toLowerCase()} button.
+                </p>
+              )}
             </div>
 
             <div className="flex gap-3 justify-end">

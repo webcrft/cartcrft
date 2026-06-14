@@ -8,20 +8,58 @@
  *   - No store switcher (super-admin operates globally)
  */
 
-import React from 'react'
-import { NavLink, Outlet } from 'react-router-dom'
+import React, { useState } from 'react'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { ROUTE_ENTRIES } from '../../routes/index'
 import { useAuth, useLogout } from '../../context/AuthContext'
-import { Shield } from 'lucide-react'
+import { Shield, Menu, X } from 'lucide-react'
 
 export default function AppShell() {
   const { admin } = useAuth()
   const logout = useLogout()
+  const location = useLocation()
+  const [mobileOpen, setMobileOpen] = useState(false)
+
+  // Close the mobile drawer whenever the route changes.
+  React.useEffect(() => { setMobileOpen(false) }, [location.pathname])
 
   return (
     <div className="flex h-screen bg-zinc-950 text-zinc-100 overflow-hidden">
+      {/* Mobile top bar (hidden on lg+) */}
+      <div className="lg:hidden fixed top-0 inset-x-0 z-40 flex items-center gap-2 h-12 px-3 border-b border-white/[0.06] bg-zinc-950">
+        <button
+          onClick={() => setMobileOpen(true)}
+          aria-label="Open navigation menu"
+          aria-expanded={mobileOpen}
+          className="rounded-lg p-1.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.06] transition"
+        >
+          <Menu size={18} />
+        </button>
+        <div className="flex items-center gap-2">
+          <div className="h-5 w-5 rounded-md bg-amber-500/20 border border-amber-500/30 flex items-center justify-center flex-shrink-0">
+            <Shield size={11} className="text-amber-400" />
+          </div>
+          <span className="text-sm font-bold text-zinc-100 tracking-tight">Cartcrft</span>
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-amber-500">Ops</span>
+        </div>
+      </div>
+
+      {/* Mobile overlay backdrop */}
+      {mobileOpen && (
+        <div
+          className="lg:hidden fixed inset-0 z-40 bg-black/70 backdrop-blur-sm"
+          onClick={() => setMobileOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="w-60 flex-shrink-0 flex flex-col border-r border-white/[0.06] bg-zinc-950">
+      <aside
+        className={`w-60 flex-shrink-0 flex flex-col border-r border-white/[0.06] bg-zinc-950 z-50
+          fixed inset-y-0 left-0 transition-transform duration-200 ease-out
+          lg:static lg:translate-x-0
+          ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}
+      >
         {/* Logo / identity */}
         <div className="px-4 py-4 border-b border-white/[0.06]">
           <div className="flex items-center gap-2">
@@ -34,6 +72,13 @@ export default function AppShell() {
                 Ops
               </span>
             </div>
+            <button
+              onClick={() => setMobileOpen(false)}
+              aria-label="Close navigation menu"
+              className="lg:hidden ml-auto rounded-lg p-1.5 text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.06] transition"
+            >
+              <X size={16} />
+            </button>
           </div>
           {admin && (
             <p className="mt-2 text-[11px] text-zinc-500 truncate">{admin.email}</p>
@@ -83,7 +128,7 @@ export default function AppShell() {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-y-auto bg-zinc-950">
+      <main className="flex-1 overflow-y-auto bg-zinc-950 pt-12 lg:pt-0">
         <div className="max-w-6xl mx-auto px-6 py-6">
           <Outlet />
         </div>

@@ -116,7 +116,7 @@ export default function Login() {
                 autoComplete="username"
                 required
                 disabled={mfaRequired}
-                className="w-full rounded-lg border border-white/[0.08] bg-zinc-800/60 px-3 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-amber-500/30 focus:outline-none focus:ring-1 focus:ring-amber-500/20 transition disabled:opacity-50"
+                className="w-full rounded-lg border border-white/[0.08] bg-zinc-800/60 px-3 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-400 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400/40 transition disabled:opacity-50"
               />
             </div>
 
@@ -133,7 +133,7 @@ export default function Login() {
                 autoComplete="current-password"
                 required
                 disabled={mfaRequired}
-                className="w-full rounded-lg border border-white/[0.08] bg-zinc-800/60 px-3 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-amber-500/30 focus:outline-none focus:ring-1 focus:ring-amber-500/20 transition disabled:opacity-50"
+                className="w-full rounded-lg border border-white/[0.08] bg-zinc-800/60 px-3 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-400 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400/40 transition disabled:opacity-50"
               />
             </div>
 
@@ -155,7 +155,7 @@ export default function Login() {
                   onChange={e => setTotpCode(e.target.value.replace(/\D/g, ''))}
                   placeholder="000000"
                   autoFocus
-                  className="w-full rounded-lg border border-amber-500/30 bg-zinc-800/60 px-3 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-amber-500/50 focus:outline-none focus:ring-1 focus:ring-amber-500/20 transition font-mono tracking-widest text-center"
+                  className="w-full rounded-lg border border-amber-500/30 bg-zinc-800/60 px-3 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-400 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400/40 transition font-mono tracking-widest text-center"
                 />
               </div>
             )}

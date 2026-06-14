@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import { useStore } from '../context/StoreContext'
 import { getSdk } from '../lib/sdk'
-import { Badge, Card, PageHeader, Spinner, TableContainer, TableHead, Th, Td } from '../components/ui/index'
+import { Badge, Card, PageHeader, Spinner, EmptyState, TableContainer, TableHead, Th, Td } from '../components/ui/index'
+import { DollarSign, ShoppingBag, TrendingUp, Users, Receipt } from 'lucide-react'
 import { FINANCIAL_STATUS_MAP, FULFILLMENT_MAP, statusBadgeProps } from '../lib/statusMaps'
 import type { Order, AnalyticsOverview } from '@cartcrft/sdk'
 
@@ -53,10 +54,10 @@ export default function Dashboard() {
   const currency = activeStore?.currency ?? 'USD'
 
   const metricCards = [
-    { label: 'Revenue', value: `${currency} ${Number(metrics?.revenue ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`, color: 'text-emerald-400' },
-    { label: 'Orders', value: String(metrics?.orders ?? 0), color: 'text-blue-400' },
-    { label: 'Avg Order Value', value: `${currency} ${Number(metrics?.aov ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`, color: 'text-violet-400' },
-    { label: 'Customers', value: String(metrics?.customers ?? 0), color: 'text-amber-400' },
+    { label: 'Revenue', value: `${currency} ${Number(metrics?.revenue ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`, color: 'text-emerald-400', icon: DollarSign, accent: 'from-emerald-500/10' },
+    { label: 'Orders', value: String(metrics?.orders ?? 0), color: 'text-blue-400', icon: ShoppingBag, accent: 'from-blue-500/10' },
+    { label: 'Avg Order Value', value: `${currency} ${Number(metrics?.aov ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`, color: 'text-violet-400', icon: TrendingUp, accent: 'from-violet-500/10' },
+    { label: 'Customers', value: String(metrics?.customers ?? 0), color: 'text-amber-400', icon: Users, accent: 'from-amber-500/10' },
   ]
 
   return (
@@ -65,18 +66,33 @@ export default function Dashboard() {
 
       {/* Metric cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {metricCards.map(card => (
-          <div key={card.label} className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-5">
-            <p className="text-xs text-slate-500 mb-1">{card.label}</p>
-            <p className={`text-xl font-bold ${card.color}`}>{card.value}</p>
-          </div>
-        ))}
+        {metricCards.map(card => {
+          const Icon = card.icon
+          return (
+            <div
+              key={card.label}
+              className={`relative overflow-hidden rounded-xl border border-white/[0.08] bg-gradient-to-br ${card.accent} to-transparent p-5`}
+            >
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-medium text-slate-400">{card.label}</p>
+                <span className={`flex h-7 w-7 items-center justify-center rounded-lg bg-white/[0.04] ${card.color}`}>
+                  <Icon size={15} />
+                </span>
+              </div>
+              <p className={`mt-3 text-2xl font-bold tracking-tight ${card.color}`}>{card.value}</p>
+            </div>
+          )
+        })}
       </div>
 
       {/* Recent orders */}
       <Card title="Recent Orders">
         {orders.length === 0 ? (
-          <p className="text-sm text-slate-500 text-center py-8">No orders yet</p>
+          <EmptyState
+            icon={<Receipt size={20} />}
+            title="No orders yet"
+            description="Recent orders will appear here once customers start purchasing."
+          />
         ) : (
           <TableContainer>
             <table className="w-full text-sm">

@@ -28,6 +28,15 @@ import {
 } from '../components/ui/index'
 import { ArrowLeft } from 'lucide-react'
 
+/** Format a string/number USD amount explicitly (locale-independent currency). */
+function fmtUsd(v: string | number | undefined): string {
+  return (parseFloat(String(v ?? 0)) || 0).toLocaleString('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0,
+  })
+}
+
 function StoreDetailView({ storeId, token, onBack, handle401 }: { storeId: string; token: string; onBack: () => void; handle401: () => void }) {
   const { toast } = useToast()
   const [store, setStore] = useState<StoreDetail | null>(null)
@@ -76,7 +85,7 @@ function StoreDetailView({ storeId, token, onBack, handle401 }: { storeId: strin
         </div>
         <div className="rounded-xl border border-white/[0.07] bg-zinc-900/60 px-5 py-4">
           <p className="text-xs text-zinc-500 uppercase tracking-wider mb-1">GMV</p>
-          <p className="text-2xl font-bold text-emerald-400">${parseFloat(store.gmv || '0').toLocaleString()}</p>
+          <p className="text-2xl font-bold text-emerald-400">{fmtUsd(store.gmv)}</p>
         </div>
         <div className="rounded-xl border border-white/[0.07] bg-zinc-900/60 px-5 py-4">
           <p className="text-xs text-zinc-500 uppercase tracking-wider mb-1">Currency</p>
@@ -213,7 +222,7 @@ export default function Stores() {
                   </Badge>
                 </Td>
                 <Td><span className="text-xs text-zinc-400">{s.order_count}</span></Td>
-                <Td><span className="text-xs text-emerald-400">${parseFloat(s.gmv || '0').toLocaleString()}</span></Td>
+                <Td><span className="text-xs text-emerald-400">{fmtUsd(s.gmv)}</span></Td>
                 <Td><span className="text-xs text-zinc-500">{new Date(s.created_at).toLocaleDateString()}</span></Td>
                 <Td>
                   <button onClick={() => setSelectedId(s.id)} className="text-xs text-amber-400 hover:text-amber-300 transition">

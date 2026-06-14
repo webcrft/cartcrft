@@ -28,6 +28,15 @@ import {
 } from '../components/ui/index'
 import { ArrowLeft } from 'lucide-react'
 
+/** Format a string/number USD amount explicitly (locale-independent currency). */
+function fmtUsd(v: string | number | undefined): string {
+  return (parseFloat(String(v ?? 0)) || 0).toLocaleString('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0,
+  })
+}
+
 function OrgDetailView({ orgId, token, onBack, handle401 }: { orgId: string; token: string; onBack: () => void; handle401: () => void }) {
   const { toast } = useToast()
   const [org, setOrg] = useState<OrgDetail | null>(null)
@@ -84,7 +93,7 @@ function OrgDetailView({ orgId, token, onBack, handle401 }: { orgId: string; tok
         </div>
         <div className="rounded-xl border border-white/[0.07] bg-zinc-900/60 px-5 py-4">
           <p className="text-xs text-zinc-500 uppercase tracking-wider mb-1">GMV</p>
-          <p className="text-2xl font-bold text-emerald-400">${parseFloat(org.gmv || '0').toLocaleString()}</p>
+          <p className="text-2xl font-bold text-emerald-400">{fmtUsd(org.gmv)}</p>
         </div>
       </div>
 
@@ -112,7 +121,7 @@ function OrgDetailView({ orgId, token, onBack, handle401 }: { orgId: string; tok
                     </Badge>
                   </Td>
                   <Td><span className="text-xs text-zinc-400">{s.order_count}</span></Td>
-                  <Td><span className="text-xs text-emerald-400">${parseFloat(s.gmv || '0').toLocaleString()}</span></Td>
+                  <Td><span className="text-xs text-emerald-400">{fmtUsd(s.gmv)}</span></Td>
                 </tr>
               ))}
             </tbody>
@@ -212,7 +221,7 @@ export default function Orgs() {
                 </Td>
                 <Td><span className="text-xs text-zinc-400">{org.store_count}</span></Td>
                 <Td><span className="text-xs text-zinc-400">{org.order_count}</span></Td>
-                <Td><span className="text-xs text-emerald-400">${parseFloat(org.gmv || '0').toLocaleString()}</span></Td>
+                <Td><span className="text-xs text-emerald-400">{fmtUsd(org.gmv)}</span></Td>
                 <Td>
                   <Badge color={org.billing_status === 'active' ? 'emerald' : 'zinc'}>
                     {org.billing_status || 'active'}

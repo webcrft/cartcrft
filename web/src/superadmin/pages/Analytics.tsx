@@ -25,6 +25,19 @@ import {
 
 // ── Inline SVG timeseries chart ────────────────────────────────────────────────
 
+const METRIC_LABELS: Record<'orders' | 'gmv' | 'signups', string> = {
+  orders: 'Orders',
+  gmv: 'GMV (USD)',
+  signups: 'Signups',
+}
+
+function fmtMetricValue(value: number, metric: 'orders' | 'gmv' | 'signups'): string {
+  if (metric === 'gmv') {
+    return value.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
+  }
+  return Math.round(value).toLocaleString('en-US')
+}
+
 function TimeseriesChart({ points, metric }: { points: TimeseriesPoint[]; metric: 'orders' | 'gmv' | 'signups' }) {
   if (!points.length) return <p className="text-xs text-zinc-500 py-4 text-center">No data</p>
 
@@ -54,21 +67,40 @@ function TimeseriesChart({ points, metric }: { points: TimeseriesPoint[]; metric
     metric === 'gmv' ? `$${(v / 1000).toFixed(0)}k` : String(Math.round(v)),
   )
 
+  const firstDate = pts[0].point.date
+  const lastDate = pts[pts.length - 1].point.date
+  const descText = `Line chart of ${METRIC_LABELS[metric]} from ${firstDate} to ${lastDate}. Minimum ${fmtMetricValue(Math.min(...values), metric)}, maximum ${fmtMetricValue(max, metric)}.`
+
   return (
-    <div className="overflow-x-auto">
+    <div>
+      {/* Legend / active-metric label */}
+      <div className="flex items-center justify-between gap-3 mb-2">
+        <div className="flex items-center gap-2">
+          <span className="inline-block h-0.5 w-4 rounded-full bg-amber-500" aria-hidden="true" />
+          <span className="text-xs font-medium text-zinc-300">{METRIC_LABELS[metric]}</span>
+          <span className="text-[11px] text-zinc-500">— daily, last 30 days</span>
+        </div>
+        <span className="text-[11px] text-zinc-500 tabular-nums">
+          Peak {fmtMetricValue(max, metric)}
+        </span>
+      </div>
       <svg
         viewBox={`0 0 ${W} ${H}`}
+        preserveAspectRatio="xMidYMid meet"
         className="w-full"
-        style={{ height: 140, minWidth: 300 }}
-        aria-label={`${metric} over time`}
+        style={{ minHeight: 120 }}
+        role="img"
+        aria-label={`${METRIC_LABELS[metric]} over time`}
       >
-        {/* Y-axis ticks */}
+        <title>{METRIC_LABELS[metric]} over the last 30 days</title>
+        <desc>{descText}</desc>
+        {/* Y-axis ticks (min / mid / max labels) */}
         {[0, 0.5, 1].map((frac, i) => {
           const cy = chartH * (1 - frac)
           return (
             <g key={i}>
               <line x1={PAD_L} y1={cy} x2={W} y2={cy} stroke="rgba(255,255,255,0.04)" strokeWidth={1} />
-              <text x={PAD_L - 4} y={cy + 4} textAnchor="end" fontSize={9} fill="#52525b">{yTicks[i]}</text>
+              <text x={PAD_L - 4} y={cy + 4} textAnchor="end" fontSize={9} fill="#71717a">{yTicks[i]}</text>
             </g>
           )
         })}
@@ -82,16 +114,32 @@ function TimeseriesChart({ points, metric }: { points: TimeseriesPoint[]; metric
         <path d={areaD} fill="url(#sa-chart-grad)" />
         {/* Line */}
         <path d={pathD} fill="none" stroke="#f59e0b" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
-        {/* Dots on hover (static for now) */}
+        {/* Data points — enlarged hit target + per-point native tooltip */}
         {pts.map((p, i) => (
-          <circle key={i} cx={p.x} cy={p.y} r={2.5} fill="#f59e0b" opacity={0.8} />
+          <g key={i} className="group">
+            {/* invisible larger hover/touch target */}
+            <circle cx={p.x} cy={p.y} r={8} fill="transparent">
+              <title>{`${p.point.date}: ${fmtMetricValue(p.value, metric)}`}</title>
+            </circle>
+            <circle
+              cx={p.x}
+              cy={p.y}
+              r={2.5}
+              fill="#f59e0b"
+              opacity={0.85}
+              stroke="#f59e0b"
+              strokeWidth={0}
+              strokeOpacity={0.25}
+              className="transition-[stroke-width] group-hover:[stroke-width:5px] group-hover:opacity-100"
+            />
+          </g>
         ))}
-        {/* X labels — show first, mid, last */}
+        {/* X labels — first, mid, last date */}
         {[0, Math.floor(pts.length / 2), pts.length - 1].map(i => {
           if (!pts[i]) return null
           const label = pts[i].point.date.slice(5) // MM-DD
           return (
-            <text key={i} x={pts[i].x} y={H - 4} textAnchor="middle" fontSize={9} fill="#52525b">
+            <text key={i} x={pts[i].x} y={H - 4} textAnchor="middle" fontSize={9} fill="#71717a">
               {label}
             </text>
           )
@@ -172,8 +220,11 @@ export default function Analytics() {
 
   useEffect(() => { void load() }, [load])
 
-  const fmt = (n: number | undefined) => n != null ? n.toLocaleString() : '—'
-  const fmtMoney = (s: string | undefined) => s ? `$${parseFloat(s).toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'
+  const fmt = (n: number | undefined) => n != null ? n.toLocaleString('en-US') : '—'
+  const fmtMoney = (s: string | undefined) =>
+    s
+      ? parseFloat(s).toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 })
+      : '—'
 
   return (
     <div>
@@ -200,7 +251,7 @@ export default function Analytics() {
       {!loading && !error && overview && (
         <>
           {/* Overview stats */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
             <StatCard label="Orgs" value={fmt(overview.total_orgs)} />
             <StatCard label="Stores" value={fmt(overview.total_stores)} />
             <StatCard label="Customers" value={fmt(overview.total_customers)} />

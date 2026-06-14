@@ -338,7 +338,7 @@ const rows = [
   </section>
 
   <!-- Comparison table (structured data — component-rendered) -->
-  <section class="table-section">
+  <section class="table-section" data-reveal>
     <div class="table-section-inner">
       <ComparisonTable
         competitors={competitors}
@@ -350,7 +350,7 @@ const rows = [
   </section>
 
   <!-- Narrative sections — rendered from markdown content -->
-  <section class="narratives">
+  <section class="narratives" data-reveal>
     <div class="narratives-inner">
       <div class="md-prose">
         <Content />
@@ -359,7 +359,7 @@ const rows = [
   </section>
 
   <!-- CTA -->
-  <section class="compare-cta">
+  <section class="compare-cta" data-reveal>
     <div class="compare-cta-inner">
       <h2>Ready to try Cartcrft?</h2>
       <p>Get a store running and MCP-connected in under 10 minutes.</p>
@@ -446,7 +446,7 @@ const rows = [
   }
 
   .table-section-inner {
-    max-width: 1200px;
+    max-width: 1100px;
     margin: 0 auto;
   }
 
@@ -594,7 +594,7 @@ const rows = [
 
   /* CTA */
   .compare-cta {
-    background: linear-gradient(135deg, #4f46e5 0%, #0d9488 100%);
+    background: linear-gradient(135deg, #6366f1 0%, #14b8a6 100%);
     padding: 5rem 1.5rem;
     text-align: center;
     color: #fff;
@@ -633,7 +633,7 @@ const rows = [
     align-items: center;
     padding: 0.75rem 1.75rem;
     background: #fff;
-    color: #4f46e5;
+    color: #6366f1;
     font-weight: 700;
     font-size: 1rem;
     border-radius: 0.5rem;

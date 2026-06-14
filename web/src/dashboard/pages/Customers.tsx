@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react'
 import { useStore } from '../context/StoreContext'
 import { getSdk } from '../lib/sdk'
 import { useToast } from '../context/ToastContext'
-import { Badge, Btn, Card, PageHeader, EmptyState, Spinner, TableContainer, TableHead, Th, Td } from '../components/ui/index'
+import { Badge, Btn, Card, PageHeader, EmptyState, SearchInput, Spinner, TableContainer, TableHead, Th, Td } from '../components/ui/index'
 import { FINANCIAL_STATUS_MAP, statusBadgeProps } from '../lib/statusMaps'
 import type { Customer, Address, Order } from '@cartcrft/sdk'
 
@@ -262,12 +262,7 @@ export default function Customers() {
         description={`${total} customer${total !== 1 ? 's' : ''}`}
       />
 
-      <input
-        value={search}
-        onChange={e => handleSearch(e.target.value)}
-        placeholder="Search by name or email..."
-        className="w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-2.5 text-sm text-white placeholder:text-slate-500 focus:border-violet-500/40 focus:outline-none"
-      />
+      <SearchInput value={search} onChange={handleSearch} placeholder="Search by name or email..." />
 
       {customers.length === 0 ? (
         <EmptyState

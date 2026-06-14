@@ -36,6 +36,18 @@ function actionColor(action: string): 'red' | 'amber' | 'emerald' | 'zinc' {
   return key ? ACTION_COLORS[key] : 'zinc'
 }
 
+/** Compact, locale-stable timestamp — e.g. "Jun 12, 14:03". */
+function fmtTimestamp(iso: string): string {
+  const d = new Date(iso)
+  return d.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
+}
+
 export default function AuditLog() {
   const { token, handle401 } = useAuth()
   const { toast } = useToast()
@@ -115,8 +127,11 @@ export default function AuditLog() {
                 <React.Fragment key={entry.id}>
                   <tr className="border-t border-white/[0.03] hover:bg-white/[0.02]">
                     <Td>
-                      <span className="text-[11px] text-zinc-500 whitespace-nowrap">
-                        {new Date(entry.created_at).toLocaleString()}
+                      <span
+                        className="text-[11px] text-zinc-500 whitespace-nowrap"
+                        title={new Date(entry.created_at).toLocaleString()}
+                      >
+                        {fmtTimestamp(entry.created_at)}
                       </span>
                     </Td>
                     <Td>
@@ -150,9 +165,8 @@ export default function AuditLog() {
                   </tr>
                   {expandedId === entry.id && entry.metadata && (
                     <tr className="border-t border-white/[0.03] bg-zinc-900/40">
-                      <Td className="col-span-6 py-3 px-5" />
-                      <td colSpan={6} className="px-5 pb-3 pt-0">
-                        <pre className="text-[11px] text-zinc-400 bg-zinc-950/60 rounded-lg p-3 overflow-x-auto font-mono leading-relaxed">
+                      <td colSpan={6} className="px-5 py-3">
+                        <pre className="text-[11px] text-zinc-400 bg-zinc-950/60 rounded-lg p-3 max-h-96 overflow-auto font-mono leading-relaxed">
                           {JSON.stringify(entry.metadata, null, 2)}
                         </pre>
                       </td>

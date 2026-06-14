@@ -355,7 +355,7 @@ const faqs: { q: string; a: string }[] = [
   </section>
 
   <!-- ---- Pricing grid ----------------------------------------------------- -->
-  <section class="pricing-section">
+  <section class="pricing-section" data-reveal>
     <div class="pricing-grid">
       {tiers.map((t) => (
         <PricingCard
@@ -373,7 +373,7 @@ const faqs: { q: string; a: string }[] = [
   </section>
 
   <!-- ---- Where your money goes -------------------------------------------- -->
-  <section class="money-section">
+  <section class="money-section" data-reveal>
     <div class="money-inner">
       <h2>Where your money goes</h2>
       <p class="money-sub">
@@ -417,7 +417,7 @@ const faqs: { q: string; a: string }[] = [
   </section>
 
   <!-- ---- Cost comparison -------------------------------------------------- -->
-  <section class="compare-section">
+  <section class="compare-section" data-reveal>
     <div class="compare-inner">
       <h2>Real cost comparison</h2>
       <p class="compare-sub">
@@ -621,7 +621,7 @@ const faqs: { q: string; a: string }[] = [
   </section>
 
   <!-- ---- Feature comparison table ---------------------------------------- -->
-  <section class="feature-compare-section">
+  <section class="feature-compare-section" data-reveal>
     <div class="feature-compare-inner">
       <h2>Feature comparison</h2>
       <p class="feature-compare-sub">
@@ -643,7 +643,7 @@ const faqs: { q: string; a: string }[] = [
   </section>
 
   <!-- ---- FAQ -------------------------------------------------------------- -->
-  <section class="faq-section">
+  <section class="faq-section" data-reveal>
     <div class="faq-inner">
       <h2>Frequently asked questions</h2>
       <dl class="faq-list">
@@ -658,7 +658,7 @@ const faqs: { q: string; a: string }[] = [
   </section>
 
   <!-- ---- CTA band --------------------------------------------------------- -->
-  <section class="pricing-cta-band">
+  <section class="pricing-cta-band" data-reveal>
     <div class="pricing-cta-inner">
       <h2>Start free. Move to cloud when you are ready.</h2>
       <p>Same codebase. No data lock-in. Flat fee only, ever.</p>
@@ -715,7 +715,11 @@ const faqs: { q: string; a: string }[] = [
   }
 
   @media (prefers-color-scheme: dark) {
-    .preview-banner a { color: #fcd34d; }
+    .preview-banner a {
+      color: #fef08a;
+      font-weight: 700;
+      text-decoration: underline;
+    }
   }
 
   /* ---- Page header ------------------------------------------------------- */
@@ -991,6 +995,9 @@ const faqs: { q: string; a: string }[] = [
   }
 
   .cost-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
     padding: 0.875rem 1.1rem;
     font-weight: 700;
     font-size: 0.8rem;
