@@ -34,6 +34,13 @@ const SIDEBAR: SidebarGroup[] = [
     items: [{ slug: 'byo-keys' }, { slug: 'self-host' }, { slug: 'cloud-vs-selfhost' }],
   },
   {
+    label: 'Commerce',
+    items: [
+      { slug: 'commerce' },
+      { slug: 'identity' },
+    ],
+  },
+  {
     label: 'Agent-native',
     items: [
       { slug: 'agent-native' },
@@ -42,7 +49,12 @@ const SIDEBAR: SidebarGroup[] = [
   },
   {
     label: 'Reference',
-    items: [{ slug: 'api-overview' }, { slug: 'parity-endpoints' }],
+    items: [
+      { slug: 'api-overview' },
+      { slug: 'parity-endpoints' },
+      { slug: 'oauth-apps' },
+      { slug: 'checkout-links' },
+    ],
   },
   {
     label: 'Operations',
