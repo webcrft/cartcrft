@@ -15,7 +15,7 @@
  * tests via SimClock injection.
  */
 
-import { getPool, withTx } from "../../db/pool.js";
+import { getPool, getReadDb, withTx } from "../../db/pool.js";
 import type { Clock } from "../../clock.js";
 import { SystemClock } from "../../clock.js";
 import type {
@@ -23,6 +23,7 @@ import type {
   CreateSubscriptionPlanInput,
   UpdateSubscriptionPlanInput,
   Subscription,
+  SubscriptionItem,
   CreateSubscriptionInput,
   BillSubscriptionResult,
 } from "./types.js";
@@ -63,7 +64,8 @@ export function nextBillingDate(
 export async function listSubscriptionPlans(
   storeId: string
 ): Promise<SubscriptionPlan[]> {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
   const { rows } = await pool.query<SubscriptionPlan>(
     `SELECT id::text, store_id::text, name, interval, interval_count, trial_days, is_active, created_at
      FROM subscription_plans WHERE store_id = $1::uuid ORDER BY name`,
@@ -76,7 +78,8 @@ export async function getSubscriptionPlan(
   storeId: string,
   planId: string
 ): Promise<SubscriptionPlan | null> {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
   const { rows } = await pool.query<SubscriptionPlan>(
     `SELECT id::text, store_id::text, name, interval, interval_count, trial_days, is_active, created_at
      FROM subscription_plans WHERE id = $1::uuid AND store_id = $2::uuid`,
@@ -141,7 +144,8 @@ export async function listSubscriptions(
     offset?: number | undefined;
   } = {}
 ): Promise<{ subscriptions: unknown[]; total: number }> {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
   const limit = Math.min(opts.limit ?? 50, 200);
   const offset = opts.offset ?? 0;
 
@@ -186,7 +190,8 @@ export async function getSubscription(
   storeId: string,
   subId: string
 ): Promise<Subscription | null> {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
   const { rows } = await pool.query<Subscription>(
     `SELECT s.id::text, s.store_id::text, s.customer_id::text, s.plan_id::text,
             s.status, s.current_period_start, s.current_period_end,
@@ -201,7 +206,7 @@ export async function getSubscription(
   if (!rows[0]) return null;
   const sub = rows[0];
 
-  const { rows: itemRows } = await pool.query(
+  const { rows: itemRows } = await pool.query<SubscriptionItem>(
     `SELECT si.id::text, si.subscription_id::text, si.variant_id::text,
             si.quantity, si.price::text,
             pv.sku, p.title AS product_title

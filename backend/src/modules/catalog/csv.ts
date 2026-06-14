@@ -30,7 +30,7 @@
  *     at export time — import will upsert into the first/default warehouse).
  */
 
-import { getPool, withTx } from "../../db/pool.js";
+import { getPool, getReadDb, withTx } from "../../db/pool.js";
 import type pg from "pg";
 
 // ── RFC4180 CSV ───────────────────────────────────────────────────────────────
@@ -192,7 +192,8 @@ interface ExportRow {
 }
 
 export async function exportProductsCsv(storeId: string): Promise<string> {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
 
   // One row per variant; products with no variants get a placeholder row.
   const { rows } = await pool.query<ExportRow>(

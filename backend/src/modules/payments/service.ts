@@ -8,7 +8,7 @@
  *  - Provider session creators (createStripeSession, createPaystackSession, etc.)
  */
 
-import { getPool, withTx } from "../../db/pool.js";
+import { getPool, getReadDb, withTx } from "../../db/pool.js";
 import { config } from "../../config/config.js";
 import { encodeSecretValue } from "../../lib/secrets.js";
 import { dispatchStoreEvent } from "../notifications/service.js";
@@ -37,7 +37,8 @@ export async function listPayments(
   orderId: string,
   storeId: string
 ): Promise<Payment[]> {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
   const { rows } = await pool.query<Payment>(
     `SELECT p.id::text, p.order_id::text, p.provider_id::text,
             p.amount::text, p.currency, p.status, p.provider_reference,
@@ -517,7 +518,8 @@ export async function createRefund(
 export async function listProviders(
   storeId: string
 ): Promise<PaymentProvider[]> {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
   const { rows } = await pool.query<
     PaymentProvider & { config: string | Record<string, unknown> }
   >(
@@ -606,7 +608,8 @@ export async function deleteProvider(
 // ── Payment gateways (platform-level) ─────────────────────────────────────────
 
 export async function listGateways(): Promise<PaymentGatewayInstance[]> {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
   const { rows } = await pool.query<{
     id: string;
     name: string;
@@ -679,7 +682,8 @@ export async function setGatewayDevCredentials(
 export async function getGatewayStatus(): Promise<
   Record<string, { has_live: boolean; has_dev: boolean }>
 > {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
   const { rows } = await pool.query<{
     type: string;
     has_live: boolean;
@@ -706,7 +710,8 @@ async function getProviderConfig(
   storeId: string,
   slug: string
 ): Promise<Record<string, unknown>> {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
   const { rows } = await pool.query<{
     config: string | Record<string, unknown>;
   }>(

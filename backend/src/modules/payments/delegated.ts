@@ -50,7 +50,7 @@
  * ───────────────────────────────────────────────────────────────────────────
  */
 
-import { getPool } from "../../db/pool.js";
+import { getReadDb } from "../../db/pool.js";
 import { completeCheckout, CheckoutError } from "../checkout/complete.js";
 import { createPayment, capturePayment } from "./service.js";
 
@@ -112,7 +112,8 @@ async function resolveProvider(
   storeId: string,
   slug?: string
 ): Promise<ResolvedProvider> {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
   const { rows } = slug
     ? await pool.query<{ id: string; slug: string | null; type: string; config: unknown }>(
         `SELECT id::text, slug, type, config FROM payment_providers

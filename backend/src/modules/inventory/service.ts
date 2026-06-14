@@ -16,7 +16,7 @@
  * quantity_delta == 0 is rejected before DB (no-op adjustment clutters audit log).
  */
 
-import { getPool, withTx } from "../../db/pool.js";
+import { getPool, getReadDb, withTx } from "../../db/pool.js";
 
 // ── Reason enum ────────────────────────────────────────────────────────────────
 
@@ -36,7 +36,8 @@ export type AdjustmentReason = typeof ADJUSTMENT_REASONS[number];
 // ── Warehouses ────────────────────────────────────────────────────────────────
 
 export async function listWarehouses(storeId: string) {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
   const { rows } = await pool.query(
     `SELECT id::text, store_id::text, name, code, address, is_active, is_default,
             fulfills_online, metadata, created_at, updated_at
@@ -154,7 +155,8 @@ export async function listInventoryLevels(
     offset?: number | undefined;
   } = {}
 ) {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
   const limit = Math.min(opts.limit ?? 100, 200);
   const offset = opts.offset ?? 0;
 
@@ -275,7 +277,8 @@ export async function listInventoryAdjustments(
     offset?: number | undefined;
   } = {}
 ) {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
   const limit = Math.min(opts.limit ?? 100, 200);
   const offset = opts.offset ?? 0;
 
@@ -315,7 +318,8 @@ export async function listInventoryLots(
   storeId: string,
   opts: { variant_id?: string | undefined; warehouse_id?: string | undefined } = {}
 ) {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
   let query = `
     SELECT il.id::text, il.variant_id::text, il.warehouse_id::text,
            il.lot_number, il.expiry_date, il.quantity, il.cost_price,
@@ -437,7 +441,8 @@ export async function listSerialNumbers(
     offset?: number | undefined;
   } = {}
 ) {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
   const limit = Math.min(opts.limit ?? 100, 200);
   const offset = opts.offset ?? 0;
 
@@ -501,8 +506,9 @@ export async function bulkCreateSerialNumbers(
 }
 
 export async function getSerialNumber(storeId: string, serialId: string) {
-  const pool = getPool();
-  const { rows } = await pool.query(
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
+  const { rows } = await pool.query<{ order_line_id: string | null } & Record<string, unknown>>(
     `SELECT sn.id::text, sn.variant_id::text, sn.warehouse_id::text,
             sn.serial_number, sn.status, sn.order_line_id::text, sn.lot_id::text,
             sn.created_at, sn.updated_at,
@@ -556,7 +562,8 @@ export async function updateSerialNumber(
 // ── Suppliers ─────────────────────────────────────────────────────────────────
 
 export async function listSuppliers(storeId: string) {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
   const { rows } = await pool.query(
     `SELECT id::text, store_id::text, name, email, phone, address,
             currency, notes, metadata, is_active,

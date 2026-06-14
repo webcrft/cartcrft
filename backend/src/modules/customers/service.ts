@@ -6,6 +6,7 @@
  */
 
 import type pg from "pg";
+import type { ReadDb } from "../../db/pool.js";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -123,7 +124,7 @@ const CUSTOMER_COLS = `
 // ── List customers ────────────────────────────────────────────────────────────
 
 export async function listCustomers(
-  pool: pg.Pool,
+  pool: ReadDb,
   storeId: string,
   opts: { limit?: number; offset?: number; q?: string }
 ): Promise<{ customers: CustomerRow[]; total: number }> {
@@ -161,7 +162,7 @@ export async function listCustomers(
 // ── Get single customer ───────────────────────────────────────────────────────
 
 export async function getCustomer(
-  pool: pg.Pool,
+  pool: ReadDb,
   storeId: string,
   customerId: string
 ): Promise<CustomerDetail | null> {
@@ -387,7 +388,7 @@ export async function deleteCustomerAddress(
 // ── Tags ──────────────────────────────────────────────────────────────────────
 
 export async function listCustomerTags(
-  pool: pg.Pool,
+  pool: ReadDb,
   storeId: string,
   customerId: string
 ): Promise<string[]> {
@@ -417,7 +418,7 @@ export async function setCustomerTags(
 // ── Audit log ─────────────────────────────────────────────────────────────────
 
 export async function listAuditLog(
-  pool: pg.Pool,
+  pool: ReadDb,
   storeId: string,
   opts: { customerId?: string | undefined; event?: string | undefined; limit?: number | undefined }
 ): Promise<unknown[]> {

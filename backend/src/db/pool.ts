@@ -92,6 +92,126 @@ export async function closePool(): Promise<void> {
 }
 
 /**
+ * Run `fn` inside a read-only, role-switched transaction so that RLS policies
+ * are enforced on READ paths (P4 / audit item 2).
+ *
+ * Why this exists
+ * ---------------
+ * withTx() already role-switches to cartcrft_app (NOBYPASSRLS) so writes are
+ * RLS-enforced. But the bulk of tenant-data READS in the request-scoped service
+ * paths run as `getPool().query()` — i.e. as the owner role (BYPASSRLS) — and
+ * rely SOLELY on hand-written `store_id` predicates. A single missing predicate
+ * = a cross-tenant read with no DB backstop. withRlsRead() routes those reads
+ * through the same role-switched path so the policies in 0006_rls.sql /
+ * 0019_rls_tenant_isolation.sql double-check every read.
+ *
+ * Behaviour
+ * ---------
+ *   - In a request context (getRequestCtx() returns a principal): opens a
+ *     READ ONLY transaction, SET LOCAL ROLE cartcrft_app, sets the
+ *     app.user_id / app.org_id GUCs, runs fn(client), then COMMITs (read-only
+ *     so there is nothing to roll back; COMMIT releases cleanly).
+ *   - Outside a request context (workers, migrations, pre-auth, seeds): runs
+ *     fn() against a plain pooled connection as the owner role (BYPASSRLS), so
+ *     trusted infrastructure code is never blocked by policies. This is the
+ *     graceful no-op the audit requires.
+ *
+ * Read-only enforcement (BEGIN ... READ ONLY) is a belt-and-braces guard: it
+ * makes accidental writes on this path fail loudly rather than silently slip
+ * past the write-oriented RLS WITH CHECK story. Use withTx() for writes.
+ */
+export async function withRlsRead<T>(
+  fn: (client: pg.PoolClient) => Promise<T>
+): Promise<T> {
+  const pool = getPool();
+  const reqCtx = getRequestCtx();
+
+  // No request context → trusted infra path: run as owner, no transaction
+  // overhead, no role switch. Keeps workers / migrations / pre-auth working.
+  if (!reqCtx) {
+    const client = await pool.connect();
+    try {
+      return await fn(client);
+    } finally {
+      client.release();
+    }
+  }
+
+  // Request context → enforce RLS in a read-only, role-switched transaction.
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN READ ONLY");
+    await client.query("SET LOCAL ROLE cartcrft_app");
+    await client.query(
+      "SELECT set_config('app.user_id', $1, true), set_config('app.org_id', $2, true)",
+      [reqCtx.userId, reqCtx.orgId]
+    );
+    const result = await fn(client);
+    await client.query("COMMIT");
+    return result;
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * A `.query()`-compatible façade that routes each query through the
+ * RLS-enforced read path (withRlsRead) when a request context is present, and
+ * straight to the pool (owner role) otherwise.
+ *
+ * Migration ergonomics
+ * --------------------
+ * Most service read functions do `const pool = getPool();` then one or more
+ * `pool.query(...)` calls (often via Promise.all). Swapping `getPool()` →
+ * `getReadDb()` converts every read at that site to RLS-enforced with a
+ * one-line change, no restructuring, and Promise.all keeps working (each query
+ * gets its own short-lived role-switched connection).
+ *
+ * IMPORTANT: only use this for READS. Each call is an independent transaction,
+ * so it gives NO write atomicity. For writes (and multi-statement read+write
+ * units that must be atomic) use withTx().
+ *
+ * Documented owner-role exception list (P4 / item-2)
+ * --------------------------------------------------
+ * The following READ sites INTENTIONALLY stay on owner-role getPool() — they
+ * either have no request context or legitimately need cross-tenant access, so
+ * routing them through getReadDb() would (correctly) deny them. Keep them as
+ * getPool() ON PURPOSE:
+ *   - Auth middleware API-key / JWT lookups — pre-auth, the org context that RLS
+ *     needs does not exist yet.
+ *   - The superadmin module — intentional cross-tenant browse (sets no
+ *     request-ctx; reads as owner/BYPASSRLS by design).
+ *   - Workers / cron / schedulers (subscriptions/scheduler, recovery, billing
+ *     worker) — run outside any HTTP request, no request-ctx.
+ *   - MCP / pre-auth store resolution and the migration runner — no org ctx.
+ *   - All write paths (INSERT/UPDATE/DELETE) — RLS-enforced via withTx(), not
+ *     this read helper.
+ * withRlsRead/getReadDb already no-op to owner role when getRequestCtx() is
+ * undefined, so the no-context cases above keep working even if accidentally
+ * routed here; the list documents which sites are owner-role BY DESIGN.
+ */
+export interface ReadDb {
+  query<R extends pg.QueryResultRow = pg.QueryResultRow>(
+    text: string,
+    params?: unknown[]
+  ): Promise<pg.QueryResult<R>>;
+}
+
+export function getReadDb(): ReadDb {
+  return {
+    query<R extends pg.QueryResultRow = pg.QueryResultRow>(
+      text: string,
+      params?: unknown[]
+    ): Promise<pg.QueryResult<R>> {
+      return withRlsRead((client) => client.query<R>(text, params));
+    },
+  };
+}
+
+/**
  * Run `fn` inside a single database transaction.
  * Rolls back and rethrows on any error.
  *

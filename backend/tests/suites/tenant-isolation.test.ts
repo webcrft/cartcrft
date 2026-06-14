@@ -34,6 +34,8 @@ import { get, post, put, del, mintJwt, createApiKey } from "../shared/helpers.js
 import { randomUUID } from "node:crypto";
 import { runWithRequestCtx } from "../../src/lib/request-ctx.js";
 import { withTx } from "../../src/db/pool.js";
+import { listOrders, getOrder } from "../../src/modules/orders/service.js";
+import { listProducts } from "../../src/modules/catalog/service.js";
 
 let ctx: TestCtx;
 
@@ -1021,6 +1023,74 @@ describe("Tenant isolation — IDOR sweep", () => {
         [productAId]
       );
       expect(check.rows[0]?.title).not.toBe("hacked");
+    });
+  });
+
+  // ── SERVICE-PATH RLS isolation on READS (P4 / audit item 2) ───────────────
+  //
+  // The block above drives raw client.query() through withTx. These tests go
+  // one level higher: they invoke the ACTUAL service functions used by the
+  // route handlers (listOrders/getOrder/listProducts), under Org B's request
+  // context, against Store A's data. These service reads were migrated from
+  // owner-role getPool() to the role-switched getReadDb() read path, so the
+  // RLS policies (is_store_member, org-gated by 0019) must now return ZERO
+  // rows — proving the read is denied at the DB layer, not merely by the
+  // app-layer store_id predicate or the HTTP middleware.
+  //
+  // Control assertions confirm Org A's own context still sees its data, so the
+  // denial is genuinely tenant-scoped and not a blanket "reads return nothing".
+
+  describe("Service-path RLS isolation on READS (getReadDb)", () => {
+    it("listOrders() under Org B context returns ZERO of Store A's orders", async () => {
+      const asB = await runWithRequestCtx(
+        { userId: `user-${userBId}`, orgId: orgBId },
+        () => listOrders(storeAId, { limit: 200 })
+      );
+      // RLS filters every Store-A order out for the wrong org → empty + 0 total.
+      expect(asB.orders).toHaveLength(0);
+      expect(asB.total).toBe(0);
+    });
+
+    it("listOrders() under Org A context CAN see Store A's orders (control)", async () => {
+      const asA = await runWithRequestCtx(
+        { userId: `user-${userAId}`, orgId: orgAId },
+        () => listOrders(storeAId, { limit: 200 })
+      );
+      expect(asA.orders.length).toBeGreaterThan(0);
+      expect(asA.total).toBeGreaterThan(0);
+    });
+
+    it("getOrder() under Org B context cannot read Store A's order (RLS → null)", async () => {
+      const asB = await runWithRequestCtx(
+        { userId: `user-${userBId}`, orgId: orgBId },
+        () => getOrder(orderAId, storeAId)
+      );
+      expect(asB).toBeNull();
+    });
+
+    it("getOrder() under Org A context CAN read Store A's order (control)", async () => {
+      const asA = await runWithRequestCtx(
+        { userId: `user-${userAId}`, orgId: orgAId },
+        () => getOrder(orderAId, storeAId)
+      );
+      expect(asA).not.toBeNull();
+      expect(asA?.id).toBe(orderAId);
+    });
+
+    it("listProducts() under Org B context returns ZERO of Store A's products", async () => {
+      const asB = await runWithRequestCtx(
+        { userId: `user-${userBId}`, orgId: orgBId },
+        () => listProducts(storeAId, { limit: 200 })
+      );
+      expect(asB).toHaveLength(0);
+    });
+
+    it("listProducts() under Org A context CAN see Store A's products (control)", async () => {
+      const asA = await runWithRequestCtx(
+        { userId: `user-${userAId}`, orgId: orgAId },
+        () => listProducts(storeAId, { limit: 200 })
+      );
+      expect(asA.length).toBeGreaterThan(0);
     });
   });
 });

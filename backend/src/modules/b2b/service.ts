@@ -19,7 +19,7 @@
  */
 
 import type pg from "pg";
-import { getPool, withTx } from "../../db/pool.js";
+import { getPool, getReadDb, withTx } from "../../db/pool.js";
 import type {
   Company,
   CreateCompanyInput,
@@ -47,7 +47,8 @@ const COMPANY_COLS = `
 `;
 
 export async function listCompanies(storeId: string): Promise<Company[]> {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
   const { rows } = await pool.query<Company>(
     `SELECT ${COMPANY_COLS} FROM companies WHERE store_id = $1::uuid ORDER BY name`,
     [storeId]
@@ -59,7 +60,8 @@ export async function getCompany(
   storeId: string,
   companyId: string
 ): Promise<Company | null> {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
   const { rows } = await pool.query<Company>(
     `SELECT ${COMPANY_COLS} FROM companies WHERE id = $1::uuid AND store_id = $2::uuid`,
     [companyId, storeId]
@@ -229,7 +231,8 @@ export async function listCompanyCustomers(
   storeId: string,
   companyId: string
 ): Promise<CompanyCustomer[]> {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
   const { rows } = await pool.query<CompanyCustomer>(
     `SELECT cc.company_id::text AS id, cc.company_id::text, cc.customer_id::text, cc.role, cc.created_at
      FROM company_customers cc
@@ -285,7 +288,8 @@ export async function removeCompanyCustomer(
 // ── Customer groups ────────────────────────────────────────────────────────────
 
 export async function listCustomerGroups(storeId: string): Promise<CustomerGroup[]> {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
   const { rows } = await pool.query<CustomerGroup>(
     `SELECT id::text, store_id::text, name, description, price_list_id::text, created_at
      FROM customer_groups WHERE store_id = $1::uuid ORDER BY name`,
@@ -378,7 +382,8 @@ export async function listQuotes(
     offset?: number | undefined;
   } = {}
 ): Promise<{ quotes: unknown[]; total: number }> {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
   const limit = Math.min(opts.limit ?? 50, 200);
   const offset = opts.offset ?? 0;
 
@@ -417,7 +422,8 @@ export async function getQuote(
   storeId: string,
   quoteId: string
 ): Promise<QuoteWithLines | null> {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
   const { rows } = await pool.query(
     `SELECT id::text, store_id::text, company_id::text, customer_id::text,
             status, expires_at, notes, converted_order_id::text,
@@ -607,7 +613,8 @@ export async function rejectQuote(
 // ── Purchase orders ────────────────────────────────────────────────────────────
 
 export async function listPurchaseOrders(storeId: string): Promise<PurchaseOrder[]> {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
   const { rows } = await pool.query<PurchaseOrder>(
     `SELECT id::text, store_id::text, company_id::text, order_id::text,
             po_number, status, notes, created_at, updated_at
@@ -621,7 +628,8 @@ export async function getPurchaseOrder(
   storeId: string,
   poId: string
 ): Promise<PurchaseOrder | null> {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
   const { rows } = await pool.query<PurchaseOrder>(
     `SELECT id::text, store_id::text, company_id::text, order_id::text,
             po_number, status, notes, created_at, updated_at

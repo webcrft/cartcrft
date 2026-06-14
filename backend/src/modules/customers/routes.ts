@@ -11,7 +11,7 @@ import {
   storeAuthAdmin,
   storeAuthWrite,
 } from "../../lib/auth/middleware.js";
-import { getPool } from "../../db/pool.js";
+import { getPool, getReadDb } from "../../db/pool.js";
 import {
   listCustomers,
   getCustomer,
@@ -119,7 +119,8 @@ export const customersPlugin: FastifyPluginAsyncZod = async (app) => {
     async (request, reply) => {
       const { storeId } = request.params;
       const q = request.query;
-      const pool = getPool();
+      // RLS-enforced read path (P4/item-2).
+      const pool = getReadDb();
       const result = await listCustomers(pool, storeId, q as { limit?: number; offset?: number; q?: string });
       return reply.send(result);
     }
@@ -164,7 +165,8 @@ export const customersPlugin: FastifyPluginAsyncZod = async (app) => {
     },
     async (request, reply) => {
       const { storeId, customerId } = request.params;
-      const pool = getPool();
+      // RLS-enforced read path (P4/item-2).
+      const pool = getReadDb();
       const customer = await getCustomer(pool, storeId, customerId);
       if (!customer) {
         return reply.status(404).send({ error: { code: "NOT_FOUND", message: "customer not found" } });
@@ -294,7 +296,8 @@ export const customersPlugin: FastifyPluginAsyncZod = async (app) => {
     },
     async (request, reply) => {
       const { storeId, customerId } = request.params;
-      const pool = getPool();
+      // RLS-enforced read path (P4/item-2).
+      const pool = getReadDb();
       const tags = await listCustomerTags(pool, storeId, customerId);
       return reply.send({ tags });
     }
@@ -328,7 +331,8 @@ export const customersPlugin: FastifyPluginAsyncZod = async (app) => {
     async (request, reply) => {
       const { storeId } = request.params;
       const q = request.query;
-      const pool = getPool();
+      // RLS-enforced read path (P4/item-2).
+      const pool = getReadDb();
       const entries = await listAuditLog(pool, storeId, {
         customerId: q.customer_id as string | undefined,
         event: q.event as string | undefined,

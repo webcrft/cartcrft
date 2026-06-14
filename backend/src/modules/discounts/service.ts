@@ -9,7 +9,7 @@
  * All IDs are uuid text. Money fields are string in responses.
  */
 
-import { getPool } from "../../db/pool.js";
+import { getPool, getReadDb } from "../../db/pool.js";
 import type {
   DiscountCode,
   AutoDiscount,
@@ -79,7 +79,8 @@ export async function listDiscounts(
   storeId: string,
   opts: { limit?: number; offset?: number } = {}
 ): Promise<DiscountCode[]> {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
   const limit = Math.min(Math.max(opts.limit ?? 50, 1), 200);
   const offset = opts.offset ?? 0;
 
@@ -99,7 +100,8 @@ export async function getDiscount(
   storeId: string,
   discountId: string
 ): Promise<DiscountCode | null> {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
   const { rows } = await pool.query<DiscountCode>(
     `SELECT ${DISCOUNT_CODE_COLS}
      FROM discount_codes
@@ -266,7 +268,8 @@ export async function validateDiscount(
     order_total?: string | undefined;
   }
 ): Promise<{ result: ValidateDiscountResult } | { reason: string } | null> {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
   const code = opts.code.trim().toUpperCase();
 
   const { rows } = await pool.query<DiscountCode>(
@@ -347,7 +350,8 @@ export async function listAutoDiscounts(
   storeId: string,
   opts: { limit?: number; offset?: number } = {}
 ): Promise<AutoDiscount[]> {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
   const limit = Math.min(Math.max(opts.limit ?? 50, 1), 200);
   const offset = opts.offset ?? 0;
 
@@ -367,7 +371,8 @@ export async function getAutoDiscount(
   storeId: string,
   discountId: string
 ): Promise<AutoDiscount | null> {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
   const { rows } = await pool.query<AutoDiscount>(
     `SELECT ${AUTO_DISCOUNT_COLS}
      FROM automatic_discounts

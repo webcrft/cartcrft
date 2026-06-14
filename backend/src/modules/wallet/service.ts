@@ -18,7 +18,7 @@
  *  - LookupGiftCard: 422 GIFT_CARD_DISABLED / GIFT_CARD_EXPIRED when applicable
  */
 
-import { getPool, withTx } from "../../db/pool.js";
+import { getPool, getReadDb, withTx } from "../../db/pool.js";
 import type {
   StoreCredit,
   StoreCreditTransaction,
@@ -89,7 +89,8 @@ export async function getCustomerCredits(
   customerId: string,
   currency?: string | undefined
 ): Promise<StoreCredit[]> {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
 
   if (currency) {
     const { rows } = await pool.query<StoreCredit>(
@@ -292,7 +293,8 @@ export async function listStoreCreditTransactions(
   customerId: string,
   opts: { limit?: number; offset?: number; currency?: string } = {}
 ): Promise<StoreCreditTransaction[]> {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
   const limit = Math.min(Math.max(opts.limit ?? 50, 1), 200);
   const offset = opts.offset ?? 0;
 
@@ -332,7 +334,8 @@ export async function listGiftCards(
   storeId: string,
   opts: { limit?: number; offset?: number } = {}
 ): Promise<GiftCard[]> {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
   const limit = Math.min(Math.max(opts.limit ?? 50, 1), 200);
   const offset = opts.offset ?? 0;
 
@@ -397,7 +400,8 @@ export async function getGiftCard(
   storeId: string,
   giftCardId: string
 ): Promise<GiftCard | null> {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
   const { rows } = await pool.query<GiftCard>(
     `SELECT ${GIFT_CARD_COLS}
      FROM gift_cards
@@ -424,7 +428,8 @@ export async function lookupGiftCard(
   | { error: "GIFT_CARD_DISABLED" | "GIFT_CARD_EXPIRED" }
   | null
 > {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
   const { rows } = await pool.query<GiftCard>(
     `SELECT ${GIFT_CARD_COLS}
      FROM gift_cards
@@ -469,7 +474,8 @@ export async function listGiftCardTransactions(
   giftCardId: string,
   opts: { limit?: number; offset?: number } = {}
 ): Promise<GiftCardTransaction[]> {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
   const limit = Math.min(Math.max(opts.limit ?? 50, 1), 200);
   const offset = opts.offset ?? 0;
 

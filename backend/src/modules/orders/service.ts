@@ -5,7 +5,7 @@
  * Uses pg.PoolClient for transactions, getPool for single queries.
  */
 
-import { getPool, withTx } from "../../db/pool.js";
+import { getPool, getReadDb, withTx } from "../../db/pool.js";
 import { dispatchStoreEvent } from "../notifications/service.js";
 import type {
   Order,
@@ -44,7 +44,9 @@ export async function listOrders(
   storeId: string,
   opts: ListOrdersOpts = {}
 ): Promise<{ orders: Order[]; total: number }> {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2): role-switched + GUC-scoped in a request
+  // context, owner-role no-op otherwise.
+  const pool = getReadDb();
 
   const limit = Math.min(opts.limit ?? 50, 200);
   const offset = opts.offset ?? 0;
@@ -103,7 +105,8 @@ export async function getOrder(
   orderId: string,
   storeId: string
 ): Promise<OrderDetail | null> {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
 
   const { rows } = await pool.query<{ row_to_json: string }>(
     `SELECT row_to_json(q) FROM (
@@ -500,7 +503,8 @@ export async function listOrderEvents(
   orderId: string,
   storeId: string
 ): Promise<OrderEvent[]> {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
 
   // Verify order belongs to store first
   const { rows: orderRows } = await pool.query<{ id: string }>(

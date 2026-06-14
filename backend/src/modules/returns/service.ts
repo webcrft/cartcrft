@@ -23,7 +23,7 @@
  * This is noted in the implementation where relevant.
  */
 
-import { getPool, withTx } from "../../db/pool.js";
+import { getPool, getReadDb, withTx } from "../../db/pool.js";
 import type {
   ReturnWithLines,
   CreateReturnInput,
@@ -62,7 +62,8 @@ export async function listReturns(
     offset?: number | undefined;
   } = {}
 ): Promise<{ returns: unknown[]; total: number }> {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
   const limit = Math.min(opts.limit ?? 50, 200);
   const offset = opts.offset ?? 0;
 
@@ -108,7 +109,8 @@ export async function getReturn(
   storeId: string,
   returnId: string
 ): Promise<ReturnWithLines | null> {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
   const { rows } = await pool.query(
     `SELECT rr.id::text, rr.store_id::text, rr.order_id::text, rr.customer_id::text,
             rr.rma_number, rr.status, rr.return_type, rr.notes, rr.metadata,
@@ -508,7 +510,8 @@ export async function listReturnEvents(
   storeId: string,
   returnId: string
 ): Promise<ReturnEvent[]> {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
   const { rows } = await pool.query<ReturnEvent>(
     `SELECT re.id::text, re.return_id::text, re.type, re.data, re.created_by::text, re.created_at
      FROM return_events re

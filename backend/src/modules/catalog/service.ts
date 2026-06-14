@@ -10,7 +10,7 @@
  */
 
 import type pg from "pg";
-import { getPool, withTx } from "../../db/pool.js";
+import { getPool, getReadDb, withTx } from "../../db/pool.js";
 import type {
   ProductPublic,
   CreateProductInput,
@@ -110,7 +110,8 @@ export async function listProducts(
     offset?: number | undefined;
   } = {}
 ): Promise<ProductPublic[]> {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
   const limit = Math.min(Math.max(opts.limit ?? 50, 1), 200);
   const offset = opts.offset ?? 0;
 
@@ -151,7 +152,8 @@ export async function getProduct(
   storeId: string,
   productId: string
 ): Promise<ProductPublic | null> {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
 
   const { rows } = await pool.query(
     `SELECT ${PRODUCT_COLS}
@@ -354,7 +356,8 @@ export async function listVariants(
   storeId: string,
   productId: string
 ): Promise<VariantPublic[]> {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
   const { rows } = await pool.query(
     `SELECT
       v.id::text, v.product_id::text, v.sku, v.barcode, v.title,
@@ -510,7 +513,8 @@ export async function listOptions(
   storeId: string,
   productId: string
 ): Promise<OptionWithValues[]> {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
   const { rows } = await pool.query(
     `SELECT
       o.id::text, o.product_id::text, o.name, o.position,
@@ -646,7 +650,8 @@ export async function listBundleItems(
   storeId: string,
   productId: string
 ): Promise<BundleItemPublic[]> {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
   const { rows } = await pool.query(
     `SELECT bi.id::text, bi.product_id::text, bi.variant_id::text,
             bi.quantity, bi.is_optional, bi.position
@@ -741,7 +746,8 @@ export async function listDigitalFiles(
   storeId: string,
   productId: string
 ): Promise<DigitalFilePublic[]> {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
   const { rows } = await pool.query(
     `SELECT
       id::text, store_id::text, product_id::text, variant_id::text,
@@ -812,7 +818,8 @@ export async function listReviews(
   productId: string,
   opts: { status?: string | undefined; limit?: number | undefined; offset?: number | undefined } = {}
 ): Promise<ReviewPublic[]> {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
   const limit = Math.min(Math.max(opts.limit ?? 50, 1), 200);
   const offset = opts.offset ?? 0;
   const status = opts.status ?? "approved";
@@ -906,8 +913,9 @@ export async function getProductTags(
   storeId: string,
   productId: string
 ): Promise<string[]> {
-  const pool = getPool();
-  const { rows } = await pool.query(
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
+  const { rows } = await pool.query<{ tag: string }>(
     `SELECT pt.tag
      FROM product_tags pt
      JOIN products p ON p.id = pt.product_id
@@ -977,7 +985,8 @@ export async function listCollections(
   storeId: string,
   opts: { limit?: number | undefined; offset?: number | undefined } = {}
 ): Promise<CollectionPublic[]> {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
   const limit = Math.min(Math.max(opts.limit ?? 50, 1), 200);
   const offset = opts.offset ?? 0;
   const { rows } = await pool.query(
@@ -995,7 +1004,8 @@ export async function getCollection(
   storeId: string,
   collectionId: string
 ): Promise<CollectionPublic | null> {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
   const { rows } = await pool.query(
     `SELECT ${COLLECTION_COLS}
      FROM collections
@@ -1152,7 +1162,8 @@ export async function getCollectionProducts(
   collectionId: string,
   opts: { limit?: number | undefined; offset?: number | undefined } = {}
 ): Promise<ProductPublic[]> {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
   const limit = Math.min(Math.max(opts.limit ?? 50, 1), 200);
   const offset = opts.offset ?? 0;
   const { rows } = await pool.query(
@@ -1177,7 +1188,8 @@ export async function listCollectionRules(
   storeId: string,
   collectionId: string
 ): Promise<CollectionRulePublic[]> {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
   const { rows } = await pool.query(
     `SELECT r.id::text, r.collection_id::text, r.field, r.relation, r.value, r.position, r.created_at
      FROM collection_rules r
@@ -1406,7 +1418,8 @@ export async function listPriceLists(
   storeId: string,
   opts: { limit?: number | undefined; offset?: number | undefined } = {}
 ): Promise<PriceListPublic[]> {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
   const limit = Math.min(Math.max(opts.limit ?? 50, 1), 200);
   const offset = opts.offset ?? 0;
   const { rows } = await pool.query(
@@ -1424,7 +1437,8 @@ export async function getPriceList(
   storeId: string,
   listId: string
 ): Promise<PriceListPublic | null> {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
   const { rows } = await pool.query(
     `SELECT id::text, store_id::text, name, currency, type, is_default, metadata, created_at, updated_at
      FROM price_lists
@@ -1502,7 +1516,8 @@ export async function listPriceListItems(
   listId: string,
   opts: { limit?: number | undefined; offset?: number | undefined } = {}
 ): Promise<PriceListItemPublic[]> {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
   const limit = Math.min(Math.max(opts.limit ?? 50, 1), 200);
   const offset = opts.offset ?? 0;
   const { rows } = await pool.query(
@@ -1609,7 +1624,8 @@ export async function listMetafields(
     offset?: number | undefined;
   } = {}
 ): Promise<MetafieldPublic[]> {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
   const limit = Math.min(Math.max(opts.limit ?? 50, 1), 200);
   const offset = opts.offset ?? 0;
 
@@ -1707,7 +1723,8 @@ export async function listMetafieldDefinitions(
   storeId: string,
   opts: { limit?: number | undefined; offset?: number | undefined } = {}
 ): Promise<MetafieldDefinitionPublic[]> {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
   const limit = Math.min(Math.max(opts.limit ?? 50, 1), 200);
   const offset = opts.offset ?? 0;
   const { rows } = await pool.query(
@@ -1834,7 +1851,8 @@ export async function listTranslations(
   resourceType: TranslationResourceType,
   resourceId: string
 ): Promise<TranslationPublic[]> {
-  const pool = getPool();
+  // RLS-enforced read path (P4/item-2).
+  const pool = getReadDb();
   const meta = TRANSLATION_TABLE_MAP[resourceType];
   if (!meta) return [];
 
