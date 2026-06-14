@@ -21,12 +21,18 @@
  *     a. Invalid variant_id → ACP error shape { error: { code: "invalid_request", message } }
  *     b. Complete on completed session → ACP error session_not_found
  *
- *  5. Live mode complete → 501 with DELEGATE_PAYMENT_LIVE_MODE_UNSUPPORTED
+ *  5. Live mode complete with no provider configured → PROVIDER_NOT_CONFIGURED (409)
  *
- *  6. ACP-Version header present on all responses
+ *  6. Delegated-token live payment (B6): a session completed with a delegated
+ *     token (mocked Stripe success) creates a REAL paid order (financial_status
+ *     paid, captured live payment recorded); declined token → DELEGATED_TOKEN_INVALID
+ *     with the checkout left pending; non-delegated provider → PROVIDER_NO_DELEGATED_PAYMENT;
+ *     test-mode (no token) still works.
+ *
+ *  7. ACP-Version header present on all responses
  */
 
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 import { createCtx, type TestCtx } from "../shared/ctx.js";
 import {
   get,
@@ -102,6 +108,41 @@ async function setupProduct(storeId: string, opts: { price?: string; title?: str
     );
   }
   return { product, variant };
+}
+
+/** Set up a Stripe payment provider for a store so delegated charges resolve. */
+async function setupStripeProvider(storeId: string, secretKey = "sk_test_delegated") {
+  await ctx.pool.query(
+    `INSERT INTO payment_providers (store_id, name, type, slug, config, is_active)
+     VALUES ($1::uuid, 'Stripe', 'stripe', 'stripe', $2::jsonb, true)
+     ON CONFLICT (store_id, slug) WHERE slug IS NOT NULL
+     DO UPDATE SET config = EXCLUDED.config, is_active = true`,
+    [storeId, JSON.stringify({ secret_key: secretKey })]
+  );
+}
+
+/**
+ * Stub global fetch so ONLY calls to the Stripe API are intercepted with the
+ * given mock response; all other fetches (including the in-process HTTP test
+ * client that talks to the Fastify server) pass through to the real fetch.
+ */
+function stubStripeFetch(response: {
+  ok: boolean;
+  status?: number;
+  json: () => Promise<unknown>;
+}): ReturnType<typeof vi.fn> {
+  const realFetch = globalThis.fetch;
+  const stripeMock = vi.fn().mockResolvedValue(response);
+  vi.stubGlobal(
+    "fetch",
+    vi.fn((url: unknown, init?: unknown) => {
+      if (typeof url === "string" && url.includes("api.stripe.com")) {
+        return stripeMock(url, init);
+      }
+      return realFetch(url as RequestInfo, init as RequestInit);
+    })
+  );
+  return stripeMock;
 }
 
 /** Set inventory level for a variant in the test DB. */
@@ -546,7 +587,7 @@ describe("ACP error mapping", () => {
     expect(error["code"]).toBe("session_not_found");
   });
 
-  it("Live mode complete → 501 with DELEGATE_PAYMENT_LIVE_MODE_UNSUPPORTED", async () => {
+  it("Live mode complete with no provider configured → PROVIDER_NOT_CONFIGURED (409)", async () => {
     // First create a valid session
     const pv = await setupProduct(storeId, { price: "25.00" });
     const createRes = await post(
@@ -558,16 +599,197 @@ describe("ACP error mapping", () => {
     expect(createRes.status).toBe(201);
     const sid = ((createRes.json["session"] ?? createRes.json) as Record<string, unknown>)["id"] as string;
 
-    // Attempt live mode complete
+    // Attempt live mode complete — no payment_providers row for this store.
     const completeRes = await post(
       ctx,
       `/acp/${storeId}/checkout_sessions/${sid}/complete`,
       { payment_data: { mode: "live", token: "tok_visa" } },
       keyAuth
     );
-    expect(completeRes.status).toBe(501);
+    expect(completeRes.status).toBe(409);
     const error = completeRes.json["error"] as Record<string, unknown>;
-    expect(error["code"]).toBe("DELEGATE_PAYMENT_LIVE_MODE_UNSUPPORTED");
+    expect(error["code"]).toBe("PROVIDER_NOT_CONFIGURED");
+  });
+});
+
+// ── Delegated-token live payment tests (B6) ───────────────────────────────────
+
+describe("ACP delegated-token live payment", () => {
+  let storeId: string;
+  let keyAuth: { type: "api-key"; key: string };
+  let variantId: string;
+
+  beforeAll(async () => {
+    const setup = await setupStore("USD");
+    storeId = setup.storeId;
+    keyAuth = setup.keyAuth;
+    await setupStripeProvider(storeId);
+    const pv = await setupProduct(storeId, { price: "80.00", title: "ACP Delegated Widget" });
+    variantId = pv.variant.id;
+  });
+
+  afterAll(() => {
+    vi.unstubAllGlobals();
+  });
+
+  async function createReadySession(): Promise<string> {
+    const res = await post(
+      ctx,
+      `/acp/${storeId}/checkout_sessions`,
+      {
+        line_items: [{ variant_id: variantId, quantity: 1 }],
+        buyer: {
+          email: "buyer@example.com",
+          shipping_address: { name: "Buyer", address1: "1 St", city: "NYC", country_code: "US" },
+        },
+      },
+      keyAuth
+    );
+    expect(res.status).toBe(201);
+    return ((res.json["session"] ?? res.json) as Record<string, unknown>)["id"] as string;
+  }
+
+  it("complete with delegated token (mocked Stripe success) → REAL paid order", async () => {
+    const sid = await createReadySession();
+
+    const mockFetch = stubStripeFetch({
+      ok: true,
+      json: async () => ({
+        id: "pi_acp_delegated_1",
+        client_secret: "pi_acp_delegated_1_secret",
+        status: "succeeded",
+        currency: "usd",
+        amount: 8000,
+      }),
+    });
+
+    const res = await post(
+      ctx,
+      `/acp/${storeId}/checkout_sessions/${sid}/complete`,
+      { payment_data: { mode: "live", token: "spt_acp_4242" } },
+      keyAuth
+    );
+    vi.unstubAllGlobals();
+
+    expect(res.status).toBe(200);
+    const orderId = res.json["order_id"] as string;
+    expect(typeof orderId).toBe("string");
+    expect((res.json["session"] as Record<string, unknown>)["status"]).toBe("completed");
+
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    const callArgs = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect(callArgs[0]).toContain("stripe.com/v1/payment_intents");
+    expect(callArgs[1].body as string).toContain("payment_method=spt_acp_4242");
+
+    const { rows: orderRows } = await ctx.pool.query<{ financial_status: string }>(
+      `SELECT financial_status FROM orders WHERE id = $1::uuid`,
+      [orderId]
+    );
+    expect(orderRows[0]?.financial_status).toBe("paid");
+
+    const { rows: payRows } = await ctx.pool.query<{
+      status: string;
+      mode: string;
+      provider_reference: string | null;
+    }>(
+      `SELECT status, mode, provider_reference FROM payments WHERE order_id = $1::uuid`,
+      [orderId]
+    );
+    expect(payRows[0]?.status).toBe("captured");
+    expect(payRows[0]?.mode).toBe("live");
+    expect(payRows[0]?.provider_reference).toBe("pi_acp_delegated_1");
+  });
+
+  it("complete with token inferred as live even without mode=live", async () => {
+    const sid = await createReadySession();
+
+    const mockFetch = stubStripeFetch({
+      ok: true,
+      json: async () => ({ id: "pi_acp_2", status: "succeeded", currency: "usd", amount: 8000 }),
+    });
+
+    const res = await post(
+      ctx,
+      `/acp/${storeId}/checkout_sessions/${sid}/complete`,
+      { payment_data: { token: "spt_no_mode" } },
+      keyAuth
+    );
+    vi.unstubAllGlobals();
+
+    expect(res.status).toBe(200);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("complete with declined token (Stripe 402) → DELEGATED_TOKEN_INVALID, no order", async () => {
+    const sid = await createReadySession();
+
+    stubStripeFetch({
+      ok: false,
+      status: 402,
+      json: async () => ({ error: { message: "Your card was declined.", code: "card_declined" } }),
+    });
+
+    const res = await post(
+      ctx,
+      `/acp/${storeId}/checkout_sessions/${sid}/complete`,
+      { payment_data: { mode: "live", token: "spt_bad" } },
+      keyAuth
+    );
+    vi.unstubAllGlobals();
+
+    expect(res.status).toBe(402);
+    const error = res.json["error"] as Record<string, unknown>;
+    expect(error["code"]).toBe("DELEGATED_TOKEN_INVALID");
+
+    const { rows } = await ctx.pool.query<{ status: string }>(
+      `SELECT status FROM checkouts WHERE id = $1::uuid`,
+      [sid]
+    );
+    expect(rows[0]?.status).toBe("pending");
+  });
+
+  it("non-delegated provider (paystack) → PROVIDER_NO_DELEGATED_PAYMENT", async () => {
+    // Configure paystack only (no stripe) for a fresh store.
+    const setup = await setupStore("ZAR");
+    await ctx.pool.query(
+      `INSERT INTO payment_providers (store_id, name, type, slug, config, is_active)
+       VALUES ($1::uuid, 'Paystack', 'paystack', 'paystack', $2::jsonb, true)`,
+      [setup.storeId, JSON.stringify({ secret_key: "sk_test_paystack" })]
+    );
+    const pv = await setupProduct(setup.storeId, { price: "30.00" });
+    const createRes = await post(
+      ctx,
+      `/acp/${setup.storeId}/checkout_sessions`,
+      { line_items: [{ variant_id: pv.variant.id, quantity: 1 }] },
+      setup.keyAuth
+    );
+    const sid = ((createRes.json["session"] ?? createRes.json) as Record<string, unknown>)["id"] as string;
+
+    const res = await post(
+      ctx,
+      `/acp/${setup.storeId}/checkout_sessions/${sid}/complete`,
+      { payment_data: { mode: "live", token: "spt_x" } },
+      setup.keyAuth
+    );
+    expect(res.status).toBe(422);
+    expect((res.json["error"] as Record<string, unknown>)["code"]).toBe("PROVIDER_NO_DELEGATED_PAYMENT");
+  });
+
+  it("test-mode complete (no token) still works", async () => {
+    const sid = await createReadySession();
+    const res = await post(
+      ctx,
+      `/acp/${storeId}/checkout_sessions/${sid}/complete`,
+      { payment_data: { mode: "test" } },
+      keyAuth
+    );
+    expect(res.status).toBe(200);
+    const orderId = res.json["order_id"] as string;
+    const { rows } = await ctx.pool.query<{ financial_status: string }>(
+      `SELECT financial_status FROM orders WHERE id = $1::uuid`,
+      [orderId]
+    );
+    expect(rows[0]?.financial_status).toBe("pending");
   });
 });
 

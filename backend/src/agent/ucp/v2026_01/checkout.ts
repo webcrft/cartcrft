@@ -4,7 +4,8 @@
  * Endpoints (relative, prefix injected by index):
  *   POST  /ucp/:storeId/checkout             — create checkout entity from line_items
  *   PATCH /ucp/:storeId/checkout/:id         — update buyer/address/fulfillment, re-totals
- *   POST  /ucp/:storeId/checkout/:id/submit  — submit: test-mode → real order; live → 501
+ *   POST  /ucp/:storeId/checkout/:id/submit  — submit: test-mode → real order;
+ *                                              live (payment_token) → delegated charge → paid order
  *
  * Wraps core cart/checkout/complete services (never edits them).
  * Idempotency-Key header honored on create and submit.
@@ -17,6 +18,10 @@ import { getPool } from "../../../db/pool.js";
 import { createCart, addCartLine } from "../../../modules/carts/service.js";
 import { createCheckout, updateCheckout, getCheckout } from "../../../modules/checkout/service.js";
 import { completeCheckout, CheckoutError } from "../../../modules/checkout/complete.js";
+import {
+  chargeDelegatedToken,
+  DelegatedPaymentError,
+} from "../../../modules/payments/delegated.js";
 import type {
   UcpCheckoutEntity,
   UcpLineItem,
@@ -431,12 +436,35 @@ export async function updateUcpCheckout(
   return entity;
 }
 
+/** Map a core CheckoutError to a UcpError. */
+function mapCheckoutError(err: CheckoutError): UcpError {
+  const codeMap: Record<string, string> = {
+    NOT_FOUND: "ENTITY_NOT_FOUND",
+    DISCOUNT_EXHAUSTED: "PROMOTION_EXHAUSTED",
+    DISCOUNT_ALREADY_USED: "PROMOTION_ALREADY_REDEEMED",
+    INSUFFICIENT_INVENTORY: "INVENTORY_UNAVAILABLE",
+    MANDATE_SPEND_LIMIT_EXCEEDED: "MANDATE_SPEND_LIMIT_EXCEEDED",
+    MANDATE_REQUIRED: "MANDATE_REQUIRED",
+    CREDIT_LIMIT_EXCEEDED: "CREDIT_LIMIT_EXCEEDED",
+  };
+  return new UcpError(
+    err.message,
+    codeMap[err.code] ?? "CHECKOUT_ERROR",
+    err.code === "NOT_FOUND" ? 404 : 422
+  );
+}
+
 /**
  * Submit (complete) a UCP checkout.
  *
- * Test mode (default): calls core completeCheckout() → real order.
- * Live mode (mode="live" or payment_token provided without mode): 501
- *   PAYMENT_TOKEN_UNSUPPORTED — live payment token passthrough not yet supported.
+ * Live mode — a payment_token is present (or mode="live"):
+ *   The token is charged through the store's configured provider (Stripe ACP
+ *   shared payment method). On a successful charge a REAL paid order is created
+ *   (financial_status = 'paid'). Unsupported providers/tokens surface machine
+ *   codes PROVIDER_NO_DELEGATED_PAYMENT / DELEGATED_TOKEN_INVALID.
+ *
+ * Test mode (no token, mode absent or "test"): calls core completeCheckout()
+ *   → real (unpaid/test) order.
  */
 export async function submitUcpCheckout(
   storeId: string,
@@ -444,18 +472,7 @@ export async function submitUcpCheckout(
   input: SubmitCheckoutInput,
   idempotencyKeyValue?: string
 ): Promise<{ checkout: UcpCheckoutEntity; orderId: string; orderNumber: string }> {
-  // Live mode: not supported
-  if (input.mode === "live" || (input.payment_token && input.mode !== "test")) {
-    throw new UcpError(
-      "Live-mode payment token passthrough is not yet supported. " +
-        "Use mode='test' for test-mode checkout completion. " +
-        "Live-mode card token support is on the roadmap.",
-      "PAYMENT_TOKEN_UNSUPPORTED",
-      501
-    );
-  }
-
-  // Check idempotency
+  // Check idempotency (applies to both test and live paths)
   if (idempotencyKeyValue) {
     const iKey = makeIdempotencyKey(storeId, `submit:${idempotencyKeyValue}`);
     const cached = idempotencyStore.get(iKey);
@@ -470,28 +487,50 @@ export async function submitUcpCheckout(
     }
   }
 
-  // Complete checkout via core service
-  let completeResult: Awaited<ReturnType<typeof completeCheckout>>;
-  try {
-    completeResult = await completeCheckout(storeId, checkoutId);
-  } catch (err) {
-    if (err instanceof CheckoutError) {
-      // Map core error codes to UCP codes
-      const codeMap: Record<string, string> = {
-        NOT_FOUND: "ENTITY_NOT_FOUND",
-        DISCOUNT_EXHAUSTED: "PROMOTION_EXHAUSTED",
-        DISCOUNT_ALREADY_USED: "PROMOTION_ALREADY_REDEEMED",
-        INSUFFICIENT_INVENTORY: "INVENTORY_UNAVAILABLE",
-        MANDATE_SPEND_LIMIT_EXCEEDED: "MANDATE_SPEND_LIMIT_EXCEEDED",
-        MANDATE_REQUIRED: "MANDATE_REQUIRED",
-      };
+  const isLive = input.mode === "live" || Boolean(input.payment_token);
+
+  let completeResult: { orderId: string; orderNumber: string };
+
+  if (isLive) {
+    // ── Live delegated-payment path ──────────────────────────────────────────
+    if (!input.payment_token) {
       throw new UcpError(
-        err.message,
-        codeMap[err.code] ?? "CHECKOUT_ERROR",
-        err.code === "NOT_FOUND" ? 404 : 422
+        "live-mode submit requires a payment_token (a delegated/shared payment credential)",
+        "DELEGATED_TOKEN_INVALID",
+        400
       );
     }
-    throw err;
+
+    const checkout = await getCheckout(storeId, checkoutId);
+    if (!checkout) {
+      throw new UcpError("checkout not found", "ENTITY_NOT_FOUND", 404);
+    }
+
+    try {
+      const charged = await chargeDelegatedToken({
+        storeId,
+        checkoutId,
+        delegatedToken: input.payment_token,
+        amount: parseFloat(checkout.total),
+        currency: checkout.currency,
+        ...(checkout.email ? { email: checkout.email } : {}),
+      });
+      completeResult = { orderId: charged.orderId, orderNumber: charged.orderNumber };
+    } catch (err) {
+      if (err instanceof CheckoutError) throw mapCheckoutError(err);
+      if (err instanceof DelegatedPaymentError) {
+        throw new UcpError(err.message, err.code, err.httpStatus);
+      }
+      throw err;
+    }
+  } else {
+    // ── Test-mode path: create a real order without charging ─────────────────
+    try {
+      completeResult = await completeCheckout(storeId, checkoutId);
+    } catch (err) {
+      if (err instanceof CheckoutError) throw mapCheckoutError(err);
+      throw err;
+    }
   }
 
   // Cache idempotency result

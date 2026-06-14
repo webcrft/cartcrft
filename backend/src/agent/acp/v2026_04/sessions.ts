@@ -15,15 +15,22 @@
  *  - Handles idempotency keys (Idempotency-Key header)
  *  - Maps core errors to ACP error codes
  *
- * Delegate payment live mode: documented as not-yet-supported → 501
- * with machine-readable code DELEGATE_PAYMENT_LIVE_MODE_UNSUPPORTED.
- * Test-mode complete: works via core completeCheckout().
+ * Delegate payment (live mode): when payment_data carries a delegated/shared
+ * payment token, the token is charged through the store's configured provider
+ * (Stripe ACP shared payment method) and a REAL paid order is created — see
+ * modules/payments/delegated.ts. Test-mode complete (no token) works via core
+ * completeCheckout(). Genuinely-unsupported providers/tokens return machine
+ * codes PROVIDER_NO_DELEGATED_PAYMENT / DELEGATED_TOKEN_INVALID.
  */
 
 import { getPool } from "../../../db/pool.js";
 import { createCart, addCartLine } from "../../../modules/carts/service.js";
 import { createCheckout, updateCheckout, getCheckout } from "../../../modules/checkout/service.js";
 import { completeCheckout, CheckoutError } from "../../../modules/checkout/complete.js";
+import {
+  chargeDelegatedToken,
+  DelegatedPaymentError,
+} from "../../../modules/payments/delegated.js";
 import type {
   AcpCheckoutSession,
   AcpLineItem,
@@ -415,16 +422,37 @@ export async function updateSession(
   return session;
 }
 
+/** Map a CheckoutError (from core complete) to an AcpError. */
+function mapCheckoutError(err: CheckoutError): AcpError {
+  const codeMap: Record<string, string> = {
+    NOT_FOUND: "session_not_found",
+    DISCOUNT_EXHAUSTED: "discount_exhausted",
+    DISCOUNT_ALREADY_USED: "discount_already_used",
+    INSUFFICIENT_INVENTORY: "insufficient_inventory",
+    MANDATE_SPEND_LIMIT_EXCEEDED: "mandate_spend_limit_exceeded",
+    MANDATE_REQUIRED: "mandate_required",
+    CREDIT_LIMIT_EXCEEDED: "credit_limit_exceeded",
+  };
+  return new AcpError(
+    err.message,
+    codeMap[err.code] ?? "checkout_error",
+    err.code === "NOT_FOUND" ? 404 : 422
+  );
+}
+
 /**
  * Complete an ACP checkout session.
  *
- * Test mode (payment_data.mode === "test" OR payment_data absent):
- *   Calls completeCheckout() directly — creates a real order.
+ * Live mode — a delegated payment token is present (payment_data.token, or
+ *   payment_data.mode === "live"):
+ *     The shared/delegated token is charged through the store's configured
+ *     provider (Stripe ACP shared payment method). On a successful charge a
+ *     REAL paid order is created (financial_status = 'paid'). Unsupported
+ *     providers/tokens surface machine codes PROVIDER_NO_DELEGATED_PAYMENT /
+ *     DELEGATED_TOKEN_INVALID.
  *
- * Live mode (payment_data.mode === "live"):
- *   Delegate payment token passthrough is NOT YET SUPPORTED.
- *   Returns 501 with code DELEGATE_PAYMENT_LIVE_MODE_UNSUPPORTED.
- *   Roadmap: wire to payment provider session once T2.4 gateway selection is wired.
+ * Test mode (no token, mode absent or "test"):
+ *     Calls completeCheckout() directly — creates a real (unpaid/test) order.
  *
  * Idempotency: if idempotencyKey is provided, the same response is returned
  * for duplicate calls.
@@ -435,18 +463,7 @@ export async function completeSession(
   input: CompleteSessionInput,
   idempotencyKeyValue?: string
 ): Promise<{ session: AcpCheckoutSession; orderId: string; orderNumber: string }> {
-  // Live mode: not supported
-  if (input.payment_data?.mode === "live") {
-    throw new AcpError(
-      "Delegate payment live mode is not yet supported. " +
-        "Use mode=test for test-mode checkout. " +
-        "Live-mode card token passthrough is on the roadmap.",
-      "DELEGATE_PAYMENT_LIVE_MODE_UNSUPPORTED",
-      501
-    );
-  }
-
-  // Check idempotency
+  // Check idempotency (applies to both test and live paths)
   if (idempotencyKeyValue) {
     const iKey = idempotencyKey(storeId, `complete:${idempotencyKeyValue}`);
     const cached = idempotencyStore.get(iKey);
@@ -465,25 +482,52 @@ export async function completeSession(
     }
   }
 
-  // Complete the checkout
-  let completeResult: Awaited<ReturnType<typeof completeCheckout>>;
-  try {
-    completeResult = await completeCheckout(storeId, sessionId);
-  } catch (err) {
-    if (err instanceof CheckoutError) {
-      const codeMap: Record<string, string> = {
-        NOT_FOUND: "session_not_found",
-        DISCOUNT_EXHAUSTED: "discount_exhausted",
-        DISCOUNT_ALREADY_USED: "discount_already_used",
-        INSUFFICIENT_INVENTORY: "insufficient_inventory",
-      };
+  const delegatedToken = input.payment_data?.token;
+  const isLive = input.payment_data?.mode === "live" || Boolean(delegatedToken);
+
+  let completeResult: { orderId: string; orderNumber: string };
+
+  if (isLive) {
+    // ── Live delegated-payment path ──────────────────────────────────────────
+    if (!delegatedToken) {
       throw new AcpError(
-        err.message,
-        codeMap[err.code] ?? "checkout_error",
-        err.code === "NOT_FOUND" ? 404 : 422
+        "live-mode completion requires payment_data.token (a delegated/shared payment credential)",
+        "DELEGATED_TOKEN_INVALID",
+        400
       );
     }
-    throw err;
+
+    // Load the checkout so we know the amount/currency/email to charge.
+    const checkout = await getCheckout(storeId, sessionId);
+    if (!checkout) {
+      throw new AcpError("session not found", "session_not_found", 404);
+    }
+
+    try {
+      const charged = await chargeDelegatedToken({
+        storeId,
+        checkoutId: sessionId,
+        delegatedToken,
+        amount: parseFloat(checkout.total),
+        currency: checkout.currency,
+        ...(checkout.email ? { email: checkout.email } : {}),
+      });
+      completeResult = { orderId: charged.orderId, orderNumber: charged.orderNumber };
+    } catch (err) {
+      if (err instanceof CheckoutError) throw mapCheckoutError(err);
+      if (err instanceof DelegatedPaymentError) {
+        throw new AcpError(err.message, err.code, err.httpStatus);
+      }
+      throw err;
+    }
+  } else {
+    // ── Test-mode path: create a real order without charging ─────────────────
+    try {
+      completeResult = await completeCheckout(storeId, sessionId);
+    } catch (err) {
+      if (err instanceof CheckoutError) throw mapCheckoutError(err);
+      throw err;
+    }
   }
 
   // Cache idempotency result

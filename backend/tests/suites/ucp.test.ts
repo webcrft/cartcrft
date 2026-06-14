@@ -25,14 +25,22 @@
  *  4. Error mapping
  *     a. Invalid variant_id → UCP error shape { error: { code: "INVALID_REQUEST" } }
  *     b. Not found checkout → ENTITY_NOT_FOUND
- *     c. Live payment token → 501 PAYMENT_TOKEN_UNSUPPORTED
+ *     c. Live payment token, no provider configured → PROVIDER_NOT_CONFIGURED (409)
+ *
+ *  4b. Delegated-token live payment (B6): submit with payment_token (mocked
+ *      Stripe success) creates a REAL paid order (financial_status paid, captured
+ *      live payment); declined token → DELEGATED_TOKEN_INVALID, checkout pending;
+ *      missing token → DELEGATED_TOKEN_INVALID; test-mode still works.
+ *
+ *  4c. C-10d: checkout create/update/submit MUTATE → require write-tier auth;
+ *      cc_pub_ read keys are rejected (403). Catalog reads still accept cc_pub_.
  *
  *  5. UCP-Version header present on all responses
  *
  *  6. Versioned prefix /ucp/v2026-01 also works
  */
 
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 import { createCtx, type TestCtx } from "../shared/ctx.js";
 import {
   get,
@@ -70,17 +78,67 @@ async function setupStore(currency = "ZAR") {
   expect(storeRes.status).toBe(201);
   const storeId = (storeRes.json as Record<string, unknown>)["id"] as string;
 
+  // C-10d: UCP checkout create/update/submit MUTATE (can complete a real charge),
+  // so they require a write-tier (cc_prv_ commerce:write) key. Catalog reads
+  // accept this same key (read ⊂ write). The public key below is used to assert
+  // that read-only public keys are rejected on the mutating endpoints.
   const apiKey = await createApiKey(ctx, {
+    orgId,
+    userId,
+    storeId,
+    type: "private",
+    scopes: ["commerce:read", "commerce:write"],
+    name: "UCP Test Key (write)",
+  });
+  const keyAuth = { type: "api-key" as const, key: apiKey };
+
+  const pubApiKey = await createApiKey(ctx, {
     orgId,
     userId,
     storeId,
     type: "public",
     scopes: ["commerce:read"],
-    name: "UCP Test Key",
+    name: "UCP Test Key (public read)",
   });
-  const keyAuth = { type: "api-key" as const, key: apiKey };
+  const pubKeyAuth = { type: "api-key" as const, key: pubApiKey };
 
-  return { storeId, auth, keyAuth, orgId, userId };
+  return { storeId, auth, keyAuth, pubKeyAuth, orgId, userId };
+}
+
+/** Set up a Stripe payment provider for a store so delegated charges resolve. */
+async function setupStripeProvider(storeId: string, secretKey = "sk_test_delegated") {
+  await ctx.pool.query(
+    `INSERT INTO payment_providers (store_id, name, type, slug, config, is_active)
+     VALUES ($1::uuid, 'Stripe', 'stripe', 'stripe', $2::jsonb, true)
+     ON CONFLICT (store_id, slug) WHERE slug IS NOT NULL
+     DO UPDATE SET config = EXCLUDED.config, is_active = true`,
+    [storeId, JSON.stringify({ secret_key: secretKey })]
+  );
+}
+
+/**
+ * Stub global fetch so ONLY calls to the Stripe API are intercepted with the
+ * given mock response; all other fetches (including the in-process HTTP test
+ * client that talks to the Fastify server) pass through to the real fetch.
+ * Returns the mock so callers can assert on it.
+ */
+function stubStripeFetch(response: {
+  ok: boolean;
+  status?: number;
+  json: () => Promise<unknown>;
+}): ReturnType<typeof vi.fn> {
+  const realFetch = globalThis.fetch;
+  const stripeMock = vi.fn().mockResolvedValue(response);
+  vi.stubGlobal(
+    "fetch",
+    vi.fn((url: unknown, init?: unknown) => {
+      if (typeof url === "string" && url.includes("api.stripe.com")) {
+        return stripeMock(url, init);
+      }
+      return realFetch(url as RequestInfo, init as RequestInit);
+    })
+  );
+  return stripeMock;
 }
 
 async function setupProduct(storeId: string, opts: {
@@ -644,7 +702,7 @@ describe("UCP error mapping", () => {
     expect(error["code"]).toBe("ENTITY_NOT_FOUND");
   });
 
-  it("Live mode payment token → 501 PAYMENT_TOKEN_UNSUPPORTED", async () => {
+  it("Live payment token with no provider configured → PROVIDER_NOT_CONFIGURED", async () => {
     const pv = await setupProduct(storeId, { price: "25.00" });
     const createRes = await post(
       ctx,
@@ -661,14 +719,229 @@ describe("UCP error mapping", () => {
       { mode: "live", payment_token: "tok_visa_4242" },
       keyAuth
     );
-    expect(submitRes.status).toBe(501);
+    // No payment_providers row for this store → cannot charge delegated token.
+    expect(submitRes.status).toBe(409);
     const error = (submitRes.json as Record<string, unknown>)["error"] as Record<string, unknown>;
-    expect(error["code"]).toBe("PAYMENT_TOKEN_UNSUPPORTED");
+    expect(error["code"]).toBe("PROVIDER_NOT_CONFIGURED");
   });
 
   it("Catalog: no auth → 401", async () => {
     const res = await get(ctx, `/ucp/${storeId}/catalog`);
     expect(res.status).toBe(401);
+  });
+});
+
+// ── 4b. Live delegated-token payments (B6) ────────────────────────────────────
+
+describe("UCP delegated-token live payment", () => {
+  let storeId: string;
+  let keyAuth: { type: "api-key"; key: string };
+  let variantId: string;
+
+  beforeAll(async () => {
+    const setup = await setupStore("USD");
+    storeId = setup.storeId;
+    keyAuth = setup.keyAuth;
+    await setupStripeProvider(storeId);
+    const pv = await setupProduct(storeId, { price: "120.00", title: "UCP Delegated Item" });
+    variantId = pv.variant.id;
+  });
+
+  afterAll(() => {
+    vi.unstubAllGlobals();
+  });
+
+  async function createReadyCheckout(): Promise<string> {
+    const res = await post(
+      ctx,
+      `/ucp/${storeId}/checkout`,
+      {
+        line_items: [{ variant_id: variantId, quantity: 1 }],
+        buyer: {
+          email: "buyer@example.com",
+          shipping_address: { name: "Buyer", address1: "1 St", city: "NYC", country_code: "US" },
+        },
+      },
+      keyAuth
+    );
+    expect(res.status).toBe(201);
+    return ((res.json as Record<string, unknown>)["checkout"] as Record<string, unknown>)["id"] as string;
+  }
+
+  it("submit with payment_token (mocked Stripe success) → REAL paid order", async () => {
+    const cid = await createReadyCheckout();
+
+    const mockFetch = stubStripeFetch({
+      ok: true,
+      json: async () => ({
+        id: "pi_delegated_123",
+        client_secret: "pi_delegated_123_secret",
+        status: "succeeded",
+        currency: "usd",
+        amount: 12000,
+      }),
+    });
+
+    const submitRes = await post(
+      ctx,
+      `/ucp/${storeId}/checkout/${cid}/submit`,
+      { mode: "live", payment_token: "spt_shared_4242" },
+      keyAuth
+    );
+    vi.unstubAllGlobals();
+
+    expect(submitRes.status).toBe(200);
+    const body = submitRes.json as Record<string, unknown>;
+    const orderRef = body["order_reference"] as Record<string, unknown>;
+    const orderId = orderRef["order_id"] as string;
+    expect(typeof orderId).toBe("string");
+    expect((body["checkout"] as Record<string, unknown>)["status"]).toBe("COMPLETED");
+
+    // Stripe was actually called with confirm + the delegated token.
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    const callArgs = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect(callArgs[0]).toContain("stripe.com/v1/payment_intents");
+    const bodyStr = callArgs[1].body as string;
+    expect(bodyStr).toContain("payment_method=spt_shared_4242");
+    expect(bodyStr).toContain("confirm=true");
+
+    // Order is financial_status = paid with a captured live payment recorded.
+    const { rows: orderRows } = await ctx.pool.query<{ financial_status: string }>(
+      `SELECT financial_status FROM orders WHERE id = $1::uuid`,
+      [orderId]
+    );
+    expect(orderRows[0]?.financial_status).toBe("paid");
+
+    const { rows: payRows } = await ctx.pool.query<{
+      status: string;
+      mode: string;
+      provider_reference: string | null;
+    }>(
+      `SELECT status, mode, provider_reference FROM payments WHERE order_id = $1::uuid`,
+      [orderId]
+    );
+    expect(payRows.length).toBe(1);
+    expect(payRows[0]?.status).toBe("captured");
+    expect(payRows[0]?.mode).toBe("live");
+    expect(payRows[0]?.provider_reference).toBe("pi_delegated_123");
+  });
+
+  it("submit with declined token (Stripe 402) → DELEGATED_TOKEN_INVALID, no order", async () => {
+    const cid = await createReadyCheckout();
+
+    stubStripeFetch({
+      ok: false,
+      status: 402,
+      json: async () => ({
+        error: { message: "Your card was declined.", code: "card_declined" },
+      }),
+    });
+
+    const submitRes = await post(
+      ctx,
+      `/ucp/${storeId}/checkout/${cid}/submit`,
+      { mode: "live", payment_token: "spt_bad" },
+      keyAuth
+    );
+    vi.unstubAllGlobals();
+
+    expect(submitRes.status).toBe(402);
+    const error = (submitRes.json as Record<string, unknown>)["error"] as Record<string, unknown>;
+    expect(error["code"]).toBe("DELEGATED_TOKEN_INVALID");
+
+    // The checkout must NOT have been completed (no order created).
+    const { rows } = await ctx.pool.query<{ status: string }>(
+      `SELECT status FROM checkouts WHERE id = $1::uuid`,
+      [cid]
+    );
+    expect(rows[0]?.status).toBe("pending");
+  });
+
+  it("submit live without a token → DELEGATED_TOKEN_INVALID (400)", async () => {
+    const cid = await createReadyCheckout();
+    const submitRes = await post(
+      ctx,
+      `/ucp/${storeId}/checkout/${cid}/submit`,
+      { mode: "live" },
+      keyAuth
+    );
+    expect(submitRes.status).toBe(400);
+    const error = (submitRes.json as Record<string, unknown>)["error"] as Record<string, unknown>;
+    expect(error["code"]).toBe("DELEGATED_TOKEN_INVALID");
+  });
+
+  it("test-mode submit still creates a real (unpaid) order", async () => {
+    const cid = await createReadyCheckout();
+    const submitRes = await post(
+      ctx,
+      `/ucp/${storeId}/checkout/${cid}/submit`,
+      { mode: "test" },
+      keyAuth
+    );
+    expect(submitRes.status).toBe(200);
+    const orderRef = (submitRes.json as Record<string, unknown>)["order_reference"] as Record<string, unknown>;
+    const orderId = orderRef["order_id"] as string;
+    const { rows } = await ctx.pool.query<{ financial_status: string }>(
+      `SELECT financial_status FROM orders WHERE id = $1::uuid`,
+      [orderId]
+    );
+    // No charge in test mode → financial_status stays pending.
+    expect(rows[0]?.financial_status).toBe("pending");
+  });
+});
+
+// ── 4c. C-10d: write-auth on mutating endpoints ───────────────────────────────
+
+describe("UCP write-auth (C-10d)", () => {
+  let storeId: string;
+  let pubKeyAuth: { type: "api-key"; key: string };
+  let keyAuth: { type: "api-key"; key: string };
+  let variantId: string;
+
+  beforeAll(async () => {
+    const setup = await setupStore("ZAR");
+    storeId = setup.storeId;
+    pubKeyAuth = setup.pubKeyAuth;
+    keyAuth = setup.keyAuth;
+    const pv = await setupProduct(storeId, { price: "10.00" });
+    variantId = pv.variant.id;
+  });
+
+  it("cc_pub_ read key is REJECTED on POST /checkout (403)", async () => {
+    const res = await post(
+      ctx,
+      `/ucp/${storeId}/checkout`,
+      { line_items: [{ variant_id: variantId, quantity: 1 }] },
+      pubKeyAuth
+    );
+    expect(res.status).toBe(403);
+    const error = (res.json as Record<string, unknown>)["error"] as Record<string, unknown>;
+    expect(error["code"]).toBe("FORBIDDEN");
+  });
+
+  it("cc_pub_ read key is REJECTED on submit (403)", async () => {
+    // Create with a write key, then attempt submit with the public key.
+    const createRes = await post(
+      ctx,
+      `/ucp/${storeId}/checkout`,
+      { line_items: [{ variant_id: variantId, quantity: 1 }] },
+      keyAuth
+    );
+    expect(createRes.status).toBe(201);
+    const cid = ((createRes.json as Record<string, unknown>)["checkout"] as Record<string, unknown>)["id"] as string;
+
+    const submitRes = await post(
+      ctx,
+      `/ucp/${storeId}/checkout/${cid}/submit`,
+      { mode: "test" },
+      pubKeyAuth
+    );
+    expect(submitRes.status).toBe(403);
+  });
+
+  it("catalog read still works with cc_pub_ key", async () => {
+    const res = await get(ctx, `/ucp/${storeId}/catalog`, pubKeyAuth);
+    expect(res.status).toBe(200);
   });
 });
 

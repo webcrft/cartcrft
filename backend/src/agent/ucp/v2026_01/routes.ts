@@ -11,7 +11,10 @@
  *   PATCH /ucp/:storeId/checkout/:checkoutId     — update buyer/address/fulfillment
  *   POST  /ucp/:storeId/checkout/:checkoutId/submit — submit checkout → order
  *
- * Auth: cc_pub_ or cc_prv_ with commerce:read (storeAuthRead).
+ * Auth:
+ *   - catalog reads          → storeAuthRead  (cc_pub_ or cc_prv_ commerce:read, or JWT)
+ *   - checkout create/update/submit (mutations, can complete a real charge)
+ *                            → storeAuthWrite (cc_prv_ commerce:write+ or JWT; cc_pub_ rejected)
  * UCP-Version: "2026-01" response header on all responses.
  *
  * Spec version: 2026-01 NRF baseline, provisional.
@@ -19,7 +22,7 @@
 
 import type { FastifyPluginAsync, FastifyReply } from "fastify";
 import { z } from "zod";
-import { storeAuthRead } from "../../../lib/auth/middleware.js";
+import { storeAuthRead, storeAuthWrite } from "../../../lib/auth/middleware.js";
 import { getUcpCatalog, getUcpProduct } from "./catalog.js";
 import {
   createUcpCheckout,
@@ -174,7 +177,7 @@ export const ucpV2026_01Plugin: FastifyPluginAsync = async (app) => {
   app.post(
     "/:storeId/checkout",
     {
-      preHandler: [storeAuthRead],
+      preHandler: [storeAuthWrite],
       schema: {
         params: StoreIdParams,
         body: CreateCheckoutBody,
@@ -198,7 +201,7 @@ export const ucpV2026_01Plugin: FastifyPluginAsync = async (app) => {
   app.patch(
     "/:storeId/checkout/:checkoutId",
     {
-      preHandler: [storeAuthRead],
+      preHandler: [storeAuthWrite],
       schema: {
         params: CheckoutParams,
         body: UpdateCheckoutBody,
@@ -221,7 +224,7 @@ export const ucpV2026_01Plugin: FastifyPluginAsync = async (app) => {
   app.post(
     "/:storeId/checkout/:checkoutId/submit",
     {
-      preHandler: [storeAuthRead],
+      preHandler: [storeAuthWrite],
       schema: {
         params: CheckoutParams,
         body: SubmitCheckoutBody,
