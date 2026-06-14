@@ -42,6 +42,7 @@ import { feedsPlugin } from "../modules/feeds/routes.js";
 import { integrationsPlugin } from "../modules/integrations/routes.js";
 import { notificationsPlugin } from "../modules/notifications/routes.js";
 import { analyticsPlugin } from "../modules/analytics/routes.js";
+import { superadminPlugin } from "../modules/superadmin/routes.js";
 import { mcpHttpPlugin } from "../agent/mcp/http.js";
 import { searchPlugin } from "../agent/search/routes.js";
 import { agentsPlugin } from "../modules/agents/routes.js";
@@ -329,6 +330,10 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
   await app.register(integrationsPlugin);
   await app.register(notificationsPlugin);
   await app.register(analyticsPlugin);
+
+  // ── Super-admin portal (Webcrft Systems operator god-mode) ────────────────
+  // Hardened, distinct-audience JWT auth; cross-tenant reads; full audit trail.
+  await app.register(superadminPlugin);
 
   // ── MCP server (agent-native layer) ───────────────────────────────────────
   await app.register(mcpHttpPlugin);
