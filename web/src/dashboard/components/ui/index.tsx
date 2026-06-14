@@ -24,12 +24,12 @@ export function Btn({ children, onClick, variant = 'primary', disabled, loading,
   children: React.ReactNode; onClick?: () => void; variant?: BtnVariant;
   disabled?: boolean; loading?: boolean; className?: string; type?: 'button' | 'submit' | 'reset'
 }) {
-  const base = 'inline-flex items-center justify-center gap-1.5 rounded-lg px-4 py-2 text-xs font-semibold transition active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100'
+  const base = 'inline-flex items-center justify-center gap-1.5 rounded-lg px-4 py-2 text-xs font-semibold transition-all duration-150 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100'
   const variants: Record<BtnVariant, string> = {
-    primary: 'bg-violet-600 text-white hover:bg-violet-500',
-    green: 'bg-emerald-600 text-white hover:bg-emerald-500',
-    secondary: 'border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white',
-    danger: 'border border-red-500/30 bg-red-600/10 text-red-300 hover:bg-red-600/20',
+    primary: 'bg-gradient-to-b from-violet-500 to-violet-600 text-white shadow-sm shadow-violet-950/40 ring-1 ring-inset ring-white/10 hover:from-violet-500 hover:to-violet-500 hover:shadow-violet-900/40',
+    green: 'bg-gradient-to-b from-emerald-500 to-emerald-600 text-white shadow-sm shadow-emerald-950/40 ring-1 ring-inset ring-white/10 hover:to-emerald-500',
+    secondary: 'border border-white/10 bg-white/[0.04] text-slate-300 shadow-sm shadow-black/10 hover:bg-white/[0.08] hover:text-white hover:border-white/20',
+    danger: 'border border-red-500/30 bg-red-600/10 text-red-300 hover:bg-red-600/20 hover:border-red-500/40',
   }
   return (
     <button type={type} onClick={onClick} disabled={disabled ?? loading} className={`${base} ${variants[variant]} ${className}`}>
@@ -41,8 +41,8 @@ export function Btn({ children, onClick, variant = 'primary', disabled, loading,
 
 export function Card({ title, children, className = '' }: { title?: string; children: React.ReactNode; className?: string }) {
   return (
-    <div className={`rounded-xl border border-white/[0.08] bg-white/[0.02] overflow-hidden ${className}`}>
-      {title && <div className="px-5 py-4 border-b border-white/[0.06]"><h3 className="text-sm font-semibold text-white">{title}</h3></div>}
+    <div className={`rounded-xl border border-white/[0.08] bg-slate-900/40 shadow-sm shadow-black/20 overflow-hidden ${className}`}>
+      {title && <div className="px-5 py-4 border-b border-white/[0.06]"><h3 className="text-sm font-semibold text-slate-100">{title}</h3></div>}
       <div className="p-5">{children}</div>
     </div>
   )
@@ -54,13 +54,13 @@ export function FormInput({ label, value, onChange, placeholder, type = 'text', 
 }) {
   const borderCls = error
     ? 'border-red-500/60 focus:border-red-500/60 focus:ring-red-500/20'
-    : 'border-white/[0.08] focus:border-white/20 focus:ring-white/10'
+    : 'border-white/[0.08] focus:border-violet-500/50 focus:ring-violet-500/20'
   return (
     <div className={className}>
       {label && <label className="block text-xs font-medium text-slate-400 mb-1.5">{label}</label>}
       <input type={type} value={value ?? ''} onChange={e => onChange(e.target.value)} placeholder={placeholder}
         aria-invalid={error ? true : undefined}
-        className={`w-full rounded-lg border bg-white/[0.03] px-3 py-2.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-1 transition ${borderCls}`} />
+        className={`w-full rounded-lg border bg-white/[0.03] px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 transition ${borderCls}`} />
       {error
         ? <p className="mt-1 text-xs text-red-400">{error}</p>
         : hint ? <p className="mt-1 text-xs text-slate-500">{hint}</p> : null}
@@ -76,7 +76,7 @@ export function FormSelect({ label, value, onChange, options, className = '' }: 
     <div className={className}>
       {label && <label className="block text-xs font-medium text-slate-400 mb-1.5">{label}</label>}
       <select value={value} onChange={e => onChange(e.target.value)}
-        className="w-full rounded-lg border border-white/[0.08] bg-slate-900 px-3 py-2.5 text-sm text-white focus:border-white/20 focus:outline-none transition">
+        className="w-full rounded-lg border border-white/[0.08] bg-slate-900 px-3 py-2.5 text-sm text-slate-100 focus:border-violet-500/50 focus:outline-none focus:ring-2 focus:ring-violet-500/20 transition">
         {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
     </div>
@@ -90,7 +90,7 @@ export function PageHeader({ title, description, actions, badge }: {
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
       <div>
         <div className="flex items-center gap-2 flex-wrap">
-          <h2 className="text-lg font-semibold text-white">{title}</h2>
+          <h2 className="text-xl font-semibold tracking-tight text-slate-100">{title}</h2>
           {badge}
         </div>
         {description && <p className="text-xs text-slate-500 mt-0.5">{description}</p>}
@@ -146,7 +146,7 @@ export function SearchInput({ value, onChange, placeholder = 'Search...', classN
 }
 
 export function Spinner({ className = '' }: { className?: string }) {
-  return <span className={`inline-block h-5 w-5 border-2 border-current border-t-transparent rounded-full animate-spin text-slate-500 ${className}`} />
+  return <span className={`inline-block h-5 w-5 border-2 border-current border-t-transparent rounded-full animate-spin text-violet-400/70 ${className}`} />
 }
 
 export function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
@@ -165,11 +165,11 @@ export function Modal({ title, onClose, children }: { title: string; onClose: ()
 }
 
 export function TableContainer({ children }: { children: React.ReactNode }) {
-  return <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] overflow-hidden">{children}</div>
+  return <div className="rounded-xl border border-white/[0.08] bg-slate-900/40 shadow-sm shadow-black/20 overflow-hidden">{children}</div>
 }
 
 export function TableHead({ children }: { children: React.ReactNode }) {
-  return <thead><tr className="border-b border-white/[0.04] text-left">{children}</tr></thead>
+  return <thead><tr className="border-b border-white/[0.08] bg-white/[0.02] text-left">{children}</tr></thead>
 }
 
 export function Th({ children, className = '', sticky, numeric, align }: {
@@ -178,7 +178,7 @@ export function Th({ children, className = '', sticky, numeric, align }: {
 }) {
   const alignCls = align === 'right' || numeric ? 'text-right' : align === 'center' ? 'text-center' : ''
   const stickyCls = sticky ? 'sticky top-0 z-10 bg-slate-950' : ''
-  return <th className={`px-5 py-3 text-xs font-semibold text-slate-300 ${alignCls} ${stickyCls} ${className}`}>{children}</th>
+  return <th className={`px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400 ${alignCls} ${stickyCls} ${className}`}>{children}</th>
 }
 
 export function Td({ children, className = '', numeric, align }: {

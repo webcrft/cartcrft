@@ -1,12 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 128" width="420" height="128" role="img" aria-label="Cartcrft">
   <defs>
-    <linearGradient id="cc-tile" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#7c7bff"/>
-      <stop offset="1" stop-color="#4f46e5"/>
+    <linearGradient id="cc-tile-d" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8b8bff"/>
+      <stop offset="1" stop-color="#5b54f0"/>
     </linearGradient>
   </defs>
   <g transform="translate(10,18) scale(0.72)">
-    <rect width="128" height="128" rx="29" fill="url(#cc-tile)"/>
+    <rect width="128" height="128" rx="29" fill="url(#cc-tile-d)"/>
     <g fill="none" stroke="#fff" stroke-width="7.2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M30.5 37H40l7.2 35a6.7 6.7 0 0 0 6.55 5.3H85.5a6.7 6.7 0 0 0 6.5-5.2L97.5 48H45"/>
     </g>
@@ -16,6 +16,6 @@
   </g>
   <text x="120" y="84" font-family="Inter, ui-sans-serif, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif"
         font-size="62" font-weight="700" letter-spacing="-3">
-    <tspan fill="#0e1116">cart</tspan><tspan fill="#5b59e6">crft</tspan>
+    <tspan fill="#f4f4f6">cart</tspan><tspan fill="#a5a3f7">crft</tspan>
   </text>
 </svg>

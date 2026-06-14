@@ -68,31 +68,31 @@ function OrgDetailView({ orgId, token, onBack, handle401 }: { orgId: string; tok
   return (
     <div>
       <div className="mb-5">
-        <button onClick={onBack} className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition mb-4">
+        <button onClick={onBack} className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-300 transition mb-4">
           <ArrowLeft size={13} /> Back to orgs
         </button>
         <PageHeader
           title={org.name || org.id}
           description={`Org ID: ${org.id}`}
-          badge={<Badge color="zinc">{org.billing_status || 'active'}</Badge>}
+          badge={<Badge color="slate">{org.billing_status || 'active'}</Badge>}
         />
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-        <div className="rounded-xl border border-white/[0.07] bg-zinc-900/60 px-5 py-4">
-          <p className="text-xs text-zinc-500 uppercase tracking-wider mb-1">Stores</p>
-          <p className="text-2xl font-bold text-zinc-100">{org.store_count}</p>
+        <div className="rounded-xl border border-white/[0.07] bg-slate-900/60 px-5 py-4">
+          <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Stores</p>
+          <p className="text-2xl font-bold text-slate-100">{org.store_count}</p>
         </div>
-        <div className="rounded-xl border border-white/[0.07] bg-zinc-900/60 px-5 py-4">
-          <p className="text-xs text-zinc-500 uppercase tracking-wider mb-1">Customers</p>
-          <p className="text-2xl font-bold text-zinc-100">{org.customer_count}</p>
+        <div className="rounded-xl border border-white/[0.07] bg-slate-900/60 px-5 py-4">
+          <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Customers</p>
+          <p className="text-2xl font-bold text-slate-100">{org.customer_count}</p>
         </div>
-        <div className="rounded-xl border border-white/[0.07] bg-zinc-900/60 px-5 py-4">
-          <p className="text-xs text-zinc-500 uppercase tracking-wider mb-1">Orders</p>
-          <p className="text-2xl font-bold text-zinc-100">{org.order_count}</p>
+        <div className="rounded-xl border border-white/[0.07] bg-slate-900/60 px-5 py-4">
+          <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Orders</p>
+          <p className="text-2xl font-bold text-slate-100">{org.order_count}</p>
         </div>
-        <div className="rounded-xl border border-white/[0.07] bg-zinc-900/60 px-5 py-4">
-          <p className="text-xs text-zinc-500 uppercase tracking-wider mb-1">GMV</p>
+        <div className="rounded-xl border border-white/[0.07] bg-slate-900/60 px-5 py-4">
+          <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">GMV</p>
           <p className="text-2xl font-bold text-emerald-400">{fmtUsd(org.gmv)}</p>
         </div>
       </div>
@@ -111,16 +111,16 @@ function OrgDetailView({ orgId, token, onBack, handle401 }: { orgId: string; tok
               {org.stores.map(s => (
                 <tr key={s.id} className="border-t border-white/[0.03] hover:bg-white/[0.02]">
                   <Td>
-                    <p className="text-xs font-medium text-zinc-200">{s.name}</p>
-                    <p className="text-[11px] text-zinc-600 font-mono">{s.id}</p>
+                    <p className="text-xs font-medium text-slate-200">{s.name}</p>
+                    <p className="text-[11px] text-slate-600 font-mono">{s.id}</p>
                   </Td>
-                  <Td><span className="text-xs text-zinc-400">{s.currency}</span></Td>
+                  <Td><span className="text-xs text-slate-400">{s.currency}</span></Td>
                   <Td>
                     <Badge color={s.status === 'active' ? 'emerald' : s.status === 'suspended' ? 'amber' : 'red'}>
                       {s.status}
                     </Badge>
                   </Td>
-                  <Td><span className="text-xs text-zinc-400">{s.order_count}</span></Td>
+                  <Td><span className="text-xs text-slate-400">{s.order_count}</span></Td>
                   <Td><span className="text-xs text-emerald-400">{fmtUsd(s.gmv)}</span></Td>
                 </tr>
               ))}
@@ -215,23 +215,23 @@ export default function Orgs() {
             {filtered.map(org => (
               <tr key={org.id} className="border-t border-white/[0.03] hover:bg-white/[0.02]">
                 <Td>
-                  <p className="text-xs font-medium text-zinc-200">{org.name || '—'}</p>
-                  <p className="text-[11px] text-zinc-600 font-mono">{org.id}</p>
-                  {org.email && <p className="text-[11px] text-zinc-500">{org.email}</p>}
+                  <p className="text-xs font-medium text-slate-200">{org.name || '—'}</p>
+                  <p className="text-[11px] text-slate-600 font-mono">{org.id}</p>
+                  {org.email && <p className="text-[11px] text-slate-500">{org.email}</p>}
                 </Td>
-                <Td><span className="text-xs text-zinc-400">{org.store_count}</span></Td>
-                <Td><span className="text-xs text-zinc-400">{org.order_count}</span></Td>
+                <Td><span className="text-xs text-slate-400">{org.store_count}</span></Td>
+                <Td><span className="text-xs text-slate-400">{org.order_count}</span></Td>
                 <Td><span className="text-xs text-emerald-400">{fmtUsd(org.gmv)}</span></Td>
                 <Td>
-                  <Badge color={org.billing_status === 'active' ? 'emerald' : 'zinc'}>
+                  <Badge color={org.billing_status === 'active' ? 'emerald' : 'slate'}>
                     {org.billing_status || 'active'}
                   </Badge>
                 </Td>
-                <Td><span className="text-xs text-zinc-500">{new Date(org.created_at).toLocaleDateString()}</span></Td>
+                <Td><span className="text-xs text-slate-500">{new Date(org.created_at).toLocaleDateString()}</span></Td>
                 <Td>
                   <button
                     onClick={() => setSelectedId(org.id)}
-                    className="text-xs text-amber-400 hover:text-amber-300 transition"
+                    className="text-xs font-medium text-violet-400 hover:text-violet-300 transition"
                   >
                     View
                   </button>

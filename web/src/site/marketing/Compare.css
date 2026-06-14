@@ -1,11 +1,9 @@
+/* ── Page header ──────────────────────────────────────────────────────────── */
 .mk-compare .page-header {
-  padding: 5rem 1.5rem 3rem;
+  padding: clamp(3.5rem, 6vw, 5.5rem) var(--gutter) clamp(2rem, 4vw, 3rem);
   text-align: center;
-  background: radial-gradient(
-    ellipse 70% 40% at 50% 0%,
-    color-mix(in srgb, #6366f1 10%, transparent),
-    transparent 60%
-  );
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 0%, var(--brand-tint), transparent 65%);
 }
 
 .mk-compare .page-header-inner {
@@ -14,77 +12,63 @@
 }
 
 .mk-compare .page-label {
-  display: inline-block;
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: #6366f1;
-  margin-bottom: 1rem;
-}
-
-@media (prefers-color-scheme: dark) {
-  .mk-compare .page-label { color: #818cf8; }
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--brand);
+  margin-bottom: 0.85rem;
 }
 
 .mk-compare .page-header h1 {
   font-size: clamp(2rem, 4vw, 3rem);
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  color: #0f172a;
+  font-weight: 760;
+  letter-spacing: -0.035em;
+  color: var(--ink);
   margin-bottom: 1rem;
-  line-height: 1.15;
-}
-
-@media (prefers-color-scheme: dark) {
-  .mk-compare .page-header h1 { color: #f8fafc; }
+  line-height: 1.1;
+  text-wrap: balance;
 }
 
 .mk-compare .page-header p {
-  font-size: 1rem;
-  color: #475569;
+  font-size: 1.05rem;
+  color: var(--ink-muted);
   line-height: 1.7;
   margin-bottom: 0.75rem;
 }
 
-@media (prefers-color-scheme: dark) {
-  .mk-compare .page-header p { color: #94a3b8; }
-}
-
 .mk-compare .methodology {
   font-size: 0.85rem !important;
-  color: #64748b !important;
-  font-style: italic;
-  border-top: 1px solid #e2e8f0;
-  padding-top: 0.75rem;
-  margin-top: 0.75rem;
+  color: var(--ink-subtle) !important;
+  border-top: 1px solid var(--line);
+  padding-top: 0.85rem;
+  margin-top: 1rem;
+  max-width: 620px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
-@media (prefers-color-scheme: dark) {
-  .mk-compare .methodology {
-    color: #64748b !important;
-    border-top-color: #1e293b;
-  }
-}
-
+/* ── Table section ────────────────────────────────────────────────────────── */
 .mk-compare .table-section {
-  padding: 2rem 1.5rem 3rem;
+  padding: clamp(2rem, 4vw, 3rem) var(--gutter) clamp(3rem, 6vw, 4rem);
 }
 
 .mk-compare .table-section-inner {
-  max-width: 1100px;
+  max-width: var(--maxw);
   margin: 0 auto;
 }
 
-/* Narrative / prose section — renders markdown Content */
+/* ── Narrative / prose section ────────────────────────────────────────────── */
 .mk-compare .narratives {
-  padding: 3rem 1.5rem;
-  max-width: 1200px;
+  padding: clamp(3rem, 6vw, 5rem) var(--gutter);
+  max-width: var(--maxw);
   margin: 0 auto;
+  background: var(--bg-subtle);
 }
 
 .mk-compare .narratives-inner {
-  max-width: 1100px;
+  max-width: var(--maxw);
   margin: 0 auto;
 }
 
@@ -101,14 +85,10 @@
 }
 
 .mk-compare .md-prose p {
-  font-size: 0.9rem;
-  color: #475569;
+  font-size: 0.92rem;
+  color: var(--ink-muted);
   line-height: 1.7;
-  margin-bottom: 0.75rem;
-}
-
-@media (prefers-color-scheme: dark) {
-  .mk-compare .md-prose p { color: #94a3b8; }
+  margin-bottom: 0.85rem;
 }
 
 /* Each h2 + its following p tags render as a card */
@@ -118,22 +98,16 @@
   margin-top: 0 !important;
   /* card header */
   font-size: 1.05rem;
-  font-weight: 700;
-  color: #0f172a;
-  padding: 1.25rem 1.5rem 0;
-  border-radius: 0.75rem 0.75rem 0 0;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+  padding: 1.4rem 1.6rem 0;
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
   border-bottom: none;
   margin-bottom: 0;
-}
-
-@media (prefers-color-scheme: dark) {
-  .mk-compare .md-prose h2 {
-    color: #f1f5f9;
-    background: #0d1426;
-    border-color: #1e293b;
-  }
+  box-shadow: var(--shadow-xs);
 }
 
 /* Hide the h2 "Introduction" heading (it's implied by context) */
@@ -142,80 +116,85 @@
 }
 
 .mk-compare .md-prose p:not(:last-child) {
-  background: #f8fafc;
-  border-left: 1px solid #e2e8f0;
-  border-right: 1px solid #e2e8f0;
-  padding: 0 1.5rem;
+  background: var(--surface);
+  border-left: 1px solid var(--line);
+  border-right: 1px solid var(--line);
+  padding: 0 1.6rem;
   margin-bottom: 0;
 }
 
 .mk-compare .md-prose p:last-of-type {
-  background: #f8fafc;
-  border-left: 1px solid #e2e8f0;
-  border-right: 1px solid #e2e8f0;
-  border-bottom: 1px solid #e2e8f0;
-  border-radius: 0 0 0.75rem 0.75rem;
-  padding: 0 1.5rem 1.25rem;
+  background: var(--surface);
+  border-left: 1px solid var(--line);
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  border-radius: 0 0 var(--r-lg) var(--r-lg);
+  padding: 0 1.6rem 1.4rem;
   margin-bottom: 0;
-}
-
-@media (prefers-color-scheme: dark) {
-  .mk-compare .md-prose p:not(:last-child),
-  .mk-compare .md-prose p:last-of-type {
-    background: #0d1426;
-    border-color: #1e293b;
-  }
+  box-shadow: var(--shadow-xs);
 }
 
 /* Sources section — full width card */
 .mk-compare .md-prose h2:last-of-type {
   grid-column: 1 / -1;
-  font-size: 0.8rem;
-  font-weight: 700;
+  font-size: 0.78rem;
+  font-weight: 650;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: #64748b;
-}
-
-@media (prefers-color-scheme: dark) {
-  .mk-compare .md-prose h2:last-of-type { color: #64748b; }
+  letter-spacing: 0.07em;
+  color: var(--ink-subtle);
+  background: var(--surface-2);
 }
 
 .mk-compare .md-prose h2:last-of-type + p {
   grid-column: 1 / -1;
-  font-size: 0.78rem !important;
-  color: #64748b !important;
-  font-style: italic;
-  border-radius: 0 0 0.75rem 0.75rem !important;
+  font-size: 0.8rem !important;
+  color: var(--ink-subtle) !important;
+  border-radius: 0 0 var(--r-lg) var(--r-lg) !important;
+  background: var(--surface-2);
 }
 
-/* CTA */
+.mk-compare .md-prose strong {
+  color: var(--ink-body);
+  font-weight: 600;
+}
+
+/* ── CTA band ─────────────────────────────────────────────────────────────── */
 .mk-compare .compare-cta {
-  background: linear-gradient(135deg, #6366f1 0%, #14b8a6 100%);
-  padding: 5rem 1.5rem;
+  background:
+    radial-gradient(60% 120% at 0% 0%, color-mix(in srgb, var(--brand-bright) 40%, transparent), transparent 60%),
+    linear-gradient(135deg, var(--brand-strong) 0%, var(--brand) 100%);
+  padding: clamp(4rem, 7vw, 6rem) var(--gutter);
   text-align: center;
   color: #fff;
-  margin-top: 4rem;
+  margin-top: clamp(3rem, 6vw, 5rem);
+  position: relative;
+  overflow: hidden;
 }
 
 .mk-compare .compare-cta-inner {
-  max-width: 560px;
+  max-width: 600px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1.25rem;
+  gap: 1.1rem;
+  position: relative;
+  z-index: 1;
 }
 
 .mk-compare .compare-cta h2 {
-  font-size: clamp(1.5rem, 3vw, 2.25rem);
-  font-weight: 800;
-  letter-spacing: -0.025em;
+  font-size: clamp(1.6rem, 3vw, 2.25rem);
+  font-weight: 720;
+  letter-spacing: -0.03em;
+  color: #fff;
+  text-wrap: balance;
+  margin: 0;
 }
 
 .mk-compare .compare-cta p {
-  font-size: 1rem;
-  opacity: 0.9;
+  font-size: 1.05rem;
+  color: rgba(255, 255, 255, 0.88);
+  margin: 0;
 }
 
 .mk-compare .compare-cta-actions {
@@ -223,39 +202,5 @@
   gap: 0.75rem;
   flex-wrap: wrap;
   justify-content: center;
-}
-
-.mk-compare .btn-primary {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.75rem 1.75rem;
-  background: #fff;
-  color: #6366f1;
-  font-weight: 700;
-  font-size: 1rem;
-  border-radius: 0.5rem;
-  text-decoration: none;
-  transition: opacity 0.15s, transform 0.1s;
-}
-
-.mk-compare .btn-primary:hover {
-  opacity: 0.92;
-  transform: translateY(-1px);
-}
-
-.mk-compare .btn-secondary {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.75rem 1.75rem;
-  border: 1.5px solid rgba(255, 255, 255, 0.6);
-  color: #fff;
-  font-weight: 600;
-  font-size: 1rem;
-  border-radius: 0.5rem;
-  text-decoration: none;
-  transition: background 0.15s;
-}
-
-.mk-compare .btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.12);
+  margin-top: 0.4rem;
 }

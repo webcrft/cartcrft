@@ -1,4 +1,5 @@
-import { Fragment } from 'react'
+import { Fragment, type ReactElement } from 'react'
+import { Check, X, Minus } from 'lucide-react'
 import './ComparisonTable.css'
 
 /**
@@ -26,10 +27,10 @@ export interface ComparisonTableProps {
   ourName?: string
 }
 
-function renderValue(v: boolean | string | null): string {
-  if (v === true) return '✓'
-  if (v === false) return '✗'
-  if (v === null) return '—'
+function renderValue(v: boolean | string | null): ReactElement | string {
+  if (v === true) return <Check size={17} strokeWidth={2.75} aria-label="Yes" />
+  if (v === false) return <X size={16} strokeWidth={2.5} aria-label="No" />
+  if (v === null) return <Minus size={15} strokeWidth={2.5} aria-label="Not applicable" />
   return String(v)
 }
 
@@ -37,7 +38,8 @@ function valueClass(v: boolean | string | null, isOurs: boolean): string {
   const base = isOurs ? 'cell cell--ours' : 'cell'
   if (v === true) return `${base} cell--yes`
   if (v === false) return `${base} cell--no`
-  return base
+  if (v === null) return `${base} cell--na`
+  return `${base} cell--text`
 }
 
 export default function ComparisonTable({ competitors, rows, caption, ourName = 'Cartcrft' }: ComparisonTableProps) {

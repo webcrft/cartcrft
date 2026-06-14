@@ -1,0 +1,119 @@
+/* ============================================================================
+ * Cartcrft design tokens — the single source of truth for the marketing + docs
+ * (site zone) visual system. Premium, restrained: one signature indigo, the
+ * neutrals do the heavy lifting, gradient/accent used sparingly. Inter for type.
+ * ========================================================================== */
+
+:root {
+  /* — Brand — */
+  --brand: #5b59e6;          /* signature indigo-violet */
+  --brand-strong: #4f46e5;
+  --brand-bright: #7c7bff;
+  --brand-ink: #ffffff;      /* text on a brand fill */
+  --accent: #14b8a6;         /* teal — used sparingly */
+  --accent-bright: #2dd4bf;
+
+  /* — Surfaces (light) — */
+  --bg: #ffffff;
+  --bg-subtle: #f7f7fa;      /* alternating section bg */
+  --bg-sunken: #f2f2f6;
+  --surface: #ffffff;
+  --surface-2: #fbfbfd;
+
+  /* — Ink (light) — */
+  --ink: #0c0d14;            /* near-black headings */
+  --ink-body: #41434f;       /* body copy */
+  --ink-muted: #6a6c7a;      /* secondary */
+  --ink-subtle: #9295a3;     /* tertiary / captions */
+
+  /* — Lines — */
+  --line: #ececf1;
+  --line-strong: #dfe0e8;
+
+  /* — Brand tints (light) — */
+  --brand-tint: color-mix(in srgb, var(--brand) 7%, transparent);
+  --brand-tint-2: color-mix(in srgb, var(--brand) 12%, transparent);
+
+  /* — Radii — */
+  --r-xs: 6px;
+  --r-sm: 9px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 22px;
+  --r-2xl: 28px;
+  --r-pill: 999px;
+
+  /* — Shadows (soft, layered — Stripe/Linear feel) — */
+  --shadow-xs: 0 1px 2px rgba(13, 14, 26, 0.04), 0 1px 1px rgba(13, 14, 26, 0.03);
+  --shadow-sm: 0 1px 3px rgba(13, 14, 26, 0.06), 0 1px 2px rgba(13, 14, 26, 0.04);
+  --shadow-md: 0 4px 14px rgba(13, 14, 26, 0.07), 0 2px 6px rgba(13, 14, 26, 0.05);
+  --shadow-lg: 0 12px 34px rgba(13, 14, 26, 0.10), 0 6px 14px rgba(13, 14, 26, 0.06);
+  --shadow-xl: 0 28px 64px rgba(13, 14, 26, 0.14), 0 12px 28px rgba(13, 14, 26, 0.08);
+  --shadow-brand: 0 10px 30px color-mix(in srgb, var(--brand) 28%, transparent);
+
+  /* — Type — */
+  --font-sans: 'Inter', ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
+
+  /* — Layout — */
+  --maxw: 1180px;
+  --maxw-prose: 720px;
+  --gutter: 1.5rem;
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --brand: #8784ff;
+    --brand-strong: #6d68f5;
+    --brand-bright: #a5a3ff;
+    --accent: #2dd4bf;
+    --accent-bright: #5eead4;
+
+    --bg: #08090f;
+    --bg-subtle: #0c0e16;
+    --bg-sunken: #0a0c13;
+    --surface: #11131d;
+    --surface-2: #141725;
+
+    --ink: #f5f6fa;
+    --ink-body: #c4c7d4;
+    --ink-muted: #969ab0;
+    --ink-subtle: #6e7286;
+
+    --line: #20232f;
+    --line-strong: #2a2e3d;
+
+    --brand-tint: color-mix(in srgb, var(--brand) 16%, transparent);
+    --brand-tint-2: color-mix(in srgb, var(--brand) 24%, transparent);
+
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.5);
+    --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.5);
+    --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.55);
+    --shadow-xl: 0 30px 70px rgba(0, 0, 0, 0.6);
+    --shadow-brand: 0 12px 36px color-mix(in srgb, var(--brand) 30%, transparent);
+
+    color-scheme: dark;
+  }
+}
+
+/* Shared utilities used across the site zone */
+.cc-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--brand);
+  text-transform: none;
+}
+
+.cc-grad-text {
+  background: linear-gradient(100deg, var(--brand) 0%, var(--accent) 130%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}

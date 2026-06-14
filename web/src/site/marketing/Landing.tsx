@@ -1,4 +1,25 @@
 import { Link } from 'react-router-dom'
+import {
+  Plug,
+  Handshake,
+  Globe,
+  ShieldCheck,
+  Search,
+  Store,
+  Package,
+  ShoppingCart,
+  CreditCard,
+  Building2,
+  RotateCcw,
+  Lock,
+  Braces,
+  Zap,
+  Container,
+  CheckCircle,
+  FileBadge,
+  KeyRound,
+  Server,
+} from 'lucide-react'
 import SiteLayout from '../SiteLayout'
 import { useDocumentMeta } from '../useDocumentMeta'
 import Hero from './components/Hero'
@@ -11,173 +32,40 @@ import './Landing.css'
  * docs/acp.md, docs/ucp.md, and roadmap.md for honest feature status.
  */
 
-// ── SVG icons ─────────────────────────────────────────────────────────────────
-const ICON_MCP = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <defs><linearGradient id="ig-mcp" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#14b8a6"/></linearGradient></defs>
-  <path d="M12 2 L20 6.5 V17.5 L12 22 L4 17.5 V6.5 Z" stroke="url(#ig-mcp)" stroke-width="1.5" stroke-linejoin="round"/>
-  <circle cx="12" cy="12" r="2.5" fill="url(#ig-mcp)"/>
-  <line x1="12" y1="6.5" x2="12" y2="9.5" stroke="url(#ig-mcp)" stroke-width="1.5"/>
-  <line x1="12" y1="14.5" x2="12" y2="17.5" stroke="url(#ig-mcp)" stroke-width="1.5"/>
-  <line x1="4" y1="6.5" x2="9.5" y2="10" stroke="url(#ig-mcp)" stroke-width="1.5"/>
-  <line x1="20" y1="6.5" x2="14.5" y2="10" stroke="url(#ig-mcp)" stroke-width="1.5"/>
-</svg>`
-
-const ICON_ACP = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <defs><linearGradient id="ig-acp" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#14b8a6"/></linearGradient></defs>
-  <rect x="3" y="3" width="8" height="8" rx="2" stroke="url(#ig-acp)" stroke-width="1.5"/>
-  <rect x="13" y="3" width="8" height="8" rx="2" stroke="url(#ig-acp)" stroke-width="1.5"/>
-  <rect x="3" y="13" width="8" height="8" rx="2" stroke="url(#ig-acp)" stroke-width="1.5"/>
-  <rect x="13" y="13" width="8" height="8" rx="2" stroke="#14b8a6" stroke-width="1.5"/>
-  <line x1="11" y1="7" x2="13" y2="7" stroke="url(#ig-acp)" stroke-width="1.5"/>
-  <line x1="11" y1="17" x2="13" y2="17" stroke="url(#ig-acp)" stroke-width="1.5"/>
-  <line x1="7" y1="11" x2="7" y2="13" stroke="url(#ig-acp)" stroke-width="1.5"/>
-  <line x1="17" y1="11" x2="17" y2="13" stroke="#14b8a6" stroke-width="1.5"/>
-</svg>`
-
-const ICON_UCP = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <defs><linearGradient id="ig-ucp" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#14b8a6"/></linearGradient></defs>
-  <circle cx="12" cy="12" r="9" stroke="url(#ig-ucp)" stroke-width="1.5"/>
-  <ellipse cx="12" cy="12" rx="4" ry="9" stroke="url(#ig-ucp)" stroke-width="1.5"/>
-  <line x1="3" y1="12" x2="21" y2="12" stroke="url(#ig-ucp)" stroke-width="1.5"/>
-  <line x1="5" y1="7" x2="19" y2="7" stroke="url(#ig-ucp)" stroke-width="1"/>
-  <line x1="5" y1="17" x2="19" y2="17" stroke="url(#ig-ucp)" stroke-width="1"/>
-</svg>`
-
-const ICON_MANDATE = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <defs><linearGradient id="ig-mnd" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#14b8a6"/></linearGradient></defs>
-  <rect x="5" y="11" width="14" height="10" rx="2" stroke="url(#ig-mnd)" stroke-width="1.5"/>
-  <path d="M8 11V7a4 4 0 0 1 8 0v4" stroke="url(#ig-mnd)" stroke-width="1.5" stroke-linecap="round"/>
-  <circle cx="12" cy="16" r="1.5" fill="url(#ig-mnd)"/>
-  <line x1="12" y1="17.5" x2="12" y2="20" stroke="url(#ig-mnd)" stroke-width="1.5"/>
-</svg>`
-
-const ICON_SEARCH = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <defs><linearGradient id="ig-srch" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#14b8a6"/></linearGradient></defs>
-  <circle cx="11" cy="11" r="7" stroke="url(#ig-srch)" stroke-width="1.5"/>
-  <line x1="16.5" y1="16.5" x2="21" y2="21" stroke="#14b8a6" stroke-width="2" stroke-linecap="round"/>
-  <line x1="8" y1="11" x2="14" y2="11" stroke="url(#ig-srch)" stroke-width="1.5" stroke-linecap="round"/>
-  <line x1="11" y1="8" x2="11" y2="14" stroke="url(#ig-srch)" stroke-width="1.5" stroke-linecap="round"/>
-</svg>`
-
-const ICON_STOREFRONT = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <defs><linearGradient id="ig-store" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#14b8a6"/></linearGradient></defs>
-  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" stroke="url(#ig-store)" stroke-width="1.5" stroke-linejoin="round"/>
-  <rect x="9" y="13" width="6" height="9" rx="1" stroke="url(#ig-store)" stroke-width="1.5"/>
-</svg>`
-
-const ICON_CATALOG = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <defs><linearGradient id="ig-cat" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#14b8a6"/></linearGradient></defs>
-  <rect x="2" y="3" width="8" height="8" rx="1.5" stroke="url(#ig-cat)" stroke-width="1.5"/>
-  <rect x="14" y="3" width="8" height="8" rx="1.5" stroke="url(#ig-cat)" stroke-width="1.5"/>
-  <rect x="2" y="13" width="8" height="8" rx="1.5" stroke="#14b8a6" stroke-width="1.5"/>
-  <rect x="14" y="13" width="8" height="8" rx="1.5" stroke="#14b8a6" stroke-width="1.5"/>
-</svg>`
-
-const ICON_CART = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <defs><linearGradient id="ig-cart" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#14b8a6"/></linearGradient></defs>
-  <path d="M2 3h2l2.5 11a2 2 0 0 0 2 1.5h8a2 2 0 0 0 2-1.5L20.5 7H7" stroke="url(#ig-cart)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="9.5" cy="20.5" r="1.5" fill="#6366f1"/>
-  <circle cx="17.5" cy="20.5" r="1.5" fill="#14b8a6"/>
-</svg>`
-
-const ICON_PAYMENT = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <defs><linearGradient id="ig-pay" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#14b8a6"/></linearGradient></defs>
-  <rect x="2" y="5" width="20" height="14" rx="2" stroke="url(#ig-pay)" stroke-width="1.5"/>
-  <line x1="2" y1="10" x2="22" y2="10" stroke="url(#ig-pay)" stroke-width="1.5"/>
-  <rect x="5" y="13" width="4" height="2" rx="0.5" fill="url(#ig-pay)"/>
-  <rect x="11" y="13" width="6" height="2" rx="0.5" fill="#14b8a6" opacity="0.7"/>
-</svg>`
-
-const ICON_B2B = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <defs><linearGradient id="ig-b2b" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#14b8a6"/></linearGradient></defs>
-  <rect x="2" y="7" width="20" height="14" rx="2" stroke="url(#ig-b2b)" stroke-width="1.5"/>
-  <path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="url(#ig-b2b)" stroke-width="1.5" stroke-linecap="round"/>
-  <line x1="12" y1="12" x2="12" y2="16" stroke="url(#ig-b2b)" stroke-width="1.5" stroke-linecap="round"/>
-  <line x1="10" y1="14" x2="14" y2="14" stroke="#14b8a6" stroke-width="1.5" stroke-linecap="round"/>
-</svg>`
-
-const ICON_RETURNS = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <defs><linearGradient id="ig-ret" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#14b8a6"/></linearGradient></defs>
-  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" stroke="url(#ig-ret)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M3 3v5h5" stroke="url(#ig-ret)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-  <line x1="9" y1="12" x2="15" y2="12" stroke="#14b8a6" stroke-width="1.5" stroke-linecap="round"/>
-</svg>`
-
-const ICON_AUTH = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <defs><linearGradient id="ig-auth" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#14b8a6"/></linearGradient></defs>
-  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="url(#ig-auth)" stroke-width="1.5" stroke-linecap="round"/>
-  <circle cx="12" cy="7" r="4" stroke="url(#ig-auth)" stroke-width="1.5"/>
-  <path d="M15 12l2 2 4-4" stroke="#14b8a6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-</svg>`
-
-const ICON_TS = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <defs><linearGradient id="ig-ts" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#14b8a6"/></linearGradient></defs>
-  <rect x="2" y="2" width="20" height="20" rx="3" stroke="url(#ig-ts)" stroke-width="1.5"/>
-  <text x="5" y="17" font-family="monospace" font-size="11" font-weight="700" fill="url(#ig-ts)">TS</text>
-</svg>`
-
-const ICON_QUICKSTART = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <defs><linearGradient id="ig-qs" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#14b8a6"/></linearGradient></defs>
-  <polygon points="13,2 3,14 12,14 11,22 21,10 12,10" stroke="url(#ig-qs)" stroke-width="1.5" stroke-linejoin="round" fill="none"/>
-</svg>`
-
-const ICON_DOCKER = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <defs><linearGradient id="ig-dock" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#14b8a6"/></linearGradient></defs>
-  <path d="M13 10H15V12H13V10Z" stroke="url(#ig-dock)" stroke-width="1.2"/>
-  <path d="M10 10H12V12H10V10Z" stroke="url(#ig-dock)" stroke-width="1.2"/>
-  <path d="M7 10H9V12H7V10Z" stroke="url(#ig-dock)" stroke-width="1.2"/>
-  <path d="M10 7H12V9H10V7Z" stroke="url(#ig-dock)" stroke-width="1.2"/>
-  <path d="M13 7H15V9H13V7Z" stroke="url(#ig-dock)" stroke-width="1.2"/>
-  <path d="M22 12c-.5-1-1.5-2-4-2h-1c-.5-2.5-3-3-4.5-2.5H2.5c-.5 2.5.5 5 2 6.5h14c2 0 3-1.5 3.5-2z" stroke="url(#ig-dock)" stroke-width="1.5" stroke-linejoin="round"/>
-  <path d="M6 18c0 1 .5 2 1.5 2s1.5-1 1.5-2" stroke="#14b8a6" stroke-width="1.5" stroke-linecap="round"/>
-</svg>`
-
-const ICON_TESTS = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <defs><linearGradient id="ig-tst" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#14b8a6"/></linearGradient></defs>
-  <path d="M9 11l3 3 5-5" stroke="url(#ig-tst)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" stroke="url(#ig-tst)" stroke-width="1.5"/>
-</svg>`
-
 // ── Agent-native features ─────────────────────────────────────────────────────
 const agentFeatures: FeatureItem[] = [
   {
-    svg: ICON_MCP,
-    icon: '🔌',
+    Icon: Plug,
     title: 'MCP server — shipped',
     description: 'Every store exposes a Model Context Protocol server by default. Any MCP-capable agent — Claude, a custom LLM, your own orchestrator — can browse and purchase in minutes, not months.',
     href: '/agent-native',
   },
   {
-    svg: ICON_ACP,
-    icon: '🤝',
+    Icon: Handshake,
     title: 'ACP adapter — test mode',
     description: 'First-class Agentic Commerce Protocol adapter (spec pin: 2026-04). Agentic checkout sessions work end-to-end in test mode. Live delegated payment is in active development (Phase H5).',
     href: '/acp',
   },
   {
-    svg: ICON_UCP,
-    icon: '🌐',
+    Icon: Globe,
     title: 'UCP adapter — test mode',
     description: 'Universal Commerce Protocol (Google surfaces / NRF 2026-01 baseline). Catalog entities, checkout create/update/submit work in test mode. Live payment token passthrough is in active development.',
     href: '/ucp',
   },
   {
-    svg: ICON_MANDATE,
-    icon: '🔏',
+    Icon: ShieldCheck,
     title: 'Signed agent mandates',
     description: 'Verifiable consent chain: intent to cart to payment. Each link is ed25519-signed by the agent and audit-logged. Configurable spend limits per agent, per time window.',
     href: '/agent-native',
   },
   {
-    svg: ICON_SEARCH,
-    icon: '🔍',
+    Icon: Search,
     title: 'Semantic catalog search',
     description: 'pgvector + Reciprocal Rank Fusion on top of Postgres full-text. BYO OpenAI-compatible embeddings key. Natural-language queries like "warm merino hoodie under $100" just work.',
     href: '/agent-native',
   },
   {
-    svg: ICON_STOREFRONT,
-    icon: '🏪',
+    Icon: Store,
     title: 'Agent-readable storefront',
     description: 'Structured product data, variant options, inventory status, shipping rates, and pricing — all machine-readable and consistently shaped for AI agents to reason over.',
     href: '/api-overview',
@@ -187,43 +75,37 @@ const agentFeatures: FeatureItem[] = [
 // ── Commerce core features ────────────────────────────────────────────────────
 const commerceFeatures: FeatureItem[] = [
   {
-    svg: ICON_CATALOG,
-    icon: '📦',
+    Icon: Package,
     title: 'Catalog and inventory',
     description: 'Products (simple, bundle, configurable, digital, service, subscription, rental), unlimited variants, collections, metafields, i18n. Warehouses, lot tracking, FEFO, reorder points.',
     href: '/api-overview',
   },
   {
-    svg: ICON_CART,
-    icon: '🛒',
+    Icon: ShoppingCart,
     title: 'Carts, checkout and orders',
     description: 'Atomic CompleteByID with price re-validation, inventory decrement, and discount burn in a single transaction. Order lifecycle state machines, cancel, notes, abandoned cart recovery.',
     href: '/api-overview',
   },
   {
-    svg: ICON_PAYMENT,
-    icon: '💳',
+    Icon: CreditCard,
     title: '4 payment providers, BYO',
     description: 'Stripe, Paystack, Razorpay, and Xendit — bring your own credentials. AES-256-GCM secret encryption. Inbound webhook router with replay protection. Zero percent platform rake.',
     href: '/byo-keys',
   },
   {
-    svg: ICON_B2B,
-    icon: '🏢',
+    Icon: Building2,
     title: 'B2B and subscriptions',
     description: 'Companies, credit limits, net terms, quotes/RFQ lifecycle, purchase orders, and customer group pricing. Subscription plans with trial, pause/resume, and generated orders.',
     href: '/api-overview',
   },
   {
-    svg: ICON_RETURNS,
-    icon: '↩️',
+    Icon: RotateCcw,
     title: 'Returns, gift cards and more',
     description: 'Full RMA flow (refund/exchange/store credit/repair), restock. Gift card transactions, store credit ledger. Shipping zones, live rates (BobGo), collection points (PUDO).',
     href: '/api-overview',
   },
   {
-    svg: ICON_AUTH,
-    icon: '🔐',
+    Icon: Lock,
     title: 'Customer auth and feeds',
     description: 'Register, login, magic link, OAuth (Google, Microsoft, Discord). Google Shopping XML and Facebook Catalog feeds. GA4 server-side purchase events.',
     href: '/api-overview',
@@ -233,29 +115,25 @@ const commerceFeatures: FeatureItem[] = [
 // ── DX features ───────────────────────────────────────────────────────────────
 const dxFeatures: FeatureItem[] = [
   {
-    svg: ICON_TS,
-    icon: '🟦',
+    Icon: Braces,
     title: 'TypeScript end-to-end',
     description: 'The backend is TypeScript on Fastify + zod + plain pg. The generated @cartcrft/sdk is typed from the same OpenAPI 3.1 spec that drives your REST API.',
     href: '/api-overview',
   },
   {
-    svg: ICON_QUICKSTART,
-    icon: '⚡',
+    Icon: Zap,
     title: 'One-command quickstart',
     description: 'Clone, pnpm install, pnpm migrate, pnpm seed, pnpm dev. A seeded demo store with 12 products at localhost:3000 in under five minutes.',
     href: '/quickstart',
   },
   {
-    svg: ICON_DOCKER,
-    icon: '🐳',
+    Icon: Container,
     title: 'Single Docker image',
     description: 'One image, three subcommands: serve, worker, migrate. Deploy on any VPS, Fly.io, Railway, or Render. Or run the full stack with docker compose up.',
     href: '/self-host',
   },
   {
-    svg: ICON_TESTS,
-    icon: '✅',
+    Icon: CheckCircle,
     title: 'Tested core',
     description: 'Backend ships with ~830 tests across 45 suites using Vitest and simulated-time billing tests. Suites cover catalog, carts, orders, payments, B2B, subscriptions, and more.',
     href: '/testing',
@@ -433,11 +311,7 @@ export default function Landing() {
             <div className="fair-open-grid">
               <div className="fair-card">
                 <div className="fair-icon-wrap">
-                  <svg viewBox="0 0 24 24" fill="none" width="22" height="22" aria-hidden="true">
-                    <defs><linearGradient id="fi-mit" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#6366f1" /><stop offset="100%" stopColor="#14b8a6" /></linearGradient></defs>
-                    <rect x="3" y="3" width="18" height="18" rx="2" stroke="url(#fi-mit)" strokeWidth="1.5" />
-                    <text x="5" y="17" fontFamily="monospace" fontSize="10" fontWeight="700" fill="url(#fi-mit)">MIT</text>
-                  </svg>
+                  <FileBadge size={22} strokeWidth={1.75} absoluteStrokeWidth aria-hidden="true" />
                 </div>
                 <h3>MIT licensed</h3>
                 <p>
@@ -447,10 +321,7 @@ export default function Landing() {
               </div>
               <div className="fair-card">
                 <div className="fair-icon-wrap">
-                  <svg viewBox="0 0 24 24" fill="none" width="22" height="22" aria-hidden="true">
-                    <defs><linearGradient id="fi-key" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#6366f1" /><stop offset="100%" stopColor="#14b8a6" /></linearGradient></defs>
-                    <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" stroke="url(#fi-key)" strokeWidth="1.5" strokeLinecap="round" />
-                  </svg>
+                  <KeyRound size={22} strokeWidth={1.75} absoluteStrokeWidth aria-hidden="true" />
                 </div>
                 <h3>BYO keys, zero rake</h3>
                 <p>
@@ -460,13 +331,7 @@ export default function Landing() {
               </div>
               <div className="fair-card">
                 <div className="fair-icon-wrap">
-                  <svg viewBox="0 0 24 24" fill="none" width="22" height="22" aria-hidden="true">
-                    <defs><linearGradient id="fi-srv" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#6366f1" /><stop offset="100%" stopColor="#14b8a6" /></linearGradient></defs>
-                    <rect x="2" y="2" width="20" height="8" rx="2" stroke="url(#fi-srv)" strokeWidth="1.5" />
-                    <rect x="2" y="14" width="20" height="8" rx="2" stroke="url(#fi-srv)" strokeWidth="1.5" />
-                    <circle cx="18" cy="6" r="1" fill="url(#fi-srv)" />
-                    <circle cx="18" cy="18" r="1" fill="#14b8a6" />
-                  </svg>
+                  <Server size={22} strokeWidth={1.75} absoluteStrokeWidth aria-hidden="true" />
                 </div>
                 <h3>Self-host or fair cloud</h3>
                 <p>
@@ -477,11 +342,7 @@ export default function Landing() {
               </div>
               <div className="fair-card">
                 <div className="fair-icon-wrap">
-                  <svg viewBox="0 0 24 24" fill="none" width="22" height="22" aria-hidden="true">
-                    <defs><linearGradient id="fi-shld" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#6366f1" /><stop offset="100%" stopColor="#14b8a6" /></linearGradient></defs>
-                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="url(#fi-shld)" strokeWidth="1.5" strokeLinejoin="round" />
-                    <path d="M9 12l2 2 4-4" stroke="#14b8a6" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
+                  <ShieldCheck size={22} strokeWidth={1.75} absoluteStrokeWidth aria-hidden="true" />
                 </div>
                 <h3>Security by design</h3>
                 <p>
@@ -590,8 +451,8 @@ export default function Landing() {
                 No payment credentials required for test mode.
               </p>
               <div className="cta-band-actions">
-                <Link to="/quickstart" className="btn-primary-inv">Read the quickstart</Link>
-                <Link to="/quickstart-mcp" className="btn-secondary-inv">Agent quickstart (MCP)</Link>
+                <Link to="/quickstart" className="cc-btn cc-btn--primary cc-btn--on-dark cc-btn--lg">Read the quickstart</Link>
+                <Link to="/quickstart-mcp" className="cc-btn cc-btn--ghost cc-btn--on-dark cc-btn--lg">Agent quickstart (MCP)</Link>
               </div>
               <p className="cta-compare-link">
                 See how Cartcrft compares to Shopify, Medusa, Vendure, Saleor, and others —{' '}

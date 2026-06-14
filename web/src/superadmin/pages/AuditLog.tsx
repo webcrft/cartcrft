@@ -23,17 +23,17 @@ import {
   Btn,
 } from '../components/ui/index'
 
-const ACTION_COLORS: Record<string, 'red' | 'amber' | 'emerald' | 'zinc'> = {
+const ACTION_COLORS: Record<string, 'red' | 'amber' | 'emerald' | 'slate'> = {
   takedown: 'red',
   suspend: 'amber',
   restore: 'emerald',
-  login: 'zinc',
-  logout: 'zinc',
+  login: 'slate',
+  logout: 'slate',
 }
 
-function actionColor(action: string): 'red' | 'amber' | 'emerald' | 'zinc' {
+function actionColor(action: string): 'red' | 'amber' | 'emerald' | 'slate' {
   const key = Object.keys(ACTION_COLORS).find(k => action.toLowerCase().includes(k))
-  return key ? ACTION_COLORS[key] : 'zinc'
+  return key ? ACTION_COLORS[key] : 'slate'
 }
 
 /** Compact, locale-stable timestamp — e.g. "Jun 12, 14:03". */
@@ -98,9 +98,9 @@ export default function AuditLog() {
           value={actionFilter}
           onChange={e => { setActionFilter(e.target.value); setPage(1) }}
           placeholder="Filter by action (e.g. takedown, login)..."
-          className="flex-1 rounded-lg border border-white/[0.08] bg-zinc-800/60 px-3 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-white/20 focus:outline-none transition"
+          className="flex-1 rounded-lg border border-white/[0.08] bg-slate-800/60 px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-600 focus:border-white/20 focus:outline-none transition"
         />
-        <div className="text-xs text-zinc-500 self-center whitespace-nowrap">
+        <div className="text-xs text-slate-500 self-center whitespace-nowrap">
           {total.toLocaleString()} entries
         </div>
       </div>
@@ -128,35 +128,35 @@ export default function AuditLog() {
                   <tr className="border-t border-white/[0.03] hover:bg-white/[0.02]">
                     <Td>
                       <span
-                        className="text-[11px] text-zinc-500 whitespace-nowrap"
+                        className="text-[11px] text-slate-500 whitespace-nowrap"
                         title={new Date(entry.created_at).toLocaleString()}
                       >
                         {fmtTimestamp(entry.created_at)}
                       </span>
                     </Td>
                     <Td>
-                      <p className="text-xs text-zinc-300">{entry.admin_email}</p>
-                      <p className="text-[11px] text-zinc-600 font-mono">{entry.admin_id?.slice(0, 8)}</p>
+                      <p className="text-xs text-slate-300">{entry.admin_email}</p>
+                      <p className="text-[11px] text-slate-600 font-mono">{entry.admin_id?.slice(0, 8)}</p>
                     </Td>
                     <Td>
                       <Badge color={actionColor(entry.action)}>{entry.action}</Badge>
                     </Td>
                     <Td>
                       {entry.target_type && (
-                        <p className="text-xs text-zinc-400">{entry.target_type}</p>
+                        <p className="text-xs text-slate-400">{entry.target_type}</p>
                       )}
                       {entry.target_id && (
-                        <p className="text-[11px] text-zinc-600 font-mono">{entry.target_id?.slice(0, 16)}</p>
+                        <p className="text-[11px] text-slate-600 font-mono">{entry.target_id?.slice(0, 16)}</p>
                       )}
                     </Td>
                     <Td>
-                      <span className="text-[11px] text-zinc-600 font-mono">{entry.ip || '—'}</span>
+                      <span className="text-[11px] text-slate-600 font-mono">{entry.ip || '—'}</span>
                     </Td>
                     <Td>
                       {entry.metadata && Object.keys(entry.metadata).length > 0 && (
                         <button
                           onClick={() => setExpandedId(expandedId === entry.id ? null : entry.id)}
-                          className="text-[11px] text-zinc-500 hover:text-zinc-300 transition"
+                          className="text-[11px] text-slate-500 hover:text-slate-300 transition"
                         >
                           {expandedId === entry.id ? 'hide' : 'details'}
                         </button>
@@ -164,9 +164,9 @@ export default function AuditLog() {
                     </Td>
                   </tr>
                   {expandedId === entry.id && entry.metadata && (
-                    <tr className="border-t border-white/[0.03] bg-zinc-900/40">
+                    <tr className="border-t border-white/[0.03] bg-slate-900/40">
                       <td colSpan={6} className="px-5 py-3">
-                        <pre className="text-[11px] text-zinc-400 bg-zinc-950/60 rounded-lg p-3 max-h-96 overflow-auto font-mono leading-relaxed">
+                        <pre className="text-[11px] text-slate-400 bg-slate-950/60 rounded-lg p-3 max-h-96 overflow-auto font-mono leading-relaxed">
                           {JSON.stringify(entry.metadata, null, 2)}
                         </pre>
                       </td>
@@ -187,7 +187,7 @@ export default function AuditLog() {
               >
                 Previous
               </Btn>
-              <span className="text-xs text-zinc-500">
+              <span className="text-xs text-slate-500">
                 Page {page} of {totalPages}
               </span>
               <Btn

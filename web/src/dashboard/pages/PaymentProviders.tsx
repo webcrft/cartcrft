@@ -175,7 +175,7 @@ export default function PaymentProviders() {
         actions={tab === 'providers' ? <Btn onClick={() => setModal(null)}>+ Add Provider</Btn> : undefined}
       />
 
-      <div className="rounded-lg border border-blue-500/20 bg-blue-500/[0.05] px-4 py-3 text-xs text-slate-400 leading-relaxed">
+      <div className="rounded-lg border border-violet-500/20 bg-violet-500/[0.05] px-4 py-3 text-xs text-slate-400 leading-relaxed">
         <span className="font-semibold text-slate-200">Your keys, your payments.</span>{' '}
         Transactions are processed directly through your own provider account — Cartcrft never handles customer payments.
         Webhook URL shown per provider for easy copy-paste configuration.

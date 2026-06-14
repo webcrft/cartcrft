@@ -53,7 +53,7 @@ function AppRoutes() {
             path={entry.path === '/' ? undefined : entry.path}
             index={entry.path === '/'}
             element={
-              <Suspense fallback={<div className="flex justify-center py-16 text-zinc-500 text-sm">Loading...</div>}>
+              <Suspense fallback={<div className="flex justify-center py-16 text-slate-500 text-sm">Loading...</div>}>
                 <entry.element />
               </Suspense>
             }

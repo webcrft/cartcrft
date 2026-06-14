@@ -1,17 +1,15 @@
 import type { CSSProperties } from 'react'
+import type { LucideIcon } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import './FeatureGrid.css'
 
 /**
- * FeatureGrid — a responsive grid of feature cards.
- * Each card accepts an svg string (inline SVG icon) or falls back to the
- * icon string (emoji/text) prop for backwards compat.
+ * FeatureGrid — a responsive grid of premium feature cards.
+ * Each card renders a monoline lucide icon in a refined icon tile.
  */
 export interface FeatureItem {
-  /** Inline SVG string for the icon (preferred) */
-  svg?: string
-  /** Emoji or short text fallback */
-  icon?: string
+  /** Lucide icon component for this feature */
+  Icon: LucideIcon
   title: string
   description: string
   href?: string
@@ -24,10 +22,10 @@ export interface FeatureGridProps {
   subheading?: string
 }
 
-function FeatureIcon({ f }: { f: FeatureItem }) {
+function FeatureIcon({ Icon }: { Icon: LucideIcon }) {
   return (
     <span className="feature-icon" aria-hidden="true">
-      {f.svg ? <span dangerouslySetInnerHTML={{ __html: f.svg }} /> : f.icon}
+      <Icon size={20} strokeWidth={1.75} absoluteStrokeWidth />
     </span>
   )
 }
@@ -47,13 +45,13 @@ export default function FeatureGrid({ features, columns = 3, heading, subheading
           <li className="feature-card" key={f.title}>
             {f.href ? (
               <Link to={f.href} className="feature-card-inner feature-card-link">
-                <FeatureIcon f={f} />
+                <FeatureIcon Icon={f.Icon} />
                 <h3 className="feature-title">{f.title}</h3>
                 <p className="feature-desc">{f.description}</p>
               </Link>
             ) : (
               <div className="feature-card-inner">
-                <FeatureIcon f={f} />
+                <FeatureIcon Icon={f.Icon} />
                 <h3 className="feature-title">{f.title}</h3>
                 <p className="feature-desc">{f.description}</p>
               </div>

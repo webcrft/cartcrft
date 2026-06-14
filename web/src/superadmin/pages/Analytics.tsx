@@ -22,6 +22,7 @@ import {
   LoadError,
   Badge,
 } from '../components/ui/index'
+import { RefreshCw } from 'lucide-react'
 
 // ── Inline SVG timeseries chart ────────────────────────────────────────────────
 
@@ -39,7 +40,7 @@ function fmtMetricValue(value: number, metric: 'orders' | 'gmv' | 'signups'): st
 }
 
 function TimeseriesChart({ points, metric }: { points: TimeseriesPoint[]; metric: 'orders' | 'gmv' | 'signups' }) {
-  if (!points.length) return <p className="text-xs text-zinc-500 py-4 text-center">No data</p>
+  if (!points.length) return <p className="text-xs text-slate-500 py-4 text-center">No data</p>
 
   const values = points.map(p =>
     metric === 'orders' ? p.orders :
@@ -74,14 +75,17 @@ function TimeseriesChart({ points, metric }: { points: TimeseriesPoint[]; metric
   return (
     <div>
       {/* Legend / active-metric label */}
-      <div className="flex items-center justify-between gap-3 mb-2">
+      <div className="flex items-center justify-between gap-3 mb-3">
         <div className="flex items-center gap-2">
-          <span className="inline-block h-0.5 w-4 rounded-full bg-amber-500" aria-hidden="true" />
-          <span className="text-xs font-medium text-zinc-300">{METRIC_LABELS[metric]}</span>
-          <span className="text-[11px] text-zinc-500">— daily, last 30 days</span>
+          <span className="inline-flex items-center gap-1" aria-hidden="true">
+            <span className="inline-block h-0.5 w-4 rounded-full bg-violet-500" />
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-violet-400 -ml-2.5 ring-2 ring-violet-500/20" />
+          </span>
+          <span className="text-xs font-medium text-slate-200">{METRIC_LABELS[metric]}</span>
+          <span className="text-[11px] text-slate-500">— daily, last 30 days</span>
         </div>
-        <span className="text-[11px] text-zinc-500 tabular-nums">
-          Peak {fmtMetricValue(max, metric)}
+        <span className="text-[11px] text-slate-500 tabular-nums">
+          Peak <span className="text-slate-300 font-medium">{fmtMetricValue(max, metric)}</span>
         </span>
       </div>
       <svg
@@ -99,21 +103,29 @@ function TimeseriesChart({ points, metric }: { points: TimeseriesPoint[]; metric
           const cy = chartH * (1 - frac)
           return (
             <g key={i}>
-              <line x1={PAD_L} y1={cy} x2={W} y2={cy} stroke="rgba(255,255,255,0.04)" strokeWidth={1} />
-              <text x={PAD_L - 4} y={cy + 4} textAnchor="end" fontSize={9} fill="#71717a">{yTicks[i]}</text>
+              <line
+                x1={PAD_L}
+                y1={cy}
+                x2={W}
+                y2={cy}
+                stroke="rgba(255,255,255,0.05)"
+                strokeWidth={1}
+                strokeDasharray={frac === 0 ? undefined : '2 4'}
+              />
+              <text x={PAD_L - 6} y={cy + 3} textAnchor="end" fontSize={9} fill="#64748b" fontWeight={500}>{yTicks[i]}</text>
             </g>
           )
         })}
         {/* Area fill */}
         <defs>
           <linearGradient id="sa-chart-grad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.25" />
-            <stop offset="100%" stopColor="#f59e0b" stopOpacity="0.02" />
+            <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.28" />
+            <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0.01" />
           </linearGradient>
         </defs>
         <path d={areaD} fill="url(#sa-chart-grad)" />
         {/* Line */}
-        <path d={pathD} fill="none" stroke="#f59e0b" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+        <path d={pathD} fill="none" stroke="#8b5cf6" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
         {/* Data points — enlarged hit target + per-point native tooltip */}
         {pts.map((p, i) => (
           <g key={i} className="group">
@@ -125,12 +137,10 @@ function TimeseriesChart({ points, metric }: { points: TimeseriesPoint[]; metric
               cx={p.x}
               cy={p.y}
               r={2.5}
-              fill="#f59e0b"
-              opacity={0.85}
-              stroke="#f59e0b"
-              strokeWidth={0}
-              strokeOpacity={0.25}
-              className="transition-[stroke-width] group-hover:[stroke-width:5px] group-hover:opacity-100"
+              fill="#0b0e15"
+              stroke="#a78bfa"
+              strokeWidth={1.5}
+              className="transition-all group-hover:[r:4px] group-hover:[stroke-width:2.5px]"
             />
           </g>
         ))}
@@ -139,7 +149,7 @@ function TimeseriesChart({ points, metric }: { points: TimeseriesPoint[]; metric
           if (!pts[i]) return null
           const label = pts[i].point.date.slice(5) // MM-DD
           return (
-            <text key={i} x={pts[i].x} y={H - 4} textAnchor="middle" fontSize={9} fill="#71717a">
+            <text key={i} x={pts[i].x} y={H - 4} textAnchor="middle" fontSize={9} fill="#64748b" fontWeight={500}>
               {label}
             </text>
           )
@@ -167,12 +177,12 @@ function HealthPanel({ health }: { health: HealthResult }) {
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2 mb-3">
-        <span className="text-xs font-medium text-zinc-400">System status</span>
+        <span className="text-xs font-medium text-slate-400">System status</span>
         <Badge color={overallColor}>{health.status}</Badge>
       </div>
       {rows.map(row => (
         <div key={row.label} className="flex items-center justify-between py-2 border-b border-white/[0.04] last:border-0">
-          <span className="text-xs text-zinc-400">{row.label}</span>
+          <span className="text-xs text-slate-400">{row.label}</span>
           <Badge color={row.ok ? 'emerald' : 'red'}>{row.value}</Badge>
         </div>
       ))}
@@ -232,7 +242,8 @@ export default function Analytics() {
         title="System Analytics"
         description="Platform-wide metrics across all tenants"
         actions={
-          <button onClick={() => void load()} className="text-xs text-zinc-500 hover:text-zinc-300 transition">
+          <button onClick={() => void load()} className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-slate-300 hover:bg-white/[0.08] hover:text-white transition">
+            <RefreshCw size={13} />
             Refresh
           </button>
         }
@@ -280,10 +291,10 @@ export default function Analytics() {
                 <button
                   key={m}
                   onClick={() => setMetric(m)}
-                  className={`px-3 py-1 rounded-lg text-xs font-medium transition ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
                     metric === m
-                      ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                      : 'text-zinc-500 hover:text-zinc-300 border border-transparent'
+                      ? 'bg-violet-600/15 text-violet-200 border border-violet-500/30'
+                      : 'text-slate-500 hover:text-slate-200 border border-transparent hover:bg-white/[0.04]'
                   }`}
                 >
                   {m === 'gmv' ? 'GMV' : m.charAt(0).toUpperCase() + m.slice(1)}

@@ -24,7 +24,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             className={`px-4 py-2.5 rounded-xl text-sm font-medium shadow-xl border pointer-events-auto
               ${t.type === 'success' ? 'bg-emerald-900/90 text-emerald-100 border-emerald-700/50' :
                 t.type === 'error' ? 'bg-red-900/90 text-red-100 border-red-700/50' :
-                'bg-zinc-800/90 text-zinc-100 border-white/10'}`}
+                'bg-slate-800/90 text-slate-100 border-white/10'}`}
           >
             {t.message}
           </div>

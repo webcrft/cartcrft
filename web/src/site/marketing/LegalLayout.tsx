@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, NavLink } from 'react-router-dom'
+import { AlertTriangle } from 'lucide-react'
 import SiteLayout from '../SiteLayout'
 import { useDocumentMeta } from '../useDocumentMeta'
 import './LegalLayout.css'
@@ -24,6 +25,7 @@ export default function LegalLayout({ title, description, lastUpdated, children 
       <div className="mk-legal">
         {/* Draft banner — rendered at the very top of every legal page until counsel finalises */}
         <div className="draft-banner" role="alert" aria-live="polite">
+          <AlertTriangle className="draft-icon" size={16} strokeWidth={2.25} aria-hidden="true" />
           <span className="draft-badge">DRAFT</span>
           <span className="draft-text">
             This document is <strong>pending legal review and is not yet in force.</strong>{' '}
@@ -56,10 +58,10 @@ export default function LegalLayout({ title, description, lastUpdated, children 
             <aside className="legal-nav">
               <h2>Legal</h2>
               <ul>
-                <li><Link to="/legal/terms">Terms of Service</Link></li>
-                <li><Link to="/legal/privacy">Privacy Policy</Link></li>
-                <li><Link to="/legal/popia">POPIA</Link></li>
-                <li><Link to="/legal/gdpr">GDPR</Link></li>
+                <li><NavLink to="/legal/terms" className={({ isActive }) => isActive ? 'is-active' : undefined}>Terms of Service</NavLink></li>
+                <li><NavLink to="/legal/privacy" className={({ isActive }) => isActive ? 'is-active' : undefined}>Privacy Policy</NavLink></li>
+                <li><NavLink to="/legal/popia" className={({ isActive }) => isActive ? 'is-active' : undefined}>POPIA</NavLink></li>
+                <li><NavLink to="/legal/gdpr" className={({ isActive }) => isActive ? 'is-active' : undefined}>GDPR</NavLink></li>
               </ul>
             </aside>
           </div>

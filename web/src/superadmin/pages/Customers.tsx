@@ -79,8 +79,8 @@ export default function Customers() {
       {/* Keyboard hint */}
       {!searched && (
         <div className="rounded-xl border border-dashed border-white/10 p-12 text-center">
-          <p className="text-sm font-medium text-zinc-400 mb-1">Cross-store customer lookup</p>
-          <p className="text-xs text-zinc-600">Enter a full or partial email address to find customers across all stores and organisations.</p>
+          <p className="text-sm font-medium text-slate-400 mb-1">Cross-store customer lookup</p>
+          <p className="text-xs text-slate-600">Enter a full or partial email address to find customers across all stores and organisations.</p>
         </div>
       )}
 
@@ -92,7 +92,7 @@ export default function Customers() {
 
       {!loading && customers.length > 0 && (
         <>
-          <p className="text-xs text-zinc-500 mb-3">{customers.length} result{customers.length !== 1 ? 's' : ''}</p>
+          <p className="text-xs text-slate-500 mb-3">{customers.length} result{customers.length !== 1 ? 's' : ''}</p>
           <TableContainer>
             <TableHead>
               <Th>Email</Th>
@@ -105,20 +105,20 @@ export default function Customers() {
               {customers.map(c => (
                 <tr key={c.id} className="border-t border-white/[0.03] hover:bg-white/[0.02]">
                   <Td>
-                    <span className="text-xs font-medium text-zinc-200">{c.email}</span>
+                    <span className="text-xs font-medium text-slate-200">{c.email}</span>
                   </Td>
                   <Td>
-                    <span className="text-[11px] text-zinc-600 font-mono">{c.id}</span>
+                    <span className="text-[11px] text-slate-600 font-mono">{c.id}</span>
                   </Td>
                   <Td>
-                    <p className="text-xs text-zinc-400">{c.store_name || '—'}</p>
-                    <p className="text-[11px] text-zinc-600 font-mono">{c.store_id}</p>
+                    <p className="text-xs text-slate-400">{c.store_name || '—'}</p>
+                    <p className="text-[11px] text-slate-600 font-mono">{c.store_id}</p>
                   </Td>
                   <Td>
-                    <span className="text-[11px] text-zinc-600 font-mono">{c.org_id}</span>
+                    <span className="text-[11px] text-slate-600 font-mono">{c.org_id}</span>
                   </Td>
                   <Td>
-                    <span className="text-xs text-zinc-500">{new Date(c.created_at).toLocaleDateString()}</span>
+                    <span className="text-xs text-slate-500">{new Date(c.created_at).toLocaleDateString()}</span>
                   </Td>
                 </tr>
               ))}

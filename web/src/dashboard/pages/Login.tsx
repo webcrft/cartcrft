@@ -68,13 +68,17 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-white mb-1">Cartcrft Admin</h1>
+    <div className="relative min-h-screen bg-slate-950 flex items-center justify-center p-4 overflow-hidden">
+      {/* Ambient brand glow */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(40rem_30rem_at_50%_-5%,rgba(91,89,230,0.18),transparent)]" />
+      <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(30rem_30rem_at_80%_110%,rgba(79,70,229,0.10),transparent)]" />
+      <div className="relative w-full max-w-md">
+        <div className="flex flex-col items-center text-center mb-8">
+          <img src="/logo.svg" alt="Cartcrft" className="h-12 w-12 rounded-xl shadow-lg shadow-violet-950/50 ring-1 ring-white/10 mb-4" />
+          <h1 className="text-2xl font-bold tracking-tight text-white mb-1">Cartcrft Admin</h1>
           <p className="text-sm text-slate-500">Sign in to manage your store</p>
         </div>
-        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-6">
+        <div className="rounded-2xl border border-white/[0.08] bg-slate-900/60 backdrop-blur-sm shadow-xl shadow-black/40 p-6">
           <div className="flex rounded-lg border border-white/[0.08] bg-white/[0.02] p-1 mb-5">
             {([
               ['password', 'Email & Password'],
@@ -84,7 +88,7 @@ export default function Login() {
                 key={m}
                 type="button"
                 onClick={() => { setMode(m); setError('') }}
-                className={`flex-1 rounded-md py-2 text-xs font-medium transition ${mode === m ? 'bg-violet-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                className={`flex-1 rounded-md py-2 text-xs font-semibold transition ${mode === m ? 'bg-gradient-to-b from-violet-500 to-violet-600 text-white shadow-sm ring-1 ring-inset ring-white/10' : 'text-slate-400 hover:text-white'}`}
               >
                 {label}
               </button>

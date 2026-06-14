@@ -1,6 +1,5 @@
-/* Global styles for marketing pages (non-Starlight routes).
- * Starlight routes use custom.css via astro.config.mjs customCss.
- */
+/* Global styles for the site zone (marketing + docs). */
+@import './tokens.css';
 
 *, *::before, *::after {
   box-sizing: border-box;
@@ -10,33 +9,109 @@
 
 html {
   scroll-behavior: smooth;
-  scroll-padding-top: 80px;
+  scroll-padding-top: 84px;
   font-size: 16px;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
-  font-family: ui-sans-serif, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
-  background: #ffffff;
-  color: #0f172a;
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--ink-body);
+  font-size: 1rem;
+  line-height: 1.6;
+  font-feature-settings: 'cv11', 'ss01';
+  letter-spacing: -0.011em;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
-@media (prefers-color-scheme: dark) {
-  body {
-    background: #0f172a;
-    color: #f8fafc;
-  }
+h1, h2, h3, h4 {
+  color: var(--ink);
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+  font-weight: 700;
 }
+
+a { color: inherit; }
 
 img, svg {
   display: block;
   max-width: 100%;
 }
 
+::selection {
+  background: color-mix(in srgb, var(--brand) 22%, transparent);
+  color: var(--ink);
+}
+
 :focus-visible {
-  outline: 2px solid #6366f1;
+  outline: 2px solid var(--brand);
   outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* ─── Shared buttons (site zone) ─────────────────────────────────── */
+.cc-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.72rem 1.3rem;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  border-radius: var(--r-md);
+  border: 1px solid transparent;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.12s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.cc-btn:active { transform: translateY(0.5px) scale(0.99); }
+
+.cc-btn--primary {
+  background: var(--brand);
+  color: var(--brand-ink);
+  box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+.cc-btn--primary:hover {
+  background: var(--brand-strong);
+  box-shadow: var(--shadow-brand);
+  transform: translateY(-1px);
+}
+
+.cc-btn--ghost {
+  background: var(--surface);
+  color: var(--ink);
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow-xs);
+}
+.cc-btn--ghost:hover {
+  border-color: color-mix(in srgb, var(--brand) 45%, var(--line-strong));
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.cc-btn--lg { padding: 0.85rem 1.6rem; font-size: 1rem; }
+
+/* On inverted/dark bands */
+.cc-btn--on-dark.cc-btn--primary {
+  background: #fff;
+  color: var(--brand-strong);
+}
+.cc-btn--on-dark.cc-btn--ghost {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.35);
+}
+.cc-btn--on-dark.cc-btn--ghost:hover {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.5);
 }
 
 /* ─── Scroll-reveal animation utility ───────────────────────────────

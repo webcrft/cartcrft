@@ -1,31 +1,34 @@
 /**
  * Super-admin UI primitives.
  *
- * Visually distinct from the org dashboard — uses a zinc/neutral palette with
- * red/amber accents to signal "operator console / high-stakes environment".
- * No violet; this is intentionally different.
+ * Harmonized with the product's indigo-violet brand (#5b59e6) and Inter
+ * typography, but on a slightly cooler/darker "steel" slate chrome so the
+ * operator console stays subtly distinct from the org dashboard. The everyday
+ * accent is the brand violet; red/amber are reserved strictly for danger and
+ * destructive operations (takedown / suspend).
  */
 
 import React from 'react'
 
 // ── Badge ─────────────────────────────────────────────────────────────────────
 
-type BadgeColor = 'emerald' | 'amber' | 'red' | 'blue' | 'zinc' | 'orange'
+type BadgeColor = 'emerald' | 'amber' | 'red' | 'blue' | 'slate' | 'orange' | 'violet'
 
 export function Badge({
   children,
-  color = 'zinc',
+  color = 'slate',
 }: {
   children: React.ReactNode
   color?: BadgeColor
 }) {
   const colors: Record<BadgeColor, string> = {
-    emerald: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20',
-    amber: 'bg-amber-500/15 text-amber-400 border-amber-500/20',
-    red: 'bg-red-500/15 text-red-400 border-red-500/20',
-    blue: 'bg-blue-500/15 text-blue-400 border-blue-500/20',
-    orange: 'bg-orange-500/15 text-orange-400 border-orange-500/20',
-    zinc: 'bg-zinc-500/15 text-zinc-400 border-zinc-500/20',
+    emerald: 'bg-emerald-500/12 text-emerald-300 border-emerald-500/25',
+    amber: 'bg-amber-500/12 text-amber-300 border-amber-500/25',
+    red: 'bg-red-500/12 text-red-300 border-red-500/25',
+    blue: 'bg-blue-500/12 text-blue-300 border-blue-500/25',
+    orange: 'bg-orange-500/12 text-orange-300 border-orange-500/25',
+    violet: 'bg-violet-500/12 text-violet-300 border-violet-500/25',
+    slate: 'bg-slate-500/12 text-slate-300 border-slate-500/25',
   }
   return (
     <span
@@ -58,11 +61,11 @@ export function Btn({
   type?: 'button' | 'submit' | 'reset'
 }) {
   const base =
-    'inline-flex items-center justify-center gap-1.5 rounded-lg px-4 py-2 text-xs font-semibold transition disabled:opacity-50'
+    'inline-flex items-center justify-center gap-1.5 rounded-lg px-4 py-2 text-xs font-semibold transition active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100'
   const variants: Record<BtnVariant, string> = {
-    primary: 'bg-zinc-100 text-zinc-900 hover:bg-white',
-    warning: 'bg-amber-600 text-white hover:bg-amber-500',
-    secondary: 'border border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10 hover:text-white',
+    primary: 'bg-violet-600 text-white shadow-sm shadow-violet-950/40 hover:bg-violet-500',
+    warning: 'bg-amber-500 text-slate-950 hover:bg-amber-400',
+    secondary: 'border border-white/10 bg-white/[0.04] text-slate-300 hover:bg-white/[0.08] hover:text-white',
     danger: 'border border-red-500/30 bg-red-600/10 text-red-300 hover:bg-red-600/20',
   }
   return (
@@ -93,11 +96,11 @@ export function Card({
 }) {
   return (
     <div
-      className={`rounded-xl border border-white/[0.07] bg-zinc-900/60 overflow-hidden ${className}`}
+      className={`rounded-xl border border-white/[0.08] bg-slate-900/50 shadow-sm shadow-black/20 overflow-hidden ${className}`}
     >
       {title && (
-        <div className="px-5 py-4 border-b border-white/[0.06]">
-          <h3 className="text-sm font-semibold text-zinc-100">{title}</h3>
+        <div className="px-5 py-4 border-b border-white/[0.07]">
+          <h3 className="text-sm font-semibold text-slate-100">{title}</h3>
         </div>
       )}
       <div className="p-5">{children}</div>
@@ -125,14 +128,14 @@ export function FormInput({
   return (
     <div className={className}>
       {label && (
-        <label className="block text-xs font-medium text-zinc-400 mb-1.5">{label}</label>
+        <label className="block text-xs font-medium text-slate-400 mb-1.5">{label}</label>
       )}
       <input
         type={type}
         value={value ?? ''}
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-lg border border-white/[0.08] bg-zinc-800/60 px-3 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-400 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400/40 transition"
+        className="w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 focus:border-violet-500/50 focus:outline-none focus:ring-1 focus:ring-violet-500/30 transition"
       />
     </div>
   )
@@ -155,10 +158,10 @@ export function PageHeader({
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
       <div>
         <div className="flex items-center gap-2 flex-wrap">
-          <h2 className="text-lg font-semibold text-zinc-100">{title}</h2>
+          <h2 className="text-lg font-semibold text-slate-100 tracking-tight">{title}</h2>
           {badge}
         </div>
-        {description && <p className="text-xs text-zinc-500 mt-0.5">{description}</p>}
+        {description && <p className="text-xs text-slate-500 mt-0.5">{description}</p>}
       </div>
       {actions && <div className="flex items-center gap-2">{actions}</div>}
     </div>
@@ -175,10 +178,10 @@ export function EmptyState({
   description?: string
 }) {
   return (
-    <div className="rounded-2xl border border-dashed border-white/10 p-16 text-center">
-      <p className="text-sm font-medium text-zinc-300 mb-1">{title}</p>
+    <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.01] p-16 text-center">
+      <p className="text-sm font-medium text-slate-300 mb-1">{title}</p>
       {description && (
-        <p className="text-xs text-zinc-500 max-w-sm mx-auto">{description}</p>
+        <p className="text-xs text-slate-500 max-w-sm mx-auto">{description}</p>
       )}
     </div>
   )
@@ -189,7 +192,7 @@ export function EmptyState({
 export function Spinner({ className = '' }: { className?: string }) {
   return (
     <span
-      className={`inline-block h-5 w-5 border-2 border-current border-t-transparent rounded-full animate-spin text-zinc-500 ${className}`}
+      className={`inline-block h-5 w-5 border-2 border-current border-t-transparent rounded-full animate-spin text-violet-400/70 ${className}`}
     />
   )
 }
@@ -208,12 +211,12 @@ export function Modal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border border-white/[0.1] bg-zinc-900 shadow-2xl">
+      <div className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border border-white/[0.1] bg-slate-900 shadow-2xl shadow-black/50">
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.07]">
-          <h2 className="text-base font-semibold text-zinc-100">{title}</h2>
+          <h2 className="text-base font-semibold text-slate-100">{title}</h2>
           <button
             onClick={onClose}
-            className="rounded-lg p-1.5 text-zinc-500 hover:text-zinc-100 hover:bg-white/[0.06] transition"
+            className="rounded-lg p-1.5 text-slate-500 hover:text-slate-100 hover:bg-white/[0.06] transition"
           >
             &#x2715;
           </button>
@@ -228,7 +231,7 @@ export function Modal({
 
 export function TableContainer({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-white/[0.07] bg-zinc-900/40 overflow-hidden">
+    <div className="rounded-xl border border-white/[0.08] bg-slate-900/40 shadow-sm shadow-black/20 overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full">{children}</table>
       </div>
@@ -239,7 +242,7 @@ export function TableContainer({ children }: { children: React.ReactNode }) {
 export function TableHead({ children }: { children: React.ReactNode }) {
   return (
     <thead>
-      <tr className="border-b border-white/[0.04] text-left">{children}</tr>
+      <tr className="border-b border-white/[0.07] bg-white/[0.015] text-left">{children}</tr>
     </thead>
   )
 }
@@ -252,7 +255,7 @@ export function Th({
   className?: string
 }) {
   return (
-    <th className={`px-5 py-2.5 text-xs font-medium text-zinc-500 ${className}`}>
+    <th className={`px-5 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500 ${className}`}>
       {children}
     </th>
   )
@@ -311,16 +314,16 @@ export function StatCard({
   color?: 'default' | 'green' | 'amber' | 'red'
 }) {
   const valueColors = {
-    default: 'text-zinc-100',
+    default: 'text-slate-100',
     green: 'text-emerald-400',
     amber: 'text-amber-400',
     red: 'text-red-400',
   }
   return (
-    <div className="rounded-xl border border-white/[0.07] bg-zinc-900/60 px-5 py-4">
-      <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">{label}</p>
-      <p className={`text-2xl font-bold tabular-nums ${valueColors[color]}`}>{value}</p>
-      {sub && <p className="text-xs text-zinc-600 mt-1">{sub}</p>}
+    <div className="rounded-xl border border-white/[0.08] bg-slate-900/50 shadow-sm shadow-black/20 px-5 py-4 transition hover:border-white/[0.12]">
+      <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1">{label}</p>
+      <p className={`text-2xl font-bold tabular-nums tracking-tight ${valueColors[color]}`}>{value}</p>
+      {sub && <p className="text-xs text-slate-600 mt-1">{sub}</p>}
     </div>
   )
 }

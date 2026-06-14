@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { Info } from 'lucide-react'
 import SiteLayout from '../SiteLayout'
 import { useDocumentMeta } from '../useDocumentMeta'
 import PricingCard, { type PricingCardProps } from './components/PricingCard'
@@ -326,7 +327,9 @@ export default function Pricing() {
       <div className="mk-pricing">
         {/* ---- Preview banner -------------------------------------------------- */}
         <div className="preview-banner" role="note">
-          <span className="preview-icon" aria-hidden="true">i</span>
+          <span className="preview-icon" aria-hidden="true">
+            <Info size={16} strokeWidth={2.25} />
+          </span>
           <span>
             <strong>Cloud pricing is in preview.</strong>{' '}
             Tier structure and final prices are illustrative — not yet locked in. Self-host is free, forever.{' '}
@@ -656,8 +659,8 @@ export default function Pricing() {
             <h2>Start free. Move to cloud when you are ready.</h2>
             <p>Same codebase. No data lock-in. Flat fee only, ever.</p>
             <div className="cta-buttons">
-              <Link to="/quickstart" className="btn-primary">Get started free</Link>
-              <a href="mailto:hello@webcrft.systems?subject=Cloud+waitlist" className="btn-secondary">
+              <Link to="/quickstart" className="cc-btn cc-btn--lg cc-btn--on-dark cc-btn--primary">Get started free</Link>
+              <a href="mailto:hello@webcrft.systems?subject=Cloud+waitlist" className="cc-btn cc-btn--lg cc-btn--on-dark cc-btn--ghost">
                 Join cloud waitlist
               </a>
             </div>

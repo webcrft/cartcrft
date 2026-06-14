@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { Menu, X } from 'lucide-react'
+import { Menu, X, List } from 'lucide-react'
 import { docMap } from './index'
 import DocSearch from './DocSearch'
 import './DocsLayout.css'
@@ -173,7 +173,10 @@ function Toc({ entries }: { entries: TocEntry[] }) {
 
   return (
     <aside className="docs-toc" aria-label="On this page">
-      <p className="docs-toc-title">On this page</p>
+      <p className="docs-toc-title">
+        <List size={13} aria-hidden="true" />
+        On this page
+      </p>
       <ul>
         {entries.map((entry) => (
           <li key={entry.id} className={entry.level === 3 ? 'docs-toc-sub' : ''}>

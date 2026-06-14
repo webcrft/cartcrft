@@ -47,8 +47,11 @@ export default function AppShell() {
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
       >
         {/* Logo */}
-        <div className="px-4 py-4 border-b border-white/[0.06] flex items-center justify-between">
-          <span className="text-sm font-bold text-white tracking-tight">Cartcrft</span>
+        <div className="px-4 h-14 border-b border-white/[0.06] flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <img src="/logo.svg" alt="" aria-hidden="true" className="h-7 w-7 rounded-lg shadow-sm shadow-violet-950/40" />
+            <span className="text-sm font-bold text-white tracking-tight">Cartcrft</span>
+          </div>
           <button
             onClick={() => setSidebarOpen(false)}
             className="md:hidden rounded-lg p-1 text-slate-500 hover:text-white hover:bg-white/[0.06] transition"
@@ -62,10 +65,12 @@ export default function AppShell() {
         <div className="px-3 py-3 border-b border-white/[0.06] relative">
           <button
             onClick={() => setShowStoreMenu(s => !s)}
-            className="w-full flex items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-slate-300 hover:bg-white/[0.04] transition"
+            className="w-full flex items-center justify-between gap-2 rounded-lg border border-white/[0.06] bg-white/[0.02] px-2.5 py-2 text-xs font-medium text-slate-200 hover:bg-white/[0.05] hover:border-white/10 transition"
           >
             <div className="flex items-center gap-2 min-w-0">
-              <div className="h-5 w-5 rounded bg-violet-600/40 flex-shrink-0" />
+              <div className="h-5 w-5 rounded bg-gradient-to-br from-violet-500 to-indigo-600 flex-shrink-0 flex items-center justify-center text-[10px] font-bold text-white">
+                {(activeStore?.name ?? '·').charAt(0).toUpperCase()}
+              </div>
               <span className="truncate">{activeStore?.name ?? 'No store'}</span>
             </div>
             <ChevronDown size={14} className="text-slate-500 flex-shrink-0" />
@@ -97,7 +102,7 @@ export default function AppShell() {
           {NAV_SECTIONS.map(section => (
             <div key={section.label}>
               {section.label && (
-                <p className="px-2 mb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-600">
+                <p className="px-2.5 mb-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">
                   {section.label}
                 </p>
               )}
@@ -109,12 +114,23 @@ export default function AppShell() {
                     end={item.path === '/'}
                     onClick={() => setSidebarOpen(false)}
                     className={({ isActive }) =>
-                      `flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium transition
-                       ${isActive ? 'bg-violet-600/15 text-violet-300' : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'}`
+                      `group relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium transition-colors
+                       ${isActive
+                         ? 'bg-violet-500/10 text-violet-200 ring-1 ring-inset ring-violet-500/20'
+                         : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'}`
                     }
                   >
-                    {item.icon && <item.icon size={14} />}
-                    {item.label}
+                    {({ isActive }) => (
+                      <>
+                        <span className={`absolute left-0 top-1/2 -translate-y-1/2 h-4 w-0.5 rounded-full bg-violet-400 transition-opacity ${isActive ? 'opacity-100' : 'opacity-0'}`} />
+                        {item.icon && (
+                          <span className={isActive ? 'text-violet-300' : 'text-slate-500 group-hover:text-slate-300'}>
+                            <item.icon size={14} />
+                          </span>
+                        )}
+                        {item.label}
+                      </>
+                    )}
                   </NavLink>
                 ))}
               </div>
@@ -134,7 +150,7 @@ export default function AppShell() {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto bg-slate-950 bg-[radial-gradient(60rem_40rem_at_70%_-10%,rgba(91,89,230,0.06),transparent)]">
         {/* Mobile top bar with hamburger — hidden on desktop */}
         <div className="md:hidden sticky top-0 z-20 flex items-center gap-3 border-b border-white/[0.06] bg-slate-950/90 backdrop-blur px-4 py-3">
           <button

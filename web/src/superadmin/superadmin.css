@@ -16,6 +16,14 @@
     box-sizing: border-box;
     border-width: 0;
     border-style: solid;
-    border-color: theme(--color-zinc-700);
+    border-color: theme(--color-slate-700);
+  }
+
+  #superadmin-root {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-feature-settings: 'cv11', 'ss01';
+    letter-spacing: -0.011em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }

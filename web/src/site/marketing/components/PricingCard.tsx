@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { Check } from 'lucide-react'
 import './PricingCard.css'
 
 /**
@@ -47,7 +48,9 @@ export default function PricingCard({
       <ul className="feature-list" role="list">
         {features.map((f) => (
           <li className="feature-item" key={f}>
-            <span className="check" aria-hidden="true">✓</span>
+            <span className="check" aria-hidden="true">
+              <Check size={15} strokeWidth={2.75} />
+            </span>
             <span>{f}</span>
           </li>
         ))}

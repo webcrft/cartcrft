@@ -422,8 +422,8 @@ export default function Compare() {
             <h2>Ready to try Cartcrft?</h2>
             <p>Get a store running and MCP-connected in under 10 minutes.</p>
             <div className="compare-cta-actions">
-              <Link to="/quickstart" className="btn-primary">Get started free</Link>
-              <Link to="/pricing" className="btn-secondary">See pricing</Link>
+              <Link to="/quickstart" className="cc-btn cc-btn--lg cc-btn--on-dark cc-btn--primary">Get started free</Link>
+              <Link to="/pricing" className="cc-btn cc-btn--lg cc-btn--on-dark cc-btn--ghost">See pricing</Link>
             </div>
           </div>
         </section>

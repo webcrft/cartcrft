@@ -140,7 +140,7 @@ export default function SiteLayout({ children }: { children: ReactNode }) {
         <div className="footer-inner">
           <div className="footer-brand">
             <Link to="/" aria-label="Cartcrft home">
-              <img src="/logo-wordmark.svg" alt="Cartcrft" height={30} className="footer-logo" />
+              <img src="/logo-wordmark-dark.svg" alt="Cartcrft" height={30} className="footer-logo" />
             </Link>
             <p className="footer-tagline">Headless commerce for<br />agent-native storefronts.</p>
             <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className="footer-github" aria-label="View Cartcrft on GitHub">
