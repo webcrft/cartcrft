@@ -1,0 +1,273 @@
+---
+/**
+ * Pricing page — /pricing
+ * TODO(pricing-agent): replace ALL placeholder pricing with real tiers, prices (USD + ZAR),
+ * and feature lists. Billing via Paystack; USD→ZAR FX conversion from cloud/billing.
+ * See cloud/billing package for subscription logic.
+ * The PricingCard component accepts: name, price, priceSub, description, features[], cta, highlighted, badge.
+ */
+import MarketingLayout from '../layouts/MarketingLayout.astro';
+import PricingCard from '../components/PricingCard.astro';
+
+// TODO(pricing-agent): define real tier data (prices, features, billing period)
+const tiers = [
+  {
+    name: 'Self-host',
+    price: 'Free',
+    priceSub: 'forever',
+    description: 'Run everything yourself. MIT licensed, no usage fees, no call-home.',
+    features: [
+      'Full REST API (105+ endpoints)',
+      'Postgres + pgvector search',
+      'MCP server (agent-native)',
+      'ACP + UCP adapters',
+      'Docker image, single binary',
+      'Community support',
+    ],
+    cta: { label: 'Read self-host docs', href: '/docs/self-host' },
+    highlighted: false,
+  },
+  {
+    name: 'Cloud',
+    price: '$TODO', // TODO(pricing-agent): set real price
+    priceSub: '/mo',
+    description: 'Managed hosting, automatic updates, Bunny CDN, and cloud billing via Paystack.',
+    features: [
+      'Everything in Self-host',
+      'Managed Postgres + backups',
+      'Bunny CDN delivery',
+      'Paystack USD→ZAR billing',
+      'Email support',
+      '[TODO(pricing-agent): add cloud-only features]',
+    ],
+    cta: { label: 'Join waitlist', href: 'mailto:hello@webcrft.systems?subject=Cloud+waitlist' },
+    highlighted: true,
+    badge: 'Coming soon',
+  },
+  {
+    name: 'Enterprise',
+    price: 'Custom',
+    priceSub: '',
+    description: 'SLA, on-prem or cloud, dedicated support, custom integrations.',
+    features: [
+      'Everything in Cloud',
+      'SLA + dedicated support',
+      'On-prem or cloud deployment',
+      'Custom integrations',
+      '[TODO(pricing-agent): add enterprise features]',
+    ],
+    cta: { label: 'Contact us', href: 'mailto:hello@webcrft.systems?subject=Enterprise' },
+    highlighted: false,
+  },
+];
+
+// TODO(pricing-agent): add FAQ items
+const faqs: { q: string; a: string }[] = [
+  { q: 'Is Cartcrft really free to self-host?', a: 'TODO(pricing-agent): answer here.' },
+  { q: 'What payment providers are supported?', a: 'TODO(pricing-agent): answer here.' },
+  { q: 'How does cloud billing work?', a: 'TODO(pricing-agent): answer here (Paystack, USD→ZAR).' },
+];
+---
+
+<MarketingLayout
+  title="Pricing"
+  description="Cartcrft is free to self-host forever. Cloud hosting with managed infrastructure coming soon."
+>
+  <!-- ─── Page header ─────────────────────────────────────────── -->
+  <section class="page-header">
+    <div class="page-header-inner">
+      <!-- TODO(pricing-agent): refine headline and subheadline -->
+      <h1>Simple, transparent pricing</h1>
+      <p>Self-host free. Pay for managed hosting when you're ready to scale.</p>
+    </div>
+  </section>
+
+  <!-- ─── Pricing grid ────────────────────────────────────────── -->
+  <section class="pricing-section">
+    <div class="pricing-grid">
+      {tiers.map((t) => (
+        <PricingCard
+          name={t.name}
+          price={t.price}
+          priceSub={t.priceSub}
+          description={t.description}
+          features={t.features}
+          cta={t.cta}
+          highlighted={t.highlighted}
+          badge={t.badge}
+        />
+      ))}
+    </div>
+  </section>
+
+  <!-- ─── FAQ ─────────────────────────────────────────────────── -->
+  <section class="faq-section">
+    <div class="faq-inner">
+      <h2>Frequently asked questions</h2>
+      <!-- TODO(pricing-agent): expand FAQ with real answers -->
+      <dl class="faq-list">
+        {faqs.map((f) => (
+          <div class="faq-item">
+            <dt>{f.q}</dt>
+            <dd>{f.a}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  </section>
+
+  <!-- ─── CTA ─────────────────────────────────────────────────── -->
+  <section class="pricing-cta">
+    <a href="/docs/quickstart" class="btn-primary">Get started free →</a>
+    <a href="/compare" class="btn-secondary">Compare features</a>
+  </section>
+</MarketingLayout>
+
+<style>
+  .page-header {
+    padding: 5rem 1.5rem 3rem;
+    text-align: center;
+    background: radial-gradient(
+      ellipse 70% 40% at 50% 0%,
+      color-mix(in srgb, #6366f1 10%, transparent),
+      transparent 60%
+    );
+  }
+
+  .page-header-inner {
+    max-width: 640px;
+    margin: 0 auto;
+  }
+
+  .page-header h1 {
+    font-size: clamp(2rem, 4vw, 3rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: #0f172a;
+    margin-bottom: 1rem;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .page-header h1 { color: #f8fafc; }
+  }
+
+  .page-header p {
+    font-size: 1.1rem;
+    color: #475569;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .page-header p { color: #94a3b8; }
+  }
+
+  .pricing-section {
+    padding: 2rem 1.5rem 4rem;
+  }
+
+  .pricing-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    max-width: 1100px;
+    margin: 0 auto;
+    align-items: start;
+  }
+
+  /* FAQ */
+  .faq-section {
+    padding: 3rem 1.5rem 2rem;
+    max-width: 760px;
+    margin: 0 auto;
+  }
+
+  .faq-section h2 {
+    font-size: 1.75rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: #0f172a;
+    margin-bottom: 2rem;
+    text-align: center;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .faq-section h2 { color: #f8fafc; }
+  }
+
+  .faq-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .faq-item {
+    border: 1px solid #e2e8f0;
+    border-radius: 0.5rem;
+    padding: 1.25rem;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .faq-item { border-color: #1e293b; }
+  }
+
+  .faq-item dt {
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 0.5rem;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .faq-item dt { color: #f1f5f9; }
+  }
+
+  .faq-item dd {
+    font-size: 0.9rem;
+    color: #475569;
+    line-height: 1.6;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .faq-item dd { color: #94a3b8; }
+  }
+
+  .pricing-cta {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    padding: 2rem 1.5rem 6rem;
+    flex-wrap: wrap;
+  }
+
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.75rem 1.75rem;
+    background: linear-gradient(135deg, #6366f1 0%, #14b8a6 100%);
+    color: #fff;
+    font-weight: 700;
+    font-size: 1rem;
+    border-radius: 0.5rem;
+    text-decoration: none;
+    transition: opacity 0.15s, transform 0.1s;
+  }
+
+  .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+
+  .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.75rem 1.75rem;
+    border: 1.5px solid #6366f1;
+    color: #6366f1;
+    font-weight: 600;
+    font-size: 1rem;
+    border-radius: 0.5rem;
+    text-decoration: none;
+    transition: background 0.15s;
+  }
+
+  .btn-secondary:hover { background: color-mix(in srgb, #6366f1 8%, transparent); }
+
+  @media (prefers-color-scheme: dark) {
+    .btn-secondary { border-color: #818cf8; color: #818cf8; }
+  }
+</style>

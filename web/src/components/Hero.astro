@@ -1,0 +1,211 @@
+---
+/**
+ * Hero — landing page hero section.
+ * TODO(landing-agent): replace placeholder content with final copy.
+ *
+ * Props:
+ *   headline     — main headline string (supports HTML for gradient spans)
+ *   subheadline  — supporting paragraph text
+ *   ctaPrimary   — { label, href } — primary CTA button
+ *   ctaSecondary — { label, href } — secondary CTA button (optional)
+ *   badge        — short badge text shown above headline (optional, e.g. "Now open source")
+ */
+export interface HeroProps {
+  headline: string;
+  subheadline: string;
+  ctaPrimary: { label: string; href: string };
+  ctaSecondary?: { label: string; href: string };
+  badge?: string;
+}
+
+const {
+  headline,
+  subheadline,
+  ctaPrimary,
+  ctaSecondary,
+  badge,
+} = Astro.props as HeroProps;
+---
+
+<section class="hero">
+  <div class="hero-inner">
+    {badge && (
+      <div class="hero-badge">
+        <span>{badge}</span>
+      </div>
+    )}
+
+    <h1 class="hero-headline" set:html={headline} />
+
+    <p class="hero-subheadline">{subheadline}</p>
+
+    <div class="hero-actions">
+      <a href={ctaPrimary.href} class="btn-primary">{ctaPrimary.label}</a>
+      {ctaSecondary && (
+        <a href={ctaSecondary.href} class="btn-secondary">{ctaSecondary.label}</a>
+      )}
+    </div>
+
+    <!-- Code preview / terminal snippet slot — filled by landing agent -->
+    <div class="hero-code-preview" aria-hidden="true">
+      <slot name="code-preview">
+        <!-- TODO(landing-agent): insert a syntax-highlighted curl / SDK snippet here -->
+        <div class="code-placeholder">
+          <pre><code># Quick API call — replace with real snippet
+curl https://api.cartcrft.io/stores/:id/products \
+  -H "Authorization: Bearer cc_pub_..."</code></pre>
+        </div>
+      </slot>
+    </div>
+  </div>
+</section>
+
+<style>
+  .hero {
+    padding: 6rem 1.5rem 4rem;
+    text-align: center;
+    background: radial-gradient(
+      ellipse 80% 50% at 50% -10%,
+      color-mix(in srgb, #6366f1 12%, transparent) 0%,
+      transparent 70%
+    );
+  }
+
+  .hero-inner {
+    max-width: 860px;
+    margin: 0 auto;
+  }
+
+  .hero-badge {
+    display: inline-flex;
+    margin-bottom: 1.5rem;
+  }
+
+  .hero-badge span {
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.3rem 0.85rem;
+    border-radius: 999px;
+    border: 1px solid #6366f1;
+    color: #6366f1;
+    background: color-mix(in srgb, #6366f1 8%, transparent);
+    letter-spacing: 0.03em;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .hero-badge span {
+      color: #a5b4fc;
+      border-color: #4f46e5;
+      background: color-mix(in srgb, #6366f1 15%, transparent);
+    }
+  }
+
+  .hero-headline {
+    font-size: clamp(2.4rem, 5vw, 3.75rem);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+    color: #0f172a;
+    margin-bottom: 1.5rem;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .hero-headline { color: #f8fafc; }
+  }
+
+  /* Gradient text applied to any <span class="gradient"> inside headline */
+  .hero-headline :global(.gradient) {
+    background: linear-gradient(135deg, #6366f1 0%, #14b8a6 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-subheadline {
+    font-size: clamp(1.05rem, 2.5vw, 1.25rem);
+    color: #475569;
+    max-width: 600px;
+    margin: 0 auto 2.5rem;
+    line-height: 1.65;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .hero-subheadline { color: #94a3b8; }
+  }
+
+  .hero-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 3.5rem;
+  }
+
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.7rem 1.6rem;
+    background: linear-gradient(135deg, #6366f1 0%, #14b8a6 100%);
+    color: #fff;
+    font-weight: 700;
+    font-size: 1rem;
+    border-radius: 0.5rem;
+    text-decoration: none;
+    transition: opacity 0.15s, transform 0.1s;
+  }
+
+  .btn-primary:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+  }
+
+  .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.7rem 1.6rem;
+    border: 1.5px solid #6366f1;
+    color: #6366f1;
+    font-weight: 600;
+    font-size: 1rem;
+    border-radius: 0.5rem;
+    text-decoration: none;
+    transition: background 0.15s;
+  }
+
+  .btn-secondary:hover {
+    background: color-mix(in srgb, #6366f1 8%, transparent);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .btn-secondary {
+      border-color: #818cf8;
+      color: #818cf8;
+    }
+  }
+
+  /* Code preview */
+  .hero-code-preview {
+    max-width: 640px;
+    margin: 0 auto;
+    text-align: left;
+  }
+
+  .code-placeholder {
+    background: #0f172a;
+    border: 1px solid #1e293b;
+    border-radius: 0.75rem;
+    padding: 1.25rem 1.5rem;
+    overflow-x: auto;
+  }
+
+  .code-placeholder pre {
+    margin: 0;
+  }
+
+  .code-placeholder code {
+    font-family: ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
+    font-size: 0.85rem;
+    color: #94a3b8;
+    white-space: pre;
+  }
+</style>

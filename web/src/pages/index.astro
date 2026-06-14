@@ -1,0 +1,162 @@
+---
+/**
+ * Landing page — /
+ * TODO(landing-agent): replace ALL placeholder content below with final marketing copy.
+ * Structure is fixed; swap text, update feature list, add social proof section, etc.
+ * Components available: Hero, FeatureGrid, PricingCard (see src/components/).
+ */
+import MarketingLayout from '../layouts/MarketingLayout.astro';
+import Hero from '../components/Hero.astro';
+import FeatureGrid from '../components/FeatureGrid.astro';
+
+// TODO(landing-agent): replace with real feature list
+const features = [
+  {
+    icon: '🤖',
+    title: 'Agent-native by design',
+    description: 'MCP server, ACP + UCP protocol adapters, and semantic search built in. AI agents can shop, cart, and checkout out of the box.',
+    href: '/docs/agent-native',
+  },
+  {
+    icon: '🔑',
+    title: 'Zero take rate, BYO keys',
+    description: 'Bring your own Paystack, Stripe, or any provider. No platform percentage. Every credential lives in your infra.',
+    href: '/docs/byo-keys',
+  },
+  {
+    icon: '🚀',
+    title: 'Headless REST API',
+    description: '105+ endpoints covering products, variants, carts, orders, discounts, shipping, and inventory — fully parity with webcrft-mono.',
+    href: '/docs/api-overview',
+  },
+  {
+    icon: '🐘',
+    title: 'Postgres-native',
+    description: 'pgvector semantic search, 18 migrations, 105+ tables. No external search dependency. Full-text fallback when pgvector is absent.',
+    href: '/docs/quickstart',
+  },
+  {
+    icon: '🛡️',
+    title: 'Security first',
+    description: 'AES-256-GCM credential encryption, argon2id password hashing, JWT + HMAC auth, rate limiting, CORS hardening.',
+    href: '/docs/security',
+  },
+  {
+    icon: '📦',
+    title: 'One Docker image',
+    description: 'Single image, three subcommands: serve, worker, migrate. Deploy on any VPS, Fly.io, Railway, or Render in minutes.',
+    href: '/docs/self-host',
+  },
+];
+---
+
+<MarketingLayout
+  title="Headless commerce for agent-native storefronts"
+  description="Cartcrft is an open-source headless commerce backend. Zero take rate, BYO keys, AI-agent ready. Deploy in minutes."
+>
+  <!-- ─── Hero ─────────────────────────────────────────────────── -->
+  <!-- TODO(landing-agent): update headline, subheadline, badge, and CTA copy -->
+  <Hero
+    badge="Open source · MIT licensed"
+    headline='Headless commerce for <span class="gradient">agent-native</span> storefronts.'
+    subheadline="Cartcrft gives your AI agents a full commerce stack — products, carts, orders, and payments — out of the box. Zero take rate. BYO keys. Self-host or cloud."
+    ctaPrimary={{ label: 'Get started free', href: '/docs/quickstart' }}
+    ctaSecondary={{ label: 'View on GitHub', href: 'https://github.com/webcrftsystems/cartcrft' }}
+  />
+
+  <!-- ─── Features ─────────────────────────────────────────────── -->
+  <!-- TODO(landing-agent): update heading + subheading copy -->
+  <FeatureGrid
+    heading="Everything you need. Nothing you don't."
+    subheading="Built for developers and the AI agents they're shipping. No bloat, no lock-in."
+    features={features}
+    columns={3}
+  />
+
+  <!-- ─── Social proof placeholder ────────────────────────────── -->
+  <!-- TODO(landing-agent): add real testimonials / logos / GitHub stars here -->
+  <section class="social-proof-placeholder">
+    <p class="placeholder-note">
+      <!-- TODO(landing-agent): replace this section with social proof (logos, stars, quotes) -->
+      [Social proof section — GitHub stars, testimonials, or "used by" logos]
+    </p>
+  </section>
+
+  <!-- ─── CTA band ─────────────────────────────────────────────── -->
+  <!-- TODO(landing-agent): refine copy and confirm CTA destination -->
+  <section class="cta-band">
+    <div class="cta-band-inner">
+      <h2>Ready to build?</h2>
+      <p>Get a Cartcrft server running locally in under five minutes.</p>
+      <a href="/docs/quickstart" class="btn-primary">Read the quickstart →</a>
+    </div>
+  </section>
+</MarketingLayout>
+
+<style>
+  .social-proof-placeholder {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+    text-align: center;
+  }
+
+  .placeholder-note {
+    font-size: 0.85rem;
+    color: #94a3b8;
+    font-style: italic;
+    border: 1px dashed #e2e8f0;
+    padding: 2rem;
+    border-radius: 0.5rem;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .placeholder-note { border-color: #1e293b; }
+  }
+
+  .cta-band {
+    background: linear-gradient(135deg, #6366f1 0%, #14b8a6 100%);
+    padding: 5rem 1.5rem;
+    text-align: center;
+    color: #fff;
+    margin-top: 4rem;
+  }
+
+  .cta-band-inner {
+    max-width: 640px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.25rem;
+  }
+
+  .cta-band h2 {
+    font-size: clamp(1.75rem, 3vw, 2.5rem);
+    font-weight: 800;
+    letter-spacing: -0.025em;
+  }
+
+  .cta-band p {
+    font-size: 1.1rem;
+    opacity: 0.9;
+  }
+
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.75rem 1.75rem;
+    background: #fff;
+    color: #6366f1;
+    font-weight: 700;
+    font-size: 1rem;
+    border-radius: 0.5rem;
+    text-decoration: none;
+    transition: opacity 0.15s, transform 0.1s;
+  }
+
+  .btn-primary:hover {
+    opacity: 0.92;
+    transform: translateY(-1px);
+  }
+</style>

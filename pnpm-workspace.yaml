@@ -4,8 +4,10 @@ packages:
   - sdk
   - sdk/storefront
   - cloud/billing
+  - web
 
 onlyBuiltDependencies: []
 allowBuilds:
-  argon2: set this to true or false
+  argon2: true
   esbuild: true
+  sharp: true

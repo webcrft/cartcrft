@@ -1,0 +1,265 @@
+---
+/**
+ * ComparisonTable — side-by-side feature comparison table.
+ * TODO(comparison-agent): pass the real rows and competitor columns.
+ *
+ * Props:
+ *   competitors — array of column header strings (e.g. ["Cartcrft", "Medusa", "Shopify"])
+ *   rows        — array of ComparisonRow
+ *   caption     — optional accessible table caption
+ */
+export interface ComparisonRow {
+  /** Feature label shown in first column */
+  feature: string;
+  /** Optional category grouping shown as a sub-header row */
+  category?: string;
+  /**
+   * Values keyed by competitor name.
+   * Value: true (checkmark) | false (cross) | string (text) | null (N/A dash)
+   */
+  values: Record<string, boolean | string | null>;
+  /** Highlight this row (e.g. for a key differentiator) */
+  highlight?: boolean;
+}
+
+export interface ComparisonTableProps {
+  competitors: string[];
+  rows: ComparisonRow[];
+  caption?: string;
+  /** Which competitor is "us" — gets accent column style */
+  ourName?: string;
+}
+
+const {
+  competitors,
+  rows,
+  caption,
+  ourName = 'Cartcrft',
+} = Astro.props as ComparisonTableProps;
+
+function renderValue(v: boolean | string | null): string {
+  if (v === true) return '✓';
+  if (v === false) return '✗';
+  if (v === null) return '—';
+  return String(v);
+}
+
+function valueClass(v: boolean | string | null, isOurs: boolean): string {
+  const base = isOurs ? 'cell cell--ours' : 'cell';
+  if (v === true) return `${base} cell--yes`;
+  if (v === false) return `${base} cell--no`;
+  return base;
+}
+---
+
+<div class="comparison-wrapper">
+  {caption && <p class="comparison-caption">{caption}</p>}
+  <div class="table-scroll">
+    <table class="comparison-table" aria-label={caption ?? 'Feature comparison'}>
+      <thead>
+        <tr>
+          <th class="feature-col" scope="col">Feature</th>
+          {competitors.map((c) => (
+            <th
+              class={c === ourName ? 'competitor-col competitor-col--ours' : 'competitor-col'}
+              scope="col"
+            >
+              {c === ourName ? (
+                <span class="our-label">{c}<span class="badge">us</span></span>
+              ) : c}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {(() => {
+          let lastCategory = '';
+          return rows.map((row) => {
+            const catRow = row.category && row.category !== lastCategory
+              ? (() => { lastCategory = row.category!; return row.category; })()
+              : null;
+            return (
+              <>
+                {catRow && (
+                  <tr class="category-row">
+                    <td colspan={competitors.length + 1}>{catRow}</td>
+                  </tr>
+                )}
+                <tr class={row.highlight ? 'data-row data-row--highlight' : 'data-row'}>
+                  <td class="feature-label">{row.feature}</td>
+                  {competitors.map((c) => {
+                    const v = row.values[c] ?? null;
+                    return (
+                      <td class={valueClass(v, c === ourName)}>
+                        {renderValue(v)}
+                      </td>
+                    );
+                  })}
+                </tr>
+              </>
+            );
+          });
+        })()}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<style>
+  .comparison-wrapper {
+    width: 100%;
+  }
+
+  .comparison-caption {
+    font-size: 0.9rem;
+    color: #64748b;
+    margin-bottom: 1rem;
+    text-align: center;
+  }
+
+  .table-scroll {
+    overflow-x: auto;
+    border-radius: 0.75rem;
+    border: 1px solid #e2e8f0;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .table-scroll { border-color: #1e293b; }
+  }
+
+  .comparison-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+    background: #fff;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .comparison-table { background: #0f172a; }
+  }
+
+  thead th {
+    padding: 0.875rem 1.25rem;
+    font-weight: 700;
+    font-size: 0.85rem;
+    text-align: center;
+    border-bottom: 2px solid #e2e8f0;
+    background: #f8fafc;
+    color: #475569;
+    white-space: nowrap;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    thead th {
+      background: #1e293b;
+      border-bottom-color: #334155;
+      color: #94a3b8;
+    }
+  }
+
+  .feature-col {
+    text-align: left !important;
+    min-width: 200px;
+  }
+
+  .competitor-col--ours {
+    background: color-mix(in srgb, #6366f1 8%, #f8fafc) !important;
+    color: #4f46e5 !important;
+    border-left: 2px solid #6366f1 !important;
+    border-right: 2px solid #6366f1 !important;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .competitor-col--ours {
+      background: color-mix(in srgb, #6366f1 15%, #1e293b) !important;
+      color: #a5b4fc !important;
+    }
+  }
+
+  .our-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .badge {
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 0.1rem 0.4rem;
+    background: #6366f1;
+    color: #fff;
+    border-radius: 999px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .category-row td {
+    padding: 0.5rem 1.25rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #6366f1;
+    background: color-mix(in srgb, #6366f1 5%, #f8fafc);
+    border-top: 1px solid #e2e8f0;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .category-row td {
+      color: #818cf8;
+      background: color-mix(in srgb, #6366f1 10%, #0f172a);
+      border-top-color: #1e293b;
+    }
+  }
+
+  .data-row td {
+    padding: 0.75rem 1.25rem;
+    border-top: 1px solid #f1f5f9;
+    text-align: center;
+    color: #0f172a;
+    vertical-align: middle;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .data-row td {
+      border-top-color: #1e293b;
+      color: #e2e8f0;
+    }
+  }
+
+  .feature-label {
+    text-align: left !important;
+    font-weight: 500;
+    color: #334155 !important;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .feature-label { color: #cbd5e1 !important; }
+  }
+
+  .data-row--highlight {
+    background: color-mix(in srgb, #6366f1 4%, transparent);
+  }
+
+  .cell--ours {
+    background: color-mix(in srgb, #6366f1 5%, transparent);
+    border-left: 2px solid #6366f1;
+    border-right: 2px solid #6366f1;
+  }
+
+  .cell--yes {
+    color: #10b981;
+    font-weight: 700;
+    font-size: 1.1rem;
+  }
+
+  .cell--no {
+    color: #ef4444;
+    font-size: 1.1rem;
+  }
+
+  /* last ours row: close the column border */
+  .data-row:last-child .cell--ours {
+    border-bottom: 2px solid #6366f1;
+  }
+</style>

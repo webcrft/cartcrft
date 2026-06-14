@@ -1,0 +1,230 @@
+---
+/**
+ * PricingCard — a single pricing tier card.
+ * TODO(pricing-agent): replace placeholder values with real pricing.
+ *
+ * Props:
+ *   name        — tier name, e.g. "Self-host" | "Cloud" | "Enterprise"
+ *   price       — e.g. "Free" | "$49/mo" | "Custom"
+ *   description — short tier description
+ *   features    — array of feature strings included in this tier
+ *   cta         — { label, href }
+ *   highlighted — true = show accent border + "Most popular" badge
+ *   badge       — optional badge text (overrides default "Most popular")
+ */
+export interface PricingCardProps {
+  name: string;
+  price: string;
+  priceSub?: string;
+  description: string;
+  features: string[];
+  cta: { label: string; href: string };
+  highlighted?: boolean;
+  badge?: string;
+}
+
+const {
+  name,
+  price,
+  priceSub,
+  description,
+  features,
+  cta,
+  highlighted = false,
+  badge,
+} = Astro.props as PricingCardProps;
+---
+
+<div class:list={['pricing-card', highlighted && 'pricing-card--highlighted']}>
+  {highlighted && (
+    <div class="popular-badge">{badge ?? 'Most popular'}</div>
+  )}
+
+  <div class="card-header">
+    <h3 class="tier-name">{name}</h3>
+    <div class="tier-price">
+      <span class="price-amount">{price}</span>
+      {priceSub && <span class="price-sub">{priceSub}</span>}
+    </div>
+    <p class="tier-desc">{description}</p>
+  </div>
+
+  <ul class="feature-list" role="list">
+    {features.map((f) => (
+      <li class="feature-item">
+        <span class="check" aria-hidden="true">✓</span>
+        <span>{f}</span>
+      </li>
+    ))}
+  </ul>
+
+  <a
+    href={cta.href}
+    class:list={['cta-btn', highlighted ? 'cta-btn--primary' : 'cta-btn--secondary']}
+  >
+    {cta.label}
+  </a>
+</div>
+
+<style>
+  .pricing-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    padding: 2rem;
+    border-radius: 1rem;
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    transition: box-shadow 0.2s;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .pricing-card {
+      border-color: #1e293b;
+      background: #0f172a;
+    }
+  }
+
+  .pricing-card--highlighted {
+    border-color: #6366f1;
+    border-width: 2px;
+    box-shadow: 0 8px 32px color-mix(in srgb, #6366f1 20%, transparent);
+  }
+
+  .popular-badge {
+    position: absolute;
+    top: -1px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-50%);
+    background: linear-gradient(135deg, #6366f1 0%, #14b8a6 100%);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.25rem 0.9rem;
+    border-radius: 999px;
+    white-space: nowrap;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .card-header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .tier-name {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .tier-name { color: #94a3b8; }
+  }
+
+  .tier-price {
+    display: flex;
+    align-items: baseline;
+    gap: 0.35rem;
+  }
+
+  .price-amount {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: #0f172a;
+    letter-spacing: -0.03em;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .price-amount { color: #f8fafc; }
+  }
+
+  .price-sub {
+    font-size: 0.9rem;
+    color: #64748b;
+  }
+
+  .tier-desc {
+    font-size: 0.9rem;
+    color: #475569;
+    line-height: 1.55;
+    margin-top: 0.25rem;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .tier-desc { color: #94a3b8; }
+  }
+
+  .feature-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    flex: 1;
+  }
+
+  .feature-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.65rem;
+    font-size: 0.9rem;
+    color: #334155;
+    line-height: 1.4;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .feature-item { color: #cbd5e1; }
+  }
+
+  .check {
+    color: #14b8a6;
+    font-weight: 700;
+    flex-shrink: 0;
+    margin-top: 0.05rem;
+  }
+
+  .cta-btn {
+    display: block;
+    width: 100%;
+    text-align: center;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    font-weight: 700;
+    font-size: 0.95rem;
+    text-decoration: none;
+    transition: opacity 0.15s, transform 0.1s;
+  }
+
+  .cta-btn--primary {
+    background: linear-gradient(135deg, #6366f1 0%, #14b8a6 100%);
+    color: #fff;
+  }
+
+  .cta-btn--primary:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+  }
+
+  .cta-btn--secondary {
+    border: 1.5px solid #6366f1;
+    color: #6366f1;
+    background: transparent;
+  }
+
+  .cta-btn--secondary:hover {
+    background: color-mix(in srgb, #6366f1 8%, transparent);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .cta-btn--secondary {
+      border-color: #818cf8;
+      color: #818cf8;
+    }
+  }
+</style>

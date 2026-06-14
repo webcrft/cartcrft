@@ -1,0 +1,203 @@
+---
+/**
+ * Compare page — /compare
+ * TODO(comparison-agent): replace ALL placeholder data below with real competitor research.
+ * The ComparisonTable component accepts competitors[] and rows[]. See component props.
+ * Also add a prose section above explaining methodology, and a CTA at the bottom.
+ */
+import MarketingLayout from '../layouts/MarketingLayout.astro';
+import ComparisonTable from '../components/ComparisonTable.astro';
+
+// TODO(comparison-agent): update competitors list (confirm correct names/versions)
+const competitors = ['Cartcrft', 'Medusa v2', 'Saleor', 'Shopify'];
+
+// TODO(comparison-agent): verify every value against official docs / source code
+const rows = [
+  // ── Core model ──────────────────────────────────────────────────
+  { category: 'Core model', feature: 'Open-source (MIT)',       values: { 'Cartcrft': true,   'Medusa v2': true,  'Saleor': true,  'Shopify': false }, highlight: true },
+  { category: 'Core model', feature: 'Self-hostable',           values: { 'Cartcrft': true,   'Medusa v2': true,  'Saleor': true,  'Shopify': false } },
+  { category: 'Core model', feature: 'Zero take rate',          values: { 'Cartcrft': true,   'Medusa v2': true,  'Saleor': true,  'Shopify': false }, highlight: true },
+  { category: 'Core model', feature: 'REST API',                values: { 'Cartcrft': true,   'Medusa v2': true,  'Saleor': false, 'Shopify': true } },
+  { category: 'Core model', feature: 'GraphQL API',             values: { 'Cartcrft': false,  'Medusa v2': true,  'Saleor': true,  'Shopify': true } },
+
+  // ── Agent-native ────────────────────────────────────────────────
+  { category: 'Agent-native', feature: 'MCP server built-in',  values: { 'Cartcrft': true,   'Medusa v2': false, 'Saleor': false, 'Shopify': false }, highlight: true },
+  { category: 'Agent-native', feature: 'ACP adapter',          values: { 'Cartcrft': true,   'Medusa v2': false, 'Saleor': false, 'Shopify': false }, highlight: true },
+  { category: 'Agent-native', feature: 'UCP adapter',          values: { 'Cartcrft': true,   'Medusa v2': false, 'Saleor': false, 'Shopify': false }, highlight: true },
+  { category: 'Agent-native', feature: 'Semantic / pgvector search', values: { 'Cartcrft': true, 'Medusa v2': false, 'Saleor': false, 'Shopify': 'Paid' } },
+
+  // ── Payments ─────────────────────────────────────────────────────
+  { category: 'Payments', feature: 'BYO payment provider',     values: { 'Cartcrft': true,   'Medusa v2': true,  'Saleor': true,  'Shopify': 'Limited' } },
+  { category: 'Payments', feature: 'Paystack support',         values: { 'Cartcrft': true,   'Medusa v2': 'Plugin', 'Saleor': 'Plugin', 'Shopify': 'Plugin' } },
+
+  // ── Infrastructure ───────────────────────────────────────────────
+  { category: 'Infrastructure', feature: 'Single Docker image', values: { 'Cartcrft': true,  'Medusa v2': false, 'Saleor': false, 'Shopify': null } },
+  { category: 'Infrastructure', feature: 'Postgres-native',    values: { 'Cartcrft': true,   'Medusa v2': true,  'Saleor': true,  'Shopify': null } },
+  { category: 'Infrastructure', feature: 'Node.js runtime',    values: { 'Cartcrft': true,   'Medusa v2': true,  'Saleor': false, 'Shopify': null } },
+];
+---
+
+<MarketingLayout
+  title="Compare Cartcrft"
+  description="See how Cartcrft compares to Medusa, Saleor, and Shopify across pricing, features, and agent-native capabilities."
+>
+  <!-- ─── Page header ─────────────────────────────────────────── -->
+  <section class="page-header">
+    <div class="page-header-inner">
+      <!-- TODO(comparison-agent): refine headline and intro paragraph -->
+      <h1>How Cartcrft compares</h1>
+      <p>
+        A straight-line comparison of features, pricing model, and agent-native capabilities.
+        <!-- TODO(comparison-agent): add methodology note + last-verified date -->
+        [Methodology and last-verified date go here]
+      </p>
+    </div>
+  </section>
+
+  <!-- ─── Comparison table ────────────────────────────────────── -->
+  <section class="table-section">
+    <div class="table-section-inner">
+      <ComparisonTable
+        competitors={competitors}
+        rows={rows}
+        ourName="Cartcrft"
+        caption="TODO(comparison-agent): verify all values. Last updated: [date]"
+      />
+    </div>
+  </section>
+
+  <!-- ─── Narrative detail placeholder ───────────────────────── -->
+  <!-- TODO(comparison-agent): add prose sections per competitor with deeper analysis -->
+  <section class="narrative-placeholder">
+    <div class="narrative-inner">
+      <p class="placeholder-note">
+        [TODO(comparison-agent): Add per-competitor deep-dive sections here — e.g.
+        "Cartcrft vs Medusa", "Cartcrft vs Saleor", "Why not Shopify?"]
+      </p>
+    </div>
+  </section>
+
+  <!-- ─── CTA ─────────────────────────────────────────────────── -->
+  <section class="compare-cta">
+    <a href="/docs/quickstart" class="btn-primary">Try Cartcrft in 5 minutes →</a>
+    <a href="/pricing" class="btn-secondary">See pricing</a>
+  </section>
+</MarketingLayout>
+
+<style>
+  .page-header {
+    padding: 5rem 1.5rem 3rem;
+    text-align: center;
+    background: radial-gradient(
+      ellipse 70% 40% at 50% 0%,
+      color-mix(in srgb, #6366f1 10%, transparent),
+      transparent 60%
+    );
+  }
+
+  .page-header-inner {
+    max-width: 680px;
+    margin: 0 auto;
+  }
+
+  .page-header h1 {
+    font-size: clamp(2rem, 4vw, 3rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: #0f172a;
+    margin-bottom: 1rem;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .page-header h1 { color: #f8fafc; }
+  }
+
+  .page-header p {
+    font-size: 1.1rem;
+    color: #475569;
+    line-height: 1.6;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .page-header p { color: #94a3b8; }
+  }
+
+  .table-section {
+    padding: 2rem 1.5rem 3rem;
+  }
+
+  .table-section-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .narrative-placeholder {
+    padding: 2rem 1.5rem;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .narrative-inner {
+    border: 1px dashed #e2e8f0;
+    border-radius: 0.5rem;
+    padding: 2rem;
+    text-align: center;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .narrative-inner { border-color: #1e293b; }
+  }
+
+  .placeholder-note {
+    font-size: 0.85rem;
+    color: #94a3b8;
+    font-style: italic;
+  }
+
+  .compare-cta {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    padding: 3rem 1.5rem 6rem;
+    flex-wrap: wrap;
+  }
+
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.75rem 1.75rem;
+    background: linear-gradient(135deg, #6366f1 0%, #14b8a6 100%);
+    color: #fff;
+    font-weight: 700;
+    font-size: 1rem;
+    border-radius: 0.5rem;
+    text-decoration: none;
+    transition: opacity 0.15s, transform 0.1s;
+  }
+
+  .btn-primary:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+  }
+
+  .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.75rem 1.75rem;
+    border: 1.5px solid #6366f1;
+    color: #6366f1;
+    font-weight: 600;
+    font-size: 1rem;
+    border-radius: 0.5rem;
+    text-decoration: none;
+    transition: background 0.15s;
+  }
+
+  .btn-secondary:hover {
+    background: color-mix(in srgb, #6366f1 8%, transparent);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .btn-secondary { border-color: #818cf8; color: #818cf8; }
+  }
+</style>
