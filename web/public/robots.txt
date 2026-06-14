@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+
+# Dashboard is a client-side app — no indexable content there
+Disallow: /dashboard/
+
+Sitemap: https://cartcrft.dev/sitemap-index.xml

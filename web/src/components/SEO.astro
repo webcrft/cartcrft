@@ -1,0 +1,60 @@
+---
+/**
+ * SEO — reusable head meta tags for marketing pages.
+ * Usage: <SEO title="..." description="..." canonical="..." />
+ *
+ * Props:
+ *   title       — page title (already includes "| Cartcrft" suffix)
+ *   description — meta description
+ *   canonical   — full canonical URL (optional — derived from Astro.url if omitted)
+ *   ogImage     — OG image URL (default: /og-image.svg)
+ *   ogType      — OG type (default: "website")
+ *   noindex     — true to add noindex (default: false)
+ */
+export interface Props {
+  title: string;
+  description: string;
+  canonical?: string;
+  ogImage?: string;
+  ogType?: string;
+  noindex?: boolean;
+}
+
+const {
+  title,
+  description,
+  canonical,
+  ogImage = '/og-image.svg',
+  ogType = 'website',
+  noindex = false,
+} = Astro.props;
+
+const site = 'https://cartcrft.dev';
+const canonicalURL = canonical ?? `${site}${Astro.url.pathname}`;
+const ogImageURL = ogImage.startsWith('http') ? ogImage : `${site}${ogImage}`;
+---
+
+<!-- Primary -->
+<title>{title}</title>
+<meta name="description" content={description} />
+{noindex && <meta name="robots" content="noindex, nofollow" />}
+<link rel="canonical" href={canonicalURL} />
+
+<!-- Open Graph -->
+<meta property="og:title" content={title} />
+<meta property="og:description" content={description} />
+<meta property="og:type" content={ogType} />
+<meta property="og:url" content={canonicalURL} />
+<meta property="og:image" content={ogImageURL} />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:site_name" content="Cartcrft" />
+
+<!-- Twitter / X Card -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content={title} />
+<meta name="twitter:description" content={description} />
+<meta name="twitter:image" content={ogImageURL} />
+
+<!-- Theme -->
+<meta name="theme-color" content="#6366f1" />

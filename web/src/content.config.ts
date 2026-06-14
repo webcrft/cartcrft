@@ -1,4 +1,4 @@
-import { defineCollection } from 'astro:content';
+import { defineCollection, z } from 'astro:content';
 import { docsLoader } from '@astrojs/starlight/loaders';
 import { docsSchema } from '@astrojs/starlight/schema';
 import { glob } from 'astro/loaders';
@@ -20,5 +20,19 @@ export const collections = {
           pattern: ['**/[^_]*.{md,mdx}', '!cloud/**'],
         }),
     schema: docsSchema(),
+  }),
+
+  // ── Marketing content — prose pages that are content-authored ─────────────
+  marketing: defineCollection({
+    loader: glob({
+      base: './src/content/marketing',
+      pattern: '**/*.{md,mdx}',
+    }),
+    schema: z.object({
+      title: z.string(),
+      description: z.string(),
+      updatedDate: z.string().optional(),
+      methodology: z.string().optional(),
+    }),
   }),
 };

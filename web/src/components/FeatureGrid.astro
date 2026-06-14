@@ -1,20 +1,22 @@
 ---
 /**
  * FeatureGrid — a responsive grid of feature cards.
- * TODO(landing-agent): pass the real features array with final copy.
+ * Each card accepts an svg string (inline SVG icon) or falls back to the
+ * icon string (emoji/text) prop for backwards compat.
  *
  * Props:
- *   features — array of FeatureItem
- *   columns  — grid column count: 2 | 3 | 4 (default: 3)
- *   heading  — optional section heading
+ *   features   — array of FeatureItem
+ *   columns    — grid column count: 2 | 3 | 4 (default: 3)
+ *   heading    — optional section heading
  *   subheading — optional section subheading
  */
 export interface FeatureItem {
-  /** Emoji or icon string shown at top of card */
-  icon: string;
+  /** Inline SVG string for the icon (preferred) */
+  svg?: string;
+  /** Emoji or short text fallback */
+  icon?: string;
   title: string;
   description: string;
-  /** Optional link for the card */
   href?: string;
 }
 
@@ -50,13 +52,21 @@ const {
       <li class="feature-card">
         {f.href ? (
           <a href={f.href} class="feature-card-inner feature-card-link">
-            <span class="feature-icon" aria-hidden="true">{f.icon}</span>
+            <span class="feature-icon" aria-hidden="true">
+              {f.svg
+                ? <Fragment set:html={f.svg} />
+                : f.icon}
+            </span>
             <h3 class="feature-title">{f.title}</h3>
             <p class="feature-desc">{f.description}</p>
           </a>
         ) : (
           <div class="feature-card-inner">
-            <span class="feature-icon" aria-hidden="true">{f.icon}</span>
+            <span class="feature-icon" aria-hidden="true">
+              {f.svg
+                ? <Fragment set:html={f.svg} />
+                : f.icon}
+            </span>
             <h3 class="feature-title">{f.title}</h3>
             <p class="feature-desc">{f.description}</p>
           </div>
@@ -79,11 +89,12 @@ const {
   }
 
   .section-heading {
-    font-size: clamp(1.75rem, 3vw, 2.5rem);
+    font-size: clamp(1.75rem, 3vw, 2.4rem);
     font-weight: 800;
     letter-spacing: -0.025em;
     color: #0f172a;
     margin-bottom: 0.75rem;
+    line-height: 1.2;
   }
 
   @media (prefers-color-scheme: dark) {
@@ -91,11 +102,11 @@ const {
   }
 
   .section-subheading {
-    font-size: 1.1rem;
+    font-size: 1.05rem;
     color: #475569;
-    max-width: 560px;
+    max-width: 580px;
     margin: 0 auto;
-    line-height: 1.6;
+    line-height: 1.65;
   }
 
   @media (prefers-color-scheme: dark) {
@@ -120,23 +131,24 @@ const {
   }
 
   .feature-card {
-    border-radius: 0.75rem;
+    border-radius: 0.875rem;
     border: 1px solid #e2e8f0;
     background: #f8fafc;
     overflow: hidden;
-    transition: border-color 0.15s, box-shadow 0.15s;
+    transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
   }
 
   @media (prefers-color-scheme: dark) {
     .feature-card {
       border-color: #1e293b;
-      background: #0f172a;
+      background: #0d1426;
     }
   }
 
   .feature-card:hover {
-    border-color: #6366f1;
-    box-shadow: 0 4px 20px color-mix(in srgb, #6366f1 15%, transparent);
+    border-color: color-mix(in srgb, #6366f1 60%, transparent);
+    box-shadow: 0 4px 24px color-mix(in srgb, #6366f1 12%, transparent);
+    transform: translateY(-2px);
   }
 
   .feature-card-inner {
@@ -154,14 +166,35 @@ const {
   }
 
   .feature-icon {
-    font-size: 1.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 0.5rem;
+    background: linear-gradient(135deg, color-mix(in srgb, #6366f1 15%, transparent), color-mix(in srgb, #14b8a6 8%, transparent));
+    padding: 0.45rem;
+    flex-shrink: 0;
+    font-size: 1.1rem;
     line-height: 1;
+  }
+
+  .feature-icon :global(svg) {
+    width: 100%;
+    height: 100%;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .feature-icon {
+      background: linear-gradient(135deg, color-mix(in srgb, #6366f1 20%, transparent), color-mix(in srgb, #14b8a6 12%, transparent));
+    }
   }
 
   .feature-title {
     font-size: 1rem;
     font-weight: 700;
     color: #0f172a;
+    line-height: 1.35;
   }
 
   @media (prefers-color-scheme: dark) {
@@ -169,9 +202,9 @@ const {
   }
 
   .feature-desc {
-    font-size: 0.9rem;
+    font-size: 0.875rem;
     color: #475569;
-    line-height: 1.6;
+    line-height: 1.65;
     flex: 1;
   }
 

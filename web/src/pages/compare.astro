@@ -1,19 +1,31 @@
 ---
 /**
  * Compare page — /compare
+ * Content (intro, narrative sections, sources) is driven from
+ * src/content/marketing/compare.md via the "marketing" Astro content collection.
+ *
+ * Competitor table data stays here as structured data (not prose) so it can
+ * be rendered by ComparisonTable. This is the right split: prose is MD-authored,
+ * structured tables are component-rendered.
+ *
  * Grounded comparison. All competitor facts are dated and sourced.
  * Sources (all verified June 2026):
- *  - Shopify pricing/fees: shopify.com/pricing — Basic $29/mo; Grow $95/mo; Advanced $360/mo;
- *    external gateway surcharge: Basic 2%, Grow 1%, Advanced 0.6%, Plus 0.2%
- *  - Medusa Cloud pricing: medusajs.com/pricing/ — Develop $29/mo; Launch $99/mo; Scale $299/mo; 0% GMV
- *  - Saleor Cloud pricing: saleor.io/pricing — Select $1,599/mo; Volume $3,999/mo; GMV cap + overage
- *  - Swell pricing: swell.is/pricing — Starter $29/mo (billed annually); revenue ceilings + overage fees
- *  - Vendure: vendure.io/pricing + github.com/vendure-ecommerce/vendure — GPLv3 core; Cloud GA Q4 2026
- *  - WooCommerce: wordpress.org/plugins/woocommerce — GPL-2.0+; self-hosted; 0% txn fees from WC itself
+ *  - Shopify pricing/fees: shopify.com/pricing
+ *  - Medusa Cloud pricing: medusajs.com/pricing/
+ *  - Saleor Cloud pricing: saleor.io/pricing
+ *  - Swell pricing: swell.is/pricing
+ *  - Vendure: vendure.io/pricing + github.com/vendure-ecommerce/vendure
+ *  - WooCommerce: wordpress.org/plugins/woocommerce
  *  - Shopify agentic commerce: shopify.com/blog/how-agentic-commerce-works (published April 30, 2026)
  */
+import { getEntry, render } from 'astro:content';
 import MarketingLayout from '../layouts/MarketingLayout.astro';
 import ComparisonTable from '../components/ComparisonTable.astro';
+
+// Load the compare content from the marketing collection
+const compareEntry = await getEntry('marketing', 'compare');
+if (!compareEntry) throw new Error('compare.md not found in marketing collection');
+const { Content } = await render(compareEntry);
 
 const competitors = ['Cartcrft', 'Shopify', 'Medusa v2', 'Vendure', 'Saleor', 'Swell', 'WooCommerce'];
 
@@ -313,26 +325,19 @@ const rows = [
   title="How Cartcrft compares"
   description="A grounded comparison of Cartcrft vs Shopify, Medusa v2, Vendure, Saleor, Swell, and WooCommerce across licensing, pricing, agent-native capabilities, and commerce features."
 >
-  <!-- Page header -->
+  <!-- Page header — from content collection frontmatter -->
   <section class="page-header">
     <div class="page-header-inner">
       <div class="page-label">Feature comparison</div>
-      <h1>How Cartcrft compares</h1>
-      <p>
-        A straight-line comparison of licensing, pricing, agent-native capabilities, and commerce
-        features across the major open-source and SaaS headless commerce platforms. We aim to be
-        fair — this is not a strawman. Where competitors lead (Shopify on live agentic payments,
-        for example), we say so.
-      </p>
-      <p class="methodology">
-        Pricing and feature status verified June 2026 from official pricing pages and documentation.
-        Commerce capabilities are assessed against each platform's documented defaults — plugins and
-        custom integrations are noted where relevant. Verify current figures before making decisions.
-      </p>
+      <h1>{compareEntry.data.title}</h1>
+      <p>{compareEntry.data.description}</p>
+      {compareEntry.data.methodology && (
+        <p class="methodology">{compareEntry.data.methodology}</p>
+      )}
     </div>
   </section>
 
-  <!-- Comparison table -->
+  <!-- Comparison table (structured data — component-rendered) -->
   <section class="table-section">
     <div class="table-section-inner">
       <ComparisonTable
@@ -344,126 +349,12 @@ const rows = [
     </div>
   </section>
 
-  <!-- Narrative sections -->
+  <!-- Narrative sections — rendered from markdown content -->
   <section class="narratives">
     <div class="narratives-inner">
-
-      <div class="narrative-card">
-        <h2>Cartcrft vs Shopify</h2>
-        <p>
-          Shopify is the undisputed scale leader and, since January 2026, a genuine agentic commerce
-          player — their Storefront MCP server is live and US merchants can accept purchases through
-          ChatGPT's Buy flow (published April 30, 2026). On agent-native, Shopify moves fast and has
-          distribution.
-        </p>
-        <p>
-          The trade-offs: Shopify is closed-source and SaaS-only. External payment gateways incur a
-          0.6%–2% transaction surcharge per plan (as of June 2026), on top of your gateway's own fees.
-          B2B features require Shopify Plus ($2,300+/mo). You cannot self-host, inspect the code, or
-          bring your own infrastructure. Cartcrft's live agentic payments are still in development —
-          if ChatGPT Instant Checkout today matters to you, Shopify is ahead. If owning your stack
-          matters, Cartcrft is the answer.
-        </p>
+      <div class="md-prose">
+        <Content />
       </div>
-
-      <div class="narrative-card">
-        <h2>Cartcrft vs Medusa v2</h2>
-        <p>
-          Medusa is the closest OSS peer: MIT-licensed, TypeScript, headless-first, 0% GMV fees.
-          Medusa Cloud starts at $29/mo (Develop tier, as of June 2026). Medusa has a large community,
-          a plugin ecosystem, and a proven track record.
-        </p>
-        <p>
-          Where Cartcrft differs: agent-native is built into the core. Medusa has no MCP server,
-          no ACP/UCP adapters, and no signed mandate layer — these would require custom integrations.
-          Cartcrft also ships 4 payment providers (including Paystack and Razorpay for non-Western
-          markets), lot tracking/FEFO inventory, and built-in pgvector semantic search. Medusa's
-          module system gives more flexibility at the cost of more assembly.
-        </p>
-      </div>
-
-      <div class="narrative-card">
-        <h2>Cartcrft vs Vendure</h2>
-        <p>
-          Vendure is a TypeScript-first, GraphQL-native headless platform — well-architected and
-          production-proven. The core is GPLv3; commercial features (storefront, enterprise plugins,
-          dedicated support) require the commercial Platform tier. Vendure Cloud is in design-partner
-          phase as of June 2026 (GA expected Q4 2026).
-        </p>
-        <p>
-          If your team prefers GraphQL over REST, Vendure is a strong option. Cartcrft is REST/OpenAPI
-          with a generated TS SDK, which integrates naturally with agent tooling that expects
-          structured REST endpoints. Neither platform has live agentic payments yet, but Cartcrft
-          ships ACP/UCP adapters out of the box.
-        </p>
-      </div>
-
-      <div class="narrative-card">
-        <h2>Cartcrft vs Saleor</h2>
-        <p>
-          Saleor is open-source (BSD-3-Clause) and GraphQL-native. The self-hosted core is free
-          and permissively licensed. Saleor Cloud, however, is positioned as an enterprise managed
-          service: the entry Select plan starts at $1,599/mo (June 2026) with a GMV cap and 0.8%
-          overage fee. For teams that want managed hosting, the cost cliff is steep.
-        </p>
-        <p>
-          Cartcrft and Saleor overlap on headless-first, open-source credentials. Cartcrft adds
-          agent-native (MCP/ACP/UCP/mandates), REST API, TypeScript end-to-end, and built-in
-          pgvector search. Saleor offers a mature GraphQL API and an established plugin marketplace.
-        </p>
-      </div>
-
-      <div class="narrative-card">
-        <h2>Cartcrft vs Swell</h2>
-        <p>
-          Swell is a closed-source, cloud-only headless commerce SaaS. The Starter plan is $29/mo
-          (billed annually, as of June 2026) but includes revenue ceilings and overage fees (2%
-          above $50K for Starter). You cannot self-host or inspect the source code.
-        </p>
-        <p>
-          Swell has a developer-friendly API and solid subscription support. If managed SaaS with
-          per-revenue pricing is acceptable, Swell competes at the low end. If you want open source,
-          self-hosting, zero transaction rake, and agent-native capabilities, Cartcrft is the
-          different-category choice.
-        </p>
-      </div>
-
-      <div class="narrative-card">
-        <h2>Cartcrft vs WooCommerce</h2>
-        <p>
-          WooCommerce is GPL-licensed, free, self-hosted, and runs on WordPress + MySQL/MariaDB.
-          It has the largest merchant install base of any ecommerce platform and an enormous
-          plugin ecosystem. WooCommerce itself charges 0% transaction fees.
-        </p>
-        <p>
-          WooCommerce is PHP-first, WordPress-coupled, and not designed for headless or agent-native
-          use cases. Advanced features (subscriptions, B2B, headless) require paid plugins. There
-          is no MCP server, no ACP/UCP, no pgvector. Cartcrft is a different category: API-first,
-          TypeScript, agent-native by design.
-        </p>
-      </div>
-
-    </div>
-  </section>
-
-  <!-- Footnote -->
-  <section class="footnote-section">
-    <div class="footnote-inner">
-      <p>
-        <strong>Sources and dates (all verified June 2026):</strong>
-        Shopify plan pricing and external gateway fees from shopify.com/pricing (Basic $29/mo,
-        external gateway surcharge 0.6%–2% depending on plan);
-        Medusa Cloud pricing from medusajs.com/pricing/ (Develop $29/mo, Launch $99/mo, Scale $299/mo, 0% GMV);
-        Saleor Cloud pricing from saleor.io/pricing (Select $1,599/mo with GMV cap, 0.8% overage);
-        Swell pricing from swell.is/pricing (Starter $29/mo billed annually, revenue ceilings and overage apply);
-        Vendure license and Cloud status from vendure.io/pricing (GPLv3 core, Commercial Platform tier, Cloud GA Q4 2026);
-        WooCommerce from wordpress.org/plugins/woocommerce (GPL-2.0+, self-hosted, 0% WC transaction fees);
-        Shopify agentic commerce (MCP, ACP, UCP) from shopify.com/blog/how-agentic-commerce-works
-        (published April 30, 2026).
-        Cartcrft ACP/UCP status from internal docs (docs/acp.md, docs/ucp.md): test mode shipped,
-        live delegated payment in development (roadmap Phase H5).
-        Verify all figures directly with each vendor before making purchasing decisions.
-      </p>
     </div>
   </section>
 
@@ -492,7 +383,7 @@ const rows = [
   }
 
   .page-header-inner {
-    max-width: 720px;
+    max-width: 760px;
     margin: 0 auto;
   }
 
@@ -516,6 +407,7 @@ const rows = [
     letter-spacing: -0.03em;
     color: #0f172a;
     margin-bottom: 1rem;
+    line-height: 1.15;
   }
 
   @media (prefers-color-scheme: dark) {
@@ -558,6 +450,7 @@ const rows = [
     margin: 0 auto;
   }
 
+  /* Narrative / prose section — renders markdown Content */
   .narratives {
     padding: 3rem 1.5rem;
     max-width: 1200px;
@@ -565,79 +458,141 @@ const rows = [
   }
 
   .narratives-inner {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1.5rem;
+    max-width: 1100px;
+    margin: 0 auto;
   }
 
-  @media (max-width: 768px) {
-    .narratives-inner { grid-template-columns: 1fr; }
-  }
-
-  .narrative-card {
-    padding: 1.75rem;
-    border: 1px solid #e2e8f0;
-    border-radius: 0.75rem;
-    background: #f8fafc;
+  /* Style the rendered markdown prose */
+  .md-prose :global(h2) {
+    font-size: clamp(1.1rem, 2vw, 1.35rem);
+    font-weight: 700;
+    color: #0f172a;
+    margin: 2.5rem 0 0.75rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e2e8f0;
   }
 
   @media (prefers-color-scheme: dark) {
-    .narrative-card {
-      border-color: #1e293b;
-      background: #0f172a;
+    .md-prose :global(h2) {
+      color: #f1f5f9;
+      border-top-color: #1e293b;
     }
   }
 
-  .narrative-card h2 {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: #0f172a;
-    margin-bottom: 0.75rem;
+  /* First h2 should not have top border */
+  .md-prose :global(h2:first-of-type) {
+    border-top: none;
+    margin-top: 0;
+    padding-top: 0;
   }
 
-  @media (prefers-color-scheme: dark) {
-    .narrative-card h2 { color: #f1f5f9; }
+  /* Hide the h2 "Introduction" heading (it's implied by context) */
+  .md-prose :global(h2:first-of-type) {
+    display: none;
   }
 
-  .narrative-card p {
+  /* Display the narrative cards in a 2-col grid (except Sources) */
+  .md-prose {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+    align-items: start;
+  }
+
+  /* Sources section spans full width */
+  .md-prose :global(h2:last-of-type),
+  .md-prose :global(h2:last-of-type + p) {
+    grid-column: 1 / -1;
+  }
+
+  @media (max-width: 768px) {
+    .md-prose { grid-template-columns: 1fr; }
+  }
+
+  .md-prose :global(p) {
     font-size: 0.9rem;
     color: #475569;
     line-height: 1.7;
     margin-bottom: 0.75rem;
   }
 
-  .narrative-card p:last-child { margin-bottom: 0; }
-
   @media (prefers-color-scheme: dark) {
-    .narrative-card p { color: #94a3b8; }
+    .md-prose :global(p) { color: #94a3b8; }
   }
 
-  .footnote-section {
-    padding: 2rem 1.5rem;
-    max-width: 1200px;
-    margin: 0 auto;
-  }
-
-  .footnote-inner {
-    border: 1px solid #e2e8f0;
-    border-radius: 0.5rem;
-    padding: 1.25rem 1.5rem;
+  /* Wrap each h2 + its following p tags as a card (via CSS sibling counters is hard;
+     simpler: wrap the whole grid item logic with a container div from md) */
+  /* Instead use a simpler prose-card wrapper approach: each section gets card styling */
+  .md-prose :global(h2) {
+    border-top: none !important;
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+    /* card header */
+    font-size: 1.05rem;
+    padding: 1.25rem 1.5rem 0;
+    border-radius: 0.75rem 0.75rem 0 0;
     background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-bottom: none;
+    margin-bottom: 0;
   }
 
   @media (prefers-color-scheme: dark) {
-    .footnote-inner {
+    .md-prose :global(h2) {
+      background: #0d1426;
       border-color: #1e293b;
-      background: #0f172a;
     }
   }
 
-  .footnote-inner p {
-    font-size: 0.8rem;
-    color: #64748b;
-    line-height: 1.7;
+  .md-prose :global(p:not(:last-child)) {
+    background: #f8fafc;
+    border-left: 1px solid #e2e8f0;
+    border-right: 1px solid #e2e8f0;
+    padding: 0 1.5rem;
+    margin-bottom: 0;
   }
 
+  .md-prose :global(p:last-of-type) {
+    background: #f8fafc;
+    border-left: 1px solid #e2e8f0;
+    border-right: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e2e8f0;
+    border-radius: 0 0 0.75rem 0.75rem;
+    padding: 0 1.5rem 1.25rem;
+    margin-bottom: 0;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .md-prose :global(p:not(:last-child)),
+    .md-prose :global(p:last-of-type) {
+      background: #0d1426;
+      border-color: #1e293b;
+    }
+  }
+
+  /* Sources section — full width card */
+  .md-prose :global(h2:last-of-type) {
+    grid-column: 1 / -1;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #64748b;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .md-prose :global(h2:last-of-type) { color: #64748b; }
+  }
+
+  .md-prose :global(h2:last-of-type + p) {
+    grid-column: 1 / -1;
+    font-size: 0.78rem !important;
+    color: #64748b !important;
+    font-style: italic;
+    border-radius: 0 0 0.75rem 0.75rem !important;
+  }
+
+  /* CTA */
   .compare-cta {
     background: linear-gradient(135deg, #4f46e5 0%, #0d9488 100%);
     padding: 5rem 1.5rem;
