@@ -91,11 +91,10 @@ export default function Login() {
       <div className="relative w-full max-w-sm">
         {/* Header */}
         <div className="text-center mb-7">
-          <img
-            src="/logo-wordmark-dark.svg"
-            alt="Cartcrft"
-            className="h-8 w-auto mx-auto mb-5"
-          />
+          <div className="flex items-center justify-center gap-2.5 mb-5">
+            <img src="/logo.svg" alt="" className="h-9 w-9" />
+            <span className="font-[var(--cc-font-display)] text-[1.5rem] font-bold tracking-[-0.04em] text-[var(--cc-text)]">cart<span className="text-[var(--cc-lime)]">crft</span></span>
+          </div>
           <h1 className="text-2xl font-bold text-[var(--cc-text)] tracking-tight">Operator Console</h1>
           <p className="mt-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-[var(--cc-text-muted)]">
             Super-Admin

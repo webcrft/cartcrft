@@ -80,7 +80,8 @@ export default function SiteLayout({ children }: { children: ReactNode }) {
       <header className={`site-header${scrolled ? ' is-scrolled' : ''}`}>
         <div className="header-inner">
           <Link to="/" className="header-logo" aria-label="Cartcrft home">
-            <img src="/logo-wordmark.svg" alt="Cartcrft" height={28} />
+            <img src="/logo.svg" alt="" width={30} height={30} />
+            <span className="wordmark">cart<span className="wm-accent">crft</span></span>
           </Link>
 
           <nav className="header-nav" aria-label="Main navigation">
@@ -140,7 +141,7 @@ export default function SiteLayout({ children }: { children: ReactNode }) {
         <div className="footer-inner">
           <div className="footer-brand">
             <Link to="/" aria-label="Cartcrft home">
-              <img src="/logo-wordmark-dark.svg" alt="Cartcrft" height={30} className="footer-logo" />
+              <span className="footer-logo"><img src="/logo.svg" alt="" width={30} height={30} /><span className="wordmark wordmark--footer">cart<span className="wm-accent">crft</span></span></span>
             </Link>
             <p className="footer-tagline">Headless commerce for<br />agent-native storefronts.</p>
             <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className="footer-github" aria-label="View Cartcrft on GitHub">

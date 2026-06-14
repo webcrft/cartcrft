@@ -21,7 +21,9 @@ function LogoLockup({ size = 'md' }: { size?: 'sm' | 'md' }) {
   const h = size === 'sm' ? 'h-5' : 'h-6'
   return (
     <div className="flex items-center gap-2.5 min-w-0">
-      <img src="/logo-wordmark-dark.svg" alt="Cartcrft" className={`${h} w-auto flex-shrink-0`} />
+      <img src="/logo.svg" alt="" className={`${h} flex-shrink-0`} style={{ aspectRatio: '1' }} />
+      <span className="font-[var(--cc-font-display)] text-[1.1rem] font-bold tracking-[-0.04em] text-[var(--cc-text)]">cart<span className="text-[var(--cc-lime)]">crft</span></span>
+      <span className="sr-only">Cartcrft</span>
       <span className="font-mono text-[10px] font-medium tracking-[0.12em] text-[var(--cc-lime)]/80 hidden sm:inline">
         // operator
       </span>

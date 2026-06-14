@@ -26,7 +26,17 @@
   height: 66px;
 }
 
-.header-logo img { height: 27px; width: auto; display: block; }
+.header-logo { display: inline-flex; align-items: center; gap: 0.55rem; text-decoration: none; }
+.header-logo img { height: 30px; width: 30px; display: block; }
+.wordmark {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.32rem;
+  letter-spacing: -0.04em;
+  color: var(--ink);
+  line-height: 1;
+}
+.wm-accent { color: var(--brand); }
 
 .header-nav {
   display: flex;
@@ -175,7 +185,9 @@
 }
 
 .footer-brand { flex: 0 0 220px; display: flex; flex-direction: column; gap: 1.1rem; }
-.footer-logo { height: 30px; width: auto; opacity: 0.98; }
+.footer-logo { display: inline-flex; align-items: center; gap: 0.55rem; }
+.footer-logo img { height: 30px; width: 30px; }
+.wordmark--footer { color: #eceae0; font-size: 1.3rem; }
 .footer-tagline { font-size: 0.9rem; line-height: 1.55; color: #6b7080; margin: 0; }
 
 .footer-github {

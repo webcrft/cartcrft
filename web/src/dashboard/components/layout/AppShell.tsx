@@ -49,7 +49,8 @@ export default function AppShell() {
         {/* Logo lockup — wordmark image + retained "Cartcrft" text */}
         <div className="px-4 h-14 border-b border-white/[0.07] flex items-center justify-between">
           <div className="flex items-center gap-2.5 min-w-0">
-            <img src="/logo-wordmark-dark.svg" alt="Cartcrft" className="h-6 w-auto" />
+            <img src="/logo.svg" alt="" className="h-7 w-7 flex-shrink-0" />
+            <span className="font-[var(--cc-font-display)] text-[1.15rem] font-bold tracking-[-0.04em] text-[var(--cc-text)]">cart<span className="text-[var(--cc-lime)]">crft</span></span>
             <span className="sr-only">Cartcrft</span>
           </div>
           <button
