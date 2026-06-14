@@ -1,52 +1,47 @@
+/* PricingCard — technical pricing tier (Agentic Terminal).
+ * Dark --surface, hairline, mono tier label + big Bricolage price. The popular
+ * tier gets a lime border + glow + a mono "// marker". All tokens. */
 .pricing-card {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
-  padding: 2rem;
-  border-radius: var(--r-xl);
+  gap: 1.4rem;
+  padding: 1.9rem;
+  border-radius: var(--r-md);
   border: 1px solid var(--line);
   background: var(--surface);
   box-shadow: var(--shadow-xs);
-  transition: border-color 0.2s ease, box-shadow 0.25s ease,
-    transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: border-color 0.22s ease, box-shadow 0.28s ease,
+    background 0.22s ease, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .pricing-card:hover {
-  border-color: color-mix(in srgb, var(--brand) 30%, var(--line));
-  box-shadow: var(--shadow-lg);
+  border-color: color-mix(in srgb, var(--brand) 55%, var(--line));
+  background: color-mix(in srgb, var(--brand) 4%, var(--surface));
+  box-shadow: var(--glow-brand);
   transform: translateY(-3px);
 }
 
 .pricing-card--highlighted {
-  border-color: color-mix(in srgb, var(--brand) 55%, var(--line));
-  box-shadow: var(--shadow-md), 0 0 0 1px color-mix(in srgb, var(--brand) 30%, transparent),
-    0 18px 48px color-mix(in srgb, var(--brand) 18%, transparent);
+  border-color: color-mix(in srgb, var(--brand) 60%, var(--line));
+  box-shadow: var(--glow-brand), inset 0 0 0 1px color-mix(in srgb, var(--brand) 18%, transparent);
 }
 
 .pricing-card--highlighted:hover {
   border-color: var(--brand);
-  box-shadow: var(--shadow-lg), 0 0 0 1px color-mix(in srgb, var(--brand) 40%, transparent),
-    0 22px 56px color-mix(in srgb, var(--brand) 22%, transparent);
+  box-shadow: var(--glow-brand), inset 0 0 0 1px color-mix(in srgb, var(--brand) 30%, transparent);
 }
 
-.pricing-card .popular-badge {
+/* Mono "// most popular" marker — not a gradient pill */
+.pricing-card .popular-marker {
   position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%) translateY(-50%);
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  background: var(--brand);
-  color: var(--brand-ink);
-  font-size: 0.72rem;
-  font-weight: 650;
-  padding: 0.32rem 0.85rem;
-  border-radius: var(--r-pill);
-  white-space: nowrap;
-  letter-spacing: 0.01em;
-  box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  top: 0.9rem;
+  right: 1.1rem;
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
+  color: var(--brand);
 }
 
 .pricing-card .card-header {
@@ -56,11 +51,12 @@
 }
 
 .pricing-card .tier-name {
-  font-size: 0.78rem;
-  font-weight: 650;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 500;
   color: var(--ink-muted);
   text-transform: uppercase;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.12em;
 }
 
 .pricing-card .tier-price {
@@ -70,15 +66,17 @@
 }
 
 .pricing-card .price-amount {
-  font-size: 2.5rem;
-  font-weight: 760;
+  font-family: var(--font-display);
+  font-size: 2.6rem;
+  font-weight: 700;
   color: var(--ink);
   letter-spacing: -0.04em;
   line-height: 1;
 }
 
 .pricing-card .price-sub {
-  font-size: 0.9rem;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
   color: var(--ink-muted);
 }
 
@@ -97,13 +95,15 @@
   flex-direction: column;
   gap: 0.7rem;
   flex: 1;
+  padding-top: 1.4rem;
+  border-top: 1px solid var(--line);
 }
 
 .pricing-card .feature-item {
   display: flex;
   align-items: flex-start;
   gap: 0.6rem;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   color: var(--ink-body);
   line-height: 1.45;
 }
@@ -112,13 +112,11 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.1rem;
-  height: 1.1rem;
-  border-radius: 50%;
-  background: var(--brand-tint);
+  width: 1.05rem;
+  height: 1.05rem;
   color: var(--brand);
   flex-shrink: 0;
-  margin-top: 0.08rem;
+  margin-top: 0.1rem;
 }
 
 .pricing-card .cta-btn {
@@ -141,24 +139,23 @@
 .pricing-card .cta-btn--primary {
   background: var(--brand);
   color: var(--brand-ink);
-  box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  font-weight: 700;
 }
 
 .pricing-card .cta-btn--primary:hover {
-  background: var(--brand-strong);
-  box-shadow: var(--shadow-brand);
+  background: var(--brand-bright);
+  box-shadow: var(--glow-brand);
   transform: translateY(-1px);
 }
 
 .pricing-card .cta-btn--secondary {
-  background: var(--surface);
+  background: transparent;
   color: var(--ink);
   border-color: var(--line-strong);
-  box-shadow: var(--shadow-xs);
 }
 
 .pricing-card .cta-btn--secondary:hover {
-  border-color: color-mix(in srgb, var(--brand) 45%, var(--line-strong));
+  border-color: var(--brand);
+  color: var(--ink);
   transform: translateY(-1px);
-  box-shadow: var(--shadow-sm);
 }

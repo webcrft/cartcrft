@@ -1,15 +1,67 @@
+/**
+ * Super-admin design tokens — "Agentic Terminal" (operator god-mode variant).
+ *
+ * Same warm near-black canvas + electric-lime signature as the rest of the
+ * product, but the operator console runs a slightly COOLER / darker "steel"
+ * chrome (graphite sidebar, steel surfaces) so operators always know they are
+ * inside the hardened god-mode console — distinct from the merchant dashboard.
+ *
+ * Fonts (Bricolage Grotesque / Hanken Grotesk / JetBrains Mono) are loaded
+ * globally in index.html. Vars are consumed from Tailwind via arbitrary values,
+ * e.g. bg-[var(--cc-steel)], text-[var(--cc-ink)], ring-[var(--cc-lime)].
+ */
+
+:root {
+  /* — Signature: electric lime (everyday accent) — */
+  --cc-lime: #b5ff2e;
+  --cc-lime-strong: #9bee1c;
+  --cc-lime-bright: #ccff63;
+  --cc-lime-ink: #0c0d0a; /* ink text on a lime fill */
+
+  /* — Canvas — warm near-black, with a cooler steel for operator chrome — */
+  --cc-ink: #0c0d0a; /* warm near-black canvas */
+  --cc-steel: #0a0c10; /* cooler graphite — sidebar / operator chrome */
+  --cc-steel-2: #0d0f14; /* slightly lifted steel */
+  --cc-surface: #15160f; /* cards (warm) */
+  --cc-surface-steel: #11131a; /* steel-tinted card variant */
+  --cc-surface-2: #1c1e13;
+
+  /* — Ink (off-white on dark) — */
+  --cc-text: #eceae0; /* headings / primary */
+  --cc-text-body: #b6b6aa; /* body copy */
+  --cc-text-muted: #85867a; /* secondary */
+  --cc-text-subtle: #5d5e53; /* labels / captions */
+
+  /* — Hairlines — */
+  --cc-line: rgba(255, 255, 255, 0.07);
+  --cc-line-strong: rgba(255, 255, 255, 0.12);
+
+  /* — Reserved semantic colours — */
+  --cc-amber: #f5b842; /* warnings only (LOCKED / IP_BLOCKED / operator banner) */
+  --cc-red: #ff5a52; /* destructive only (takedown / suspend) */
+  --cc-green: #6ee787; /* healthy / restore */
+
+  /* — Type (loaded globally) — */
+  --cc-font-display: 'Bricolage Grotesque', ui-sans-serif, Georgia, serif;
+  --cc-font-sans: 'Hanken Grotesk', ui-sans-serif, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
+  --cc-font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', 'Cascadia Code', monospace;
+
+  color-scheme: dark;
+}
+
 *, *::before, *::after { box-sizing: border-box; }
+
 body {
   margin: 0;
-  background: #080a0f;
-  color: #e2e8f0;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  font-feature-settings: 'cv11', 'ss01';
-  letter-spacing: -0.011em;
+  background: var(--cc-ink);
+  color: var(--cc-text);
+  font-family: var(--cc-font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
 }
+
 h1, h2, h3, h4 {
-  letter-spacing: -0.022em;
+  font-family: var(--cc-font-display);
+  letter-spacing: -0.02em;
 }

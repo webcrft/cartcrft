@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <!-- Main hexagonal frame -->
+  <path d="M100 20 L170 60 L170 140 L100 180 L30 140 L30 60 Z" 
+        fill="#2563eb" 
+        stroke="none"/>
+  
+  <!-- Inner geometric web (simplified) -->
+  <path d="M100 40 L100 160 M45 70 L155 130 M155 70 L45 130" 
+        fill="none" 
+        stroke="white" 
+        stroke-width="12" 
+        stroke-linecap="round"/>
+  
+  <!-- Central node -->
+  <circle cx="100" cy="100" r="20" fill="white"/>
+</svg>

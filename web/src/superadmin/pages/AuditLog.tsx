@@ -98,9 +98,9 @@ export default function AuditLog() {
           value={actionFilter}
           onChange={e => { setActionFilter(e.target.value); setPage(1) }}
           placeholder="Filter by action (e.g. takedown, login)..."
-          className="flex-1 rounded-lg border border-white/[0.08] bg-slate-800/60 px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-600 focus:border-white/20 focus:outline-none transition"
+          className="flex-1 rounded-md border border-white/[0.08] bg-white/[0.02] px-3 py-2.5 text-sm text-[var(--cc-text)] placeholder:text-[var(--cc-text-subtle)] focus:border-[var(--cc-lime)]/50 focus:outline-none focus:ring-1 focus:ring-[var(--cc-lime)]/40 transition"
         />
-        <div className="text-xs text-slate-500 self-center whitespace-nowrap">
+        <div className="font-mono text-[11px] text-[var(--cc-text-muted)] self-center whitespace-nowrap tabular-nums">
           {total.toLocaleString()} entries
         </div>
       </div>
@@ -125,38 +125,38 @@ export default function AuditLog() {
             <tbody>
               {entries.map(entry => (
                 <React.Fragment key={entry.id}>
-                  <tr className="border-t border-white/[0.03] hover:bg-white/[0.02]">
+                  <tr className="border-t border-white/[0.04] hover:bg-white/[0.02]">
                     <Td>
                       <span
-                        className="text-[11px] text-slate-500 whitespace-nowrap"
+                        className="font-mono text-[11px] text-[var(--cc-text-muted)] whitespace-nowrap"
                         title={new Date(entry.created_at).toLocaleString()}
                       >
                         {fmtTimestamp(entry.created_at)}
                       </span>
                     </Td>
                     <Td>
-                      <p className="text-xs text-slate-300">{entry.admin_email}</p>
-                      <p className="text-[11px] text-slate-600 font-mono">{entry.admin_id?.slice(0, 8)}</p>
+                      <p className="text-xs text-[var(--cc-text-body)]">{entry.admin_email}</p>
+                      <p className="text-[11px] text-[var(--cc-text-subtle)] font-mono">{entry.admin_id?.slice(0, 8)}</p>
                     </Td>
                     <Td>
                       <Badge color={actionColor(entry.action)}>{entry.action}</Badge>
                     </Td>
                     <Td>
                       {entry.target_type && (
-                        <p className="text-xs text-slate-400">{entry.target_type}</p>
+                        <p className="text-xs text-[var(--cc-text-muted)]">{entry.target_type}</p>
                       )}
                       {entry.target_id && (
-                        <p className="text-[11px] text-slate-600 font-mono">{entry.target_id?.slice(0, 16)}</p>
+                        <p className="text-[11px] text-[var(--cc-text-subtle)] font-mono">{entry.target_id?.slice(0, 16)}</p>
                       )}
                     </Td>
                     <Td>
-                      <span className="text-[11px] text-slate-600 font-mono">{entry.ip || '—'}</span>
+                      <span className="text-[11px] text-[var(--cc-text-subtle)] font-mono">{entry.ip || '—'}</span>
                     </Td>
                     <Td>
                       {entry.metadata && Object.keys(entry.metadata).length > 0 && (
                         <button
                           onClick={() => setExpandedId(expandedId === entry.id ? null : entry.id)}
-                          className="text-[11px] text-slate-500 hover:text-slate-300 transition"
+                          className="font-mono text-[11px] text-[var(--cc-text-muted)] hover:text-[var(--cc-lime)] transition"
                         >
                           {expandedId === entry.id ? 'hide' : 'details'}
                         </button>
@@ -164,9 +164,9 @@ export default function AuditLog() {
                     </Td>
                   </tr>
                   {expandedId === entry.id && entry.metadata && (
-                    <tr className="border-t border-white/[0.03] bg-slate-900/40">
+                    <tr className="border-t border-white/[0.04] bg-black/20">
                       <td colSpan={6} className="px-5 py-3">
-                        <pre className="text-[11px] text-slate-400 bg-slate-950/60 rounded-lg p-3 max-h-96 overflow-auto font-mono leading-relaxed">
+                        <pre className="text-[11px] text-[var(--cc-text-body)] bg-[var(--cc-steel)]/80 border border-white/[0.05] rounded-md p-3 max-h-96 overflow-auto font-mono leading-relaxed">
                           {JSON.stringify(entry.metadata, null, 2)}
                         </pre>
                       </td>
@@ -187,7 +187,7 @@ export default function AuditLog() {
               >
                 Previous
               </Btn>
-              <span className="text-xs text-slate-500">
+              <span className="font-mono text-[11px] text-[var(--cc-text-muted)] tabular-nums">
                 Page {page} of {totalPages}
               </span>
               <Btn

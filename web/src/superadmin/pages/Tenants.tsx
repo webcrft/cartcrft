@@ -142,8 +142,8 @@ export default function Tenants() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Step 1: Select store */}
-        <div className="rounded-xl border border-white/[0.07] bg-slate-900/60 p-5">
-          <h3 className="text-sm font-semibold text-slate-200 mb-4">1. Select store</h3>
+        <div className="rounded-lg border border-white/[0.07] bg-[var(--cc-surface)] p-5">
+          <h3 className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--cc-text-muted)] mb-4">1. Select store</h3>
           <FormInput
             value={storeSearch}
             onChange={setStoreSearch}
@@ -158,16 +158,16 @@ export default function Tenants() {
                 <button
                   key={s.id}
                   onClick={() => setSelectedStore(s)}
-                  className={`w-full text-left rounded-lg px-3 py-2.5 transition ${
+                  className={`w-full text-left rounded-md px-3 py-2.5 transition ${
                     selectedStore?.id === s.id
-                      ? 'bg-violet-600/15 border border-violet-500/30'
+                      ? 'bg-[var(--cc-lime)]/12 border border-[var(--cc-lime)]/30'
                       : 'hover:bg-white/[0.03] border border-transparent'
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs font-medium text-slate-200">{s.name}</p>
-                      <p className="text-[11px] text-slate-600 font-mono">{s.id}</p>
+                      <p className="text-xs font-medium text-[var(--cc-text-body)]">{s.name}</p>
+                      <p className="text-[11px] text-[var(--cc-text-subtle)] font-mono">{s.id}</p>
                     </div>
                     <Badge color={s.status === 'active' ? 'emerald' : s.status === 'suspended' ? 'amber' : 'red'}>
                       {s.status}
@@ -176,23 +176,23 @@ export default function Tenants() {
                 </button>
               ))}
               {filteredStores.length === 0 && (
-                <p className="text-xs text-slate-600 text-center py-4">No stores found</p>
+                <p className="text-xs text-[var(--cc-text-muted)] text-center py-4">No stores found</p>
               )}
             </div>
           )}
         </div>
 
         {/* Step 2: Choose action + reason */}
-        <div className="rounded-xl border border-white/[0.07] bg-slate-900/60 p-5">
-          <h3 className="text-sm font-semibold text-slate-200 mb-4">2. Choose action</h3>
+        <div className="rounded-lg border border-white/[0.07] bg-[var(--cc-surface)] p-5">
+          <h3 className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--cc-text-muted)] mb-4">2. Choose action</h3>
 
           {!selectedStore ? (
-            <p className="text-xs text-slate-600 py-4 text-center">Select a store first</p>
+            <p className="text-xs text-[var(--cc-text-muted)] py-4 text-center">Select a store first</p>
           ) : (
             <div className="space-y-4">
-              <div className="rounded-lg bg-slate-800/60 border border-white/[0.06] px-3 py-2.5">
-                <p className="text-xs font-medium text-slate-200">{selectedStore.name}</p>
-                <p className="text-[11px] text-slate-500 font-mono">{selectedStore.id}</p>
+              <div className="rounded-md bg-white/[0.03] border border-white/[0.06] px-3 py-2.5">
+                <p className="text-xs font-medium text-[var(--cc-text-body)]">{selectedStore.name}</p>
+                <p className="text-[11px] text-[var(--cc-text-muted)] font-mono">{selectedStore.id}</p>
               </div>
 
               {/* Action selector */}
@@ -203,9 +203,9 @@ export default function Tenants() {
                     <button
                       key={action}
                       onClick={() => setSelectedAction(action)}
-                      className={`w-full text-left rounded-lg px-3 py-3 border transition ${
+                      className={`w-full text-left rounded-md px-3 py-3 border transition ${
                         selectedAction === action
-                          ? 'border-white/20 bg-white/[0.04]'
+                          ? 'border-white/20 bg-white/[0.05]'
                           : 'border-transparent hover:border-white/10 hover:bg-white/[0.02]'
                       }`}
                     >
@@ -213,7 +213,7 @@ export default function Tenants() {
                         {meta.icon}
                         <span className={`text-xs font-semibold ${meta.color}`}>{meta.label}</span>
                       </div>
-                      <p className="text-[11px] text-slate-500">{meta.description}</p>
+                      <p className="text-[11px] text-[var(--cc-text-muted)]">{meta.description}</p>
                     </button>
                   )
                 })}
@@ -233,7 +233,7 @@ export default function Tenants() {
                       A reason is required before you can continue.
                     </p>
                   ) : (
-                    <p className="text-[11px] text-slate-600 mt-1">
+                    <p className="text-[11px] text-[var(--cc-text-muted)] mt-1">
                       This reason is permanently recorded in the audit log.
                     </p>
                   )}
@@ -269,14 +269,14 @@ export default function Tenants() {
               <p className="text-xs text-red-400/70">{ACTION_META[selectedAction].description}</p>
             </div>
 
-            <div className="text-xs text-slate-400 space-y-1">
-              <p><span className="text-slate-500">Store:</span> {selectedStore.name}</p>
-              <p className="font-mono"><span className="text-slate-500">ID:</span> {selectedStore.id}</p>
-              <p><span className="text-slate-500">Reason:</span> {reason}</p>
+            <div className="text-xs text-[var(--cc-text-body)] space-y-1">
+              <p><span className="text-[var(--cc-text-muted)]">Store:</span> {selectedStore.name}</p>
+              <p className="font-mono"><span className="text-[var(--cc-text-muted)]">ID:</span> {selectedStore.id}</p>
+              <p><span className="text-[var(--cc-text-muted)]">Reason:</span> {reason}</p>
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1.5">
+              <label className="block font-mono text-[10px] font-medium uppercase tracking-wider text-[var(--cc-text-muted)] mb-1.5">
                 To confirm, type the exact phrase below:
               </label>
               <div className="mb-2 rounded-lg border border-red-500/20 bg-red-500/[0.06] px-3 py-2 select-all">
@@ -290,7 +290,7 @@ export default function Tenants() {
                 onChange={e => setConfirmText(e.target.value)}
                 placeholder={confirmRequired}
                 aria-label={`Type ${confirmRequired} to confirm`}
-                className={`w-full rounded-lg border bg-slate-800/60 px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 transition font-mono ${
+                className={`w-full rounded-md border bg-white/[0.02] px-3 py-2.5 text-sm text-[var(--cc-text)] placeholder:text-[var(--cc-text-subtle)] focus:outline-none focus:ring-2 transition font-mono ${
                   confirmOk
                     ? 'border-emerald-500/40 focus:ring-emerald-400/40'
                     : 'border-red-500/30 focus:border-red-400 focus:ring-red-400/40'

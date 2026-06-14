@@ -9,6 +9,14 @@
  */
 @import "tailwindcss";
 
+/* Map Tailwind font utilities to the globally-loaded brand families so
+ * font-sans / font-display / font-mono are consistent across the console. */
+@theme {
+  --font-sans: 'Hanken Grotesk', ui-sans-serif, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
+  --font-display: 'Bricolage Grotesque', ui-sans-serif, Georgia, serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', 'Cascadia Code', monospace;
+}
+
 @layer base {
   #superadmin-root *,
   #superadmin-root *::before,
@@ -16,14 +24,30 @@
     box-sizing: border-box;
     border-width: 0;
     border-style: solid;
-    border-color: theme(--color-slate-700);
+    border-color: var(--cc-line);
   }
 
   #superadmin-root {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    font-feature-settings: 'cv11', 'ss01';
-    letter-spacing: -0.011em;
+    font-family: var(--cc-font-sans);
+    color: var(--cc-text);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+
+  #superadmin-root h1,
+  #superadmin-root h2,
+  #superadmin-root h3,
+  #superadmin-root h4 {
+    font-family: var(--cc-font-display);
+    letter-spacing: -0.02em;
+  }
 }
+
+/* Thin technical scrollbars to match the operator-console feel. */
+#superadmin-root ::-webkit-scrollbar { width: 9px; height: 9px; }
+#superadmin-root ::-webkit-scrollbar-track { background: transparent; }
+#superadmin-root ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+}
+#superadmin-root ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.14); }

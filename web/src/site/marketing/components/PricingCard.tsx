@@ -34,7 +34,9 @@ export default function PricingCard({
   const ctaClass = `cta-btn ${highlighted ? 'cta-btn--primary' : 'cta-btn--secondary'}`
   return (
     <div className={`pricing-card${highlighted ? ' pricing-card--highlighted' : ''}`}>
-      {highlighted && <div className="popular-badge">{badge ?? 'Most popular'}</div>}
+      {highlighted && (
+        <div className="popular-marker">{`// ${(badge ?? 'most popular').toLowerCase()}`}</div>
+      )}
 
       <div className="card-header">
         <h3 className="tier-name">{name}</h3>

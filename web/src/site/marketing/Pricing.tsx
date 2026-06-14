@@ -4,6 +4,7 @@ import SiteLayout from '../SiteLayout'
 import { useDocumentMeta } from '../useDocumentMeta'
 import PricingCard, { type PricingCardProps } from './components/PricingCard'
 import ComparisonTable, { type ComparisonRow } from './components/ComparisonTable'
+import PricingCalculator from './components/PricingCalculator'
 import './Pricing.css'
 
 /**
@@ -339,9 +340,18 @@ export default function Pricing() {
 
         {/* ---- Page header ------------------------------------------------------ */}
         <section className="page-header">
+          <div className="page-header-fx" aria-hidden="true">
+            <div className="page-header-grid cc-grid-bg" />
+          </div>
+          <div className="cc-grain" aria-hidden="true" />
           <div className="page-header-inner">
-            <div className="header-badge">MIT open source · 0% GMV rake · BYO keys</div>
-            <h1>No Shopify tax. Ever.</h1>
+            <div className="header-badge">
+              <span className="ey-b">[</span>
+              <span className="ey-dot" />
+              MIT · 0% GMV rake · BYO keys
+              <span className="ey-b">]</span>
+            </div>
+            <h1>No Shopify <span className="hl">tax</span>. Ever.</h1>
             <p>
               Self-host free. Or pay a flat monthly fee for managed infra.
               Either way, Cartcrft takes <strong>zero percent</strong> of your revenue.
@@ -366,6 +376,11 @@ export default function Pricing() {
               />
             ))}
           </div>
+        </section>
+
+        {/* ---- Interactive grounded cost calculator ---------------------------- */}
+        <section className="calc-section" data-reveal style={{ padding: 'clamp(2rem, 5vw, 4.5rem) var(--gutter)' }}>
+          <PricingCalculator />
         </section>
 
         {/* ---- Where your money goes -------------------------------------------- */}

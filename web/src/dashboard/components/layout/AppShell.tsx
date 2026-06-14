@@ -30,7 +30,7 @@ export default function AppShell() {
   }
 
   return (
-    <div className="flex h-screen bg-slate-950 text-white overflow-hidden">
+    <div className="flex h-screen bg-[var(--cc-bg)] text-[var(--cc-text)] overflow-hidden">
       {/* Mobile backdrop — only when the sidebar is open under md */}
       {sidebarOpen && (
         <div
@@ -42,19 +42,19 @@ export default function AppShell() {
 
       {/* Sidebar — static on desktop, fixed overlay on mobile */}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 w-56 flex-shrink-0 flex flex-col border-r border-white/[0.06] bg-slate-950
+        className={`fixed inset-y-0 left-0 z-40 w-56 flex-shrink-0 flex flex-col border-r border-white/[0.07] bg-[var(--cc-bg-subtle)]
           transform transition-transform duration-200 md:static md:translate-x-0
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
       >
-        {/* Logo */}
-        <div className="px-4 h-14 border-b border-white/[0.06] flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <img src="/logo.svg" alt="" aria-hidden="true" className="h-7 w-7 rounded-lg shadow-sm shadow-violet-950/40" />
-            <span className="text-sm font-bold text-white tracking-tight">Cartcrft</span>
+        {/* Logo lockup — wordmark image + retained "Cartcrft" text */}
+        <div className="px-4 h-14 border-b border-white/[0.07] flex items-center justify-between">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <img src="/logo-wordmark-dark.svg" alt="Cartcrft" className="h-6 w-auto" />
+            <span className="sr-only">Cartcrft</span>
           </div>
           <button
             onClick={() => setSidebarOpen(false)}
-            className="md:hidden rounded-lg p-1 text-slate-500 hover:text-white hover:bg-white/[0.06] transition"
+            className="md:hidden rounded-lg p-1 text-[var(--cc-muted)] hover:text-[var(--cc-text)] hover:bg-white/[0.06] transition"
             aria-label="Close menu"
           >
             <X size={16} />
@@ -62,26 +62,26 @@ export default function AppShell() {
         </div>
 
         {/* Store switcher */}
-        <div className="px-3 py-3 border-b border-white/[0.06] relative">
+        <div className="px-3 py-3 border-b border-white/[0.07] relative">
           <button
             onClick={() => setShowStoreMenu(s => !s)}
-            className="w-full flex items-center justify-between gap-2 rounded-lg border border-white/[0.06] bg-white/[0.02] px-2.5 py-2 text-xs font-medium text-slate-200 hover:bg-white/[0.05] hover:border-white/10 transition"
+            className="w-full flex items-center justify-between gap-2 rounded-lg border border-white/[0.07] bg-[var(--cc-surface)] px-2.5 py-2 text-xs font-medium text-[var(--cc-text)] hover:bg-[var(--cc-surface-2)] hover:border-white/15 transition"
           >
             <div className="flex items-center gap-2 min-w-0">
-              <div className="h-5 w-5 rounded bg-gradient-to-br from-violet-500 to-indigo-600 flex-shrink-0 flex items-center justify-center text-[10px] font-bold text-white">
+              <div className="h-5 w-5 rounded bg-[var(--cc-lime)] flex-shrink-0 flex items-center justify-center font-mono text-[10px] font-bold text-[var(--cc-ink)]">
                 {(activeStore?.name ?? '·').charAt(0).toUpperCase()}
               </div>
               <span className="truncate">{activeStore?.name ?? 'No store'}</span>
             </div>
-            <ChevronDown size={14} className="text-slate-500 flex-shrink-0" />
+            <ChevronDown size={14} className="text-[var(--cc-muted)] flex-shrink-0" />
           </button>
           {showStoreMenu && (
-            <div className="absolute left-3 right-3 top-full mt-1 z-50 rounded-xl border border-white/[0.08] bg-slate-900 shadow-xl overflow-hidden">
+            <div className="absolute left-3 right-3 top-full mt-1 z-50 rounded-lg border border-white/[0.08] bg-[var(--cc-surface)] shadow-xl overflow-hidden">
               {stores.map(s => (
                 <button
                   key={s.id}
                   onClick={() => { setActiveStore(s); setShowStoreMenu(false) }}
-                  className={`w-full text-left px-3 py-2.5 text-xs transition hover:bg-white/[0.04] ${s.id === activeStore?.id ? 'text-violet-400' : 'text-slate-300'}`}
+                  className={`w-full text-left px-3 py-2.5 text-xs transition hover:bg-white/[0.04] ${s.id === activeStore?.id ? 'text-[var(--cc-lime)]' : 'text-[var(--cc-body)]'}`}
                 >
                   {s.name}
                 </button>
@@ -89,7 +89,7 @@ export default function AppShell() {
               {/* Always show "Create store" in the switcher dropdown */}
               <button
                 onClick={() => { setShowCreateStore(true); setShowStoreMenu(false) }}
-                className="w-full text-left px-3 py-2.5 text-xs text-violet-400 hover:bg-white/[0.04] transition border-t border-white/[0.06]"
+                className="w-full text-left px-3 py-2.5 text-xs text-[var(--cc-lime)] hover:bg-white/[0.04] transition border-t border-white/[0.07]"
               >
                 + Create new store
               </button>
@@ -102,7 +102,7 @@ export default function AppShell() {
           {NAV_SECTIONS.map(section => (
             <div key={section.label}>
               {section.label && (
-                <p className="px-2.5 mb-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+                <p className="px-2.5 mb-1.5 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--cc-subtle)]">
                   {section.label}
                 </p>
               )}
@@ -116,15 +116,15 @@ export default function AppShell() {
                     className={({ isActive }) =>
                       `group relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium transition-colors
                        ${isActive
-                         ? 'bg-violet-500/10 text-violet-200 ring-1 ring-inset ring-violet-500/20'
-                         : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'}`
+                         ? 'bg-[var(--cc-lime)]/10 text-[var(--cc-lime)] ring-1 ring-inset ring-[var(--cc-lime)]/20'
+                         : 'text-[var(--cc-muted)] hover:text-[var(--cc-text)] hover:bg-white/[0.04]'}`
                     }
                   >
                     {({ isActive }) => (
                       <>
-                        <span className={`absolute left-0 top-1/2 -translate-y-1/2 h-4 w-0.5 rounded-full bg-violet-400 transition-opacity ${isActive ? 'opacity-100' : 'opacity-0'}`} />
+                        <span className={`absolute left-0 top-1/2 -translate-y-1/2 h-4 w-0.5 rounded-full bg-[var(--cc-lime)] transition-opacity ${isActive ? 'opacity-100' : 'opacity-0'}`} />
                         {item.icon && (
-                          <span className={isActive ? 'text-violet-300' : 'text-slate-500 group-hover:text-slate-300'}>
+                          <span className={isActive ? 'text-[var(--cc-lime)]' : 'text-[var(--cc-subtle)] group-hover:text-[var(--cc-body)]'}>
                             <item.icon size={14} />
                           </span>
                         )}
@@ -139,10 +139,10 @@ export default function AppShell() {
         </nav>
 
         {/* Footer */}
-        <div className="px-3 py-3 border-t border-white/[0.06]">
+        <div className="px-3 py-3 border-t border-white/[0.07]">
           <button
             onClick={onSignOutClick}
-            className="w-full text-left px-2.5 py-2 text-xs text-slate-500 hover:text-red-400 transition rounded-lg hover:bg-white/[0.04]"
+            className="w-full text-left px-2.5 py-2 font-mono text-[11px] uppercase tracking-wider text-[var(--cc-subtle)] hover:text-red-400 transition rounded-lg hover:bg-white/[0.04]"
           >
             Sign out
           </button>
@@ -150,12 +150,12 @@ export default function AppShell() {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-y-auto bg-slate-950 bg-[radial-gradient(60rem_40rem_at_70%_-10%,rgba(91,89,230,0.06),transparent)]">
+      <main className="flex-1 overflow-y-auto bg-[var(--cc-bg)] bg-[radial-gradient(60rem_40rem_at_75%_-10%,rgba(181,255,46,0.05),transparent)]">
         {/* Mobile top bar with hamburger — hidden on desktop */}
-        <div className="md:hidden sticky top-0 z-20 flex items-center gap-3 border-b border-white/[0.06] bg-slate-950/90 backdrop-blur px-4 py-3">
+        <div className="md:hidden sticky top-0 z-20 flex items-center gap-3 border-b border-white/[0.07] bg-[var(--cc-bg)]/90 backdrop-blur px-4 py-3">
           <button
             onClick={() => setSidebarOpen(true)}
-            className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-medium text-slate-300 hover:text-white hover:bg-white/[0.06] transition"
+            className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-medium text-[var(--cc-body)] hover:text-[var(--cc-text)] hover:bg-white/[0.06] transition"
             aria-label="Open menu"
           >
             <Menu size={18} />
@@ -165,7 +165,7 @@ export default function AppShell() {
         <div className="max-w-5xl mx-auto px-6 py-6">
           {!activeStore ? (
             <div className="flex flex-col items-center justify-center py-32 gap-4">
-              <p className="text-slate-400 text-sm">
+              <p className="text-[var(--cc-muted)] text-sm">
                 {stores.length === 0
                   ? 'No stores found. Create your first store to get started.'
                   : 'Select a store to continue.'}

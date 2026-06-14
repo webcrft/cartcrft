@@ -1,10 +1,13 @@
-/* ── Draft banner ─────────────────────────────────────────────────────────── */
+/* Local "caution" accent (draft/notice). Restrained amber, tokens elsewhere. */
+.mk-legal { --amber: #ffc14d; }
+
+/* ── Draft banner (tasteful amber token notice) ───────────────────────────── */
 .mk-legal .draft-banner {
   display: flex;
   align-items: center;
   gap: 0.65rem;
-  background: color-mix(in srgb, #f59e0b 10%, var(--surface));
-  border-bottom: 1px solid color-mix(in srgb, #f59e0b 35%, var(--line));
+  background: color-mix(in srgb, var(--amber) 9%, var(--surface));
+  border-bottom: 1px solid color-mix(in srgb, var(--amber) 30%, var(--line));
   color: var(--ink-body);
   padding: 0.8rem var(--gutter);
   font-size: 0.875rem;
@@ -14,29 +17,19 @@
 
 .mk-legal .draft-icon {
   flex-shrink: 0;
-  color: #b45309;
-}
-
-@media (prefers-color-scheme: dark) {
-  .mk-legal .draft-icon { color: #fbbf24; }
+  color: var(--amber);
 }
 
 .mk-legal .draft-badge {
   flex-shrink: 0;
-  background: color-mix(in srgb, #f59e0b 18%, transparent);
-  color: #92400e;
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  font-family: var(--font-mono);
+  background: color-mix(in srgb, var(--amber) 16%, transparent);
+  color: var(--amber);
+  font-size: 0.64rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
   padding: 0.22rem 0.55rem;
   border-radius: var(--r-xs);
-}
-
-@media (prefers-color-scheme: dark) {
-  .mk-legal .draft-badge {
-    background: color-mix(in srgb, #fbbf24 20%, transparent);
-    color: #fcd34d;
-  }
 }
 
 .mk-legal .draft-text {
@@ -63,9 +56,11 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: 0.82rem;
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  letter-spacing: 0.02em;
   color: var(--ink-subtle);
-  margin-bottom: 1rem;
+  margin-bottom: 1.1rem;
 }
 
 .mk-legal .legal-breadcrumb a {
@@ -77,16 +72,18 @@
 .mk-legal .legal-breadcrumb a:hover { text-decoration: underline; }
 
 .mk-legal .legal-header h1 {
-  font-size: clamp(1.9rem, 3.5vw, 2.5rem);
-  font-weight: 740;
-  letter-spacing: -0.035em;
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 3.8vw, 2.8rem);
+  font-weight: 700;
+  letter-spacing: -0.04em;
   color: var(--ink);
-  margin-bottom: 0.5rem;
-  line-height: 1.1;
+  margin-bottom: 0.55rem;
+  line-height: 1.04;
 }
 
 .mk-legal .last-updated {
-  font-size: 0.875rem;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
   color: var(--ink-muted);
 }
 
@@ -191,10 +188,11 @@
 }
 
 .mk-legal .legal-nav h2 {
-  font-size: 0.72rem;
-  font-weight: 650;
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
   color: var(--ink-subtle);
   margin-bottom: 0.75rem;
 }
@@ -209,7 +207,8 @@
 }
 
 .mk-legal .legal-nav a {
-  font-size: 0.875rem;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
   color: var(--ink-muted);
   text-decoration: none;
   display: block;
@@ -230,10 +229,12 @@
   box-shadow: inset 2px 0 0 var(--brand);
 }
 
-/* ── Shared notice box ────────────────────────────────────────────────────── */
+/* ── Shared notice box (lime-tinted, with a hairline lime rule) ───────────── */
 .mk-legal .notice-box {
-  background: color-mix(in srgb, #f59e0b 8%, var(--surface));
-  border: 1px solid color-mix(in srgb, #f59e0b 32%, var(--line));
+  position: relative;
+  background: var(--brand-tint);
+  border: 1px solid color-mix(in srgb, var(--brand) 28%, var(--line));
+  border-left: 2px solid var(--brand);
   border-radius: var(--r-md);
   padding: 1rem 1.25rem;
   margin-bottom: 2rem;
@@ -270,7 +271,10 @@
 .mk-legal .legal-content tr:last-child td { border-bottom: none; }
 
 .mk-legal .legal-content th {
-  background: var(--bg-subtle);
-  font-weight: 650;
+  background: var(--bg-sunken);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
   color: var(--ink);
 }

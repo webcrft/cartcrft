@@ -71,16 +71,16 @@ export default function Dashboard() {
           return (
             <div
               key={card.label}
-              className="group relative overflow-hidden rounded-xl border border-white/[0.08] bg-slate-900/40 shadow-sm shadow-black/20 p-5 transition-colors hover:border-violet-500/20"
+              className="group relative overflow-hidden rounded-lg border border-white/[0.07] bg-[var(--cc-surface)] p-5 transition-colors hover:border-[var(--cc-lime)]/25"
             >
-              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-violet-500/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--cc-lime)]/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
               <div className="flex items-center justify-between">
-                <p className="text-xs font-medium text-slate-400">{card.label}</p>
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/10 text-violet-300 ring-1 ring-inset ring-violet-500/15">
+                <p className="font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-[var(--cc-muted)]">{card.label}</p>
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--cc-lime)]/10 text-[var(--cc-lime)] ring-1 ring-inset ring-[var(--cc-lime)]/20">
                   <Icon size={15} />
                 </span>
               </div>
-              <p className="mt-3 text-2xl font-bold tracking-tight tabular-nums text-slate-100">{card.value}</p>
+              <p style={{ fontFamily: 'var(--cc-font-display)' }} className="mt-3 text-2xl font-bold tracking-tight tabular-nums text-[var(--cc-text)]">{card.value}</p>
             </div>
           )
         })}
@@ -111,7 +111,7 @@ export default function Dashboard() {
                   const ful = statusBadgeProps(order.fulfillment_status, FULFILLMENT_MAP)
                   return (
                     <tr key={order.id} className="border-t border-white/[0.04] hover:bg-white/[0.02] transition">
-                      <Td><span className="font-mono text-violet-400">#{order.order_number}</span></Td>
+                      <Td><span className="font-mono text-[var(--cc-lime)]">#{order.order_number}</span></Td>
                       <Td className="text-slate-400">{new Date(order.created_at).toLocaleDateString()}</Td>
                       <Td className="text-slate-300">{(order.email as string | undefined) ?? '—'}</Td>
                       <Td><Badge color={fin.color}>{fin.label}</Badge></Td>

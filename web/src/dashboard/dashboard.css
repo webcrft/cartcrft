@@ -6,10 +6,60 @@
  *   - Disable Tailwind preflight globally to avoid resetting Starlight and
  *     marketing page styles. The dashboard wraps its entire tree in
  *     #dashboard-root so utility classes only affect that subtree in practice.
- *   - The dashboard already sets `body { margin:0; background:#020617 }` in
+ *   - The dashboard already sets `body { margin:0 }` + the warm-dark canvas in
  *     index.css, so we don't need preflight for the dashboard either.
+ *
+ * "Agentic Terminal" re-theme:
+ *   The admin SPA used an indigo/violet-on-slate look. Rather than touch every
+ *   CRUD page, we REMAP the Tailwind color scales those pages already use to the
+ *   terminal palette via @theme:
+ *     - violet-* / indigo-*  -> electric lime ramp (all accents become lime)
+ *     - slate-*              -> warm near-black + off-white ramp (canvas/text)
+ *   The high-leverage files (ui primitives, AppShell, Login, Dashboard) are also
+ *   hand-tuned, but this remap guarantees the long tail of pages stays on-palette.
+ *   Status hues (emerald/amber/red/blue/cyan) are left intact.
  */
 @import "tailwindcss";
+
+@theme {
+  /* — Signature electric lime — remaps every violet and indigo utility — */
+  --color-violet-50:  #f4ffe0;
+  --color-violet-100: #e8ffbf;
+  --color-violet-200: #ccff63;
+  --color-violet-300: #c2ff52;
+  --color-violet-400: #b5ff2e;
+  --color-violet-500: #b5ff2e;
+  --color-violet-600: #9bee1c;
+  --color-violet-700: #7ec015;
+  --color-violet-800: #5d8f10;
+  --color-violet-900: #3a5a0a;
+  --color-violet-950: #1d2e05;
+
+  --color-indigo-50:  #f4ffe0;
+  --color-indigo-100: #e8ffbf;
+  --color-indigo-200: #ccff63;
+  --color-indigo-300: #c2ff52;
+  --color-indigo-400: #b5ff2e;
+  --color-indigo-500: #b5ff2e;
+  --color-indigo-600: #9bee1c;
+  --color-indigo-700: #7ec015;
+  --color-indigo-800: #5d8f10;
+  --color-indigo-900: #3a5a0a;
+  --color-indigo-950: #1d2e05;
+
+  /* — Warm near-black canvas + off-white ink — remaps every slate-* utility — */
+  --color-slate-50:  #f7f6ef;
+  --color-slate-100: #eceae0;   /* primary text */
+  --color-slate-200: #d6d4c7;
+  --color-slate-300: #b6b6aa;   /* body */
+  --color-slate-400: #85867a;   /* muted */
+  --color-slate-500: #5d5e53;   /* subtle / captions */
+  --color-slate-600: #43453a;
+  --color-slate-700: #353826;   /* hairline strong */
+  --color-slate-800: #25271b;   /* hairline */
+  --color-slate-900: #16170f;   /* surface / cards */
+  --color-slate-950: #0c0d0a;   /* canvas */
+}
 
 @layer base {
   /*

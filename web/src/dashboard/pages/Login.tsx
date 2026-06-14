@@ -68,18 +68,21 @@ export default function Login() {
   }
 
   return (
-    <div className="relative min-h-screen bg-slate-950 flex items-center justify-center p-4 overflow-hidden">
-      {/* Ambient brand glow */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(40rem_30rem_at_50%_-5%,rgba(91,89,230,0.18),transparent)]" />
-      <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(30rem_30rem_at_80%_110%,rgba(79,70,229,0.10),transparent)]" />
+    <div className="relative min-h-screen bg-[var(--cc-bg)] flex items-center justify-center p-4 overflow-hidden">
+      {/* Ambient lime glow */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(40rem_30rem_at_50%_-5%,rgba(181,255,46,0.14),transparent)]" />
+      <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(30rem_30rem_at_80%_110%,rgba(87,224,255,0.07),transparent)]" />
       <div className="relative w-full max-w-md">
         <div className="flex flex-col items-center text-center mb-8">
-          <img src="/logo.svg" alt="Cartcrft" className="h-12 w-12 rounded-xl shadow-lg shadow-violet-950/50 ring-1 ring-white/10 mb-4" />
-          <h1 className="text-2xl font-bold tracking-tight text-white mb-1">Cartcrft Admin</h1>
-          <p className="text-sm text-slate-500">Sign in to manage your store</p>
+          <img src="/logo.svg" alt="Cartcrft" className="h-12 w-12 mb-4" />
+          <div className="font-mono text-[11px] font-medium uppercase tracking-[0.18em] text-[var(--cc-lime)] mb-2">
+            <span className="text-[var(--cc-subtle)]">[</span> admin console <span className="text-[var(--cc-subtle)]">]</span>
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight text-[var(--cc-text)] mb-1">Cartcrft Admin</h1>
+          <p className="text-sm text-[var(--cc-muted)]">Sign in to manage your store</p>
         </div>
-        <div className="rounded-2xl border border-white/[0.08] bg-slate-900/60 backdrop-blur-sm shadow-xl shadow-black/40 p-6">
-          <div className="flex rounded-lg border border-white/[0.08] bg-white/[0.02] p-1 mb-5">
+        <div className="rounded-lg border border-white/[0.07] bg-[var(--cc-surface)] shadow-xl shadow-black/40 p-6">
+          <div className="flex rounded-lg border border-white/[0.07] bg-[var(--cc-bg-sunken)] p-1 mb-5">
             {([
               ['password', 'Email & Password'],
               ['advanced', 'Advanced / CI'],
@@ -88,7 +91,7 @@ export default function Login() {
                 key={m}
                 type="button"
                 onClick={() => { setMode(m); setError('') }}
-                className={`flex-1 rounded-md py-2 text-xs font-semibold transition ${mode === m ? 'bg-gradient-to-b from-violet-500 to-violet-600 text-white shadow-sm ring-1 ring-inset ring-white/10' : 'text-slate-400 hover:text-white'}`}
+                className={`flex-1 rounded-md py-2 text-xs font-semibold transition ${mode === m ? 'bg-[var(--cc-lime)] text-[var(--cc-ink)] ring-1 ring-inset ring-white/10' : 'text-[var(--cc-muted)] hover:text-[var(--cc-text)]'}`}
               >
                 {label}
               </button>
@@ -98,25 +101,25 @@ export default function Login() {
           {mode === 'password' ? (
             <form onSubmit={handlePassword} className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1.5">Email</label>
+                <label className="block font-mono text-[10px] font-medium uppercase tracking-[0.1em] text-[var(--cc-muted)] mb-1.5">Email</label>
                 <input
                   type="email"
                   autoComplete="username"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   placeholder="you@company.com"
-                  className="w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2.5 text-sm text-white placeholder:text-slate-500 focus:border-violet-500/40 focus:outline-none focus:ring-1 focus:ring-violet-500/20 transition"
+                  className="w-full rounded-lg border border-white/[0.08] bg-[var(--cc-bg-sunken)] px-3 py-2.5 text-sm text-[var(--cc-text)] placeholder:text-[var(--cc-subtle)] focus:border-[var(--cc-lime)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--cc-lime)]/25 transition"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1.5">Password</label>
+                <label className="block font-mono text-[10px] font-medium uppercase tracking-[0.1em] text-[var(--cc-muted)] mb-1.5">Password</label>
                 <input
                   type="password"
                   autoComplete="current-password"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2.5 text-sm text-white placeholder:text-slate-500 focus:border-violet-500/40 focus:outline-none focus:ring-1 focus:ring-violet-500/20 transition"
+                  className="w-full rounded-lg border border-white/[0.08] bg-[var(--cc-bg-sunken)] px-3 py-2.5 text-sm text-[var(--cc-text)] placeholder:text-[var(--cc-subtle)] focus:border-[var(--cc-lime)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--cc-lime)]/25 transition"
                 />
               </div>
               {error && <p className="text-xs text-red-400">{error}</p>}
@@ -134,16 +137,16 @@ export default function Login() {
                 </p>
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1.5">Private API Key</label>
+                <label className="block font-mono text-[10px] font-medium uppercase tracking-[0.1em] text-[var(--cc-muted)] mb-1.5">Private API Key</label>
                 <input
                   type="password"
                   value={apiKey}
                   onChange={e => setApiKeyValue(e.target.value)}
                   placeholder="cc_prv_..."
-                  className="w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2.5 text-sm text-white placeholder:text-slate-500 focus:border-violet-500/40 focus:outline-none focus:ring-1 focus:ring-violet-500/20 transition font-mono"
+                  className="w-full rounded-lg border border-white/[0.08] bg-[var(--cc-bg-sunken)] px-3 py-2.5 text-sm text-[var(--cc-text)] placeholder:text-[var(--cc-subtle)] focus:border-[var(--cc-lime)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--cc-lime)]/25 transition font-mono"
                 />
               </div>
-              <label className="flex items-center gap-2 text-[11px] text-slate-500 select-none">
+              <label className="flex items-center gap-2 text-[11px] text-[var(--cc-muted)] select-none">
                 <input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)} />
                 Remember on this tab only (sessionStorage, cleared on close)
               </label>

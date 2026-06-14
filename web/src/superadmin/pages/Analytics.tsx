@@ -40,7 +40,7 @@ function fmtMetricValue(value: number, metric: 'orders' | 'gmv' | 'signups'): st
 }
 
 function TimeseriesChart({ points, metric }: { points: TimeseriesPoint[]; metric: 'orders' | 'gmv' | 'signups' }) {
-  if (!points.length) return <p className="text-xs text-slate-500 py-4 text-center">No data</p>
+  if (!points.length) return <p className="text-xs text-[var(--cc-text-muted)] py-4 text-center">No data</p>
 
   const values = points.map(p =>
     metric === 'orders' ? p.orders :
@@ -78,14 +78,14 @@ function TimeseriesChart({ points, metric }: { points: TimeseriesPoint[]; metric
       <div className="flex items-center justify-between gap-3 mb-3">
         <div className="flex items-center gap-2">
           <span className="inline-flex items-center gap-1" aria-hidden="true">
-            <span className="inline-block h-0.5 w-4 rounded-full bg-violet-500" />
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-violet-400 -ml-2.5 ring-2 ring-violet-500/20" />
+            <span className="inline-block h-0.5 w-4 rounded-full bg-[var(--cc-lime)]" />
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--cc-lime)] -ml-2.5 ring-2 ring-[var(--cc-lime)]/25" />
           </span>
-          <span className="text-xs font-medium text-slate-200">{METRIC_LABELS[metric]}</span>
-          <span className="text-[11px] text-slate-500">— daily, last 30 days</span>
+          <span className="font-mono text-[11px] font-medium uppercase tracking-wider text-[var(--cc-text-body)]">{METRIC_LABELS[metric]}</span>
+          <span className="text-[11px] text-[var(--cc-text-muted)]">— daily, last 30 days</span>
         </div>
-        <span className="text-[11px] text-slate-500 tabular-nums">
-          Peak <span className="text-slate-300 font-medium">{fmtMetricValue(max, metric)}</span>
+        <span className="font-mono text-[11px] text-[var(--cc-text-muted)] tabular-nums">
+          Peak <span className="text-[var(--cc-lime)] font-medium">{fmtMetricValue(max, metric)}</span>
         </span>
       </div>
       <svg
@@ -112,20 +112,20 @@ function TimeseriesChart({ points, metric }: { points: TimeseriesPoint[]; metric
                 strokeWidth={1}
                 strokeDasharray={frac === 0 ? undefined : '2 4'}
               />
-              <text x={PAD_L - 6} y={cy + 3} textAnchor="end" fontSize={9} fill="#64748b" fontWeight={500}>{yTicks[i]}</text>
+              <text x={PAD_L - 6} y={cy + 3} textAnchor="end" fontSize={9} fill="#85867a" fontFamily="'JetBrains Mono', monospace">{yTicks[i]}</text>
             </g>
           )
         })}
-        {/* Area fill */}
+        {/* Area fill — lime */}
         <defs>
           <linearGradient id="sa-chart-grad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.28" />
-            <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0.01" />
+            <stop offset="0%" stopColor="#b5ff2e" stopOpacity="0.26" />
+            <stop offset="100%" stopColor="#b5ff2e" stopOpacity="0.01" />
           </linearGradient>
         </defs>
         <path d={areaD} fill="url(#sa-chart-grad)" />
-        {/* Line */}
-        <path d={pathD} fill="none" stroke="#8b5cf6" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+        {/* Line — lime */}
+        <path d={pathD} fill="none" stroke="#b5ff2e" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
         {/* Data points — enlarged hit target + per-point native tooltip */}
         {pts.map((p, i) => (
           <g key={i} className="group">
@@ -137,8 +137,8 @@ function TimeseriesChart({ points, metric }: { points: TimeseriesPoint[]; metric
               cx={p.x}
               cy={p.y}
               r={2.5}
-              fill="#0b0e15"
-              stroke="#a78bfa"
+              fill="#0c0d0a"
+              stroke="#b5ff2e"
               strokeWidth={1.5}
               className="transition-all group-hover:[r:4px] group-hover:[stroke-width:2.5px]"
             />
@@ -149,7 +149,7 @@ function TimeseriesChart({ points, metric }: { points: TimeseriesPoint[]; metric
           if (!pts[i]) return null
           const label = pts[i].point.date.slice(5) // MM-DD
           return (
-            <text key={i} x={pts[i].x} y={H - 4} textAnchor="middle" fontSize={9} fill="#64748b" fontWeight={500}>
+            <text key={i} x={pts[i].x} y={H - 4} textAnchor="middle" fontSize={9} fill="#85867a" fontFamily="'JetBrains Mono', monospace">
               {label}
             </text>
           )
@@ -177,12 +177,12 @@ function HealthPanel({ health }: { health: HealthResult }) {
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2 mb-3">
-        <span className="text-xs font-medium text-slate-400">System status</span>
+        <span className="font-mono text-[11px] font-medium uppercase tracking-wider text-[var(--cc-text-muted)]">System status</span>
         <Badge color={overallColor}>{health.status}</Badge>
       </div>
       {rows.map(row => (
         <div key={row.label} className="flex items-center justify-between py-2 border-b border-white/[0.04] last:border-0">
-          <span className="text-xs text-slate-400">{row.label}</span>
+          <span className="text-xs text-[var(--cc-text-body)]">{row.label}</span>
           <Badge color={row.ok ? 'emerald' : 'red'}>{row.value}</Badge>
         </div>
       ))}
@@ -242,7 +242,7 @@ export default function Analytics() {
         title="System Analytics"
         description="Platform-wide metrics across all tenants"
         actions={
-          <button onClick={() => void load()} className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-slate-300 hover:bg-white/[0.08] hover:text-white transition">
+          <button onClick={() => void load()} className="inline-flex items-center gap-1.5 rounded-md border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-[var(--cc-text-body)] hover:bg-white/[0.08] hover:text-[var(--cc-text)] transition">
             <RefreshCw size={13} />
             Refresh
           </button>
@@ -291,10 +291,10 @@ export default function Analytics() {
                 <button
                   key={m}
                   onClick={() => setMetric(m)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
+                  className={`px-3 py-1.5 rounded-md font-mono text-[11px] font-medium uppercase tracking-wider transition ${
                     metric === m
-                      ? 'bg-violet-600/15 text-violet-200 border border-violet-500/30'
-                      : 'text-slate-500 hover:text-slate-200 border border-transparent hover:bg-white/[0.04]'
+                      ? 'bg-[var(--cc-lime)]/12 text-[var(--cc-lime)] border border-[var(--cc-lime)]/30'
+                      : 'text-[var(--cc-text-muted)] hover:text-[var(--cc-text-body)] border border-transparent hover:bg-white/[0.04]'
                   }`}
                 >
                   {m === 'gmv' ? 'GMV' : m.charAt(0).toUpperCase() + m.slice(1)}

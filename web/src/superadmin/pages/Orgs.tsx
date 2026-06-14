@@ -68,7 +68,7 @@ function OrgDetailView({ orgId, token, onBack, handle401 }: { orgId: string; tok
   return (
     <div>
       <div className="mb-5">
-        <button onClick={onBack} className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-300 transition mb-4">
+        <button onClick={onBack} className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-[var(--cc-text-muted)] hover:text-[var(--cc-lime)] transition mb-4">
           <ArrowLeft size={13} /> Back to orgs
         </button>
         <PageHeader
@@ -79,21 +79,21 @@ function OrgDetailView({ orgId, token, onBack, handle401 }: { orgId: string; tok
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-        <div className="rounded-xl border border-white/[0.07] bg-slate-900/60 px-5 py-4">
-          <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Stores</p>
-          <p className="text-2xl font-bold text-slate-100">{org.store_count}</p>
+        <div className="rounded-lg border border-white/[0.07] bg-[var(--cc-surface)] px-5 py-4">
+          <p className="font-mono text-[10px] text-[var(--cc-text-subtle)] uppercase tracking-[0.14em] mb-1.5">Stores</p>
+          <p className="font-display text-2xl font-bold text-[var(--cc-text)]">{org.store_count}</p>
         </div>
-        <div className="rounded-xl border border-white/[0.07] bg-slate-900/60 px-5 py-4">
-          <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Customers</p>
-          <p className="text-2xl font-bold text-slate-100">{org.customer_count}</p>
+        <div className="rounded-lg border border-white/[0.07] bg-[var(--cc-surface)] px-5 py-4">
+          <p className="font-mono text-[10px] text-[var(--cc-text-subtle)] uppercase tracking-[0.14em] mb-1.5">Customers</p>
+          <p className="font-display text-2xl font-bold text-[var(--cc-text)]">{org.customer_count}</p>
         </div>
-        <div className="rounded-xl border border-white/[0.07] bg-slate-900/60 px-5 py-4">
-          <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Orders</p>
-          <p className="text-2xl font-bold text-slate-100">{org.order_count}</p>
+        <div className="rounded-lg border border-white/[0.07] bg-[var(--cc-surface)] px-5 py-4">
+          <p className="font-mono text-[10px] text-[var(--cc-text-subtle)] uppercase tracking-[0.14em] mb-1.5">Orders</p>
+          <p className="font-display text-2xl font-bold text-[var(--cc-text)]">{org.order_count}</p>
         </div>
-        <div className="rounded-xl border border-white/[0.07] bg-slate-900/60 px-5 py-4">
-          <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">GMV</p>
-          <p className="text-2xl font-bold text-emerald-400">{fmtUsd(org.gmv)}</p>
+        <div className="rounded-lg border border-white/[0.07] bg-[var(--cc-surface)] px-5 py-4">
+          <p className="font-mono text-[10px] text-[var(--cc-text-subtle)] uppercase tracking-[0.14em] mb-1.5">GMV</p>
+          <p className="font-display text-2xl font-bold text-[var(--cc-lime)]">{fmtUsd(org.gmv)}</p>
         </div>
       </div>
 
@@ -109,19 +109,19 @@ function OrgDetailView({ orgId, token, onBack, handle401 }: { orgId: string; tok
             </TableHead>
             <tbody>
               {org.stores.map(s => (
-                <tr key={s.id} className="border-t border-white/[0.03] hover:bg-white/[0.02]">
+                <tr key={s.id} className="border-t border-white/[0.04] hover:bg-white/[0.02]">
                   <Td>
-                    <p className="text-xs font-medium text-slate-200">{s.name}</p>
-                    <p className="text-[11px] text-slate-600 font-mono">{s.id}</p>
+                    <p className="text-xs font-medium text-[var(--cc-text-body)]">{s.name}</p>
+                    <p className="text-[11px] text-[var(--cc-text-subtle)] font-mono">{s.id}</p>
                   </Td>
-                  <Td><span className="text-xs text-slate-400">{s.currency}</span></Td>
+                  <Td><span className="text-xs text-[var(--cc-text-muted)] font-mono">{s.currency}</span></Td>
                   <Td>
                     <Badge color={s.status === 'active' ? 'emerald' : s.status === 'suspended' ? 'amber' : 'red'}>
                       {s.status}
                     </Badge>
                   </Td>
-                  <Td><span className="text-xs text-slate-400">{s.order_count}</span></Td>
-                  <Td><span className="text-xs text-emerald-400">{fmtUsd(s.gmv)}</span></Td>
+                  <Td><span className="text-xs text-[var(--cc-text-muted)] tabular-nums">{s.order_count}</span></Td>
+                  <Td><span className="text-xs text-[var(--cc-lime)] tabular-nums">{fmtUsd(s.gmv)}</span></Td>
                 </tr>
               ))}
             </tbody>
@@ -213,25 +213,25 @@ export default function Orgs() {
           </TableHead>
           <tbody>
             {filtered.map(org => (
-              <tr key={org.id} className="border-t border-white/[0.03] hover:bg-white/[0.02]">
+              <tr key={org.id} className="border-t border-white/[0.04] hover:bg-white/[0.02]">
                 <Td>
-                  <p className="text-xs font-medium text-slate-200">{org.name || '—'}</p>
-                  <p className="text-[11px] text-slate-600 font-mono">{org.id}</p>
-                  {org.email && <p className="text-[11px] text-slate-500">{org.email}</p>}
+                  <p className="text-xs font-medium text-[var(--cc-text-body)]">{org.name || '—'}</p>
+                  <p className="text-[11px] text-[var(--cc-text-subtle)] font-mono">{org.id}</p>
+                  {org.email && <p className="text-[11px] text-[var(--cc-text-muted)]">{org.email}</p>}
                 </Td>
-                <Td><span className="text-xs text-slate-400">{org.store_count}</span></Td>
-                <Td><span className="text-xs text-slate-400">{org.order_count}</span></Td>
-                <Td><span className="text-xs text-emerald-400">{fmtUsd(org.gmv)}</span></Td>
+                <Td><span className="text-xs text-[var(--cc-text-muted)] tabular-nums">{org.store_count}</span></Td>
+                <Td><span className="text-xs text-[var(--cc-text-muted)] tabular-nums">{org.order_count}</span></Td>
+                <Td><span className="text-xs text-[var(--cc-lime)] tabular-nums">{fmtUsd(org.gmv)}</span></Td>
                 <Td>
                   <Badge color={org.billing_status === 'active' ? 'emerald' : 'slate'}>
                     {org.billing_status || 'active'}
                   </Badge>
                 </Td>
-                <Td><span className="text-xs text-slate-500">{new Date(org.created_at).toLocaleDateString()}</span></Td>
+                <Td><span className="text-xs text-[var(--cc-text-muted)] tabular-nums">{new Date(org.created_at).toLocaleDateString()}</span></Td>
                 <Td>
                   <button
                     onClick={() => setSelectedId(org.id)}
-                    className="text-xs font-medium text-violet-400 hover:text-violet-300 transition"
+                    className="text-xs font-medium text-[var(--cc-lime)] hover:text-[var(--cc-lime-bright)] transition"
                   >
                     View
                   </button>

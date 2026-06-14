@@ -1,52 +1,80 @@
-/* ── Page header ──────────────────────────────────────────────────────────── */
+/* ── Page header (Agentic Terminal — left-aligned, mono eyebrow) ──────────── */
 .mk-compare .page-header {
-  padding: clamp(3.5rem, 6vw, 5.5rem) var(--gutter) clamp(2rem, 4vw, 3rem);
-  text-align: center;
-  background:
-    radial-gradient(ellipse 70% 55% at 50% 0%, var(--brand-tint), transparent 65%);
+  position: relative;
+  overflow: hidden;
+  padding: clamp(3.5rem, 6vw, 5.5rem) var(--gutter) clamp(2.25rem, 4vw, 3rem);
+  border-bottom: 1px solid var(--line);
+  background: var(--bg);
+}
+
+.mk-compare .page-header-fx { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+.mk-compare .page-header-grid {
+  position: absolute;
+  inset: -1px;
+  -webkit-mask-image: radial-gradient(ellipse 60% 70% at 20% 0%, #000 8%, transparent 70%);
+  mask-image: radial-gradient(ellipse 60% 70% at 20% 0%, #000 8%, transparent 70%);
+  opacity: 0.6;
 }
 
 .mk-compare .page-header-inner {
-  max-width: 760px;
+  position: relative;
+  z-index: 1;
+  max-width: var(--maxw);
   margin: 0 auto;
 }
 
 .mk-compare .page-label {
   display: inline-flex;
   align-items: center;
-  font-size: 0.78rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
+  gap: 0.55rem;
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
   color: var(--brand);
-  margin-bottom: 0.85rem;
+  margin-bottom: 1.25rem;
 }
+.mk-compare .page-label .ey-b { color: var(--ink-subtle); }
+.mk-compare .ey-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--brand);
+  box-shadow: 0 0 10px var(--brand);
+  animation: cmp-blink 1.8s steps(1) infinite;
+}
+@keyframes cmp-blink { 0%, 60% { opacity: 1; } 61%, 100% { opacity: 0.25; } }
 
 .mk-compare .page-header h1 {
-  font-size: clamp(2rem, 4vw, 3rem);
-  font-weight: 760;
-  letter-spacing: -0.035em;
+  font-family: var(--font-display);
+  font-size: clamp(2.2rem, 5vw, 3.4rem);
+  font-weight: 700;
+  letter-spacing: -0.04em;
   color: var(--ink);
-  margin-bottom: 1rem;
-  line-height: 1.1;
+  margin-bottom: 1.1rem;
+  line-height: 1.0;
   text-wrap: balance;
 }
+.mk-compare .page-header h1 .hl { color: var(--brand); }
 
 .mk-compare .page-header p {
   font-size: 1.05rem;
   color: var(--ink-muted);
   line-height: 1.7;
   margin-bottom: 0.75rem;
+  max-width: 60ch;
 }
 
 .mk-compare .methodology {
-  font-size: 0.85rem !important;
+  font-family: var(--font-mono);
+  font-size: 0.78rem !important;
   color: var(--ink-subtle) !important;
   border-top: 1px solid var(--line);
-  padding-top: 0.85rem;
-  margin-top: 1rem;
-  max-width: 620px;
-  margin-left: auto;
-  margin-right: auto;
+  padding-top: 0.95rem;
+  margin-top: 1.25rem;
+  max-width: 80ch;
+  line-height: 1.65 !important;
 }
 
 /* ── Table section ────────────────────────────────────────────────────────── */
@@ -59,12 +87,12 @@
   margin: 0 auto;
 }
 
-/* ── Narrative / prose section ────────────────────────────────────────────── */
+/* ── Narrative / prose section (dark cards, hairlines, lime hover) ─────────── */
 .mk-compare .narratives {
   padding: clamp(3rem, 6vw, 5rem) var(--gutter);
-  max-width: var(--maxw);
-  margin: 0 auto;
   background: var(--bg-subtle);
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
 }
 
 .mk-compare .narratives-inner {
@@ -76,7 +104,7 @@
 .mk-compare .md-prose {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 1.5rem;
+  gap: 1.25rem;
   align-items: start;
 }
 
@@ -96,18 +124,18 @@
   border-top: none !important;
   padding-top: 0 !important;
   margin-top: 0 !important;
-  /* card header */
-  font-size: 1.05rem;
-  font-weight: 650;
-  letter-spacing: -0.015em;
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
   color: var(--ink);
   padding: 1.4rem 1.6rem 0;
-  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  border-radius: var(--r-md) var(--r-md) 0 0;
   background: var(--surface);
   border: 1px solid var(--line);
   border-bottom: none;
   margin-bottom: 0;
-  box-shadow: var(--shadow-xs);
+  transition: border-color 0.22s ease, background 0.22s ease;
 }
 
 /* Hide the h2 "Introduction" heading (it's implied by context) */
@@ -121,6 +149,7 @@
   border-right: 1px solid var(--line);
   padding: 0 1.6rem;
   margin-bottom: 0;
+  transition: border-color 0.22s ease, background 0.22s ease;
 }
 
 .mk-compare .md-prose p:last-of-type {
@@ -128,28 +157,31 @@
   border-left: 1px solid var(--line);
   border-right: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
-  border-radius: 0 0 var(--r-lg) var(--r-lg);
+  border-radius: 0 0 var(--r-md) var(--r-md);
   padding: 0 1.6rem 1.4rem;
   margin-bottom: 0;
-  box-shadow: var(--shadow-xs);
+  transition: border-color 0.22s ease, background 0.22s ease;
 }
 
 /* Sources section — full width card */
 .mk-compare .md-prose h2:last-of-type {
   grid-column: 1 / -1;
-  font-size: 0.78rem;
-  font-weight: 650;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.12em;
   color: var(--ink-subtle);
   background: var(--surface-2);
 }
 
 .mk-compare .md-prose h2:last-of-type + p {
   grid-column: 1 / -1;
-  font-size: 0.8rem !important;
+  font-family: var(--font-mono);
+  font-size: 0.76rem !important;
   color: var(--ink-subtle) !important;
-  border-radius: 0 0 var(--r-lg) var(--r-lg) !important;
+  line-height: 1.7 !important;
+  border-radius: 0 0 var(--r-md) var(--r-md) !important;
   background: var(--surface-2);
 }
 
@@ -158,42 +190,45 @@
   font-weight: 600;
 }
 
-/* ── CTA band ─────────────────────────────────────────────────────────────── */
+.mk-compare .md-prose h2:last-of-type + p strong { color: var(--brand); }
+
+/* ── CTA band (full-bleed lime) ───────────────────────────────────────────── */
 .mk-compare .compare-cta {
   background:
-    radial-gradient(60% 120% at 0% 0%, color-mix(in srgb, var(--brand-bright) 40%, transparent), transparent 60%),
+    radial-gradient(60% 120% at 0% 0%, color-mix(in srgb, var(--brand-bright) 50%, transparent), transparent 60%),
     linear-gradient(135deg, var(--brand-strong) 0%, var(--brand) 100%);
   padding: clamp(4rem, 7vw, 6rem) var(--gutter);
-  text-align: center;
-  color: #fff;
+  color: var(--brand-ink);
   margin-top: clamp(3rem, 6vw, 5rem);
   position: relative;
   overflow: hidden;
 }
 
 .mk-compare .compare-cta-inner {
-  max-width: 600px;
+  max-width: var(--maxw);
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   gap: 1.1rem;
   position: relative;
   z-index: 1;
 }
 
 .mk-compare .compare-cta h2 {
-  font-size: clamp(1.6rem, 3vw, 2.25rem);
-  font-weight: 720;
-  letter-spacing: -0.03em;
-  color: #fff;
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 3.5vw, 2.6rem);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  color: var(--brand-ink);
   text-wrap: balance;
   margin: 0;
+  line-height: 1.0;
 }
 
 .mk-compare .compare-cta p {
   font-size: 1.05rem;
-  color: rgba(255, 255, 255, 0.88);
+  color: color-mix(in srgb, var(--brand-ink) 82%, transparent);
   margin: 0;
 }
 
@@ -201,6 +236,9 @@
   display: flex;
   gap: 0.75rem;
   flex-wrap: wrap;
-  justify-content: center;
   margin-top: 0.4rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mk-compare .ey-dot { animation: none !important; }
 }

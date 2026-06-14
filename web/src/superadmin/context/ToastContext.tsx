@@ -21,10 +21,10 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         {toasts.map(t => (
           <div
             key={t.id}
-            className={`px-4 py-2.5 rounded-xl text-sm font-medium shadow-xl border pointer-events-auto
-              ${t.type === 'success' ? 'bg-emerald-900/90 text-emerald-100 border-emerald-700/50' :
+            className={`px-4 py-2.5 rounded-lg text-sm font-medium shadow-xl border pointer-events-auto
+              ${t.type === 'success' ? 'bg-[var(--cc-lime)] text-[var(--cc-lime-ink)] border-[var(--cc-lime-strong)]' :
                 t.type === 'error' ? 'bg-red-900/90 text-red-100 border-red-700/50' :
-                'bg-slate-800/90 text-slate-100 border-white/10'}`}
+                'bg-[var(--cc-surface-steel)] text-[var(--cc-text)] border-white/10'}`}
           >
             {t.message}
           </div>

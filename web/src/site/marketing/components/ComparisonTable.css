@@ -1,18 +1,22 @@
+/* ComparisonTable — premium mono data-table (Agentic Terminal).
+ * Hairline rows, sticky header, mono labels, Cartcrft column lime-highlighted,
+ * ✓ lime / ✗ + N/A in --ink-subtle. All tokens. */
 .comparison-wrapper {
   width: 100%;
 }
 
 .comparison-caption {
-  font-size: 0.85rem;
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  letter-spacing: 0.02em;
   color: var(--ink-muted);
   margin-bottom: 1.1rem;
-  text-align: center;
   line-height: 1.6;
 }
 
 .table-scroll {
   overflow-x: auto;
-  border-radius: var(--r-lg);
+  border-radius: var(--r-md);
   border: 1px solid var(--line);
   background: var(--surface);
   box-shadow: var(--shadow-sm);
@@ -21,17 +25,20 @@
 .comparison-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.9rem;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
   background: var(--surface);
 }
 
 .comparison-table thead th {
-  padding: 0.9rem 1.25rem;
-  font-weight: 650;
-  font-size: 0.82rem;
+  padding: 0.85rem 1.2rem;
+  font-weight: 500;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   text-align: center;
   border-bottom: 1px solid var(--line-strong);
-  background: var(--bg-subtle);
+  background: var(--bg-sunken);
   color: var(--ink-muted);
   white-space: nowrap;
   position: sticky;
@@ -48,8 +55,8 @@
 .comparison-table .competitor-col--ours {
   background: var(--brand-tint);
   color: var(--brand);
-  border-left: 1px solid color-mix(in srgb, var(--brand) 35%, transparent);
-  border-right: 1px solid color-mix(in srgb, var(--brand) 35%, transparent);
+  border-left: 1px solid color-mix(in srgb, var(--brand) 40%, transparent);
+  border-right: 1px solid color-mix(in srgb, var(--brand) 40%, transparent);
 }
 
 .comparison-table .our-label {
@@ -59,54 +66,66 @@
 }
 
 .comparison-table .badge {
-  font-size: 0.62rem;
-  font-weight: 650;
+  font-size: 0.58rem;
+  font-weight: 500;
   padding: 0.12rem 0.4rem;
   background: var(--brand);
   color: var(--brand-ink);
-  border-radius: var(--r-pill);
+  border-radius: var(--r-xs);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
 }
 
 .comparison-table .category-row td {
-  padding: 0.5rem 1.25rem;
-  font-size: 0.72rem;
-  font-weight: 650;
+  padding: 0.55rem 1.2rem;
+  font-size: 0.64rem;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   color: var(--ink-subtle);
   background: var(--surface-2);
   border-top: 1px solid var(--line);
 }
 
 .comparison-table .data-row td {
-  padding: 0.78rem 1.25rem;
+  padding: 0.74rem 1.2rem;
   border-top: 1px solid var(--line);
   text-align: center;
   color: var(--ink-body);
   vertical-align: middle;
 }
 
+.comparison-table .data-row:hover td {
+  background: color-mix(in srgb, var(--brand) 3%, transparent);
+}
+
 .comparison-table .feature-label {
   text-align: left !important;
-  font-weight: 500;
-  color: var(--ink-body) !important;
+  font-weight: 400;
+  color: var(--ink) !important;
+  font-family: var(--font-sans);
+  letter-spacing: -0.01em;
 }
 
 .comparison-table .data-row--highlight td {
-  background: color-mix(in srgb, var(--brand) 3%, transparent);
+  background: color-mix(in srgb, var(--brand) 4%, transparent);
+}
+.comparison-table .data-row--highlight:hover td {
+  background: color-mix(in srgb, var(--brand) 6%, transparent);
 }
 
 .comparison-table .cell--ours {
   background: var(--brand-tint);
-  border-left: 1px solid color-mix(in srgb, var(--brand) 35%, transparent);
-  border-right: 1px solid color-mix(in srgb, var(--brand) 35%, transparent);
+  border-left: 1px solid color-mix(in srgb, var(--brand) 40%, transparent);
+  border-right: 1px solid color-mix(in srgb, var(--brand) 40%, transparent);
   font-weight: 600;
-  color: var(--ink);
+  color: var(--brand);
 }
 
 .comparison-table .data-row--highlight .cell--ours {
+  background: var(--brand-tint-2);
+}
+.comparison-table .data-row:hover .cell--ours {
   background: var(--brand-tint-2);
 }
 
@@ -122,26 +141,24 @@
   vertical-align: middle;
 }
 
-.comparison-table .cell--yes svg { color: #10b981; }
+.comparison-table .cell--yes svg { color: var(--brand); }
 .comparison-table .cell--no svg { color: var(--ink-subtle); }
 .comparison-table .cell--na svg { color: var(--line-strong); }
 
-.comparison-table .cell--ours.cell--yes svg { color: #059669; }
-
-@media (prefers-color-scheme: dark) {
-  .comparison-table .cell--yes svg { color: #34d399; }
-  .comparison-table .cell--ours.cell--yes svg { color: #34d399; }
-}
+.comparison-table .cell--ours.cell--yes svg { color: var(--brand); }
 
 .comparison-table .cell--text {
   color: var(--ink-body);
-  font-size: 0.82rem;
+  font-size: 0.76rem;
+}
+.comparison-table .cell--ours.cell--text {
+  color: var(--brand);
 }
 
 /* close the highlighted column on the last row */
 .comparison-table .data-row:last-child .cell--ours {
-  border-bottom: 1px solid color-mix(in srgb, var(--brand) 35%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--brand) 40%, transparent);
 }
 .comparison-table .data-row:last-child .competitor-col--ours {
-  border-bottom: 1px solid color-mix(in srgb, var(--brand) 35%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--brand) 40%, transparent);
 }

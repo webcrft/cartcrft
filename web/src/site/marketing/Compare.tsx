@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import SiteLayout from '../SiteLayout'
 import { useDocumentMeta } from '../useDocumentMeta'
 import ComparisonTable, { type ComparisonRow } from './components/ComparisonTable'
+import PricingCalculator from './components/PricingCalculator'
 import './Compare.css'
 
 /**
@@ -321,9 +322,18 @@ export default function Compare() {
       <div className="mk-compare">
         {/* Page header — from content collection frontmatter */}
         <section className="page-header">
+          <div className="page-header-fx" aria-hidden="true">
+            <div className="page-header-grid cc-grid-bg" />
+          </div>
+          <div className="cc-grain" aria-hidden="true" />
           <div className="page-header-inner">
-            <div className="page-label">Feature comparison</div>
-            <h1>{PAGE_TITLE}</h1>
+            <div className="page-label">
+              <span className="ey-b">[</span>
+              <span className="ey-dot" />
+              feature comparison
+              <span className="ey-b">]</span>
+            </div>
+            <h1>How Cartcrft <span className="hl">compares</span></h1>
             <p>{PAGE_DESCRIPTION}</p>
             <p className="methodology">{METHODOLOGY}</p>
           </div>
@@ -339,6 +349,11 @@ export default function Compare() {
               caption="Figures as of June 2026. Verify with official sources before making purchasing decisions."
             />
           </div>
+        </section>
+
+        {/* Interactive grounded cost calculator */}
+        <section className="calc-section" data-reveal style={{ padding: 'clamp(2rem, 5vw, 4.5rem) var(--gutter)' }}>
+          <PricingCalculator />
         </section>
 
         {/* Narrative sections — ported verbatim from compare.md */}

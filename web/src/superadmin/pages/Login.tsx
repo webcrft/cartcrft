@@ -11,7 +11,7 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { login, SuperAdminApiError } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
-import { Shield, AlertTriangle, Lock } from 'lucide-react'
+import { AlertTriangle, Lock } from 'lucide-react'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -71,52 +71,54 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-[#080a0f] flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Subtle grid pattern overlay for "ops" feel */}
+    <div className="min-h-screen bg-[var(--cc-ink)] flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Technical grid pattern overlay for the "terminal" feel */}
       <div
-        className="absolute inset-0 opacity-[0.02]"
+        className="absolute inset-0 opacity-[0.03]"
         style={{
           backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)',
-          backgroundSize: '40px 40px',
+          backgroundSize: '52px 52px',
+          maskImage: 'radial-gradient(ellipse 80% 70% at 50% 35%, #000 20%, transparent 75%)',
+          WebkitMaskImage: 'radial-gradient(ellipse 80% 70% at 50% 35%, #000 20%, transparent 75%)',
         }}
       />
-      {/* Brand glow */}
+      {/* Lime brand glow */}
       <div
-        className="absolute top-1/4 left-1/2 -translate-x-1/2 h-64 w-64 rounded-full bg-violet-600/15 blur-[100px] pointer-events-none"
+        className="absolute top-1/4 left-1/2 -translate-x-1/2 h-64 w-72 rounded-full bg-[var(--cc-lime)]/12 blur-[110px] pointer-events-none"
         aria-hidden="true"
       />
 
       <div className="relative w-full max-w-sm">
         {/* Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center h-12 w-12 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 shadow-lg shadow-violet-950/50 ring-1 ring-white/10 mb-4">
-            <Shield size={22} className="text-white" strokeWidth={2.25} />
-          </div>
-          <div className="flex items-center justify-center gap-2 mb-1">
-            <h1 className="text-xl font-bold text-slate-100 tracking-tight">Operator Console</h1>
-          </div>
-          <p className="text-xs text-slate-500">
-            Cartcrft Super-Admin
-            <span className="mx-1.5 text-slate-700">&middot;</span>
-            <span className="text-amber-400/90 font-medium">restricted access</span>
+        <div className="text-center mb-7">
+          <img
+            src="/logo-wordmark-dark.svg"
+            alt="Cartcrft"
+            className="h-8 w-auto mx-auto mb-5"
+          />
+          <h1 className="text-2xl font-bold text-[var(--cc-text)] tracking-tight">Operator Console</h1>
+          <p className="mt-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-[var(--cc-text-muted)]">
+            Super-Admin
+            <span className="mx-1.5 text-[var(--cc-text-subtle)]">&middot;</span>
+            <span className="text-amber-400/90">restricted access</span>
           </p>
         </div>
 
-        {/* Warning */}
-        <div className="mb-4 rounded-xl border border-amber-500/20 bg-amber-500/[0.06] px-4 py-3 flex gap-2.5 items-start">
+        {/* Warning — amber */}
+        <div className="mb-4 rounded-lg border border-amber-500/25 bg-amber-500/[0.06] px-4 py-3 flex gap-2.5 items-start">
           <AlertTriangle size={14} className="text-amber-400 flex-shrink-0 mt-0.5" />
-          <p className="text-[11px] text-amber-300/80 leading-relaxed">
+          <p className="text-[11px] text-amber-300/85 leading-relaxed">
             This console has operator-level access to all tenant data. All actions are permanently
             audited. Unauthorized access is prohibited.
           </p>
         </div>
 
         {/* Card */}
-        <div className="rounded-2xl border border-white/[0.08] bg-slate-900/70 backdrop-blur-xl shadow-2xl shadow-black/40 p-6">
+        <div className="rounded-xl border border-white/[0.08] bg-[var(--cc-surface-steel)]/80 backdrop-blur-xl shadow-2xl shadow-black/50 p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Email */}
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1.5">
+              <label className="block font-mono text-[10px] font-medium uppercase tracking-wider text-[var(--cc-text-muted)] mb-1.5">
                 Email address
               </label>
               <input
@@ -127,13 +129,13 @@ export default function Login() {
                 autoComplete="username"
                 required
                 disabled={mfaRequired}
-                className="w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 focus:border-violet-500/50 focus:outline-none focus:ring-1 focus:ring-violet-500/30 transition disabled:opacity-50"
+                className="w-full rounded-md border border-white/[0.08] bg-white/[0.02] px-3 py-2.5 text-sm text-[var(--cc-text)] placeholder:text-[var(--cc-text-subtle)] focus:border-[var(--cc-lime)]/50 focus:outline-none focus:ring-1 focus:ring-[var(--cc-lime)]/40 transition disabled:opacity-50"
               />
             </div>
 
             {/* Password */}
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1.5">
+              <label className="block font-mono text-[10px] font-medium uppercase tracking-wider text-[var(--cc-text-muted)] mb-1.5">
                 Password
               </label>
               <input
@@ -144,17 +146,17 @@ export default function Login() {
                 autoComplete="current-password"
                 required
                 disabled={mfaRequired}
-                className="w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 focus:border-violet-500/50 focus:outline-none focus:ring-1 focus:ring-violet-500/30 transition disabled:opacity-50"
+                className="w-full rounded-md border border-white/[0.08] bg-white/[0.02] px-3 py-2.5 text-sm text-[var(--cc-text)] placeholder:text-[var(--cc-text-subtle)] focus:border-[var(--cc-lime)]/50 focus:outline-none focus:ring-1 focus:ring-[var(--cc-lime)]/40 transition disabled:opacity-50"
               />
             </div>
 
             {/* TOTP — shown only after MFA_REQUIRED */}
             {mfaRequired && (
               <div>
-                <label className="block text-xs font-medium text-amber-400 mb-1.5">
+                <label className="block font-mono text-[10px] font-medium uppercase tracking-wider text-amber-400 mb-1.5">
                   Authenticator code
                 </label>
-                <p className="text-[11px] text-slate-500 mb-2">
+                <p className="text-[11px] text-[var(--cc-text-muted)] mb-2">
                   Enter the 6-digit code from your authenticator app.
                 </p>
                 <input
@@ -166,31 +168,31 @@ export default function Login() {
                   onChange={e => setTotpCode(e.target.value.replace(/\D/g, ''))}
                   placeholder="000000"
                   autoFocus
-                  className="w-full rounded-lg border border-amber-500/30 bg-white/[0.03] px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-600 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400/30 transition font-mono tracking-[0.3em] text-center"
+                  className="w-full rounded-md border border-amber-500/30 bg-white/[0.02] px-3 py-2.5 text-sm text-[var(--cc-text)] placeholder:text-[var(--cc-text-subtle)] focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400/30 transition font-mono tracking-[0.3em] text-center"
                 />
               </div>
             )}
 
-            {/* Error states */}
+            {/* Error states — amber for lockout warnings, red for blocked/denied */}
             {error && (
               <div
-                className={`rounded-lg px-3 py-2.5 text-xs border ${
+                className={`rounded-md px-3 py-2.5 text-xs border ${
                   error.type === 'locked'
-                    ? 'bg-orange-500/10 border-orange-500/20 text-orange-300'
+                    ? 'bg-amber-500/10 border-amber-500/25 text-amber-300'
                     : error.type === 'blocked'
-                    ? 'bg-red-600/10 border-red-500/20 text-red-300'
-                    : 'bg-red-500/10 border-red-500/20 text-red-300'
+                    ? 'bg-red-600/10 border-red-500/25 text-red-300'
+                    : 'bg-red-500/10 border-red-500/25 text-red-300'
                 }`}
               >
                 {error.message}
               </div>
             )}
 
-            {/* Submit */}
+            {/* Submit — lime primary, ink text */}
             <button
               type="submit"
               disabled={loading || error?.type === 'locked' || error?.type === 'blocked'}
-              className="w-full flex items-center justify-center gap-2 rounded-lg bg-violet-600 text-white px-4 py-2.5 text-sm font-semibold shadow-sm shadow-violet-950/40 hover:bg-violet-500 transition active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
+              className="w-full flex items-center justify-center gap-2 rounded-md bg-[var(--cc-lime)] text-[var(--cc-lime-ink)] px-4 py-2.5 text-sm font-semibold shadow-[0_0_0_1px_rgba(181,255,46,0.2),0_10px_28px_-12px_rgba(181,255,46,0.55)] hover:bg-[var(--cc-lime-bright)] transition active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cc-lime)]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--cc-ink)] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
             >
               {loading && (
                 <span className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
@@ -202,7 +204,7 @@ export default function Login() {
               <button
                 type="button"
                 onClick={() => { setMfaRequired(false); setTotpCode(''); setError(null) }}
-                className="w-full text-xs text-slate-500 hover:text-slate-300 transition py-1"
+                className="w-full text-xs text-[var(--cc-text-muted)] hover:text-[var(--cc-text-body)] transition py-1"
               >
                 Back to password
               </button>
@@ -210,7 +212,7 @@ export default function Login() {
           </form>
         </div>
 
-        <p className="flex items-center justify-center gap-1.5 text-center text-[11px] text-slate-600 mt-4">
+        <p className="flex items-center justify-center gap-1.5 text-center font-mono text-[10px] uppercase tracking-[0.1em] text-[var(--cc-text-subtle)] mt-4">
           <Lock size={10} />
           Cartcrft Operator Console &middot; Access is logged
         </p>

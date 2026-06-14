@@ -69,7 +69,7 @@ function StoreDetailView({ storeId, token, onBack, handle401 }: { storeId: strin
 
   return (
     <div>
-      <button onClick={onBack} className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-300 transition mb-4">
+      <button onClick={onBack} className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-[var(--cc-text-muted)] hover:text-[var(--cc-lime)] transition mb-4">
         <ArrowLeft size={13} /> Back to stores
       </button>
       <PageHeader
@@ -79,17 +79,17 @@ function StoreDetailView({ storeId, token, onBack, handle401 }: { storeId: strin
       />
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
-        <div className="rounded-xl border border-white/[0.07] bg-slate-900/60 px-5 py-4">
-          <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Orders</p>
-          <p className="text-2xl font-bold text-slate-100">{store.order_count}</p>
+        <div className="rounded-lg border border-white/[0.07] bg-[var(--cc-surface)] px-5 py-4">
+          <p className="font-mono text-[10px] text-[var(--cc-text-subtle)] uppercase tracking-[0.14em] mb-1.5">Orders</p>
+          <p className="font-display text-2xl font-bold text-[var(--cc-text)]">{store.order_count}</p>
         </div>
-        <div className="rounded-xl border border-white/[0.07] bg-slate-900/60 px-5 py-4">
-          <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">GMV</p>
-          <p className="text-2xl font-bold text-emerald-400">{fmtUsd(store.gmv)}</p>
+        <div className="rounded-lg border border-white/[0.07] bg-[var(--cc-surface)] px-5 py-4">
+          <p className="font-mono text-[10px] text-[var(--cc-text-subtle)] uppercase tracking-[0.14em] mb-1.5">GMV</p>
+          <p className="font-display text-2xl font-bold text-[var(--cc-lime)]">{fmtUsd(store.gmv)}</p>
         </div>
-        <div className="rounded-xl border border-white/[0.07] bg-slate-900/60 px-5 py-4">
-          <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Currency</p>
-          <p className="text-2xl font-bold text-slate-100">{store.currency}</p>
+        <div className="rounded-lg border border-white/[0.07] bg-[var(--cc-surface)] px-5 py-4">
+          <p className="font-mono text-[10px] text-[var(--cc-text-subtle)] uppercase tracking-[0.14em] mb-1.5">Currency</p>
+          <p className="font-display text-2xl font-bold text-[var(--cc-text)]">{store.currency}</p>
         </div>
       </div>
 
@@ -104,8 +104,8 @@ function StoreDetailView({ storeId, token, onBack, handle401 }: { storeId: strin
             { label: 'Created', value: new Date(store.created_at).toLocaleString() },
           ].map(({ label, value }) => (
             <div key={label} className="flex items-start justify-between gap-4 py-2 border-b border-white/[0.04] last:border-0">
-              <span className="text-xs text-slate-500 flex-shrink-0 w-24">{label}</span>
-              <span className="text-xs text-slate-300 font-mono text-right break-all">{value}</span>
+              <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--cc-text-subtle)] flex-shrink-0 w-24">{label}</span>
+              <span className="text-xs text-[var(--cc-text-body)] font-mono text-right break-all">{value}</span>
             </div>
           ))}
         </div>
@@ -179,7 +179,7 @@ export default function Stores() {
           <select
             value={statusFilter}
             onChange={e => setStatusFilter(e.target.value)}
-            className="rounded-lg border border-white/[0.08] bg-slate-800/60 px-3 py-2 text-xs text-slate-300 focus:outline-none"
+            className="rounded-md border border-white/[0.08] bg-white/[0.02] px-3 py-2 text-xs text-[var(--cc-text-body)] focus:border-[var(--cc-lime)]/50 focus:outline-none focus:ring-1 focus:ring-[var(--cc-lime)]/40"
           >
             <option value="">All statuses</option>
             {statuses.map(s => <option key={s} value={s}>{s}</option>)}
@@ -207,25 +207,25 @@ export default function Stores() {
           </TableHead>
           <tbody>
             {filtered.map(s => (
-              <tr key={s.id} className="border-t border-white/[0.03] hover:bg-white/[0.02]">
+              <tr key={s.id} className="border-t border-white/[0.04] hover:bg-white/[0.02]">
                 <Td>
-                  <p className="text-xs font-medium text-slate-200">{s.name}</p>
-                  <p className="text-[11px] text-slate-600 font-mono">{s.id}</p>
+                  <p className="text-xs font-medium text-[var(--cc-text-body)]">{s.name}</p>
+                  <p className="text-[11px] text-[var(--cc-text-subtle)] font-mono">{s.id}</p>
                 </Td>
                 <Td>
-                  <span className="text-xs text-slate-400">{s.org_name || s.org_id}</span>
+                  <span className="text-xs text-[var(--cc-text-muted)]">{s.org_name || s.org_id}</span>
                 </Td>
-                <Td><span className="text-xs text-slate-400">{s.currency}</span></Td>
+                <Td><span className="text-xs text-[var(--cc-text-muted)] font-mono">{s.currency}</span></Td>
                 <Td>
                   <Badge color={s.status === 'active' ? 'emerald' : s.status === 'suspended' ? 'amber' : 'red'}>
                     {s.status}
                   </Badge>
                 </Td>
-                <Td><span className="text-xs text-slate-400">{s.order_count}</span></Td>
-                <Td><span className="text-xs text-emerald-400">{fmtUsd(s.gmv)}</span></Td>
-                <Td><span className="text-xs text-slate-500">{new Date(s.created_at).toLocaleDateString()}</span></Td>
+                <Td><span className="text-xs text-[var(--cc-text-muted)] tabular-nums">{s.order_count}</span></Td>
+                <Td><span className="text-xs text-[var(--cc-lime)] tabular-nums">{fmtUsd(s.gmv)}</span></Td>
+                <Td><span className="text-xs text-[var(--cc-text-muted)] tabular-nums">{new Date(s.created_at).toLocaleDateString()}</span></Td>
                 <Td>
-                  <button onClick={() => setSelectedId(s.id)} className="text-xs font-medium text-violet-400 hover:text-violet-300 transition">
+                  <button onClick={() => setSelectedId(s.id)} className="text-xs font-medium text-[var(--cc-lime)] hover:text-[var(--cc-lime-bright)] transition">
                     View
                   </button>
                 </Td>

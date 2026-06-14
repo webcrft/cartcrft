@@ -33,7 +33,7 @@ function AuthBoot({ children }: { children: React.ReactNode }) {
 
   if (!ready) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-500 text-sm">
+      <div className="min-h-screen bg-[var(--cc-bg)] flex items-center justify-center text-[var(--cc-muted)] font-mono text-xs uppercase tracking-widest">
         Loading…
       </div>
     )
@@ -84,7 +84,7 @@ export default function DashboardApp() {
                       path={entry.path === '/' ? undefined : entry.path}
                       index={entry.path === '/'}
                       element={
-                        <Suspense fallback={<div className="flex justify-center py-16 text-slate-500">Loading...</div>}>
+                        <Suspense fallback={<div className="flex justify-center py-16 text-[var(--cc-muted)] font-mono text-xs uppercase tracking-widest">Loading...</div>}>
                           <entry.element />
                         </Suspense>
                       }
