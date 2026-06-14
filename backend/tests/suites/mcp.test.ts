@@ -514,3 +514,58 @@ describe("MCP ?key= query param auth (H1.3: must be rejected)", () => {
     }
   });
 });
+
+// ── Cross-org isolation (the MCP org-check hole) ──────────────────────────────
+//
+// Previously MCP only verified the store EXISTS — it never compared the key's
+// org to stores.organization_id (REST does this in middleware.ts:200-216).  A
+// store-RESTRICTED key was caught by the storeRestriction check, but an
+// ORG-LEVEL key (no store restriction) for Org A could reach Org B's store.
+// These tests use org-level keys to prove the new org comparison denies it.
+
+describe("MCP cross-org isolation (org-level key)", () => {
+  it("rejects an Org-A org-level key against an Org-B store (403)", async () => {
+    const orgA = await setupStore();
+    const orgB = await setupStore();
+
+    // Org-level private key for Org A (NO storeId → no storeRestriction), so
+    // the only thing standing between it and Org B's store is the org check.
+    const orgAKey = await createApiKey(ctx, {
+      orgId: orgA.orgId,
+      userId: orgA.userId,
+      type: "private",
+      scopes: ["commerce:read", "commerce:write", "commerce:admin"],
+      name: "Org A org-level key",
+    });
+
+    const url = new URL(`${ctx.baseUrl}/mcp/${orgB.storeId}`);
+    const transport = new StreamableHTTPClientTransport(url, {
+      requestInit: { headers: { authorization: `Bearer ${orgAKey}` } },
+    });
+    const client = new Client(
+      { name: "cross-org-client", version: "0.1.0" },
+      { capabilities: {} }
+    );
+    // The server must reject (403) — connect() should throw.
+    await expect(client.connect(asTransport(transport))).rejects.toThrow();
+  });
+
+  it("an Org-level key still works against ITS OWN org's store (control)", async () => {
+    const org = await setupStore();
+    const orgKey = await createApiKey(ctx, {
+      orgId: org.orgId,
+      userId: org.userId,
+      type: "private",
+      scopes: ["commerce:read", "commerce:write", "commerce:admin"],
+      name: "same-org org-level key",
+    });
+
+    const client = await mcpClient(org.storeId, orgKey);
+    try {
+      const { tools } = await client.listTools();
+      expect(tools).toHaveLength(9);
+    } finally {
+      await client.close();
+    }
+  });
+});

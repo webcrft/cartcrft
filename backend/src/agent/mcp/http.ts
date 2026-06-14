@@ -20,6 +20,7 @@ import type { FastifyPluginAsync } from "fastify";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { lookupApiKey, hasScope } from "../../modules/apikeys/service.js";
 import { getPool } from "../../db/pool.js";
+import { runWithRequestCtx } from "../../lib/request-ctx.js";
 import { buildMcpServer } from "./server.js";
 
 // ── Auth helper ───────────────────────────────────────────────────────────────
@@ -90,15 +91,30 @@ export const mcpHttpPlugin: FastifyPluginAsync = async (app) => {
       });
     }
 
-    // Verify store exists and is active
+    // Verify store exists, is active, AND belongs to the key's org.
+    //
+    // The REST middleware (middleware.ts:200-216) compares the key's org to
+    // stores.organization_id; MCP previously only checked existence, so an
+    // org-A key could drive tools against an org-B store (cross-tenant hole).
+    // We now select organization_id and reject on mismatch.
     const pool = getPool();
-    const { rows } = await pool.query<{ exists: boolean }>(
-      `SELECT EXISTS(SELECT 1 FROM stores WHERE id = $1::uuid AND is_active = true) AS exists`,
+    const { rows } = await pool.query<{ organization_id: string }>(
+      `SELECT organization_id::text FROM stores WHERE id = $1::uuid AND is_active = true`,
       [storeId]
     );
-    if (!rows[0]?.exists) {
+    const storeOrg = rows[0]?.organization_id;
+    if (!storeOrg) {
       return reply.status(404).send({
         error: { code: "NOT_FOUND", message: "Store not found" },
+      });
+    }
+    if (storeOrg !== cached.orgId) {
+      // Cross-org access — the key's org does not own this store.
+      return reply.status(403).send({
+        error: {
+          code: "FORBIDDEN",
+          message: "API key does not belong to this store's organization",
+        },
       });
     }
 
@@ -110,26 +126,37 @@ export const mcpHttpPlugin: FastifyPluginAsync = async (app) => {
 
     const mcpServer = buildMcpServer(storeId);
 
-    try {
-      // Connect the MCP server to this transport instance.
-      await mcpServer.connect(transport as Parameters<typeof mcpServer.connect>[0]);
+    // Run the entire MCP exchange inside a request context so withTx (in the
+    // tool service calls) switches to the cartcrft_app role and sets the
+    // app.user_id / app.org_id GUCs — without this the tools ran as the
+    // BYPASSRLS DB owner and RLS never applied.  For API-key auth there is no
+    // individual user, so use the same synthetic `apikey:<org>` identifier the
+    // REST middleware uses (see middleware.ts).
+    await runWithRequestCtx(
+      { userId: `apikey:${cached.orgId}`, orgId: cached.orgId },
+      async () => {
+        try {
+          // Connect the MCP server to this transport instance.
+          await mcpServer.connect(transport as Parameters<typeof mcpServer.connect>[0]);
 
-      // Delegate to the transport's Node.js handleRequest adapter.
-      // Passing the parsed body for POST so the transport doesn't attempt to re-read
-      // a stream that Fastify has already consumed.
-      await transport.handleRequest(
-        request.raw,
-        reply.raw,
-        request.method === "POST" ? request.body : undefined
-      );
-    } finally {
-      // Close server after each stateless request.
-      try {
-        await mcpServer.close();
-      } catch {
-        // Ignore close errors
+          // Delegate to the transport's Node.js handleRequest adapter.
+          // Passing the parsed body for POST so the transport doesn't attempt to
+          // re-read a stream that Fastify has already consumed.
+          await transport.handleRequest(
+            request.raw,
+            reply.raw,
+            request.method === "POST" ? request.body : undefined
+          );
+        } finally {
+          // Close server after each stateless request.
+          try {
+            await mcpServer.close();
+          } catch {
+            // Ignore close errors
+          }
+        }
       }
-    }
+    );
   };
 
   // Register all three HTTP methods the MCP spec uses on the same endpoint.

@@ -32,6 +32,8 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { createCtx, type TestCtx } from "../shared/ctx.js";
 import { get, post, put, del, mintJwt, createApiKey } from "../shared/helpers.js";
 import { randomUUID } from "node:crypto";
+import { runWithRequestCtx } from "../../src/lib/request-ctx.js";
+import { withTx } from "../../src/db/pool.js";
 
 let ctx: TestCtx;
 
@@ -923,6 +925,102 @@ describe("Tenant isolation — IDOR sweep", () => {
         // Cart creation may require different setup — skip if not 201
         expect([200, 201, 400, 404]).toContain(cartRes.status);
       }
+    });
+  });
+
+  // ── DB-LEVEL isolation (RLS, not just the app layer) ──────────────────────
+  //
+  // The IDOR sweep above proves the HTTP middleware denies cross-tenant
+  // access.  These tests go a layer deeper: they drive the SAME withTx path the
+  // services use, but set Org B's request context directly (bypassing the HTTP
+  // middleware entirely), then assert the Postgres RLS policies — via the
+  // org-gated is_store_member() from 0019_rls_tenant_isolation.sql — still deny
+  // access to Org A's rows.  Without 0019 these would all leak (is_store_member
+  // returned true for any authenticated principal against any active store).
+
+  describe("DB-level RLS isolation (withTx + cross-org context)", () => {
+    it("Org B context sees ZERO of Store A's products via withTx", async () => {
+      const rowsAsB = await runWithRequestCtx(
+        { userId: `user-${userBId}`, orgId: orgBId },
+        () =>
+          withTx(async (client) => {
+            const r = await client.query(
+              `SELECT id FROM products WHERE store_id = $1::uuid`,
+              [storeAId]
+            );
+            return r.rowCount;
+          })
+      );
+      expect(rowsAsB).toBe(0);
+    });
+
+    it("Org A context CAN see Store A's products via withTx (control)", async () => {
+      const rowsAsA = await runWithRequestCtx(
+        { userId: `user-${userAId}`, orgId: orgAId },
+        () =>
+          withTx(async (client) => {
+            const r = await client.query(
+              `SELECT id FROM products WHERE store_id = $1::uuid`,
+              [storeAId]
+            );
+            return r.rowCount;
+          })
+      );
+      expect(rowsAsA).toBeGreaterThan(0);
+    });
+
+    it("Org B context sees ZERO of Store A's orders via withTx", async () => {
+      const rowsAsB = await runWithRequestCtx(
+        { userId: `user-${userBId}`, orgId: orgBId },
+        () =>
+          withTx(async (client) => {
+            const r = await client.query(
+              `SELECT id FROM orders WHERE store_id = $1::uuid`,
+              [storeAId]
+            );
+            return r.rowCount;
+          })
+      );
+      expect(rowsAsB).toBe(0);
+    });
+
+    it("Org B context CANNOT insert a product into Store A (RLS WITH CHECK)", async () => {
+      await expect(
+        runWithRequestCtx(
+          { userId: `user-${userBId}`, orgId: orgBId },
+          () =>
+            withTx(async (client) => {
+              await client.query(
+                `INSERT INTO products (store_id, title, slug)
+                 VALUES ($1::uuid, 'RLS injected', $2)`,
+                [storeAId, `rls-injected-${randomUUID()}`]
+              );
+            })
+        )
+      ).rejects.toThrow(); // row-level security policy violation
+    });
+
+    it("Org B context CANNOT update Store A's product (RLS denies → 0 rows)", async () => {
+      const affected = await runWithRequestCtx(
+        { userId: `user-${userBId}`, orgId: orgBId },
+        () =>
+          withTx(async (client) => {
+            const r = await client.query(
+              `UPDATE products SET title = 'hacked' WHERE id = $1::uuid`,
+              [productAId]
+            );
+            return r.rowCount;
+          })
+      );
+      // RLS USING clause filters the row out — the UPDATE matches nothing.
+      expect(affected).toBe(0);
+
+      // Confirm via owner connection that the title is unchanged.
+      const check = await ctx.pool.query<{ title: string }>(
+        `SELECT title FROM products WHERE id = $1::uuid`,
+        [productAId]
+      );
+      expect(check.rows[0]?.title).not.toBe("hacked");
     });
   });
 });
