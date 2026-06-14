@@ -7,6 +7,7 @@ import Login from './pages/Login'
 import { ROUTE_ENTRIES } from './routes/index'
 import { getToken, getApiKey } from './lib/auth'
 import './index.css'
+import './dashboard.css'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const authed = !!(getToken() ?? getApiKey())
@@ -26,35 +27,39 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
  */
 export default function DashboardApp() {
   return (
-    <ToastProvider>
-      <BrowserRouter basename="/dashboard">
-        <StoreProvider>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route
-              path="/"
-              element={
-                <RequireAuth>
-                  <AppShell />
-                </RequireAuth>
-              }
-            >
-              {ROUTE_ENTRIES.map(entry => (
-                <Route
-                  key={entry.path}
-                  path={entry.path === '/' ? undefined : entry.path}
-                  index={entry.path === '/'}
-                  element={
-                    <Suspense fallback={<div className="flex justify-center py-16 text-slate-500">Loading...</div>}>
-                      <entry.element />
-                    </Suspense>
-                  }
-                />
-              ))}
-            </Route>
-          </Routes>
-        </StoreProvider>
-      </BrowserRouter>
-    </ToastProvider>
+    // #dashboard-root scopes Tailwind's base layer resets to avoid colliding
+    // with Starlight or marketing page styles (which live on separate routes).
+    <div id="dashboard-root" style={{ display: 'contents' }}>
+      <ToastProvider>
+        <BrowserRouter basename="/dashboard">
+          <StoreProvider>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route
+                path="/"
+                element={
+                  <RequireAuth>
+                    <AppShell />
+                  </RequireAuth>
+                }
+              >
+                {ROUTE_ENTRIES.map(entry => (
+                  <Route
+                    key={entry.path}
+                    path={entry.path === '/' ? undefined : entry.path}
+                    index={entry.path === '/'}
+                    element={
+                      <Suspense fallback={<div className="flex justify-center py-16 text-slate-500">Loading...</div>}>
+                        <entry.element />
+                      </Suspense>
+                    }
+                  />
+                ))}
+              </Route>
+            </Routes>
+          </StoreProvider>
+        </BrowserRouter>
+      </ToastProvider>
+    </div>
   )
 }

@@ -14,37 +14,37 @@ const agentFeatures = [
     icon: '🔌',
     title: 'MCP server — shipped',
     description: 'Every store exposes a Model Context Protocol server by default. Any MCP-capable agent — Claude, a custom LLM, your own orchestrator — can browse and purchase in minutes, not months.',
-    href: '/docs/agent-native',
+    href: '/agent-native',
   },
   {
     icon: '🤝',
     title: 'ACP adapter — test mode',
     description: 'First-class Agentic Commerce Protocol adapter (spec pin: 2026-04). Agentic checkout sessions work end-to-end in test mode. Live delegated payment is in active development (Phase H5).',
-    href: '/docs/acp',
+    href: '/acp',
   },
   {
     icon: '🌐',
     title: 'UCP adapter — test mode',
     description: 'Universal Commerce Protocol (Google surfaces / NRF 2026-01 baseline). Catalog entities, checkout create/update/submit work in test mode. Live payment token passthrough is in active development.',
-    href: '/docs/ucp',
+    href: '/ucp',
   },
   {
     icon: '🔏',
     title: 'Signed agent mandates',
     description: 'Verifiable consent chain: intent to cart to payment. Each link is ed25519-signed by the agent and audit-logged. Configurable spend limits per agent, per time window.',
-    href: '/docs/agent-native',
+    href: '/agent-native',
   },
   {
     icon: '🔍',
     title: 'Semantic catalog search',
     description: 'pgvector + Reciprocal Rank Fusion on top of Postgres full-text. BYO OpenAI-compatible embeddings key. Natural-language queries like "warm merino hoodie under $100" just work.',
-    href: '/docs/agent-native',
+    href: '/agent-native',
   },
   {
     icon: '🏪',
     title: 'Agent-readable storefront',
     description: 'Structured product data, variant options, inventory status, shipping rates, and pricing — all machine-readable and consistently shaped for AI agents to reason over.',
-    href: '/docs/api-overview',
+    href: '/api-overview',
   },
 ];
 
@@ -54,37 +54,37 @@ const commerceFeatures = [
     icon: '📦',
     title: 'Catalog and inventory',
     description: 'Products (simple, bundle, configurable, digital, service, subscription, rental), unlimited variants, collections, metafields, i18n. Warehouses, lot tracking, FEFO, reorder points.',
-    href: '/docs/api-overview',
+    href: '/api-overview',
   },
   {
     icon: '🛒',
     title: 'Carts, checkout and orders',
     description: 'Atomic CompleteByID with price re-validation, inventory decrement, and discount burn in a single transaction. Order lifecycle state machines, cancel, notes, abandoned cart recovery.',
-    href: '/docs/api-overview',
+    href: '/api-overview',
   },
   {
     icon: '💳',
     title: '4 payment providers, BYO',
     description: 'Stripe, Paystack, Razorpay, and Xendit — bring your own credentials. AES-256-GCM secret encryption. Inbound webhook router with replay protection. Zero percent platform rake.',
-    href: '/docs/byo-keys',
+    href: '/byo-keys',
   },
   {
     icon: '🏢',
     title: 'B2B and subscriptions',
     description: 'Companies, credit limits, net terms, quotes/RFQ lifecycle, purchase orders, and customer group pricing. Subscription plans with trial, pause/resume, and generated orders.',
-    href: '/docs/api-overview',
+    href: '/api-overview',
   },
   {
     icon: '↩️',
     title: 'Returns, gift cards and more',
     description: 'Full RMA flow (refund/exchange/store credit/repair), restock. Gift card transactions, store credit ledger. Shipping zones, live rates (BobGo), collection points (PUDO).',
-    href: '/docs/api-overview',
+    href: '/api-overview',
   },
   {
     icon: '🔐',
     title: 'Customer auth and feeds',
     description: 'Register, login, magic link, OAuth (Google, Microsoft, Discord). Google Shopping XML and Facebook Catalog feeds. GA4 server-side purchase events.',
-    href: '/docs/api-overview',
+    href: '/api-overview',
   },
 ];
 
@@ -94,25 +94,25 @@ const dxFeatures = [
     icon: '🟦',
     title: 'TypeScript end-to-end',
     description: 'The backend is TypeScript on Fastify + zod + plain pg. The generated @cartcrft/sdk is typed from the same OpenAPI 3.1 spec that drives your REST API.',
-    href: '/docs/api-overview',
+    href: '/api-overview',
   },
   {
     icon: '⚡',
     title: 'One-command quickstart',
     description: 'Clone, pnpm install, pnpm migrate, pnpm seed, pnpm dev. A seeded demo store with 12 products at localhost:3000 in under five minutes.',
-    href: '/docs/quickstart',
+    href: '/quickstart',
   },
   {
     icon: '🐳',
     title: 'Single Docker image',
     description: 'One image, three subcommands: serve, worker, migrate. Deploy on any VPS, Fly.io, Railway, or Render. Or run the full stack with docker compose up.',
-    href: '/docs/self-host',
+    href: '/self-host',
   },
   {
     icon: '✅',
     title: 'Tested core',
     description: 'Backend ships with ~830 tests across 45 suites using Vitest and simulated-time billing tests. Suites cover catalog, carts, orders, payments, B2B, subscriptions, and more.',
-    href: '/docs/testing',
+    href: '/testing',
   },
 ];
 ---
@@ -126,7 +126,7 @@ const dxFeatures = [
     badge="Open source · MIT licensed · TypeScript"
     headline='The <span class="gradient">open-source, agent-native</span> commerce backend.'
     subheadline="Make your store reachable by every AI agent — owned by no single platform. MCP server shipped by default. ACP + UCP adapters. Signed agent mandates. Zero take rate. BYO keys. Self-host or cloud."
-    ctaPrimary={{ label: 'Get started', href: '/docs/quickstart' }}
+    ctaPrimary={{ label: 'Get started', href: '/quickstart' }}
     ctaSecondary={{ label: 'View on GitHub', href: 'https://github.com/webcrftsystems/cartcrft' }}
   />
 
@@ -207,7 +207,7 @@ const dxFeatures = [
       </ol>
       <p class="how-note">
         Full 9-step walkthrough with verified tool-call transcripts in
-        <a href="/docs/quickstart-mcp">docs/quickstart-mcp</a>.
+        <a href="/quickstart-mcp">quickstart-mcp</a>.
         Test mode requires no payment credentials.
       </p>
     </div>
@@ -279,8 +279,8 @@ const dxFeatures = [
         No payment credentials required for test mode.
       </p>
       <div class="cta-band-actions">
-        <a href="/docs/quickstart" class="btn-primary">Read the quickstart</a>
-        <a href="/docs/quickstart-mcp" class="btn-secondary">Agent quickstart (MCP)</a>
+        <a href="/quickstart" class="btn-primary">Read the quickstart</a>
+        <a href="/quickstart-mcp" class="btn-secondary">Agent quickstart (MCP)</a>
       </div>
       <p class="cta-compare-link">
         See how Cartcrft compares to Shopify, Medusa, Vendure, Saleor, and others —

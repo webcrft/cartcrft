@@ -5,8 +5,9 @@ import {
   Tag, Layers, Settings, Truck, Receipt, RotateCcw, Wallet,
   Repeat, List, Building2, UsersRound, Star, Heart,
   ShoppingCart, Package2, Plug, Bell, Webhook, CreditCard,
-  ShieldCheck, Bot, Key, Download,
+  ShieldCheck, Bot, Key, Download, Cloud, UserCircle,
 } from 'lucide-react'
+import { useCloud } from '../lib/useCloud'
 
 export interface NavItem {
   path: string
@@ -60,6 +61,42 @@ const AgentsPage = lazy(() => import('../pages/Agents'))
 const ApiKeysPage = lazy(() => import('../pages/ApiKeys'))
 const DigitalProductsPage = lazy(() => import('../pages/DigitalProducts'))
 
+// ── Cloud-only pages ─────────────────────────────────────────────────────────
+// These lazy imports exist in all bundles but the routes are only *registered*
+// when PUBLIC_CARTCRFT_CLOUD is set — so the OSS build never exposes the pages.
+const CloudBillingPage = lazy(() => import('../pages/cloud/Billing'))
+const CloudAccountPage = lazy(() => import('../pages/cloud/Account'))
+const CloudOnboardingPage = lazy(() => import('../pages/cloud/CloudOnboarding'))
+
+// Cloud routes registered at runtime based on the build-time flag.
+// useCloud() reads import.meta.env.PUBLIC_CARTCRFT_CLOUD which is inlined at
+// build time, so in the OFF build this array is always empty.
+const CLOUD_ROUTE_ENTRIES: RouteEntry[] = useCloud()
+  ? [
+      {
+        path: '/cloud/billing',
+        element: CloudBillingPage,
+        navSection: 'Cloud',
+        navLabel: 'Billing',
+        icon: CreditCard,
+      },
+      {
+        path: '/cloud/account',
+        element: CloudAccountPage,
+        navSection: 'Cloud',
+        navLabel: 'Account',
+        icon: UserCircle,
+      },
+      {
+        path: '/cloud/onboarding',
+        element: CloudOnboardingPage,
+        navSection: 'Cloud',
+        navLabel: 'Onboarding',
+        icon: Cloud,
+      },
+    ]
+  : []
+
 export const ROUTE_ENTRIES: RouteEntry[] = [
   { path: '/', element: DashboardPage, navSection: '', navLabel: 'Overview', icon: LayoutDashboard },
   { path: '/products', element: ProductsPage, navSection: 'Catalog', navLabel: 'Products', icon: Package },
@@ -93,9 +130,14 @@ export const ROUTE_ENTRIES: RouteEntry[] = [
   // H4.2 — new pages
   { path: '/api-keys', element: ApiKeysPage, navSection: 'Store', navLabel: 'API Keys', icon: Key },
   { path: '/digital-products', element: DigitalProductsPage, navSection: 'Catalog', navLabel: 'Digital Files', icon: Download },
+
+  // Cloud-only routes — empty array in OFF builds, populated in ON builds
+  ...CLOUD_ROUTE_ENTRIES,
 ]
 
-const SECTION_ORDER = ['', 'Catalog', 'Sales', 'Operations', 'Store']
+const SECTION_ORDER = useCloud()
+  ? ['', 'Catalog', 'Sales', 'Operations', 'Store', 'Cloud']
+  : ['', 'Catalog', 'Sales', 'Operations', 'Store']
 
 export const NAV_SECTIONS: NavSection[] = SECTION_ORDER.map(label => ({
   label,

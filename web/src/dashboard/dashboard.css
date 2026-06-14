@@ -1,0 +1,33 @@
+/*
+ * Dashboard Tailwind entry point — imported by DashboardApp.tsx.
+ *
+ * Strategy (Tailwind v4):
+ *   - Import tailwindcss which activates the full utility set.
+ *   - Disable Tailwind preflight globally to avoid resetting Starlight and
+ *     marketing page styles. The dashboard wraps its entire tree in
+ *     #dashboard-root so utility classes only affect that subtree in practice.
+ *   - The dashboard already sets `body { margin:0; background:#020617 }` in
+ *     index.css, so we don't need preflight for the dashboard either.
+ */
+@import "tailwindcss";
+
+@layer base {
+  /*
+   * Opt out of Tailwind v4 preflight on the top-level document elements so
+   * Starlight's CSS (which loads on doc pages, not dashboard pages) is not
+   * overridden. The dashboard is a client-only island — it never co-renders
+   * with Starlight in the same browser context, but disabling broad preflight
+   * resets is still the safer, documented isolation strategy.
+   *
+   * Scope: only elements inside #dashboard-root get the Tailwind base layer
+   * resets we actually need.
+   */
+  #dashboard-root *,
+  #dashboard-root *::before,
+  #dashboard-root *::after {
+    box-sizing: border-box;
+    border-width: 0;
+    border-style: solid;
+    border-color: theme(--color-slate-700);
+  }
+}

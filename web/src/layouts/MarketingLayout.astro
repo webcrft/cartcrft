@@ -14,6 +14,8 @@ export interface Props {
 
 const { title, description = 'Headless commerce for agent-native storefronts.' } = Astro.props;
 const pageTitle = `${title} | Cartcrft`;
+// Cloud feature flag — PUBLIC_* vars are available at build time in Astro
+const CLOUD = Boolean(import.meta.env.PUBLIC_CARTCRFT_CLOUD);
 ---
 
 <!doctype html>
@@ -43,9 +45,10 @@ const pageTitle = `${title} | Cartcrft`;
         </a>
 
         <nav class="header-nav" aria-label="Main navigation">
-          <a href="/docs">Docs</a>
+          <a href="/quickstart">Docs</a>
           <a href="/pricing">Pricing</a>
           <a href="/compare">Compare</a>
+          {CLOUD && <a href="/cloud/overview">Cloud</a>}
           <a
             href="https://github.com/webcrftsystems/cartcrft"
             target="_blank"
@@ -55,7 +58,10 @@ const pageTitle = `${title} | Cartcrft`;
 
         <div class="header-cta">
           <a href="/dashboard" class="header-login">Log in</a>
-          <a href="/dashboard" class="cc-btn-primary">Get started</a>
+          {CLOUD
+            ? <a href="/dashboard/cloud/onboarding" class="cc-btn-primary">Sign up</a>
+            : <a href="/quickstart" class="cc-btn-primary">Get started</a>
+          }
         </div>
       </div>
     </header>
@@ -78,27 +84,37 @@ const pageTitle = `${title} | Cartcrft`;
           <div class="footer-col">
             <h3>Product</h3>
             <ul>
-              <li><a href="/docs">Documentation</a></li>
+              <li><a href="/quickstart">Documentation</a></li>
               <li><a href="/pricing">Pricing</a></li>
               <li><a href="/compare">Compare</a></li>
-              <li><a href="/docs/quickstart">Quickstart</a></li>
+              <li><a href="/quickstart">Quickstart</a></li>
               <li><a href="/dashboard">Dashboard</a></li>
             </ul>
           </div>
           <div class="footer-col">
             <h3>Guides</h3>
             <ul>
-              <li><a href="/docs/agent-native">Agent-Native</a></li>
-              <li><a href="/docs/self-host">Self-hosting</a></li>
-              <li><a href="/docs/byo-keys">BYO Keys</a></li>
-              <li><a href="/docs/api-overview">API Reference</a></li>
+              <li><a href="/agent-native">Agent-Native</a></li>
+              <li><a href="/self-host">Self-hosting</a></li>
+              <li><a href="/byo-keys">BYO Keys</a></li>
+              <li><a href="/api-overview">API Reference</a></li>
             </ul>
           </div>
+          {CLOUD && (
+            <div class="footer-col">
+              <h3>Cloud</h3>
+              <ul>
+                <li><a href="/cloud/overview">Cloud Overview</a></li>
+                <li><a href="/cloud/billing">Billing & Pricing</a></li>
+                <li><a href="/dashboard/cloud/onboarding">Get Started</a></li>
+              </ul>
+            </div>
+          )}
           <div class="footer-col">
             <h3>Community</h3>
             <ul>
               <li><a href="https://github.com/webcrftsystems/cartcrft" target="_blank" rel="noopener noreferrer">GitHub</a></li>
-              <li><a href="/docs/contributing">Contributing</a></li>
+              <li><a href="/contributing">Contributing</a></li>
             </ul>
           </div>
           <div class="footer-col">
