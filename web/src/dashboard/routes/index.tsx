@@ -7,7 +7,27 @@ import {
   ShoppingCart, Package2, Plug, Bell, Webhook, CreditCard,
   ShieldCheck, Bot, Key, Download, Cloud, UserCircle,
 } from 'lucide-react'
-import { useCloud } from '../lib/useCloud'
+
+/**
+ * BUILD-TIME cloud flag.
+ *
+ * Vite inlines `import.meta.env.PUBLIC_CARTCRFT_CLOUD` as a string literal at
+ * build time (or `undefined` when the var is unset).  Using the literal form
+ * `import.meta.env.PUBLIC_CARTCRFT_CLOUD` (without casting to `any`) is
+ * required so Vite's bundler can statically analyse the condition and
+ * dead-code-eliminate the unreachable branches:
+ *
+ *   - OFF build (var unset):  `undefined === "1"` -> false
+ *     -> Vite removes the cloud lazy() branches -> Billing/Account/CloudOnboarding
+ *     chunks are never emitted into the output.
+ *   - ON  build (PUBLIC_CARTCRFT_CLOUD=1): `"1" === "1"` -> true
+ *     -> all three cloud chunks are included.
+ *
+ * IMPORTANT: Do NOT wrap this in a function call (e.g. useCloud()) -- the
+ * indirection defeats Vite's static analysis.  The `as any` cast also defeats
+ * it (Vite needs to see the literal `import.meta.env.*` property access).
+ */
+const CLOUD_ENABLED = import.meta.env.PUBLIC_CARTCRFT_CLOUD === '1'
 
 export interface NavItem {
   path: string
@@ -37,7 +57,7 @@ const DiscountsPage = lazy(() => import('../pages/Discounts'))
 const CollectionsPage = lazy(() => import('../pages/Collections'))
 const SettingsPage = lazy(() => import('../pages/Settings'))
 
-// T5.4 — remaining pages
+// T5.4 -- remaining pages
 const ShippingPage = lazy(() => import('../pages/Shipping'))
 const TaxPage = lazy(() => import('../pages/Tax'))
 const ReturnsPage = lazy(() => import('../pages/Returns'))
@@ -57,39 +77,35 @@ const PaymentProvidersPage = lazy(() => import('../pages/PaymentProviders'))
 const CustomerAuthPage = lazy(() => import('../pages/CustomerAuth'))
 const AgentsPage = lazy(() => import('../pages/Agents'))
 
-// H4.2 — new pages
+// H4.2 -- new pages
 const ApiKeysPage = lazy(() => import('../pages/ApiKeys'))
 const DigitalProductsPage = lazy(() => import('../pages/DigitalProducts'))
 
-// ── Cloud-only pages ─────────────────────────────────────────────────────────
-// These lazy imports exist in all bundles but the routes are only *registered*
-// when PUBLIC_CARTCRFT_CLOUD is set — so the OSS build never exposes the pages.
-const CloudBillingPage = lazy(() => import('../pages/cloud/Billing'))
-const CloudAccountPage = lazy(() => import('../pages/cloud/Account'))
-const CloudOnboardingPage = lazy(() => import('../pages/cloud/CloudOnboarding'))
-
-// Cloud routes registered at runtime based on the build-time flag.
-// useCloud() reads import.meta.env.PUBLIC_CARTCRFT_CLOUD which is inlined at
-// build time, so in the OFF build this array is always empty.
-const CLOUD_ROUTE_ENTRIES: RouteEntry[] = useCloud()
+// Cloud-only pages.
+// The lazy imports live INSIDE the CLOUD_ENABLED branch so that Vite's static
+// analyser can see them as dead code in an OFF build and omit the chunks
+// entirely from the output.  Do NOT hoist them to module top-level as
+// const CloudBillingPage = lazy(() => import(...)) -- that pattern includes
+// the chunk in the bundle regardless of the runtime condition.
+const CLOUD_ROUTE_ENTRIES: RouteEntry[] = CLOUD_ENABLED
   ? [
       {
         path: '/cloud/billing',
-        element: CloudBillingPage,
+        element: lazy(() => import('../pages/cloud/Billing')),
         navSection: 'Cloud',
         navLabel: 'Billing',
         icon: CreditCard,
       },
       {
         path: '/cloud/account',
-        element: CloudAccountPage,
+        element: lazy(() => import('../pages/cloud/Account')),
         navSection: 'Cloud',
         navLabel: 'Account',
         icon: UserCircle,
       },
       {
         path: '/cloud/onboarding',
-        element: CloudOnboardingPage,
+        element: lazy(() => import('../pages/cloud/CloudOnboarding')),
         navSection: 'Cloud',
         navLabel: 'Onboarding',
         icon: Cloud,
@@ -107,7 +123,7 @@ export const ROUTE_ENTRIES: RouteEntry[] = [
   { path: '/discounts', element: DiscountsPage, navSection: 'Operations', navLabel: 'Discounts', icon: Tag },
   { path: '/settings', element: SettingsPage, navSection: 'Store', navLabel: 'Settings', icon: Settings },
 
-  // T5.4 — remaining pages
+  // T5.4 -- remaining pages
   { path: '/shipping', element: ShippingPage, navSection: 'Operations', navLabel: 'Shipping', icon: Truck },
   { path: '/tax', element: TaxPage, navSection: 'Operations', navLabel: 'Tax', icon: Receipt },
   { path: '/returns', element: ReturnsPage, navSection: 'Operations', navLabel: 'Returns', icon: RotateCcw },
@@ -127,15 +143,15 @@ export const ROUTE_ENTRIES: RouteEntry[] = [
   { path: '/customer-auth', element: CustomerAuthPage, navSection: 'Store', navLabel: 'Customer Auth', icon: ShieldCheck },
   { path: '/agents', element: AgentsPage, navSection: 'Store', navLabel: 'Agents', icon: Bot },
 
-  // H4.2 — new pages
+  // H4.2 -- new pages
   { path: '/api-keys', element: ApiKeysPage, navSection: 'Store', navLabel: 'API Keys', icon: Key },
   { path: '/digital-products', element: DigitalProductsPage, navSection: 'Catalog', navLabel: 'Digital Files', icon: Download },
 
-  // Cloud-only routes — empty array in OFF builds, populated in ON builds
+  // Cloud-only routes -- empty array in OFF builds, populated in ON builds
   ...CLOUD_ROUTE_ENTRIES,
 ]
 
-const SECTION_ORDER = useCloud()
+const SECTION_ORDER = CLOUD_ENABLED
   ? ['', 'Catalog', 'Sales', 'Operations', 'Store', 'Cloud']
   : ['', 'Catalog', 'Sales', 'Operations', 'Store']
 

@@ -20,6 +20,15 @@ const { title, description, lastUpdated } = Astro.props;
 ---
 
 <MarketingLayout title={title} description={description}>
+  <!-- Draft banner — rendered at the very top of every legal page until counsel finalises -->
+  <div class="draft-banner" role="alert" aria-live="polite">
+    <span class="draft-badge">DRAFT</span>
+    <span class="draft-text">
+      This document is <strong>pending legal review and is not yet in force.</strong>
+      It must not be relied upon as a binding policy until approved by qualified legal counsel.
+    </span>
+  </div>
+
   <article class="legal-page">
     <header class="legal-header">
       <div class="legal-header-inner">
@@ -56,6 +65,46 @@ const { title, description, lastUpdated } = Astro.props;
 </MarketingLayout>
 
 <style>
+  /* ── Draft banner ─────────────────────────────────────────────────────────── */
+  .draft-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: #7c3aed;
+    color: #fff;
+    padding: 0.85rem 1.5rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    flex-wrap: wrap;
+  }
+
+  .draft-badge {
+    flex-shrink: 0;
+    background: #fff;
+    color: #7c3aed;
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    padding: 0.2rem 0.5rem;
+    border-radius: 0.25rem;
+  }
+
+  .draft-text {
+    flex: 1;
+    min-width: 0;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .draft-banner {
+      background: #4c1d95;
+    }
+    .draft-badge {
+      background: #c4b5fd;
+      color: #1e0757;
+    }
+  }
+
+  /* ── Legal header ─────────────────────────────────────────────────────────── */
   .legal-header {
     padding: 4rem 1.5rem 2rem;
     background: #f8fafc;

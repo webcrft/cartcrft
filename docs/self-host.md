@@ -24,7 +24,7 @@ docker compose up
 docker compose --profile seed run --rm seed
 
 # 5. Verify
-curl http://localhost:3000/healthz
+curl http://localhost:8080/healthz
 # → {"status":"ok","version":"0.0.0","db":"ok"}
 ```
 
@@ -38,7 +38,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 CREATE EXTENSION IF NOT EXISTS vector;
 ```
 
-The server listens on port **3000** by default (override with `PORT`).
+The server listens on port **8080** by default (override with `PORT`).
 
 ---
 
@@ -51,8 +51,8 @@ Never commit values — only commit an `.env.example` with placeholder text.
 |---|---|---|---|
 | `DATABASE_URL` | Yes | — | Postgres connection string, e.g. `postgres://user:pass@host:5432/db` |
 | `APP_ENV` | No | `development` | `development` / `test` / `production` |
-| `PORT` | No | `3000` | HTTP listen port |
-| `JWT_SECRET` | Yes | — | HS256 signing secret for admin JWTs (min 32 chars in production) |
+| `PORT` | No | `8080` | HTTP listen port |
+| `JWT_SECRET` | Yes | — | HS256 signing secret for admin JWTs — **must be ≥ 32 chars and not the dev default when `APP_ENV=production`** (boot will throw otherwise); generate with `openssl rand -hex 32` |
 | `JWT_EXPIRY_HOURS` | No | `24` | Admin JWT lifetime in hours |
 | `FRONTEND_URL` | No | `http://localhost:5173` | CORS allowed origin for admin SPA |
 | `BASE_DOMAIN` | No | `localhost` | Root domain used for subdomain webhook routing |
@@ -77,7 +77,7 @@ Never commit values — only commit an `.env.example` with placeholder text.
                  │           docker-compose stack            │
                  │                                           │
   Browser/Agent  │   ┌─────────────────────────────────┐    │
-   ──────────▶   │   │   server (Fastify, :3000)       │    │
+   ──────────▶   │   │   server (Fastify, :8080)       │    │
                  │   │   node dist/main.js serve        │    │
                  │   └──────────────┬──────────────────┘    │
                  │                  │                        │

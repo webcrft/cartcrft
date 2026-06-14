@@ -98,3 +98,9 @@ export {
   type WebhookHandlerDeps,
   type BillingWebhookPluginOptions,
 } from './webhook.js';
+
+// ── Cloud billing read-API plugin ─────────────────────────────────────────────
+export {
+  billingApiPlugin,
+  type BillingApiPluginOptions,
+} from './api.js';

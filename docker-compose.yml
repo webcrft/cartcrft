@@ -23,7 +23,10 @@ x-backend-common: &backend-common
   environment:
     DATABASE_URL: "postgres://cartcrft:cartcrft@db:5432/cartcrft?sslmode=disable"
     APP_ENV: development
-    PORT: "3000"
+    PORT: "8080"
+    # DEV-ONLY secret. Never use this value in production.
+    # In production (APP_ENV=production), set JWT_SECRET to a random string of
+    # at least 32 characters, e.g.:  openssl rand -hex 32
     JWT_SECRET: "dev-jwt-secret-change-in-production"
     JWT_EXPIRY_HOURS: "24"
     FRONTEND_URL: "http://localhost:5173"
@@ -81,7 +84,7 @@ services:
     command: ["node", "backend/dist/main.js", "serve"]
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "8080:8080"
     depends_on:
       db:
         condition: service_healthy

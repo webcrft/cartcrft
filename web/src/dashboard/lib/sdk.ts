@@ -2,8 +2,9 @@ import { Cartcrft, CartcrftApiError } from '@cartcrft/sdk'
 import { getToken, getApiKey, clearToken } from './auth'
 
 // Astro exposes client-visible env vars under the PUBLIC_ prefix.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const BASE_URL: string = (import.meta as any).env?.['PUBLIC_API_URL'] ?? 'http://localhost:8080'
+// The literal `import.meta.env.PUBLIC_API_URL` form is required so Vite inlines
+// the value at build time.  Falls back to localhost:8080 when unset.
+const BASE_URL: string = import.meta.env.PUBLIC_API_URL ?? 'http://localhost:8080'
 
 /** Called on 401 — clears auth and redirects to /login. Injected at app boot. */
 let _on401: (() => void) | null = null

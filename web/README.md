@@ -72,11 +72,74 @@ Layouts:
 
 ## Deploy
 
-Static build targets `web/dist/`. The repo uses **Bunny CDN** (see `.env` `SUPER_BUNNY_*`) for CDN delivery. Compatible with Cloudflare Pages and Netlify as alternatives.
+### Build
 
-For Bunny CDN:
-- Upload `web/dist/` to your Bunny Storage Zone
-- Point a Pull Zone at the storage zone
-- Enable "Perma-Cache" and set Cache-Control headers as appropriate
+```bash
+# OSS build (no cloud billing/account pages bundled)
+pnpm --filter @cartcrft/web build
 
-For Cloudflare Pages: connect the repo, set build command `pnpm build:web`, output directory `web/dist`.
+# Cloud build (includes cloud pages in the JS bundle)
+PUBLIC_CARTCRFT_CLOUD=1 pnpm --filter @cartcrft/web build
+```
+
+Output lands in `web/dist/`. Set `PUBLIC_API_URL` before building so the dashboard SPA knows where the backend lives:
+
+```bash
+PUBLIC_API_URL=https://api.yourstore.com PUBLIC_CARTCRFT_CLOUD=1 pnpm --filter @cartcrft/web build
+```
+
+### SPA fallback — critical for /dashboard/* deep links
+
+The dashboard is a React SPA mounted at `/dashboard`. Serving `/dashboard/products` directly (e.g. on page refresh or a bookmarked URL) must return the `dashboard/index.html` shell, not a 404. Each host has its own mechanism:
+
+**Netlify / Cloudflare Pages**
+
+A `_redirects` file in `web/dist/` (or `web/public/`) handles this:
+
+```
+/dashboard/*  /dashboard/index.html  200
+```
+
+This file is committed at `web/public/_redirects` and copied to `web/dist/` automatically during the Astro build (Astro copies everything in `public/` verbatim).
+
+**Bunny CDN (Pull Zone)**
+
+Bunny does not honour `_redirects` files. Instead configure these Pull Zone settings:
+
+1. **Error pages** → set the 404 page to `/dashboard/index.html` — this causes any unknown `/dashboard/*` path to serve the SPA shell.
+2. **Alternatively**, use a Bunny Edge Rule: `If URL path starts with /dashboard/ → Rewrite URL to /dashboard/index.html` with a 200 response (not a redirect).
+
+**Cloudflare Pages (alternative)**
+
+Add a `_redirects` file (already committed in `web/public/`). Cloudflare Pages automatically processes it.
+
+**Nginx / self-host**
+
+```nginx
+location /dashboard/ {
+    try_files $uri $uri/ /dashboard/index.html;
+}
+```
+
+### Cloudflare Pages
+
+1. Connect the repo in the Cloudflare Pages dashboard.
+2. Build command: `pnpm build:web`
+3. Output directory: `web/dist`
+4. Environment variables: `PUBLIC_API_URL`, optionally `PUBLIC_CARTCRFT_CLOUD=1`
+5. The `web/public/_redirects` file is included in the build output and handles SPA routing automatically.
+
+### Netlify
+
+1. Build command: `pnpm build:web`
+2. Publish directory: `web/dist`
+3. Environment variables: `PUBLIC_API_URL`, optionally `PUBLIC_CARTCRFT_CLOUD=1`
+4. The `web/public/_redirects` file handles SPA routing automatically.
+
+### Bunny CDN (primary host)
+
+1. Upload `web/dist/` to your Bunny Storage Zone (or use the Bunny CDN deploy action).
+2. Point a Pull Zone at the storage zone.
+3. Add an Edge Rule: `If URL path starts with /dashboard/ → Rewrite URL to /dashboard/index.html` (200, not 301/302).
+4. Enable "Perma-Cache" and configure Cache-Control headers.
+5. Set `Cache-Control: no-store` on `_astro/*.js` entries that include the API URL (or use runtime env injection — see below).

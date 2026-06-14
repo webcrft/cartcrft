@@ -81,10 +81,6 @@ export default function Login() {
             </Btn>
           </form>
         </div>
-        <p className="text-center text-[11px] text-slate-600 mt-4">
-          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-          PUBLIC_API_URL: {(import.meta as any).env?.['PUBLIC_API_URL'] ?? 'http://localhost:8080'}
-        </p>
       </div>
     </div>
   )

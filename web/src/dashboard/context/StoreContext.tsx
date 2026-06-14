@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getSdk, setOn401Handler } from '../lib/sdk'
-import { getActiveStoreId, setActiveStoreId } from '../lib/auth'
+import { getSdk, setOn401Handler, resetSdk } from '../lib/sdk'
+import { getActiveStoreId, setActiveStoreId, clearToken } from '../lib/auth'
+import { CartcrftApiError } from '@cartcrft/sdk'
 
 interface Store {
   id: string
@@ -50,8 +51,25 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const found = list.find(s => s.id === savedId) ?? list[0] ?? null
       setActiveStoreState(found)
       if (found) setActiveStoreId(found.id)
-    } catch { /* not yet authed */ } finally { setLoading(false) }
-  }, [])
+    } catch (err) {
+      // 401 → the global sdk handler (registered above via setOn401Handler) will
+      // fire the navigate-to-login callback.  Distinguish it from a transient
+      // network error so we don't silently swallow auth-expiry as "empty list".
+      if (err instanceof CartcrftApiError && err.status === 401) {
+        // Clear stale auth so the redirect lands on a clean login screen.
+        clearToken()
+        localStorage.removeItem('cc_admin_apikey')
+        localStorage.removeItem('cc_admin_store')
+        resetSdk()
+        // The setOn401Handler callback fires asynchronously from within guardedCall
+        // when called through the SDK wrapper, but direct sdk.stores.list() calls
+        // bypass guardedCall, so we fire the redirect here too.
+        void navigate('/login', { replace: true })
+      }
+      // Other errors (network, 5xx): leave stores empty; the UI shows an empty
+      // state rather than a blank screen.
+    } finally { setLoading(false) }
+  }, [navigate])
 
   useEffect(() => { void reload() }, [reload])
 

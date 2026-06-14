@@ -124,8 +124,9 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
 
     // In dev mode allow common localhost ports so the admin + storefront dev
     // servers work without any extra env setup.
+    // 4321 = unified web dev server (Astro/dashboard).
     if (isDev) {
-      for (const port of ["3000", "3001", "4000", "5173", "5174", "8080"]) {
+      for (const port of ["3000", "3001", "4000", "4321", "5173", "5174", "8080"]) {
         allowedOrigins.add(`http://localhost:${port}`);
         allowedOrigins.add(`http://127.0.0.1:${port}`);
       }
@@ -189,7 +190,7 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
         },
         servers: [
           { url: "https://api.cartcrft.dev", description: "Cartcrft Cloud" },
-          { url: "http://localhost:3000", description: "Local dev" },
+          { url: "http://localhost:8080", description: "Local dev" },
         ],
         components: {
           securitySchemes: {
@@ -352,7 +353,7 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
   await app.register(digitalPlugin);
   await app.register(engagementPlugin);
 
-  // ── Cloud billing webhook (CARTCRFT_CLOUD=1 only) ────────────────────────────
+  // ── Cloud billing webhook + read-API (CARTCRFT_CLOUD=1 only) ─────────────────
   // Dynamic import so the OSS build never eagerly imports @cartcrft/cloud-billing.
   // The backend typechecks and builds cleanly without the cloud package present.
   if (process.env["CARTCRFT_CLOUD"]) {
@@ -360,12 +361,18 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
     // workspace dep (cloud-license boundary). TypeScript cannot statically verify
     // the import target when the package may be absent. The plugin function is
     // duck-typed by Fastify's register() call — safe at runtime. /* any: optional cloud dep */
-    // Pass the backend's existing pg.Pool so billingWebhookPlugin reuses the
-    // connection pool instead of opening a second one from DATABASE_URL.
+    // Pass the backend's existing pg.Pool so plugins reuse the connection pool
+    // instead of opening a second one from DATABASE_URL.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const cloudBilling = await import("@cartcrft/cloud-billing" as any) as { billingWebhookPlugin: (instance: unknown, opts: Record<string, unknown>) => Promise<void> };
+    const cloudBilling = await import("@cartcrft/cloud-billing" as any) as {
+      billingWebhookPlugin: (instance: unknown, opts: Record<string, unknown>) => Promise<void>;
+      billingApiPlugin: (instance: unknown, opts: Record<string, unknown>) => Promise<void>;
+    };
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (app as any).register(cloudBilling.billingWebhookPlugin, { prefix: "/webhooks/billing", pool: getPool() });
+    // Cloud account + billing read endpoints consumed by the dashboard cloud pages.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (app as any).register(cloudBilling.billingApiPlugin, { prefix: "/cloud", pool: getPool() });
   }
 
   // ── T6.5 — Abandoned-cart recovery emails (routes) ───────────────────────────
