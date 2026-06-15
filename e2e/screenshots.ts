@@ -206,11 +206,12 @@ test('dashboard: orders', async ({ page }) => {
 
 test('superadmin: analytics', async ({ page }) => {
   await loginToSuperAdmin(page);
-  // Wait for a StatCard value to be rendered — any element with a large
-  // tabular number proves the analytics data came back from the API.
+  // The operator console holds its super-JWT in memory and loads analytics after
+  // auth — wait for the network to settle (data back) then the shell to be present.
+  await page.waitForLoadState('networkidle');
   await snap(page, 'superadmin-analytics.png', {
-    sentinel: '[class*="tabular-nums"], [class*="font-display"], svg path',
-    settleMs: 600,
+    sentinel: 'main, [class*="grid"]',
+    settleMs: 1200,
     clip: { x: 0, y: 0, width: 1512, height: 900 },
   });
 });

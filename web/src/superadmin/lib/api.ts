@@ -98,15 +98,16 @@ export async function getMe(token: string): Promise<MeResult> {
 // ── Analytics ─────────────────────────────────────────────────────────────────
 
 export interface AnalyticsOverview {
-  total_orgs: number
-  total_stores: number
-  total_customers: number
-  total_orders: number
-  total_gmv: string
-  total_revenue: string
-  active_30d: number
-  new_this_period: number
-  growth_pct: number
+  totalOrgs: number
+  totalStores: number
+  totalCustomers: number
+  totalOrders: number
+  gmv: string
+  revenueCents: number | null
+  activeStores30d: number
+  newStores30d: number
+  newOrders30d: number
+  newCustomers30d: number
 }
 
 export async function getAnalyticsOverview(token: string): Promise<AnalyticsOverview> {
@@ -114,10 +115,10 @@ export async function getAnalyticsOverview(token: string): Promise<AnalyticsOver
 }
 
 export interface TimeseriesPoint {
-  date: string
+  bucket: string
   orders: number
   gmv: string
-  signups: number
+  newCustomers: number
 }
 
 export interface TimeseriesResult {

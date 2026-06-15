@@ -29,7 +29,7 @@ import { RefreshCw } from 'lucide-react'
 const METRIC_LABELS: Record<'orders' | 'gmv' | 'signups', string> = {
   orders: 'Orders',
   gmv: 'GMV (USD)',
-  signups: 'Signups',
+  signups: 'New customers',
 }
 
 function fmtMetricValue(value: number, metric: 'orders' | 'gmv' | 'signups'): string {
@@ -42,9 +42,12 @@ function fmtMetricValue(value: number, metric: 'orders' | 'gmv' | 'signups'): st
 function TimeseriesChart({ points, metric }: { points: TimeseriesPoint[]; metric: 'orders' | 'gmv' | 'signups' }) {
   if (!points.length) return <p className="text-xs text-[var(--cc-text-muted)] py-4 text-center">No data</p>
 
+  // bucket is a timestamp string ("2026-05-16 00:00:00+02") — take YYYY-MM-DD.
+  const fmtBucket = (b: string | undefined) => (b ?? '').slice(0, 10)
+
   const values = points.map(p =>
     metric === 'orders' ? p.orders :
-    metric === 'signups' ? p.signups :
+    metric === 'signups' ? p.newCustomers :
     parseFloat(p.gmv),
   )
   const max = Math.max(...values, 1)
@@ -68,8 +71,8 @@ function TimeseriesChart({ points, metric }: { points: TimeseriesPoint[]; metric
     metric === 'gmv' ? `$${(v / 1000).toFixed(0)}k` : String(Math.round(v)),
   )
 
-  const firstDate = pts[0].point.date
-  const lastDate = pts[pts.length - 1].point.date
+  const firstDate = fmtBucket(pts[0].point.bucket)
+  const lastDate = fmtBucket(pts[pts.length - 1].point.bucket)
   const descText = `Line chart of ${METRIC_LABELS[metric]} from ${firstDate} to ${lastDate}. Minimum ${fmtMetricValue(Math.min(...values), metric)}, maximum ${fmtMetricValue(max, metric)}.`
 
   return (
@@ -131,7 +134,7 @@ function TimeseriesChart({ points, metric }: { points: TimeseriesPoint[]; metric
           <g key={i} className="group">
             {/* invisible larger hover/touch target */}
             <circle cx={p.x} cy={p.y} r={8} fill="transparent">
-              <title>{`${p.point.date}: ${fmtMetricValue(p.value, metric)}`}</title>
+              <title>{`${fmtBucket(p.point.bucket)}: ${fmtMetricValue(p.value, metric)}`}</title>
             </circle>
             <circle
               cx={p.x}
@@ -147,7 +150,7 @@ function TimeseriesChart({ points, metric }: { points: TimeseriesPoint[]; metric
         {/* X labels — first, mid, last date */}
         {[0, Math.floor(pts.length / 2), pts.length - 1].map(i => {
           if (!pts[i]) return null
-          const label = pts[i].point.date.slice(5) // MM-DD
+          const label = fmtBucket(pts[i].point.bucket).slice(5) // MM-DD
           return (
             <text key={i} x={pts[i].x} y={H - 4} textAnchor="middle" fontSize={9} fill="#85867a" fontFamily="'JetBrains Mono', monospace">
               {label}
@@ -263,24 +266,29 @@ export default function Analytics() {
         <>
           {/* Overview stats */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
-            <StatCard label="Orgs" value={fmt(overview.total_orgs)} />
-            <StatCard label="Stores" value={fmt(overview.total_stores)} />
-            <StatCard label="Customers" value={fmt(overview.total_customers)} />
-            <StatCard label="Orders" value={fmt(overview.total_orders)} />
-            <StatCard label="GMV" value={fmtMoney(overview.total_gmv)} color="green" />
+            <StatCard label="Orgs" value={fmt(overview.totalOrgs)} />
+            <StatCard label="Stores" value={fmt(overview.totalStores)} />
+            <StatCard label="Customers" value={fmt(overview.totalCustomers)} />
+            <StatCard label="Orders" value={fmt(overview.totalOrders)} />
+            <StatCard label="GMV" value={fmtMoney(overview.gmv)} color="green" />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
-            <StatCard label="Revenue" value={fmtMoney(overview.total_revenue)} color="green" />
             <StatCard
-              label="Active (30d)"
-              value={fmt(overview.active_30d)}
+              label="Active stores (30d)"
+              value={fmt(overview.activeStores30d)}
               sub="stores with activity"
             />
             <StatCard
-              label="Growth"
-              value={`${overview.growth_pct >= 0 ? '+' : ''}${overview.growth_pct.toFixed(1)}%`}
-              color={overview.growth_pct >= 0 ? 'green' : 'red'}
-              sub="new this period"
+              label="New orders (30d)"
+              value={fmt(overview.newOrders30d)}
+              color="green"
+              sub="this period"
+            />
+            <StatCard
+              label="New customers (30d)"
+              value={fmt(overview.newCustomers30d)}
+              color="green"
+              sub="this period"
             />
           </div>
 
@@ -297,7 +305,7 @@ export default function Analytics() {
                       : 'text-[var(--cc-text-muted)] hover:text-[var(--cc-text-body)] border border-transparent hover:bg-white/[0.04]'
                   }`}
                 >
-                  {m === 'gmv' ? 'GMV' : m.charAt(0).toUpperCase() + m.slice(1)}
+                  {m === 'gmv' ? 'GMV' : m === 'signups' ? 'Customers' : 'Orders'}
                 </button>
               ))}
             </div>
