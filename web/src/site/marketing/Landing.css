@@ -648,6 +648,291 @@
 }
 .mk-landing .mini-table-note a:hover { text-decoration: underline; }
 
+/* ─── Two-paths "Choose your adventure" section ────────────────── */
+.mk-landing .two-paths {
+  padding: clamp(5rem, 8vw, 7rem) var(--gutter);
+  background: var(--bg-subtle);
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.mk-landing .two-paths-inner {
+  max-width: var(--maxw);
+  margin: 0 auto;
+}
+
+.mk-landing .two-paths-heading {
+  font-family: var(--font-display);
+  font-size: clamp(1.9rem, 3.6vw, 2.8rem);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  color: var(--ink);
+  line-height: 1.02;
+  text-wrap: balance;
+  margin-bottom: 2.75rem;
+}
+
+.mk-landing .two-paths-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .mk-landing .two-paths-grid { grid-template-columns: 1fr; }
+}
+
+/* Path cards — shared shell */
+.mk-landing .path-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1.75rem;
+  border-radius: var(--r-xl);
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+  transition: border-color 0.25s ease, box-shadow 0.3s ease;
+}
+
+.mk-landing .path-card:hover {
+  box-shadow: var(--shadow-lg);
+}
+
+/* Merchant card — lime accent */
+.mk-landing .path-card--merchant {
+  border-color: color-mix(in srgb, var(--brand) 28%, var(--line-strong));
+  background: color-mix(in srgb, var(--brand) 3.5%, var(--surface));
+}
+.mk-landing .path-card--merchant:hover {
+  border-color: color-mix(in srgb, var(--brand) 45%, var(--line-strong));
+  box-shadow: var(--shadow-lg), 0 0 0 1px color-mix(in srgb, var(--brand) 18%, transparent),
+    0 0 60px color-mix(in srgb, var(--brand) 12%, transparent);
+}
+
+/* Builder card — cyan accent */
+.mk-landing .path-card--builder {
+  border-color: color-mix(in srgb, var(--accent) 28%, var(--line-strong));
+  background: color-mix(in srgb, var(--accent) 3.5%, var(--surface));
+}
+.mk-landing .path-card--builder:hover {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line-strong));
+  box-shadow: var(--shadow-lg), 0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent),
+    0 0 60px color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+/* Badge */
+.mk-landing .path-badge {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.3rem 0.75rem;
+  border-radius: var(--r-pill);
+  margin-bottom: 0.65rem;
+}
+.mk-landing .path-badge--lime {
+  background: var(--brand-tint);
+  color: var(--brand);
+  border: 1px solid color-mix(in srgb, var(--brand) 30%, transparent);
+}
+.mk-landing .path-badge--cyan {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.mk-landing .path-card-header { display: flex; flex-direction: column; }
+
+.mk-landing .path-card h3 {
+  font-family: var(--font-display);
+  font-size: clamp(1.25rem, 2vw, 1.65rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+  line-height: 1.1;
+  margin-bottom: 0.5rem;
+}
+
+.mk-landing .path-sub {
+  font-size: 0.95rem;
+  color: var(--ink-muted);
+  line-height: 1.65;
+  margin: 0;
+}
+
+/* Bullet list */
+.mk-landing .path-bullets {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.mk-landing .path-bullets li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  font-size: 0.9rem;
+  color: var(--ink-body);
+  line-height: 1.55;
+}
+
+.mk-landing .path-check {
+  flex-shrink: 0;
+  margin-top: 0.18rem;
+}
+.mk-landing .path-check--lime { color: var(--brand); }
+.mk-landing .path-check--cyan { color: var(--accent); }
+
+/* Screenshot inside path card */
+.mk-landing .path-screenshot {
+  margin: 0;
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+
+.mk-landing .path-img {
+  max-height: 260px;
+  object-fit: cover;
+  object-position: top left;
+  mask-image: none;
+}
+
+/* Compact console inside builder card */
+.mk-landing .path-console {
+  font-size: 0.82rem;
+}
+.mk-landing .path-console .code-panel-body {
+  padding: 0.9rem 1.1rem 1rem;
+}
+.mk-landing .path-console .code-panel-body code {
+  font-size: 0.78rem;
+  line-height: 1.85;
+}
+
+/* CTA buttons inside path cards */
+.mk-landing .path-cta {
+  align-self: flex-start;
+  margin-top: auto;
+}
+.mk-landing .path-cta--ghost {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line-strong));
+  color: var(--accent);
+}
+.mk-landing .path-cta--ghost:hover {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border-color: var(--accent);
+  color: var(--accent-bright);
+}
+
+/* ─── Catalog shot — contextual dashboard-products screenshot ─── */
+.mk-landing .catalog-shot {
+  padding: clamp(4rem, 7vw, 6rem) var(--gutter);
+  max-width: var(--maxw);
+  margin: 0 auto;
+}
+
+.mk-landing .catalog-shot-inner {
+  display: grid;
+  grid-template-columns: 0.45fr 0.55fr;
+  gap: clamp(2rem, 5vw, 4rem);
+  align-items: center;
+}
+
+@media (max-width: 860px) {
+  .mk-landing .catalog-shot-inner {
+    grid-template-columns: 1fr;
+  }
+}
+
+.mk-landing .catalog-shot-text h2 {
+  font-family: var(--font-display);
+  font-size: clamp(1.7rem, 3vw, 2.4rem);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  color: var(--ink);
+  line-height: 1.04;
+  margin-bottom: 0.8rem;
+  text-wrap: balance;
+}
+
+.mk-landing .catalog-shot-text p {
+  font-size: 0.97rem;
+  color: var(--ink-muted);
+  line-height: 1.7;
+  margin: 0;
+}
+
+.mk-landing .catalog-shot-frame {
+  margin: 0;
+}
+
+/* ─── Checkout callout — contextual checkout.png near payments ── */
+.mk-landing .checkout-callout {
+  padding: clamp(4rem, 7vw, 6rem) var(--gutter);
+  background: var(--bg-subtle);
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.mk-landing .checkout-callout-inner {
+  max-width: var(--maxw);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 0.55fr 0.45fr;
+  gap: clamp(2rem, 5vw, 4rem);
+  align-items: center;
+}
+
+@media (max-width: 860px) {
+  .mk-landing .checkout-callout-inner {
+    grid-template-columns: 1fr;
+  }
+}
+
+.mk-landing .checkout-callout-frame {
+  margin: 0;
+}
+
+.mk-landing .checkout-callout-text h2 {
+  font-family: var(--font-display);
+  font-size: clamp(1.7rem, 3vw, 2.4rem);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  color: var(--ink);
+  line-height: 1.04;
+  margin-bottom: 0.8rem;
+  text-wrap: balance;
+}
+
+.mk-landing .checkout-callout-text p {
+  font-size: 0.97rem;
+  color: var(--ink-muted);
+  line-height: 1.7;
+  margin: 0 0 1.4rem;
+}
+
+.mk-landing .checkout-callout-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--brand);
+  text-decoration: none;
+  transition: gap 0.15s ease;
+}
+.mk-landing .checkout-callout-link:hover { gap: 0.65rem; }
+
 /* ─── Product showcase ─────────────────────────────────────────── */
 .mk-landing .product-showcase {
   padding: clamp(5rem, 8vw, 7.5rem) var(--gutter);

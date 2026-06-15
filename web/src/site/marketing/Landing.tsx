@@ -26,6 +26,7 @@ import {
   Tag,
   Gift,
   CalendarClock,
+  Check,
 } from 'lucide-react'
 import SiteLayout from '../SiteLayout'
 import { useDocumentMeta } from '../useDocumentMeta'
@@ -202,6 +203,12 @@ const dxFeatures: FeatureItem[] = [
   },
 ]
 
+// MCP snippet for the "Build agent-native commerce" card
+const MCP_CARD_HTML = `<span class="c-comment"># connect any MCP agent to your store</span>
+<span class="c-tool">search_products</span>(&#123; query: <span class="c-str">"merino hoodie"</span> &#125;)<span class="c-ok"> → 12 results</span>
+<span class="c-tool">create_cart</span>() · <span class="c-tool">add_to_cart</span>(<span class="c-str">var_8x</span>)
+<span class="c-tool">complete_checkout</span>()<span class="c-ok"> ✓ mandate verified</span>`
+
 // Code-panel body preserved verbatim from the Astro source (HTML entities + syntax spans).
 const CODE_PANEL_HTML = `<span class="c-comment">// 1. Search catalog</span>
 <span class="c-tool">search_products</span>(&#123; query: <span class="c-str">"merino hoodie"</span> &#125;)
@@ -256,6 +263,143 @@ export default function Landing() {
           </div>
         </section>
 
+        {/* Two-audience section — "Two ways to ship" */}
+        <section className="two-paths" data-reveal aria-label="Two ways to use Cartcrft">
+          <div className="two-paths-inner">
+            <div className="mk-eyebrow">
+              <span className="ey-b">[</span>
+              <span className="ey-dot" />
+              two ways to ship
+              <span className="ey-b">]</span>
+            </div>
+            <h2 className="two-paths-heading">
+              Your complete stack. <span className="hl">Choose your adventure.</span>
+            </h2>
+
+            <div className="two-paths-grid">
+              {/* ── Left card: merchant / Shopify alternative ── */}
+              <div className="path-card path-card--merchant">
+                <div className="path-card-header">
+                  <span className="path-badge path-badge--lime">For merchants</span>
+                  <h3>Replace your storefront platform</h3>
+                  <p className="path-sub">
+                    Everything Shopify gives you — catalog, payments, accounts, B2B, subscriptions —
+                    on infrastructure you own, at 0% take rate.
+                  </p>
+                </div>
+
+                <ul className="path-bullets">
+                  <li>
+                    <Check size={15} strokeWidth={2.5} aria-hidden="true" className="path-check path-check--lime" />
+                    Complete commerce backend: catalog, payments, identity, B2B, subscriptions, returns, shipping, tax
+                  </li>
+                  <li>
+                    <Check size={15} strokeWidth={2.5} aria-hidden="true" className="path-check path-check--lime" />
+                    Real admin dashboard — orders, products, customers, analytics — on day one
+                  </li>
+                  <li>
+                    <Check size={15} strokeWidth={2.5} aria-hidden="true" className="path-check path-check--lime" />
+                    MIT licensed, self-host anywhere — you own the stack, not a vendor
+                  </li>
+                  <li>
+                    <Check size={15} strokeWidth={2.5} aria-hidden="true" className="path-check path-check--lime" />
+                    0% platform take rate — bring your own Stripe, Paystack, Razorpay, or Xendit keys
+                  </li>
+                </ul>
+
+                {/* dashboard-overview.png — browser-chrome frame */}
+                <figure className="path-screenshot showcase-frame">
+                  <div className="browser-chrome" aria-hidden="true">
+                    <div className="bc-dots">
+                      <span className="bc-dot bc-dot--red" />
+                      <span className="bc-dot bc-dot--amber" />
+                      <span className="bc-dot bc-dot--green" />
+                    </div>
+                    <div className="bc-bar">
+                      <svg className="bc-lock" viewBox="0 0 8 10" fill="currentColor" aria-hidden="true">
+                        <rect x="1" y="4.5" width="6" height="5" rx="1" />
+                        <path d="M2 4.5V3a2 2 0 1 1 4 0v1.5" fill="none" stroke="currentColor" strokeWidth="1.1" />
+                      </svg>
+                      <span className="bc-address">cartcrft.dev / dashboard</span>
+                    </div>
+                  </div>
+                  <img
+                    src="/screenshots/dashboard-overview.png"
+                    alt="Cartcrft admin dashboard — store overview with revenue metrics, recent orders, and full nav"
+                    width="1512"
+                    height="900"
+                    loading="lazy"
+                    decoding="async"
+                    className="showcase-img path-img"
+                  />
+                  <figcaption className="showcase-caption">
+                    <span className="cap-label">admin / overview</span>
+                    <span className="cap-sep" aria-hidden="true" />
+                    <span className="cap-text">Revenue, orders, AOV, customers — full nav in a single sidebar.</span>
+                  </figcaption>
+                </figure>
+
+                <Link to="/quickstart" className="cc-btn cc-btn--primary cc-btn--on-dark path-cta">
+                  Get started
+                  <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+                    <path fill="currentColor" d="M6.22 3.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 1 1-1.06-1.06L9.94 8 6.22 4.28a.75.75 0 0 1 0-1.06z" />
+                  </svg>
+                </Link>
+              </div>
+
+              {/* ── Right card: LLM / builder path ── */}
+              <div className="path-card path-card--builder">
+                <div className="path-card-header">
+                  <span className="path-badge path-badge--cyan">For builders &amp; agents</span>
+                  <h3>Build agent-native commerce</h3>
+                  <p className="path-sub">
+                    Every Cartcrft store is MCP-accessible by default. Wire up any LLM, build an
+                    AI shopping agent, or integrate ACP/UCP in hours.
+                  </p>
+                </div>
+
+                <ul className="path-bullets">
+                  <li>
+                    <Check size={15} strokeWidth={2.5} aria-hidden="true" className="path-check path-check--cyan" />
+                    MCP server by default — any MCP-capable agent connects in minutes, no integration code
+                  </li>
+                  <li>
+                    <Check size={15} strokeWidth={2.5} aria-hidden="true" className="path-check path-check--cyan" />
+                    ACP &amp; UCP adapters — agent checkout sessions work end-to-end in test mode today
+                  </li>
+                  <li>
+                    <Check size={15} strokeWidth={2.5} aria-hidden="true" className="path-check path-check--cyan" />
+                    Signed ed25519 agent mandates — verifiable consent chain, configurable spend limits
+                  </li>
+                  <li>
+                    <Check size={15} strokeWidth={2.5} aria-hidden="true" className="path-check path-check--cyan" />
+                    Semantic catalog search and agent-readable storefront — structured data agents reason over
+                  </li>
+                </ul>
+
+                {/* Compact terminal snippet */}
+                <div className="path-console how-code-panel" aria-label="Example MCP tool call sequence">
+                  <div className="code-panel-header">
+                    <span className="dot red" />
+                    <span className="dot amber" />
+                    <span className="dot green" />
+                    <span className="panel-title">mcp://cartcrft.io/&lt;storeId&gt;</span>
+                    <span className="panel-live"><span className="panel-live-dot" />live</span>
+                  </div>
+                  <pre className="code-panel-body"><code dangerouslySetInnerHTML={{ __html: MCP_CARD_HTML }} /></pre>
+                </div>
+
+                <Link to="/quickstart-mcp" className="cc-btn cc-btn--ghost cc-btn--on-dark path-cta path-cta--ghost">
+                  Agent quickstart (MCP)
+                  <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+                    <path fill="currentColor" d="M6.22 3.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 1 1-1.06-1.06L9.94 8 6.22 4.28a.75.75 0 0 1 0-1.06z" />
+                  </svg>
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* Everything a store needs — commerce-first reframe */}
         <section className="everything" data-reveal>
           <div className="everything-inner">
@@ -286,6 +430,112 @@ export default function Landing() {
           features={commerceFeatures}
           columns={3}
         />
+
+        {/* Contextual screenshot: product catalog — illustrates "a real admin for your whole catalog" */}
+        <section className="catalog-shot" data-reveal aria-label="Product catalog screenshot">
+          <div className="catalog-shot-inner">
+            <div className="catalog-shot-text">
+              <div className="mk-eyebrow">
+                <span className="ey-b">[</span>
+                <span className="ey-dot" />
+                real admin
+                <span className="ey-b">]</span>
+              </div>
+              <h2>A real admin for <span className="hl">your whole catalog</span>.</h2>
+              <p>
+                Products, variants, collections, digital files, and inventory — managed through a purpose-built
+                dashboard, not cobbled together from third-party apps. Your catalog is a first-class citizen,
+                not an afterthought.
+              </p>
+            </div>
+            <figure className="catalog-shot-frame showcase-frame">
+              <div className="browser-chrome" aria-hidden="true">
+                <div className="bc-dots">
+                  <span className="bc-dot bc-dot--red" />
+                  <span className="bc-dot bc-dot--amber" />
+                  <span className="bc-dot bc-dot--green" />
+                </div>
+                <div className="bc-bar">
+                  <svg className="bc-lock" viewBox="0 0 8 10" fill="currentColor" aria-hidden="true">
+                    <rect x="1" y="4.5" width="6" height="5" rx="1" />
+                    <path d="M2 4.5V3a2 2 0 1 1 4 0v1.5" fill="none" stroke="currentColor" strokeWidth="1.1" />
+                  </svg>
+                  <span className="bc-address">cartcrft.dev / dashboard / products</span>
+                </div>
+              </div>
+              <img
+                src="/screenshots/dashboard-products.png"
+                alt="Cartcrft admin dashboard — product catalog list with variants and pricing"
+                width="1512"
+                height="900"
+                loading="lazy"
+                decoding="async"
+                className="showcase-img"
+              />
+              <figcaption className="showcase-caption">
+                <span className="cap-label">catalog</span>
+                <span className="cap-sep" aria-hidden="true" />
+                <span className="cap-text">Products, variants, collections, digital files — no plugin required.</span>
+              </figcaption>
+            </figure>
+          </div>
+        </section>
+
+        {/* Contextual callout: hosted checkout — near payments content */}
+        <section className="checkout-callout" data-reveal aria-label="Hosted checkout screenshot">
+          <div className="checkout-callout-inner">
+            <figure className="checkout-callout-frame showcase-frame">
+              <div className="browser-chrome" aria-hidden="true">
+                <div className="bc-dots">
+                  <span className="bc-dot bc-dot--red" />
+                  <span className="bc-dot bc-dot--amber" />
+                  <span className="bc-dot bc-dot--green" />
+                </div>
+                <div className="bc-bar">
+                  <svg className="bc-lock" viewBox="0 0 8 10" fill="currentColor" aria-hidden="true">
+                    <rect x="1" y="4.5" width="6" height="5" rx="1" />
+                    <path d="M2 4.5V3a2 2 0 1 1 4 0v1.5" fill="none" stroke="currentColor" strokeWidth="1.1" />
+                  </svg>
+                  <span className="bc-address">pay.cartcrft.dev / pay / cl_…</span>
+                </div>
+              </div>
+              <img
+                src="/screenshots/checkout.png"
+                alt="Cartcrft hosted checkout — branded payment page with line items and total"
+                width="1512"
+                height="982"
+                loading="lazy"
+                decoding="async"
+                className="showcase-img"
+              />
+              <figcaption className="showcase-caption">
+                <span className="cap-label">checkout</span>
+                <span className="cap-sep" aria-hidden="true" />
+                <span className="cap-text">Shareable hosted checkout — one API call, one URL, no storefront code.</span>
+              </figcaption>
+            </figure>
+            <div className="checkout-callout-text">
+              <div className="mk-eyebrow">
+                <span className="ey-b">[</span>
+                <span className="ey-dot" />
+                hosted checkout &amp; cart links
+                <span className="ey-b">]</span>
+              </div>
+              <h2>One API call. <span className="hl">One URL. Done.</span></h2>
+              <p>
+                Generate a hosted checkout link from any cart — shareable by email, SMS, or QR code.
+                Payments run on your own Stripe, Paystack, Razorpay, or Xendit credentials. 0% take rate.
+                No storefront code required.
+              </p>
+              <Link to="/api-overview" className="checkout-callout-link">
+                See the checkout API
+                <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false">
+                  <path fill="currentColor" d="M6.22 3.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L9.94 8 6.22 4.28a.75.75 0 0 1 0-1.06z" />
+                </svg>
+              </Link>
+            </div>
+          </div>
+        </section>
 
         {/* Integrations — works-with / BYO keys */}
         <Integrations />
@@ -563,157 +813,6 @@ export default function Landing() {
                 </tbody>
               </table>
               <p className="mini-table-note">Figures as of June 2026. <Link to="/compare">Full comparison →</Link></p>
-            </div>
-          </div>
-        </section>
-
-        {/* Product showcase */}
-        <section className="product-showcase" data-reveal aria-label="Product screenshots">
-          <div className="product-showcase-inner">
-            <div className="mk-eyebrow">
-              <span className="ey-b">[</span>
-              <span className="ey-dot" />
-              see it in action
-              <span className="ey-b">]</span>
-            </div>
-            <h2>
-              Built for <span className="hl">real stores</span>. Ready on day one.
-            </h2>
-            <p className="showcase-sub">
-              The same backend — every surface. Admin dashboard for merchants, hosted checkout for
-              buyers, platform console for operators. All Agentic Terminal.
-            </p>
-
-            <div className="showcase-grid">
-
-              {/* ── Featured: dashboard overview (full-width) ── */}
-              <figure className="showcase-frame showcase-frame--featured">
-                <div className="browser-chrome" aria-hidden="true">
-                  <div className="bc-dots">
-                    <span className="bc-dot bc-dot--red" />
-                    <span className="bc-dot bc-dot--amber" />
-                    <span className="bc-dot bc-dot--green" />
-                  </div>
-                  <div className="bc-bar">
-                    <svg className="bc-lock" viewBox="0 0 8 10" fill="currentColor" aria-hidden="true">
-                      <rect x="1" y="4.5" width="6" height="5" rx="1" />
-                      <path d="M2 4.5V3a2 2 0 1 1 4 0v1.5" fill="none" stroke="currentColor" strokeWidth="1.1" />
-                    </svg>
-                    <span className="bc-address">cartcrft.dev / dashboard</span>
-                  </div>
-                </div>
-                <img
-                  src="/screenshots/dashboard-overview.png"
-                  alt="Cartcrft admin dashboard — store overview with revenue metrics, recent orders, and full nav"
-                  width="1512"
-                  height="900"
-                  loading="lazy"
-                  decoding="async"
-                  className="showcase-img"
-                />
-                <figcaption className="showcase-caption">
-                  <span className="cap-label">admin / overview</span>
-                  <span className="cap-sep" aria-hidden="true" />
-                  <span className="cap-text">Revenue, orders, AOV, customers — plus full catalog, B2B, and subscriptions nav in a single sidebar.</span>
-                </figcaption>
-              </figure>
-
-              {/* ── Grid: products ── */}
-              <figure className="showcase-frame">
-                <div className="browser-chrome" aria-hidden="true">
-                  <div className="bc-dots">
-                    <span className="bc-dot bc-dot--red" />
-                    <span className="bc-dot bc-dot--amber" />
-                    <span className="bc-dot bc-dot--green" />
-                  </div>
-                  <div className="bc-bar">
-                    <svg className="bc-lock" viewBox="0 0 8 10" fill="currentColor" aria-hidden="true">
-                      <rect x="1" y="4.5" width="6" height="5" rx="1" />
-                      <path d="M2 4.5V3a2 2 0 1 1 4 0v1.5" fill="none" stroke="currentColor" strokeWidth="1.1" />
-                    </svg>
-                    <span className="bc-address">cartcrft.dev / dashboard / products</span>
-                  </div>
-                </div>
-                <img
-                  src="/screenshots/dashboard-products.png"
-                  alt="Cartcrft admin dashboard — product catalog list with variants and pricing"
-                  width="1512"
-                  height="900"
-                  loading="lazy"
-                  decoding="async"
-                  className="showcase-img"
-                />
-                <figcaption className="showcase-caption">
-                  <span className="cap-label">catalog</span>
-                  <span className="cap-sep" aria-hidden="true" />
-                  <span className="cap-text">Products, variants, collections, digital files — no plugin required.</span>
-                </figcaption>
-              </figure>
-
-              {/* ── Grid: operator analytics ── */}
-              <figure className="showcase-frame">
-                <div className="browser-chrome" aria-hidden="true">
-                  <div className="bc-dots">
-                    <span className="bc-dot bc-dot--red" />
-                    <span className="bc-dot bc-dot--amber" />
-                    <span className="bc-dot bc-dot--green" />
-                  </div>
-                  <div className="bc-bar">
-                    <svg className="bc-lock" viewBox="0 0 8 10" fill="currentColor" aria-hidden="true">
-                      <rect x="1" y="4.5" width="6" height="5" rx="1" />
-                      <path d="M2 4.5V3a2 2 0 1 1 4 0v1.5" fill="none" stroke="currentColor" strokeWidth="1.1" />
-                    </svg>
-                    <span className="bc-address">cartcrft.dev / superadmin / analytics</span>
-                  </div>
-                </div>
-                <img
-                  src="/screenshots/superadmin-analytics.png"
-                  alt="Cartcrft operator console — system analytics with timeseries chart and platform metrics"
-                  width="1512"
-                  height="900"
-                  loading="lazy"
-                  decoding="async"
-                  className="showcase-img"
-                />
-                <figcaption className="showcase-caption">
-                  <span className="cap-label">operator</span>
-                  <span className="cap-sep" aria-hidden="true" />
-                  <span className="cap-text">Platform GMV, orgs, stores, and system health — the god-mode console.</span>
-                </figcaption>
-              </figure>
-
-              {/* ── Grid: hosted checkout ── */}
-              <figure className="showcase-frame">
-                <div className="browser-chrome" aria-hidden="true">
-                  <div className="bc-dots">
-                    <span className="bc-dot bc-dot--red" />
-                    <span className="bc-dot bc-dot--amber" />
-                    <span className="bc-dot bc-dot--green" />
-                  </div>
-                  <div className="bc-bar">
-                    <svg className="bc-lock" viewBox="0 0 8 10" fill="currentColor" aria-hidden="true">
-                      <rect x="1" y="4.5" width="6" height="5" rx="1" />
-                      <path d="M2 4.5V3a2 2 0 1 1 4 0v1.5" fill="none" stroke="currentColor" strokeWidth="1.1" />
-                    </svg>
-                    <span className="bc-address">pay.cartcrft.dev / pay / cl_…</span>
-                  </div>
-                </div>
-                <img
-                  src="/screenshots/checkout.png"
-                  alt="Cartcrft hosted checkout — branded payment page with line items and total"
-                  width="1512"
-                  height="982"
-                  loading="lazy"
-                  decoding="async"
-                  className="showcase-img"
-                />
-                <figcaption className="showcase-caption">
-                  <span className="cap-label">checkout</span>
-                  <span className="cap-sep" aria-hidden="true" />
-                  <span className="cap-text">Shareable hosted checkout — one API call, one URL, no storefront code.</span>
-                </figcaption>
-              </figure>
-
             </div>
           </div>
         </section>
