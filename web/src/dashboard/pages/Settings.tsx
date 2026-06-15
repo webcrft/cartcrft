@@ -3,6 +3,7 @@ import { useStore } from '../context/StoreContext'
 import { getSdk } from '../lib/sdk'
 import { useToast } from '../context/ToastContext'
 import { Btn, Card, FormInput, FormSelect, PageHeader, Spinner } from '../components/ui/index'
+import { Settings2, AlertTriangle } from 'lucide-react'
 
 const COUNTRY_OPTIONS = [
   { value: '', label: 'Select country' },
@@ -59,7 +60,6 @@ export default function Settings() {
         timezone: (s.timezone as string | undefined) ?? '',
       })
     }).catch(() => {
-      // fallback to activeStore data
       setForm({
         name: activeStore.name ?? '',
         email: activeStore.email ?? '',
@@ -109,54 +109,113 @@ export default function Settings() {
 
   if (loading) return <div className="flex justify-center py-16"><Spinner /></div>
 
+  const set = (k: string) => (v: string) => setForm(f => ({ ...f, [k]: v }))
+
   return (
     <div className="space-y-6">
-      <PageHeader title="Store Settings" description="Manage your store details and configuration" />
+      <PageHeader
+        title="Store Settings"
+        description="Manage your store details and configuration"
+        badge={
+          <div className="flex items-center gap-1.5">
+            <Settings2 size={13} className="text-[var(--cc-lime)]" />
+          </div>
+        }
+      />
 
-      <Card title="Store Details">
-        <div className="space-y-4">
-          <FormInput label="Store Name" value={form.name} onChange={v => setForm(f => ({ ...f, name: v }))} placeholder="My Store" />
+      <Card title="Store Details" description="Basic information about your store">
+        <div className="space-y-4 max-w-xl">
+          <FormInput
+            label="Store Name"
+            value={form.name}
+            onChange={set('name')}
+            placeholder="My Store"
+            required
+          />
           <div className="grid grid-cols-2 gap-4">
-            <FormInput label="Email" value={form.email} onChange={v => setForm(f => ({ ...f, email: v }))} placeholder="store@example.com" type="email" />
-            <FormInput label="Phone" value={form.phone} onChange={v => setForm(f => ({ ...f, phone: v }))} placeholder="+1 555 0100" />
+            <FormInput
+              label="Email"
+              value={form.email}
+              onChange={set('email')}
+              placeholder="store@example.com"
+              type="email"
+            />
+            <FormInput
+              label="Phone"
+              value={form.phone}
+              onChange={set('phone')}
+              placeholder="+1 555 0100"
+            />
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <FormSelect label="Country" value={form.country_code} onChange={v => setForm(f => ({ ...f, country_code: v }))} options={COUNTRY_OPTIONS} />
-            <FormSelect label="Timezone" value={form.timezone} onChange={v => setForm(f => ({ ...f, timezone: v }))} options={TZ_OPTIONS} />
+            <FormSelect
+              label="Country"
+              value={form.country_code}
+              onChange={set('country_code')}
+              options={COUNTRY_OPTIONS}
+            />
+            <FormSelect
+              label="Timezone"
+              value={form.timezone}
+              onChange={set('timezone')}
+              options={TZ_OPTIONS}
+            />
           </div>
+
+          {/* Currency — read-only */}
           <div>
-            <label className="block text-xs font-medium text-slate-400 mb-1.5">Currency</label>
-            <div className="rounded-lg border border-white/[0.08] bg-white/[0.01] px-3 py-2.5 text-sm text-slate-500">
-              {activeStore?.currency ?? '—'} <span className="text-xs text-slate-600">(cannot be changed after store creation)</span>
+            <label className="block font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--cc-muted)] mb-1.5">
+              Currency
+            </label>
+            <div
+              className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm"
+              style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}
+            >
+              <span className="font-mono font-semibold text-[var(--cc-body)]">{activeStore?.currency ?? '—'}</span>
+              <span className="text-[11px] text-[var(--cc-subtle)]">Cannot be changed after store creation</span>
             </div>
           </div>
-          <div className="pt-2">
+
+          <div className="pt-1">
             <Btn onClick={handleSave} loading={saving}>Save Settings</Btn>
           </div>
         </div>
       </Card>
 
+      {/* Danger zone */}
       <Card title="Danger Zone">
-        <div className="space-y-4">
-          <p className="text-xs text-slate-500">Deleting a store is permanent and cannot be undone. All products, orders, and customer data will be permanently deleted.</p>
+        <div className="space-y-4 max-w-xl">
+          <div
+            className="flex items-start gap-2.5 rounded-lg px-4 py-3 text-xs text-[var(--cc-muted)]"
+            style={{ background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.15)' }}
+          >
+            <AlertTriangle size={14} className="text-red-400 flex-shrink-0 mt-0.5" />
+            <p>
+              Deleting a store is permanent and cannot be undone. All products, orders, and customer data
+              will be permanently deleted.
+            </p>
+          </div>
+
           {!confirmDelete ? (
-            <button
-              onClick={() => setConfirmDelete(true)}
-              className="rounded-lg border border-red-500/30 bg-red-600/10 px-4 py-2 text-xs font-semibold text-red-300 hover:bg-red-600/20 transition"
-            >
+            <Btn variant="danger" onClick={() => setConfirmDelete(true)}>
               Delete Store
-            </button>
+            </Btn>
           ) : (
-            <div className="rounded-xl border border-red-500/20 bg-red-900/10 p-4 space-y-3">
-              <p className="text-sm font-medium text-red-300">Are you sure you want to delete <strong>{activeStore?.name}</strong>?</p>
-              <p className="text-xs text-red-400/80">This action cannot be undone.</p>
+            <div
+              className="rounded-xl p-5 space-y-4"
+              style={{ background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.2)' }}
+            >
+              <p className="text-sm font-semibold text-red-300">
+                Are you sure you want to delete <span className="text-red-200 font-bold">{activeStore?.name}</span>?
+              </p>
+              <p className="text-xs text-red-400/75">This action cannot be undone. All data will be permanently lost.</p>
               <div className="flex gap-2">
                 <button
                   onClick={handleDelete}
                   disabled={deleting}
-                  className="rounded-lg bg-red-600 px-4 py-2 text-xs font-semibold text-white hover:bg-red-500 transition disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-4 py-2 text-xs font-semibold text-white hover:bg-red-500 transition disabled:opacity-50 active:scale-[0.97]"
                 >
-                  {deleting ? 'Deleting...' : 'Yes, delete store'}
+                  {deleting ? 'Deleting…' : 'Yes, delete store'}
                 </button>
                 <Btn variant="secondary" onClick={() => setConfirmDelete(false)}>Cancel</Btn>
               </div>

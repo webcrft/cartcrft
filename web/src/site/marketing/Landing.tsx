@@ -843,19 +843,8 @@ export default function Landing() {
 
         {/* CTA band */}
         <section className="cta-band" data-reveal>
+          <div className="cta-grain cc-grain" aria-hidden="true" />
           <div className="cta-band-inner">
-            {/* decorative SVG circles */}
-            <div className="cta-deco" aria-hidden="true">
-              <svg viewBox="0 0 200 200" width="200" height="200">
-                <circle cx="100" cy="100" r="80" fill="none" stroke="var(--brand-ink)" strokeOpacity="0.18" strokeWidth="1.5" />
-                <circle cx="100" cy="100" r="55" fill="none" stroke="var(--brand-ink)" strokeOpacity="0.12" strokeWidth="1.5" />
-                <circle cx="100" cy="100" r="30" fill="var(--brand-ink)" fillOpacity="0.06" />
-                <path d="M75 75 H85 L92 105 a4 4 0 0 0 3.9 3.1 h21 a4 4 0 0 0 3.9-3.1 L110 85 H80" fill="none" stroke="var(--brand-ink)" strokeOpacity="0.55" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
-                <circle cx="93" cy="115" r="3.5" fill="var(--brand-ink)" fillOpacity="0.55" />
-                <circle cx="107" cy="115" r="3.5" fill="var(--brand-ink)" fillOpacity="0.55" />
-              </svg>
-            </div>
-
             <div className="cta-band-text">
               <div className="cta-eyebrow">
                 <span className="ey-b">[</span>
@@ -865,17 +854,26 @@ export default function Landing() {
               </div>
               <h2>Your store, reachable by every agent.</h2>
               <p>
-                Get a Cartcrft server running and MCP-connected in under 10 minutes.
-                No payment credentials required for test mode.
+                Clone it, seed a demo store, and have it MCP-connected in minutes — no payment
+                credentials needed for test mode. Self-host for free under MIT, or run it on
+                Cartcrft Cloud.
               </p>
               <div className="cta-band-actions">
-                <Link to="/quickstart" className="cc-btn cc-btn--primary cc-btn--on-dark cc-btn--lg">Read the quickstart</Link>
-                <Link to="/quickstart-mcp" className="cc-btn cc-btn--ghost cc-btn--on-dark cc-btn--lg">Agent quickstart (MCP)</Link>
+                <Link to="/quickstart" className="cc-btn cc-btn--primary cc-btn--on-dark cc-btn--lg">Read the quickstart →</Link>
+                <a href="https://github.com/webcrft/cartcrft" target="_blank" rel="noopener noreferrer" className="cc-btn cc-btn--ghost cc-btn--on-dark cc-btn--lg">View on GitHub</a>
               </div>
               <p className="cta-compare-link">
-                See how Cartcrft compares to Shopify, Medusa, Vendure, Saleor, and others —{' '}
-                <Link to="/compare">feature comparison</Link>.
+                Going agent-first? <Link to="/quickstart-mcp">Agent quickstart (MCP)</Link> · or{' '}
+                <Link to="/compare">compare vs Shopify, Medusa &amp; others</Link>.
               </p>
+            </div>
+
+            <div className="cta-term" aria-hidden="true">
+              <div className="cta-term-bar">
+                <span className="ctd" /><span className="ctd" /><span className="ctd" />
+                <span className="cta-term-title">~/my-store — zsh</span>
+              </div>
+              <pre className="cta-term-body"><code><span className="t-p">$</span> git clone github.com/webcrft/cartcrft{'\n'}<span className="t-p">$</span> pnpm install{'\n'}<span className="t-p">$</span> pnpm migrate <span className="t-op">&amp;&amp;</span> pnpm seed{'\n'}<span className="t-p">$</span> pnpm dev{'\n'}<span className="t-ok"># store live · 12 products · MCP ready</span><span className="cta-caret" /></code></pre>
             </div>
           </div>
         </section>

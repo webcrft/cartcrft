@@ -30,6 +30,17 @@ const SIDEBAR: SidebarGroup[] = [
     items: [{ slug: 'quickstart' }, { slug: 'quickstart-mcp' }],
   },
   {
+    label: 'Run your store',
+    items: [
+      { slug: 'guides/getting-started' },
+      { slug: 'guides/add-a-product' },
+      { slug: 'guides/fulfill-an-order' },
+      { slug: 'guides/discounts' },
+      { slug: 'guides/customers' },
+      { slug: 'guides/go-live' },
+    ],
+  },
+  {
     label: 'Commerce',
     items: [
       { slug: 'commerce' },

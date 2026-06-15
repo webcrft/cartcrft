@@ -1,0 +1,253 @@
+/**
+ * LoginArtPanel — styles for the operator console artwork panel.
+ *
+ * Design language: dark steel-graphite, restrained technical motifs, JetBrains Mono.
+ * No external images. prefers-reduced-motion honoured throughout.
+ */
+
+/* ═══════════════════════════════════════════════════════════════ Panel base */
+.lp-panel {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--cc-steel, #0a0c10);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ═══════════════════════════════════════════════════════════ Texture layers */
+
+/* Horizontal scanlines — very subtle */
+.lp-scanlines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0px,
+    transparent 3px,
+    rgba(0, 0, 0, 0.18) 3px,
+    rgba(0, 0, 0, 0.18) 4px
+  );
+  opacity: 0.35;
+}
+
+/* Film-grain SVG filter via data URI */
+.lp-grain {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0.055;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  background-size: 200px 200px;
+}
+
+/* ════════════════════════════════════════════════════════════════ Grid SVG */
+.lp-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* ═══════════════════════════════════════════════════════════════ Content */
+.lp-content {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+  padding: 2.5rem 2rem;
+  width: 100%;
+  max-width: 440px;
+}
+
+/* ═══════════════════════════════════════════════════════════════ Brand mark */
+.lp-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.lp-mark {
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 14px rgba(181, 255, 46, 0.18));
+}
+
+.lp-wordmark {
+  font-family: var(--cc-font-display, 'Bricolage Grotesque', sans-serif);
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: -0.045em;
+  color: var(--cc-text, #eceae0);
+  line-height: 1;
+}
+
+.lp-wordmark-lime {
+  color: var(--cc-lime, #b5ff2e);
+}
+
+/* ═══════════════════════════════════════════════════════════ Security rings */
+.lp-rings-wrap {
+  position: relative;
+  width: min(280px, 70%);
+  aspect-ratio: 1;
+}
+
+.lp-rings {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* Sweep animation — rotates around the centre */
+.lp-sweep {
+  transform-origin: 160px 160px;
+  animation: lp-sweep-rotate 6s linear infinite;
+}
+
+@keyframes lp-sweep-rotate {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* Subtle pulse on the innermost ring */
+.lp-rings circle:last-of-type {
+  animation: lp-pulse 4s ease-in-out infinite;
+}
+
+@keyframes lp-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
+}
+
+/* Respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  .lp-sweep        { animation: none; }
+  .lp-rings circle { animation: none; }
+  .lp-ticker-inner { animation: none; }
+  .lp-scanlines    { opacity: 0.15; }
+}
+
+/* ═══════════════════════════════════════════════════════════ Audit ticker */
+.lp-ticker-wrap {
+  width: 100%;
+  max-width: 340px;
+}
+
+.lp-ticker-label {
+  font-family: var(--cc-font-mono, 'JetBrains Mono', monospace);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  color: var(--cc-text-subtle, #5d5e53);
+  margin-bottom: 0.5rem;
+  padding-left: 0.125rem;
+}
+
+.lp-ticker {
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  height: 108px;
+  position: relative;
+}
+
+/* Fade out at top and bottom */
+.lp-ticker::before,
+.lp-ticker::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 24px;
+  pointer-events: none;
+  z-index: 2;
+}
+.lp-ticker::before {
+  top: 0;
+  background: linear-gradient(to bottom, rgba(10, 12, 16, 0.95), transparent);
+}
+.lp-ticker::after {
+  bottom: 0;
+  background: linear-gradient(to top, rgba(10, 12, 16, 0.95), transparent);
+}
+
+.lp-ticker-inner {
+  display: flex;
+  flex-direction: column;
+  animation: lp-scroll 18s linear infinite;
+  padding: 0.5rem 0;
+}
+
+@keyframes lp-scroll {
+  0%   { transform: translateY(0); }
+  100% { transform: translateY(-50%); }
+}
+
+.lp-tick {
+  display: block;
+  font-family: var(--cc-font-mono, 'JetBrains Mono', monospace);
+  font-size: 10px;
+  line-height: 1.8;
+  white-space: nowrap;
+  padding: 0 0.875rem;
+  letter-spacing: 0.01em;
+}
+
+.lp-tick--ok   { color: rgba(110, 231, 135, 0.65); }   /* --cc-green tinted */
+.lp-tick--info { color: rgba(255, 255, 255, 0.28); }
+.lp-tick--warn { color: rgba(245, 184, 66, 0.7); }     /* --cc-amber */
+
+/* ═══════════════════════════════════════════════════════════ Bottom badge */
+.lp-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--cc-font-mono, 'JetBrains Mono', monospace);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  color: var(--cc-text-subtle, #5d5e53);
+  text-transform: uppercase;
+}
+
+.lp-badge-icon {
+  width: 10px;
+  height: 10px;
+  color: var(--cc-lime, #b5ff2e);
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+
+/* Edge vignette for depth */
+.lp-panel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+  box-shadow: inset 0 0 80px rgba(0, 0, 0, 0.45);
+}
+
+/* Lime radial accent — very subtle, bottom-left glow */
+.lp-panel::before {
+  content: '';
+  position: absolute;
+  bottom: -60px;
+  left: -40px;
+  width: 320px;
+  height: 280px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(181, 255, 46, 0.045) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 4;
+}

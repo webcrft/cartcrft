@@ -2,8 +2,12 @@ import React, { useEffect, useState, useCallback } from 'react'
 import { useStore } from '../context/StoreContext'
 import { getSdk } from '../lib/sdk'
 import { useToast } from '../context/ToastContext'
-import { Badge, Btn, Card, FormInput, PageHeader, EmptyState, Spinner, TableContainer, TableHead, Th, Td } from '../components/ui/index'
+import {
+  Badge, Btn, Card, FormInput, PageHeader, EmptyState,
+  Spinner, TableContainer, TableHead, Th, Td, Pagination, InfoRow,
+} from '../components/ui/index'
 import { FINANCIAL_STATUS_MAP, FULFILLMENT_MAP, ORDER_STATUS_MAP, statusBadgeProps } from '../lib/statusMaps'
+import { ShoppingCart, ChevronLeft } from 'lucide-react'
 import type { Order, Payment } from '@cartcrft/sdk'
 
 interface Shipment {
@@ -120,7 +124,7 @@ function OrderDetail({ storeId, orderId, onBack }: {
   }
 
   if (loading) return <div className="flex justify-center py-16"><Spinner /></div>
-  if (!order) return <div className="text-slate-500 py-8 text-center">Order not found</div>
+  if (!order) return <p className="text-[var(--cc-muted)] py-8 text-center text-sm">Order not found</p>
 
   const finStatus = statusBadgeProps(order.financial_status, FINANCIAL_STATUS_MAP)
   const fulStatus = statusBadgeProps(order.fulfillment_status, FULFILLMENT_MAP)
@@ -134,84 +138,104 @@ function OrderDetail({ storeId, orderId, onBack }: {
   const shippingAddress = order.shipping_address as Record<string, string | undefined> | undefined
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <button onClick={onBack} className="text-xs text-slate-500 hover:text-white transition">&#8592; Orders</button>
-        <span className="text-slate-700">/</span>
-        <span className="text-sm font-mono text-violet-400">#{order.order_number}</span>
+    <div className="space-y-5">
+      {/* Breadcrumb header */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <button
+          onClick={onBack}
+          className="inline-flex items-center gap-1.5 text-xs text-[var(--cc-muted)] hover:text-[var(--cc-text)] transition"
+        >
+          <ChevronLeft size={14} />
+          Orders
+        </button>
+        <span className="text-[var(--cc-subtle)] text-sm">/</span>
+        <span className="font-mono text-sm text-[var(--cc-lime)] font-medium">#{order.order_number}</span>
         <Badge color={ordStatus.color}>{ordStatus.label}</Badge>
         <Badge color={finStatus.color}>{finStatus.label}</Badge>
         <Badge color={fulStatus.color}>{fulStatus.label}</Badge>
         <div className="ml-auto">
           {order.status !== 'cancelled' && (
-            <Btn variant="danger" loading={cancelling} onClick={handleCancel}>Cancel Order</Btn>
+            <Btn size="sm" variant="danger" loading={cancelling} onClick={handleCancel}>Cancel Order</Btn>
           )}
         </div>
       </div>
 
       <div className="grid grid-cols-3 gap-4">
-        {/* Line items + totals */}
+        {/* Left: line items + payments + shipments + notes */}
         <div className="col-span-2 space-y-4">
           <Card title="Line Items">
             {lines.length === 0 ? (
-              <p className="text-xs text-slate-500">No line items</p>
+              <p className="text-xs text-[var(--cc-subtle)]">No line items</p>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-0">
                 {lines.map((line, i) => {
                   const l = line as Record<string, unknown>
                   return (
-                    <div key={String(l['id'] ?? i)} className="flex items-center justify-between py-2 border-b border-white/[0.04] last:border-0">
+                    <div
+                      key={String(l['id'] ?? i)}
+                      className="flex items-center justify-between py-2.5"
+                      style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
+                    >
                       <div>
-                        <span className="text-sm text-white">{String(l['title'] ?? l['variant_id'] ?? 'Item')}</span>
-                        <span className="ml-2 text-xs text-slate-500">× {String(l['quantity'] ?? 1)}</span>
+                        <span className="text-sm text-[var(--cc-text)]">{String(l['title'] ?? l['variant_id'] ?? 'Item')}</span>
+                        <span className="ml-2 text-xs text-[var(--cc-subtle)]">× {String(l['quantity'] ?? 1)}</span>
                       </div>
-                      <span className="text-sm font-mono text-slate-300">{order.currency} {String(l['line_total'] ?? l['unit_price'] ?? '0')}</span>
+                      <span className="text-sm font-mono text-[var(--cc-body)]">
+                        {order.currency} {String(l['line_total'] ?? l['unit_price'] ?? '0')}
+                      </span>
                     </div>
                   )
                 })}
+                <div className="pt-3 space-y-1.5 mt-1">
+                  <InfoRow label="Subtotal">{order.currency} {subtotal}</InfoRow>
+                  <InfoRow label="Shipping">{order.currency} {shippingTotal}</InfoRow>
+                  <InfoRow label="Tax">{order.currency} {taxTotal}</InfoRow>
+                  {Number(discountTotal) > 0 && (
+                    <div className="flex items-baseline justify-between gap-3 text-sm py-0.5">
+                      <span className="text-[var(--cc-muted)] text-xs">Discount</span>
+                      <span className="text-emerald-400 text-right">− {order.currency} {discountTotal}</span>
+                    </div>
+                  )}
+                  <div
+                    className="flex items-baseline justify-between gap-3 pt-2 mt-1"
+                    style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}
+                  >
+                    <span className="text-sm font-semibold text-[var(--cc-text)]">Total</span>
+                    <span className="font-mono font-semibold text-[var(--cc-text)]">{order.currency} {order.total}</span>
+                  </div>
+                </div>
               </div>
             )}
-            <div className="mt-4 pt-3 border-t border-white/[0.06] space-y-1.5">
-              <div className="flex justify-between text-xs text-slate-400">
-                <span>Subtotal</span><span className="font-mono">{order.currency} {subtotal}</span>
-              </div>
-              <div className="flex justify-between text-xs text-slate-400">
-                <span>Shipping</span><span className="font-mono">{order.currency} {shippingTotal}</span>
-              </div>
-              <div className="flex justify-between text-xs text-slate-400">
-                <span>Tax</span><span className="font-mono">{order.currency} {taxTotal}</span>
-              </div>
-              {Number(discountTotal) > 0 && (
-                <div className="flex justify-between text-xs text-emerald-400">
-                  <span>Discount</span><span className="font-mono">- {order.currency} {discountTotal}</span>
-                </div>
-              )}
-              <div className="flex justify-between text-sm font-semibold text-white pt-1 border-t border-white/[0.06]">
-                <span>Total</span><span className="font-mono">{order.currency} {order.total}</span>
-              </div>
-            </div>
           </Card>
 
           {/* Payments */}
           <Card title="Payments">
             {payments.length === 0 ? (
-              <p className="text-xs text-slate-500">No payments recorded</p>
+              <p className="text-xs text-[var(--cc-subtle)]">No payments recorded</p>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-0">
                 {payments.map(p => (
-                  <div key={p.id} className="flex items-center justify-between py-2 border-b border-white/[0.04] last:border-0">
-                    <div>
-                      <span className="text-xs font-medium text-white">{p.provider}</span>
-                      <Badge color={p.status === 'captured' ? 'emerald' : p.status === 'pending' ? 'amber' : 'slate'} >{p.status}</Badge>
-                      <span className="ml-2 text-xs text-slate-500">{new Date(p.created_at).toLocaleString()}</span>
+                  <div
+                    key={p.id}
+                    className="flex items-center justify-between py-2.5"
+                    style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
+                  >
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-medium text-[var(--cc-text)]">{p.provider}</span>
+                      <Badge color={p.status === 'captured' ? 'emerald' : p.status === 'pending' ? 'amber' : 'slate'}>
+                        {p.status}
+                      </Badge>
+                      <span className="text-[11px] text-[var(--cc-subtle)]">
+                        {new Date(p.created_at).toLocaleString()}
+                      </span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-mono text-slate-300">{p.currency} {p.amount}</span>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className="text-sm font-mono text-[var(--cc-body)]">{p.currency} {p.amount}</span>
                       {p.status === 'authorized' && (
-                        <Btn variant="green" onClick={() => handleCapture(p.id)}>Capture</Btn>
+                        <Btn size="sm" variant="green" onClick={() => handleCapture(p.id)}>Capture</Btn>
                       )}
                       {p.status === 'captured' && (
-                        <Btn variant="danger" onClick={() => handleRefund(p.id, p.amount)}>Refund</Btn>
+                        <Btn size="sm" variant="danger" onClick={() => handleRefund(p.id, p.amount)}>Refund</Btn>
                       )}
                     </div>
                   </div>
@@ -221,51 +245,72 @@ function OrderDetail({ storeId, orderId, onBack }: {
           </Card>
 
           {/* Shipments */}
-          <Card title="Shipments">
-            {shipments.length === 0 && !showShipForm ? (
-              <div className="flex items-center justify-between">
-                <p className="text-xs text-slate-500">No shipments yet</p>
-                <Btn variant="secondary" onClick={() => setShowShipForm(true)}>+ Add Shipment</Btn>
-              </div>
-            ) : (
-              <div className="space-y-3">
+          <Card
+            title="Shipments"
+            actions={!showShipForm ? (
+              <Btn size="sm" variant="secondary" onClick={() => setShowShipForm(true)}>+ Add Shipment</Btn>
+            ) : undefined}
+          >
+            {shipments.length === 0 && !showShipForm && (
+              <p className="text-xs text-[var(--cc-subtle)]">No shipments yet</p>
+            )}
+            {shipments.length > 0 && (
+              <div className="space-y-2 mb-3">
                 {shipments.map((s, i) => (
-                  <div key={s.id ?? i} className="rounded-lg bg-white/[0.02] border border-white/[0.06] p-3">
+                  <div
+                    key={s.id ?? i}
+                    className="rounded-lg p-3 space-y-1"
+                    style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}
+                  >
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-white">{s.carrier ?? 'Carrier'}</span>
+                      <span className="text-sm font-medium text-[var(--cc-text)]">{s.carrier ?? 'Carrier'}</span>
                       <Badge color="blue">{s.status ?? 'shipped'}</Badge>
                     </div>
-                    <p className="text-xs font-mono text-slate-400 mt-1">{s.tracking_number}</p>
+                    <p className="text-xs font-mono text-[var(--cc-muted)]">{s.tracking_number}</p>
                     {s.tracking_url && (
-                      <a href={s.tracking_url} target="_blank" rel="noopener noreferrer"
-                        className="text-xs text-violet-400 hover:text-violet-300 mt-1 inline-block">Track &#x2197;</a>
+                      <a
+                        href={s.tracking_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-[var(--cc-lime)] hover:underline"
+                      >
+                        Track shipment ↗
+                      </a>
                     )}
                   </div>
                 ))}
-                {!showShipForm && <Btn variant="secondary" onClick={() => setShowShipForm(true)}>+ Add Shipment</Btn>}
               </div>
             )}
             {showShipForm && (
-              <div className="mt-3 p-3 rounded-lg border border-white/[0.08] bg-white/[0.02] space-y-3">
-                <FormInput label="Carrier" value={shipForm.carrier} onChange={v => setShipForm(f => ({ ...f, carrier: v }))} placeholder="FedEx, UPS..." />
-                <FormInput label="Tracking Number *" value={shipForm.tracking_number} onChange={v => setShipForm(f => ({ ...f, tracking_number: v }))} placeholder="1Z..." />
-                <FormInput label="Tracking URL" value={shipForm.tracking_url} onChange={v => setShipForm(f => ({ ...f, tracking_url: v }))} placeholder="https://..." />
+              <div
+                className="rounded-lg p-4 space-y-3"
+                style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)' }}
+              >
+                <FormInput label="Carrier" value={shipForm.carrier} onChange={v => setShipForm(f => ({ ...f, carrier: v }))} placeholder="FedEx, UPS…" />
+                <FormInput label="Tracking Number" required value={shipForm.tracking_number} onChange={v => setShipForm(f => ({ ...f, tracking_number: v }))} placeholder="1Z999AA1012345678" />
+                <FormInput label="Tracking URL" value={shipForm.tracking_url} onChange={v => setShipForm(f => ({ ...f, tracking_url: v }))} placeholder="https://…" />
                 <div className="flex gap-2">
-                  <Btn onClick={handleAddShipment} loading={addingShipment}>Add Shipment</Btn>
-                  <Btn variant="secondary" onClick={() => setShowShipForm(false)}>Cancel</Btn>
+                  <Btn size="sm" onClick={handleAddShipment} loading={addingShipment}>Add Shipment</Btn>
+                  <Btn size="sm" variant="secondary" onClick={() => setShowShipForm(false)}>Cancel</Btn>
                 </div>
               </div>
             )}
           </Card>
 
-          {/* Notes */}
+          {/* Notes & Timeline */}
           <Card title="Notes & Timeline">
             {events.length > 0 && (
-              <div className="space-y-2 mb-4">
+              <div className="space-y-0 mb-4">
                 {events.slice(0, 10).map((ev, i) => (
-                  <div key={String(ev.id ?? i)} className="text-xs text-slate-400 py-1 border-b border-white/[0.04] last:border-0">
-                    <span className="text-slate-300">{String(ev.message ?? ev.type ?? 'Event')}</span>
-                    {ev.created_at && <span className="ml-2 text-slate-600">{new Date(String(ev.created_at)).toLocaleString()}</span>}
+                  <div
+                    key={String(ev.id ?? i)}
+                    className="py-2 text-xs"
+                    style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
+                  >
+                    <span className="text-[var(--cc-body)]">{String(ev.message ?? ev.type ?? 'Event')}</span>
+                    {ev.created_at && (
+                      <span className="ml-2 text-[var(--cc-subtle)]">{new Date(String(ev.created_at)).toLocaleString()}</span>
+                    )}
                   </div>
                 ))}
               </div>
@@ -274,41 +319,46 @@ function OrderDetail({ storeId, orderId, onBack }: {
               <input
                 value={note}
                 onChange={e => setNote(e.target.value)}
-                placeholder="Add a note..."
-                className="flex-1 rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-xs text-white placeholder:text-slate-500 focus:border-white/20 focus:outline-none"
+                placeholder="Add a note…"
+                className="flex-1 rounded-lg px-3 py-2 text-xs text-[var(--cc-text)] placeholder:text-[var(--cc-subtle)] focus:outline-none focus:ring-1 focus:ring-[var(--cc-lime)]/20 transition"
+                style={{ background: 'var(--cc-bg-sunken)', border: '1px solid rgba(255,255,255,0.08)' }}
               />
-              <Btn onClick={handleAddNote} loading={addingNote} variant="secondary">Add Note</Btn>
+              <Btn size="sm" onClick={handleAddNote} loading={addingNote} variant="secondary">Add Note</Btn>
             </div>
           </Card>
         </div>
 
-        {/* Sidebar: customer + address */}
+        {/* Right sidebar */}
         <div className="space-y-4">
           <Card title="Customer">
-            <div className="space-y-2">
-              <p className="text-sm text-white">{(order.email as string | undefined) ?? 'Guest'}</p>
+            <div className="space-y-1.5">
+              <p className="text-sm text-[var(--cc-text)]">{(order.email as string | undefined) ?? 'Guest'}</p>
               {!!order.customer_id && (
-                <p className="text-xs text-slate-500">ID: {String(order.customer_id)}</p>
+                <p className="text-[11px] font-mono text-[var(--cc-subtle)]">ID: {String(order.customer_id)}</p>
               )}
             </div>
           </Card>
+
           {shippingAddress && (
             <Card title="Shipping Address">
-              <div className="space-y-1 text-xs text-slate-400">
-                {shippingAddress['name'] && <p className="text-white text-sm">{shippingAddress['name']}</p>}
+              <div className="space-y-0.5 text-xs text-[var(--cc-muted)]">
+                {shippingAddress['name'] && <p className="text-[var(--cc-body)] font-medium mb-1">{shippingAddress['name']}</p>}
                 {shippingAddress['address1'] && <p>{shippingAddress['address1']}</p>}
                 {shippingAddress['address2'] && <p>{shippingAddress['address2']}</p>}
                 <p>{[shippingAddress['city'], shippingAddress['province_code'], shippingAddress['zip']].filter(Boolean).join(', ')}</p>
                 {shippingAddress['country_code'] && <p>{shippingAddress['country_code']}</p>}
-                {shippingAddress['phone'] && <p>{shippingAddress['phone']}</p>}
+                {shippingAddress['phone'] && <p className="mt-1">{shippingAddress['phone']}</p>}
               </div>
             </Card>
           )}
+
           <Card title="Order Info">
-            <div className="space-y-1.5 text-xs text-slate-400">
-              <div className="flex justify-between"><span>Created</span><span>{new Date(order.created_at).toLocaleString()}</span></div>
-              <div className="flex justify-between"><span>Updated</span><span>{new Date(order.updated_at).toLocaleString()}</span></div>
-              {order.test && <Badge color="amber">Test Order</Badge>}
+            <div className="space-y-1">
+              <InfoRow label="Created">{new Date(order.created_at).toLocaleString()}</InfoRow>
+              <InfoRow label="Updated">{new Date(order.updated_at).toLocaleString()}</InfoRow>
+              {order.test && (
+                <div className="mt-2"><Badge color="amber">Test Order</Badge></div>
+              )}
             </div>
           </Card>
         </div>
@@ -350,12 +400,8 @@ export default function Orders() {
     )
   }
 
-  if (loading) return <div className="flex justify-center py-16"><Spinner /></div>
-
   const totalPages = Math.ceil(total / PAGE_SIZE)
   const currentPage = Math.floor(offset / PAGE_SIZE) + 1
-  const hasPrev = offset > 0
-  const hasNext = offset + PAGE_SIZE < total
 
   const goToPage = (newOffset: number) => {
     setOffset(newOffset)
@@ -363,16 +409,19 @@ export default function Orders() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <PageHeader
         title="Orders"
-        description={`${total} total order${total !== 1 ? 's' : ''}`}
+        description={loading ? undefined : `${total.toLocaleString()} order${total !== 1 ? 's' : ''}`}
       />
 
-      {orders.length === 0 ? (
+      {loading ? (
+        <div className="flex justify-center py-16"><Spinner /></div>
+      ) : orders.length === 0 ? (
         <EmptyState
+          icon={<ShoppingCart size={22} />}
           title="No orders yet"
-          description="Orders will appear here once customers start purchasing"
+          description="Orders will appear here once customers start purchasing."
         />
       ) : (
         <>
@@ -385,7 +434,7 @@ export default function Orders() {
                 <Th>Status</Th>
                 <Th>Payment</Th>
                 <Th>Fulfillment</Th>
-                <Th className="text-right">Total</Th>
+                <Th align="right">Total</Th>
               </TableHead>
               <tbody>
                 {orders.map(order => {
@@ -395,16 +444,23 @@ export default function Orders() {
                   return (
                     <tr
                       key={order.id}
-                      className="border-t border-white/[0.04] hover:bg-white/[0.02] transition cursor-pointer"
+                      className="cursor-pointer transition-colors"
+                      style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}
                       onClick={() => setSelectedOrderId(order.id)}
+                      onMouseEnter={e => { (e.currentTarget as HTMLTableRowElement).style.background = 'rgba(255,255,255,0.02)' }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLTableRowElement).style.background = '' }}
                     >
-                      <Td><span className="font-mono text-violet-400">#{order.order_number}</span></Td>
-                      <Td className="text-slate-400">{new Date(order.created_at).toLocaleDateString()}</Td>
-                      <Td className="text-slate-300">{(order.email as string | undefined) ?? 'Guest'}</Td>
+                      <Td>
+                        <span className="font-mono text-[var(--cc-lime)] font-medium">#{order.order_number}</span>
+                      </Td>
+                      <Td muted>{new Date(order.created_at).toLocaleDateString()}</Td>
+                      <Td className="text-[var(--cc-body)]">{(order.email as string | undefined) ?? 'Guest'}</Td>
                       <Td><Badge color={ord.color}>{ord.label}</Badge></Td>
                       <Td><Badge color={fin.color}>{fin.label}</Badge></Td>
                       <Td><Badge color={ful.color}>{ful.label}</Badge></Td>
-                      <Td className="text-right font-mono font-medium text-white">{order.currency} {Number(order.total).toFixed(2)}</Td>
+                      <Td align="right" className="font-mono font-medium text-[var(--cc-text)]">
+                        {order.currency} {Number(order.total).toFixed(2)}
+                      </Td>
                     </tr>
                   )
                 })}
@@ -413,27 +469,14 @@ export default function Orders() {
           </TableContainer>
 
           {totalPages > 1 && (
-            <div className="flex items-center justify-between px-1">
-              <span className="text-xs text-slate-500">
-                Page {currentPage} of {totalPages} &middot; {total} orders
-              </span>
-              <div className="flex items-center gap-2">
-                <Btn
-                  variant="secondary"
-                  disabled={!hasPrev}
-                  onClick={() => goToPage(offset - PAGE_SIZE)}
-                >
-                  &#8592; Prev
-                </Btn>
-                <Btn
-                  variant="secondary"
-                  disabled={!hasNext}
-                  onClick={() => goToPage(offset + PAGE_SIZE)}
-                >
-                  Next &#8594;
-                </Btn>
-              </div>
-            </div>
+            <Pagination
+              page={currentPage}
+              totalPages={totalPages}
+              total={total}
+              unit="orders"
+              onPrev={() => goToPage(offset - PAGE_SIZE)}
+              onNext={() => goToPage(offset + PAGE_SIZE)}
+            />
           )}
         </>
       )}

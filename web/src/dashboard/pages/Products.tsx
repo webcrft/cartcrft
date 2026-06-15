@@ -2,8 +2,13 @@ import React, { useEffect, useState, useCallback } from 'react'
 import { useStore } from '../context/StoreContext'
 import { getSdk } from '../lib/sdk'
 import { useToast } from '../context/ToastContext'
-import { Badge, Btn, Card, FormInput, FormSelect, PageHeader, EmptyState, SearchInput, Spinner, Modal, TableContainer, TableHead, Th, Td } from '../components/ui/index'
+import {
+  Badge, Btn, Card, FormInput, FormSelect, PageHeader, EmptyState,
+  SearchInput, Spinner, Modal, TableContainer, TableHead, Th, Td, Pagination,
+  SectionDivider,
+} from '../components/ui/index'
 import { PRODUCT_STATUS_MAP, statusBadgeProps } from '../lib/statusMaps'
+import { Package, Plus } from 'lucide-react'
 import type { Product, Variant } from '@cartcrft/sdk'
 
 const PRODUCT_TYPES = [
@@ -76,7 +81,6 @@ function ProductEditor({ storeId, product, onClose, onSaved }: {
         weight_g: '',
         track_inventory: false,
       })
-      // Load variants
       setLoadingVariants(true)
       const sdk = getSdk()
       void sdk.catalog.listVariants(storeId, product.id).then(res => {
@@ -118,7 +122,6 @@ function ProductEditor({ storeId, product, onClose, onSaved }: {
         const res = await sdk.catalog.createProduct(storeId, body)
         savedProduct = res.product
       }
-      // Save/update default variant if price provided
       if (form.price) {
         type VariantBodyType = Parameters<typeof sdk.catalog.createVariant>[2]
         const variantBody: VariantBodyType = { title: 'Default', price: form.price, track_inventory: form.track_inventory }
@@ -142,17 +145,18 @@ function ProductEditor({ storeId, product, onClose, onSaved }: {
   }
 
   return (
-    <Modal title={product ? 'Edit Product' : 'New Product'} onClose={onClose}>
+    <Modal title={product ? 'Edit Product' : 'New Product'} onClose={onClose} size="md">
       <div className="space-y-4">
-        <FormInput label="Title *" value={form.title} onChange={set('title')} placeholder="Product name" />
+        <FormInput label="Title" required value={form.title} onChange={set('title')} placeholder="Product name" />
         <div>
-          <label className="block text-xs font-medium text-slate-400 mb-1.5">Description</label>
+          <label className="block font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--cc-muted)] mb-1.5">Description</label>
           <textarea
             value={form.description}
             onChange={e => set('description')(e.target.value)}
             rows={3}
             placeholder="Product description..."
-            className="w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2.5 text-sm text-white placeholder:text-slate-500 focus:border-white/20 focus:outline-none resize-none"
+            className="w-full rounded-lg px-3 py-2.5 text-sm text-[var(--cc-text)] placeholder:text-[var(--cc-subtle)] focus:outline-none focus:ring-2 focus:ring-[var(--cc-lime)]/20 transition resize-none"
+            style={{ background: 'var(--cc-bg-sunken)', border: '1px solid rgba(255,255,255,0.08)' }}
           />
         </div>
         <div className="grid grid-cols-2 gap-3">
@@ -161,45 +165,57 @@ function ProductEditor({ storeId, product, onClose, onSaved }: {
         </div>
         <div className="grid grid-cols-2 gap-3">
           <FormInput label="Vendor" value={form.vendor} onChange={set('vendor')} placeholder="Brand name" />
-          <FormInput label="Tags (comma-separated)" value={form.tags} onChange={set('tags')} placeholder="tag1, tag2" />
+          <FormInput label="Tags" value={form.tags} onChange={set('tags')} placeholder="tag1, tag2" hint="Comma-separated" />
         </div>
 
-        <div className="border-t border-white/[0.06] pt-4">
-          <p className="text-xs font-semibold text-slate-400 mb-3">Default Variant Pricing</p>
-          {loadingVariants ? <Spinner /> : (
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <FormInput label="Price *" value={form.price} onChange={set('price')} placeholder="0.00" type="number" />
-                <FormInput label="Compare at Price" value={form.compare_at_price} onChange={set('compare_at_price')} placeholder="0.00" type="number" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <FormInput label="SKU" value={form.sku} onChange={set('sku')} placeholder="SKU-001" />
-                <FormInput label="Weight (g)" value={form.weight_g} onChange={set('weight_g')} placeholder="0" type="number" />
-              </div>
-              <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer">
-                <input type="checkbox" checked={form.track_inventory} onChange={e => set('track_inventory')(e.target.checked)}
-                  className="rounded" />
-                Track inventory
-              </label>
-            </div>
-          )}
-        </div>
+        <SectionDivider label="Default Variant" />
 
-        {variants.length > 1 && (
-          <div className="border-t border-white/[0.06] pt-4">
-            <p className="text-xs font-semibold text-slate-400 mb-3">All Variants ({variants.length})</p>
-            <div className="space-y-1">
-              {variants.map(v => (
-                <div key={v.id} className="flex items-center justify-between rounded-lg bg-white/[0.02] px-3 py-2">
-                  <span className="text-xs text-slate-300">{v.title}</span>
-                  <span className="text-xs font-mono text-slate-400">{v.price}</span>
-                </div>
-              ))}
+        {loadingVariants ? (
+          <div className="flex items-center gap-2 py-2">
+            <Spinner size="sm" />
+            <span className="text-xs text-[var(--cc-muted)]">Loading variants…</span>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <FormInput label="Price" required value={form.price} onChange={set('price')} placeholder="0.00" type="number" />
+              <FormInput label="Compare at Price" value={form.compare_at_price} onChange={set('compare_at_price')} placeholder="0.00" type="number" />
             </div>
+            <div className="grid grid-cols-2 gap-3">
+              <FormInput label="SKU" value={form.sku} onChange={set('sku')} placeholder="SKU-001" />
+              <FormInput label="Weight (g)" value={form.weight_g} onChange={set('weight_g')} placeholder="0" type="number" />
+            </div>
+            <label className="flex items-center gap-2.5 text-xs text-[var(--cc-muted)] cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={form.track_inventory}
+                onChange={e => set('track_inventory')(e.target.checked)}
+                className="rounded"
+              />
+              Track inventory for this product
+            </label>
           </div>
         )}
 
-        <div className="flex gap-2 pt-2 border-t border-white/[0.06]">
+        {variants.length > 1 && (
+          <>
+            <SectionDivider label={`All Variants (${variants.length})`} />
+            <div className="space-y-1 max-h-40 overflow-y-auto">
+              {variants.map(v => (
+                <div
+                  key={v.id}
+                  className="flex items-center justify-between rounded-lg px-3 py-2"
+                  style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}
+                >
+                  <span className="text-xs text-[var(--cc-body)]">{v.title}</span>
+                  <span className="text-xs font-mono text-[var(--cc-muted)]">{v.price}</span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        <div className="flex gap-2 pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
           <Btn onClick={handleSave} loading={saving}>{product ? 'Save Changes' : 'Create Product'}</Btn>
           <Btn variant="secondary" onClick={onClose}>Cancel</Btn>
         </div>
@@ -251,12 +267,8 @@ export default function Products() {
     }
   }
 
-  if (loading) return <div className="flex justify-center py-16"><Spinner /></div>
-
   const totalPages = Math.ceil(total / PAGE_SIZE)
   const currentPage = Math.floor(offset / PAGE_SIZE) + 1
-  const hasPrev = offset > 0
-  const hasNext = offset + PAGE_SIZE < total
 
   const handleSearch = (q: string) => {
     setSearch(q)
@@ -270,19 +282,27 @@ export default function Products() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <PageHeader
         title="Products"
-        description={`${total} product${total !== 1 ? 's' : ''}`}
-        actions={<Btn onClick={() => setEditProduct(null)}>+ New Product</Btn>}
+        description={loading ? undefined : `${total.toLocaleString()} product${total !== 1 ? 's' : ''}`}
+        actions={
+          <Btn onClick={() => setEditProduct(null)}>
+            <Plus size={13} />
+            New Product
+          </Btn>
+        }
       />
 
-      <SearchInput value={search} onChange={handleSearch} placeholder="Search products..." />
+      <SearchInput value={search} onChange={handleSearch} placeholder="Search products by title, SKU…" />
 
-      {products.length === 0 ? (
+      {loading ? (
+        <div className="flex justify-center py-16"><Spinner /></div>
+      ) : products.length === 0 ? (
         <EmptyState
+          icon={<Package size={22} />}
           title="No products yet"
-          description="Create your first product to start selling"
+          description="Create your first product to start selling."
           action="New Product"
           onAction={() => setEditProduct(null)}
         />
@@ -294,29 +314,39 @@ export default function Products() {
                 <Th>Product</Th>
                 <Th>Type</Th>
                 <Th>Status</Th>
-                <Th>Price</Th>
+                <Th align="right">Price</Th>
                 <Th></Th>
               </TableHead>
               <tbody>
                 {products.map(product => {
                   const st = statusBadgeProps(product.status, PRODUCT_STATUS_MAP)
                   return (
-                    <tr key={product.id} className="border-t border-white/[0.04] hover:bg-white/[0.02] transition">
+                    <tr
+                      key={product.id}
+                      className="transition-colors"
+                      style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLTableRowElement).style.background = 'rgba(255,255,255,0.02)' }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLTableRowElement).style.background = '' }}
+                    >
                       <Td>
-                        <div>
-                          <span className="font-medium text-white">{product.title}</span>
+                        <div className="flex flex-col gap-0.5">
+                          <span className="font-medium text-[var(--cc-text)]">{product.title}</span>
                           {product.variants_count != null && product.variants_count > 0 && (
-                            <span className="ml-2 text-[11px] text-slate-500">{product.variants_count} variant{product.variants_count !== 1 ? 's' : ''}</span>
+                            <span className="text-[11px] text-[var(--cc-subtle)]">
+                              {product.variants_count} variant{product.variants_count !== 1 ? 's' : ''}
+                            </span>
                           )}
                         </div>
                       </Td>
                       <Td><Badge color="slate">{product.product_type}</Badge></Td>
                       <Td><Badge color={st.color}>{st.label}</Badge></Td>
-                      <Td className="text-slate-300 font-mono">{product.price_min ? `${product.price_min}` : '—'}</Td>
+                      <Td align="right" className="font-mono text-[var(--cc-body)]">
+                        {product.price_min ? product.price_min : <span className="text-[var(--cc-subtle)]">—</span>}
+                      </Td>
                       <Td>
-                        <div className="flex items-center gap-2 justify-end">
-                          <Btn variant="secondary" onClick={() => setEditProduct(product)}>Edit</Btn>
-                          <Btn variant="danger" loading={deleting === product.id} onClick={() => handleDelete(product.id)}>Del</Btn>
+                        <div className="flex items-center gap-1.5 justify-end">
+                          <Btn size="sm" variant="secondary" onClick={() => setEditProduct(product)}>Edit</Btn>
+                          <Btn size="sm" variant="danger" loading={deleting === product.id} onClick={() => handleDelete(product.id)}>Delete</Btn>
                         </div>
                       </Td>
                     </tr>
@@ -327,27 +357,14 @@ export default function Products() {
           </TableContainer>
 
           {totalPages > 1 && (
-            <div className="flex items-center justify-between px-1">
-              <span className="text-xs text-slate-500">
-                Page {currentPage} of {totalPages} &middot; {total} products
-              </span>
-              <div className="flex items-center gap-2">
-                <Btn
-                  variant="secondary"
-                  disabled={!hasPrev}
-                  onClick={() => goToPage(offset - PAGE_SIZE)}
-                >
-                  &#8592; Prev
-                </Btn>
-                <Btn
-                  variant="secondary"
-                  disabled={!hasNext}
-                  onClick={() => goToPage(offset + PAGE_SIZE)}
-                >
-                  Next &#8594;
-                </Btn>
-              </div>
-            </div>
+            <Pagination
+              page={currentPage}
+              totalPages={totalPages}
+              total={total}
+              unit="products"
+              onPrev={() => goToPage(offset - PAGE_SIZE)}
+              onNext={() => goToPage(offset + PAGE_SIZE)}
+            />
           )}
         </>
       )}

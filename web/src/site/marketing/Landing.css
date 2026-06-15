@@ -1281,10 +1281,45 @@
   font-weight: 600;
 }
 
+/* CTA terminal (dark chip on the lime band) */
+.mk-landing .cta-grain { opacity: 0.07; z-index: 0; }
+.mk-landing .cta-band > * { position: relative; z-index: 1; }
+.mk-landing .cta-term {
+  flex: 0 0 clamp(330px, 38%, 460px);
+  border-radius: var(--r-lg);
+  background: linear-gradient(180deg, #14160c 0%, #0b0d06 100%);
+  border: 1px solid color-mix(in srgb, var(--brand-ink) 24%, transparent);
+  box-shadow: 0 26px 64px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+}
+@media (max-width: 900px) {
+  .mk-landing .cta-term { flex: 1 1 100%; width: 100%; }
+}
+.mk-landing .cta-term-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.65rem 0.9rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.mk-landing .cta-term-bar .ctd { width: 10px; height: 10px; border-radius: 50%; background: rgba(255, 255, 255, 0.2); }
+.mk-landing .cta-term-bar .ctd:nth-child(1) { background: #ff5f57; }
+.mk-landing .cta-term-bar .ctd:nth-child(2) { background: #febc2e; }
+.mk-landing .cta-term-bar .ctd:nth-child(3) { background: #28c840; }
+.mk-landing .cta-term-title { margin-left: 0.45rem; font-family: var(--font-mono); font-size: 0.7rem; color: rgba(236, 234, 224, 0.5); }
+.mk-landing .cta-term-body { margin: 0; padding: 1.1rem 1.25rem 1.3rem; overflow-x: auto; }
+.mk-landing .cta-term-body code { font-family: var(--font-mono); font-size: 0.8rem; line-height: 1.95; color: #d6dac4; white-space: pre; display: block; }
+.mk-landing .cta-term-body .t-p { color: var(--brand); }
+.mk-landing .cta-term-body .t-op { color: #8a8f78; }
+.mk-landing .cta-term-body .t-ok { color: var(--brand); }
+.mk-landing .cta-caret { display: inline-block; width: 7px; height: 1.05em; background: var(--brand); margin-left: 3px; vertical-align: -2px; animation: cta-blink 1s steps(1) infinite; }
+@keyframes cta-blink { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0; } }
+
 @media (prefers-reduced-motion: reduce) {
   .mk-landing .ey-dot,
   .mk-landing .why-now-glow,
   .mk-landing .panel-live-dot,
+  .mk-landing .cta-caret,
   .mk-landing .cta-deco { animation: none !important; }
   .mk-landing .stat,
   .mk-landing .fair-card,
