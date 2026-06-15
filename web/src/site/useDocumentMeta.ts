@@ -14,7 +14,7 @@ export function useDocumentMeta(opts: {
   canonical?: string
   noindex?: boolean
 }) {
-  const { title, description, ogImage = '/og-image.svg', canonical, noindex } = opts
+  const { title, description, ogImage = '/og-image.png', canonical, noindex } = opts
 
   useEffect(() => {
     document.title = title
@@ -40,9 +40,15 @@ export function useDocumentMeta(opts: {
     setMeta('meta[property="og:title"]', 'property', 'og:title', title)
     setMeta('meta[name="twitter:title"]', 'name', 'twitter:title', title)
     setMeta('meta[property="og:image"]', 'property', 'og:image', ogImageURL)
+    setMeta('meta[property="og:image:type"]', 'property', 'og:image:type', 'image/png')
+    setMeta('meta[property="og:image:width"]', 'property', 'og:image:width', '1200')
+    setMeta('meta[property="og:image:height"]', 'property', 'og:image:height', '630')
     setMeta('meta[name="twitter:image"]', 'name', 'twitter:image', ogImageURL)
     setMeta('meta[property="og:type"]', 'property', 'og:type', 'website')
+    setMeta('meta[property="og:url"]', 'property', 'og:url', canonicalURL)
+    setMeta('meta[property="og:site_name"]', 'property', 'og:site_name', 'Cartcrft')
     setMeta('meta[name="twitter:card"]', 'name', 'twitter:card', 'summary_large_image')
+    setMeta('meta[name="twitter:site"]', 'name', 'twitter:site', '@cartcrft')
 
     let link = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]')
     if (!link) {

@@ -132,8 +132,8 @@ const commerceClusters: ShowcaseCluster[] = [
       },
       {
         Icon: CreditCard,
-        title: 'Payments — 4 providers, BYO',
-        description: 'Stripe, Paystack, Razorpay, and Xendit on your own credentials. AES-256-GCM secret encryption, an inbound webhook router with replay protection, and zero percent platform rake.',
+        title: 'Payments — bring your own keys',
+        description: 'Connect your own Stripe, Paystack, Razorpay, or Xendit account — Cartcrft never sits in the payment flow and takes 0% of your sales. AES-256-GCM secret encryption and an inbound webhook router with replay protection.',
         href: '/byo-keys',
       },
       {

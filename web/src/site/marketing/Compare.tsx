@@ -509,19 +509,6 @@ const rows: ComparisonRow[] = [
       WooCommerce: 'Plugin (Google Listings & Ads)',
     },
   },
-  {
-    category: 'Commerce features',
-    feature: 'Multi-payment providers (BYO)',
-    values: {
-      Cartcrft: 'Stripe, Paystack, Razorpay, Xendit',
-      Shopify: 'Limited (0.6%–2% surcharge if not Shopify Payments)',
-      'Medusa v2': true,
-      Vendure: true,
-      Saleor: true,
-      Swell: true,
-      WooCommerce: true,
-    },
-  },
 ]
 
 // ── Competitor card data ─────────────────────────────────────────────────────

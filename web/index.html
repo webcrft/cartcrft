@@ -13,9 +13,109 @@
     <title>Cartcrft — open-source, agent-native commerce backend</title>
     <meta
       name="description"
-      content="Open-source, agent-native headless commerce backend for the agentic era. MCP server, ACP/UCP adapters, signed mandates, 4 payment providers. MIT licensed, zero take rate, self-host or cloud."
+      content="Open-source, agent-native headless commerce backend for the agentic era. MCP server, ACP/UCP adapters, signed mandates, bring-your-own payment keys. MIT licensed, zero take rate, self-host or cloud."
     />
     <meta name="theme-color" content="#0c0d0a" />
+
+    <!-- Open Graph (default / fallback — useDocumentMeta overrides per-page at runtime) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Cartcrft" />
+    <meta property="og:url" content="https://cartcrft.dev/" />
+    <meta property="og:title" content="Cartcrft — open-source, agent-native commerce backend" />
+    <meta property="og:description" content="Open-source, agent-native headless commerce backend for the agentic era. MCP server, ACP/UCP adapters, signed mandates, bring-your-own payment keys. MIT licensed, zero take rate, self-host or cloud." />
+    <meta property="og:image" content="https://cartcrft.dev/og-image.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Cartcrft — agent-native commerce backend. MCP server, signed mandates, MIT licensed." />
+
+    <!-- Twitter / X Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@cartcrft" />
+    <meta name="twitter:title" content="Cartcrft — open-source, agent-native commerce backend" />
+    <meta name="twitter:description" content="Open-source headless commerce backend with MCP server, ACP/UCP adapters, signed mandates, bring-your-own payment keys. MIT licensed, 0% rake." />
+    <meta name="twitter:image" content="https://cartcrft.dev/og-image.png" />
+
+    <!-- JSON-LD structured data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://cartcrft.dev/#organization",
+          "name": "Webcrft Systems",
+          "alternateName": "Cartcrft",
+          "url": "https://cartcrft.dev",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://cartcrft.dev/logo.svg",
+            "contentUrl": "https://cartcrft.dev/logo.svg"
+          },
+          "sameAs": [
+            "https://github.com/webcrft/cartcrft"
+          ],
+          "contactPoint": {
+            "@type": "ContactPoint",
+            "email": "hello@webcrft.systems",
+            "contactType": "customer support"
+          }
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://cartcrft.dev/#website",
+          "url": "https://cartcrft.dev",
+          "name": "Cartcrft",
+          "description": "Open-source, agent-native headless commerce backend",
+          "publisher": { "@id": "https://cartcrft.dev/#organization" }
+        },
+        {
+          "@type": "SoftwareApplication",
+          "@id": "https://cartcrft.dev/#software",
+          "name": "Cartcrft",
+          "alternateName": "Cartcrft Commerce Backend",
+          "description": "Open-source, agent-native headless commerce backend. MCP server, ACP/UCP protocol adapters, signed mandates, bring-your-own payment keys (Stripe, Paystack, Razorpay, Xendit). MIT licensed, zero GMV rake — Cartcrft never sits in your payment flow.",
+          "applicationCategory": "BusinessApplication",
+          "applicationSubCategory": "E-Commerce Platform",
+          "operatingSystem": "Linux, macOS, Docker",
+          "url": "https://cartcrft.dev",
+          "downloadUrl": "https://github.com/webcrft/cartcrft",
+          "softwareVersion": "0.0.1",
+          "softwareRequirements": "Node.js 22+, PostgreSQL 15+",
+          "license": "https://opensource.org/licenses/MIT",
+          "author": { "@id": "https://cartcrft.dev/#organization" },
+          "offers": [
+            {
+              "@type": "Offer",
+              "name": "Self-host (MIT)",
+              "price": "0",
+              "priceCurrency": "USD",
+              "description": "Free, open-source MIT license. Self-host on your own infrastructure."
+            },
+            {
+              "@type": "Offer",
+              "name": "Cartcrft Cloud",
+              "price": "79",
+              "priceCurrency": "USD",
+              "billingIncrement": "P1M",
+              "description": "Managed Cartcrft hosting. Flat monthly fee, 0% GMV rake, zero-downtime deploys."
+            }
+          ],
+          "featureList": [
+            "MCP server for AI agent integration",
+            "ACP and UCP protocol adapters",
+            "ed25519-signed payment mandates",
+            "Bring-your-own payment keys (Stripe, Paystack, Razorpay, Xendit) — 0% rake",
+            "Multi-tenant architecture with Row-Level Security",
+            "REST API with OpenAPI spec",
+            "Self-host or managed cloud",
+            "MIT licensed, zero GMV rake"
+          ]
+        }
+      ]
+    }
+    </script>
+
     <!-- Swap no-js → js immediately so reveal animations only arm when JS is present -->
     <script>
       document.documentElement.classList.remove('no-js');

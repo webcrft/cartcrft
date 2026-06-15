@@ -53,7 +53,7 @@ const CATEGORIES: CategoryCard[] = [
     icon: <Zap size={22} aria-hidden="true" />,
     title: 'Selling channels & agents',
     description:
-      'Let AI agents browse and buy, publish to Google Shopping, and accept payments via shareable links.',
+      'Let AI agents browse and buy, publish to Google Shopping, and collect payment through shareable checkout links — on your own gateway.',
     href: '/agent-native',
     links: [
       { label: 'Agent-native (MCP)', href: '/agent-native' },
