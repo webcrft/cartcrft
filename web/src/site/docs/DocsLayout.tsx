@@ -30,35 +30,66 @@ const SIDEBAR: SidebarGroup[] = [
     items: [{ slug: 'quickstart' }, { slug: 'quickstart-mcp' }],
   },
   {
-    label: 'Guides',
-    items: [{ slug: 'byo-keys' }, { slug: 'self-host' }, { slug: 'cloud-vs-selfhost' }],
-  },
-  {
     label: 'Commerce',
     items: [
       { slug: 'commerce' },
-      { slug: 'identity' },
+      {
+        label: 'Catalog & products',
+        items: [
+          { slug: 'commerce/products' },
+          { slug: 'commerce/inventory' },
+          { slug: 'commerce/digital-products' },
+          { slug: 'commerce/bookings' },
+        ],
+      },
+      {
+        label: 'Selling',
+        items: [
+          { slug: 'commerce/orders-checkout' },
+          { slug: 'commerce/payments' },
+          { slug: 'commerce/discounts' },
+          { slug: 'commerce/shipping' },
+          { slug: 'commerce/tax' },
+        ],
+      },
+      {
+        label: 'Customers & loyalty',
+        items: [
+          { slug: 'commerce/customers' },
+          { slug: 'identity' },
+          { slug: 'commerce/wallet' },
+          { slug: 'commerce/subscriptions' },
+          { slug: 'commerce/returns' },
+          { slug: 'commerce/b2b' },
+        ],
+      },
     ],
   },
   {
-    label: 'Agent-native',
+    label: 'Selling channels & agents',
     items: [
       { slug: 'agent-native' },
       { label: 'Protocols', items: [{ slug: 'acp' }, { slug: 'ucp' }] },
-    ],
-  },
-  {
-    label: 'Reference',
-    items: [
-      { slug: 'api-overview' },
-      { slug: 'parity-endpoints' },
       { slug: 'oauth-apps' },
       { slug: 'checkout-links' },
     ],
   },
   {
+    label: 'API & SDK',
+    items: [
+      { slug: 'api-overview' },
+      { slug: 'parity-endpoints' },
+      { slug: 'byo-keys' },
+    ],
+  },
+  {
     label: 'Operations',
-    items: [{ slug: 'security' }, { slug: 'testing' }],
+    items: [
+      { slug: 'self-host' },
+      { slug: 'cloud-vs-selfhost' },
+      { slug: 'security' },
+      { slug: 'testing' },
+    ],
   },
   {
     label: 'Project',
@@ -103,9 +134,20 @@ function NavLink({ slug, activeSlug }: { slug: string; activeSlug: string }) {
 }
 
 function Sidebar({ activeSlug }: { activeSlug: string }) {
+  const homeActive = activeSlug === ''
   return (
     <nav className="docs-sidebar-nav" aria-label="Documentation">
       <DocSearch />
+      {/* Docs home link — always visible */}
+      <div className="docs-nav-home">
+        <Link
+          to="/docs"
+          className={`docs-nav-link docs-nav-home-link${homeActive ? ' is-active' : ''}`}
+          aria-current={homeActive ? 'page' : undefined}
+        >
+          <span aria-hidden="true">⌂ </span>Docs home
+        </Link>
+      </div>
       {SIDEBAR.filter((g) => !(g.cloudOnly && !CLOUD)).map((group) => (
         <div className="docs-nav-group" key={group.label}>
           <p className="docs-nav-group-title">{group.label}</p>

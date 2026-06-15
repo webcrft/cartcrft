@@ -1,10 +1,10 @@
-import { Navigate } from 'react-router-dom'
 import { Suspense, lazy } from 'react'
 import type { SiteRoute } from '../types'
 
 // Lazy-load the markdown renderer so react-markdown + highlight.js + the docs
 // chrome land in their own chunk — the marketing landing never ships them.
 const DocPage = lazy(() => import('./DocPage'))
+const DocsHome = lazy(() => import('./DocsHome'))
 
 /**
  * Docs module — replaces the prior Astro Starlight site. Markdown lives in
@@ -104,7 +104,7 @@ export const docMap: Record<string, Doc> = Object.fromEntries(
 /** Flat list (stable order) used to build the search index. */
 export const docList: Doc[] = allDocs
 
-/** Routes contributed to SiteApp. Each doc page + the legacy /docs redirect. */
+/** Routes contributed to SiteApp. Each doc page + the /docs homepage. */
 export const docRoutes: SiteRoute[] = [
   ...allDocs.map((doc) => ({
     path: doc.path,
@@ -114,6 +114,13 @@ export const docRoutes: SiteRoute[] = [
       </Suspense>
     ),
   })),
-  { path: '/docs', element: <Navigate to="/quickstart" replace /> },
+  {
+    path: '/docs',
+    element: (
+      <Suspense fallback={<div style={{ minHeight: '60vh' }} aria-hidden="true" />}>
+        <DocsHome />
+      </Suspense>
+    ),
+  },
 ]
 

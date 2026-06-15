@@ -2,131 +2,93 @@
   <img src="assets/logo.svg" width="96" alt="Cartcrft logo" />
 </p>
 
-# Cartcrft
+<h1 align="center">Cartcrft</h1>
 
-**The open-source, agent-native, headless commerce backend. TypeScript end-to-end.**
+<p align="center">
+  <strong>The open-source, agent-native headless commerce backend.<br />TypeScript end-to-end.</strong>
+</p>
 
-> The Supabase of commerce, built for the agentic era.
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-b5ff2e?style=flat-square&labelColor=16170f" alt="MIT License" /></a>
+  <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-5.x-57e0ff?style=flat-square&labelColor=16170f" alt="TypeScript" /></a>
+  <a href="https://www.postgresql.org/"><img src="https://img.shields.io/badge/PostgreSQL-16-57e0ff?style=flat-square&labelColor=16170f" alt="PostgreSQL 16" /></a>
+  <a href="CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-welcome-b5ff2e?style=flat-square&labelColor=16170f" alt="PRs welcome" /></a>
+</p>
+
+---
+
+Cartcrft is an open-source headless commerce backend built for the agentic era.
+Every store ships with an MCP server that lets any AI agent (Claude, GPT, or your
+own) browse, search, and complete purchases out of the box — no plugins, no
+middleware, no proprietary agent layer. Under that agent surface sits a complete
+ecommerce engine: products, inventory, orders, payments (Stripe / Paystack /
+Razorpay / Xendit), B2B, subscriptions, returns, digital products, bookings, and
+more. Fully headless, TypeScript end-to-end, MIT-licensed outside the cloud billing
+layer.
 
 ---
 
 ## Screenshots
 
 <p align="center">
-  <img src="docs/screenshots/dashboard-overview.png" width="720" alt="Cartcrft admin dashboard — Overview (Agentic Terminal theme)" />
+  <img src="docs/screenshots/dashboard-overview.png" width="720" alt="Cartcrft admin dashboard — Overview" />
 </p>
 <p align="center"><em>Admin dashboard — multi-store switcher, full catalog and sales nav.</em></p>
 
 <p align="center">
-  <img src="docs/screenshots/checkout.png" width="720" alt="Cartcrft hosted checkout — Lekki Threads store, ZAR 319.00" />
+  <img src="docs/screenshots/dashboard-products.png" width="720" alt="Cartcrft dashboard — Products" />
 </p>
-<p align="center"><em>Hosted checkout link — branded, no-storefront-required payment page.</em></p>
+<p align="center"><em>Product catalog — manage products, variants, collections, and inventory.</em></p>
+
+<p align="center">
+  <img src="docs/screenshots/dashboard-orders.png" width="720" alt="Cartcrft dashboard — Orders" />
+</p>
+<p align="center"><em>Orders dashboard — financial and fulfillment status at a glance.</em></p>
+
+<p align="center">
+  <img src="docs/screenshots/checkout.png" width="720" alt="Cartcrft hosted checkout — branded payment page" />
+</p>
+<p align="center"><em>Hosted checkout link — branded payment page, no storefront code required.</em></p>
 
 <p align="center">
   <img src="docs/screenshots/landing.png" width="720" alt="Cartcrft marketing landing page" />
 </p>
-<p align="center"><em>Marketing site — agent-native commerce landing (1440-wide, Agentic Terminal theme).</em></p>
-
----
-
-## Why Cartcrft?
-
-Agents are the new buyers. AI assistants, autonomous shopping agents, and LLM-powered
-storefronts already browse, compare, and purchase on behalf of humans — but every major
-commerce platform treats agent access as a bolt-on: a webhook here, a plugin there. The
-result is brittle, incomplete, and expensive.
-
-Cartcrft is designed from the data model up for agent-native commerce:
-
-- **MCP server by default** — your store is browsable and purchasable via MCP in minutes,
-  not months. Buyable in ChatGPT, Claude, or any MCP-capable agent in ~10 minutes.
-- **ACP / UCP adapters** — first-class support for the emerging agentic commerce protocols,
-  isolated so spec churn never touches your core data.
-- **Signed agent mandates** — verifiable consent chain: agent intent → cart → payment,
-  ed25519-signed and audit-logged. Trust, not just access.
-- **BYO keys** — your Stripe, Paystack, Razorpay, or Xendit credentials; your OpenAI-compatible
-  embeddings key for semantic search. Zero percent take rate. Flat cloud fee if you use ours.
-- **Fully headless** — the core renders nothing. REST API + webhooks + generated TS SDK +
-  agent surfaces. Admin dashboard is a separate SPA speaking the same public API.
+<p align="center"><em>Marketing site — Agentic Terminal theme.</em></p>
 
 ---
 
 ## Features
 
-| Domain | What ships | Status |
-|---|---|---|
-| **Catalog** | Products (simple / bundle / configurable / digital / service / subscription / rental), options, variants — no variant or option caps — media, collections (manual + smart rules), tags, metafields, SEO, i18n | shipped |
-| **Inventory** | Warehouses, stock levels, adjustment audit, lots + expiry (FEFO), serial numbers, reorder points, suppliers | shipped |
-| **Carts & Checkout** | Carts with price snapshots, checkout sessions, atomic `CompleteByID` (price re-validation, inventory decrement, discount burn — all in one transaction), abandoned cart recovery | shipped |
-| **Orders** | Order lifecycle, financial + fulfillment state machines, cancel, notes, test-mode orders | shipped |
-| **Payments** | Provider abstraction, BYO keys: **Stripe** (PaymentIntent), **Paystack**, **Razorpay**, **Xendit**, custom webhook provider. AES-256-GCM secret encryption. Inbound webhook router with replay protection | shipped |
-| **Shipping** | Zones / regions / rates, live rates (BobGo), collection points (PUDO), shipments + tracking events, split fulfillment (inventory decrement across warehouses; fulfillment_orders created manually — no auto-split on checkout) | shipped |
-| **Tax** | Categories, zones, rates (inclusive / exclusive) — static rate tables (zones / categories / rates); no external/webhook tax provider | shipped |
-| **Discounts** | Codes (percentage / fixed / free-shipping / BOGO / buy-X-get-Y), automatic discounts, usage limits, once-per-customer atomicity | shipped |
-| **B2B** | Companies, credit limits, net terms, quotes / RFQ lifecycle, purchase orders, customer group pricing | shipped |
-| **Subscriptions** | Plans (interval / trial), subscription lifecycle (pause / resume / cancel / bill), generated orders | shipped |
-| **Returns / RMA** | Return requests, refund / exchange / store-credit / repair flows, restock | shipped |
-| **Gift cards & store credit** | Gift card transactions, store credit ledger | shipped |
-| **Customer auth** | Register / login / sessions / password reset / email verify / magic link / invites, Google / Microsoft / Discord OAuth PKCE | shipped |
-| **Feeds** | Google Shopping XML, Facebook Catalog feeds | shipped |
-| **MCP server** | `search_products`, `get_product`, `create_cart`, `add_to_cart`, `complete_checkout`, `get_order_status` and more, per-store config, `cc_pub_` auth | shipped |
-| **Semantic search** | pgvector embeddings, BYO OpenAI-compatible embeddings key (any `/v1/embeddings` endpoint — OpenAI, compatible providers), pg full-text fallback, natural-language `/search` endpoint | shipped |
-| **Signed agent mandates** | Agent registry (scopes, spend limits), mandate chain (intent → cart → payment), ed25519 signatures, audit log | shipped |
-| **ACP adapter** | Agentic checkout sessions + product feed at ACP spec, date-versioned isolation. Test-mode checkout works end-to-end; live delegated payment returns 501 (H5.1) | shipped (test mode) |
-| **UCP adapter** | Universal Commerce Protocol (Google surfaces / NRF 2026-01 baseline): catalog entities, checkout create/update/submit. Test-mode submit works; live payment token passthrough returns 501 (H5.1) | shipped (test mode) |
-| **GA4 server-side** | Measurement Protocol `purchase` event fired on payment capture when a `google_analytics_4` pixel is configured for the store | shipped |
-| **Outbound webhooks + notifications** | `dispatchStoreEvent` wired into order/payment/shipment transitions; webhook delivery + signed payloads; transactional email via AWS SES or console mailer. Customer-auth emails (verify, reset, magic link) use HTML templates; store-event notification emails use plain-text JSON payload (HTML templates planned H6) | shipped |
-| **Platform API keys** | `cc_pub_` (read / storefront) and `cc_prv_` (write / admin) key scheme | shipped |
+### Standard commerce
+- **Catalog** — products (simple, bundle, configurable, digital, service, subscription, rental), options, variants, media, collections (manual + smart), tags, metafields, SEO, i18n translations, CSV import/export
+- **Inventory** — warehouses, stock levels, FEFO lot tracking, serial numbers, reorder points, suppliers
+- **Orders & checkout** — carts with price snapshots, checkout sessions, atomic `CompleteByID` (price re-validation + inventory decrement + discount burn in one transaction), abandoned-cart recovery, wishlists
+- **Payments** — Stripe, Paystack, Razorpay, Xendit; BYO keys; AES-256-GCM secret encryption; inbound webhook router with replay protection; GA4 server-side purchase events
+- **Shipping** — zones, rates, live rates (BobGo), collection points (PUDO/click-and-collect), shipments, tracking events, fulfillment orders
+- **Tax** — categories, zones, rates (inclusive/exclusive static tables)
+- **Discounts** — code-based (%, fixed, free-shipping, BOGO, buy-X-get-Y) and automatic discounts; usage limits; once-per-customer atomicity
+- **B2B** — companies, credit limits, net terms, quotes/RFQ lifecycle, purchase orders, customer group pricing
+- **Subscriptions** — plans (interval/trial), lifecycle (pause/resume/cancel/bill), automatic renewal scheduler
+- **Returns / RMA** — refund, exchange, store credit, repair resolution; optional restock
+- **Wallet** — gift card issuance and redemption; per-customer store credit ledger
+- **Digital products** — time-limited, download-count-limited token delivery
+- **Bookings & rentals** — resources, availability calendars, price rules, iCal export, OTA channel linkage
 
----
+### Agent-native
+- **MCP server** — every store is browsable and purchasable via MCP from any MCP-capable agent (Claude Desktop, Claude Code, custom agents)
+- **Signed agent mandates** — verifiable consent chain: intent → cart → payment, ed25519-signed and audit-logged
+- **Semantic search** — pgvector hybrid search with BYO OpenAI-compatible embeddings key; full-text fallback with no key required
+- **ACP adapter** — Agentic Commerce Protocol checkout sessions + product feed, date-versioned isolation
+- **UCP adapter** — Universal Commerce Protocol (Google surfaces / NRF 2026-01 baseline), catalog entities + checkout
+- **Spend limits** — per-agent spending caps with configurable time windows
 
-## Architecture
-
-Cartcrft is fully headless. The backend exposes:
-
-- **REST API** — date-versioned OpenAPI 3.1, machine-readable error semantics, idempotency
-  keys on all mutating storefront endpoints.
-- **Webhooks** — outbound event delivery + inbound payment provider webhook router.
-- **MCP server** — agent-native tool surface, ships by default on every store.
-- **Generated TS SDK** — `@cartcrft/sdk`, auto-generated from OpenAPI.
-
-The admin dashboard is a React SPA bundled into the web app (`web/src/dashboard/`, served
-at `/dashboard`) that speaks the same public API with a `cc_prv_` key. Storefronts are your
-problem — or an agent's.
-
-Self-hosting requires nothing from `cloud/`. The cloud layer (`cloud/`) is metering +
-billing + tenant provisioning for cartcrft.com only.
-
-**Security posture** — multi-tenant isolation is enforced at two layers: (1) the app-layer
-auth middleware verifies org ownership on every request; (2) PostgreSQL RLS is enforced via
-`SET LOCAL ROLE cartcrft_app` (NOBYPASSRLS) inside every database transaction (H1.1).
-A comprehensive IDOR sweep covers 14 module groups. See [docs/security.md](./docs/security.md).
-
----
-
-## Monorepo layout
-
-```
-cartcrft/
-├── LICENSE                    # MIT (everything except cloud/)
-├── README.md
-├── roadmap.md / tasks.md      # planning pair
-├── assets/                    # logo + brand
-├── package.json               # pnpm workspace root
-├── backend/                   # TypeScript headless commerce core (MIT)
-│   ├── src/                   # one entrypoint: serve | worker | migrate (Fastify + zod + pg)
-│   ├── migrations/            # Postgres schema (plain SQL, numbered — 18 migration files, 0001–0018)
-│   └── tests/                 # vitest suites: pnpm suite <name>
-├── mcp/                       # MCP usage docs + conformance examples (MIT)
-├── sdk/                       # @cartcrft/sdk (generated from OpenAPI) + storefront.js (MIT)
-├── web/                       # Vite + React 19 app: marketing site + docs + admin dashboard (MIT)
-│   │                         #   SPA with react-router; dashboard at /dashboard, docs at /docs
-│   └── src/dashboard/         # React 19 admin SPA (react-router under basename=/dashboard)
-├── cloud/                     # thin cloud layer (Cartcrft Cloud License — source-visible, not MIT)
-│   ├── LICENSE
-│   └── billing/               # plans, Paystack, USD→ZAR fx snapshots, wallet, billingsim
-└── docs/                      # markdown docs, OpenAPI spec, protocol conformance
-```
+### Platform
+- **OAuth apps** — third-party app authorization flows
+- **Checkout links** — shareable pre-filled payment URLs (`/pay/:token`), embeddable as iframes; no storefront required
+- **Customer auth** — register, login, sessions, password reset, email verification, magic links, Google/Microsoft/Discord OAuth PKCE
+- **Platform API keys** — `cc_pub_` (read) and `cc_prv_` (write/admin) key scheme
+- **Generated TS SDK** — `@cartcrft/sdk`, auto-generated from OpenAPI 3.1
+- **Outbound webhooks** — signed event delivery on order/payment/shipment transitions; transactional email via AWS SES
 
 ---
 
@@ -136,18 +98,29 @@ cartcrft/
 git clone https://github.com/webcrftsystems/cartcrft
 cd cartcrft
 pnpm install
+```
 
-# Start a Postgres instance with pgvector (or use your own):
-docker run -d --name cartcrft-pg -e POSTGRES_PASSWORD=postgres \
-  -e POSTGRES_DB=cartcrft -p 5432:5432 pgvector/pgvector:pg16
+```bash
+# Start Postgres 16 + pgvector (or use your own)
+docker run -d --name cartcrft-pg \
+  -e POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_DB=cartcrft \
+  -p 5432:5432 \
+  pgvector/pgvector:pg16
+```
 
-# Configure (minimum):
-echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/cartcrft
-JWT_SECRET=change-me
-APP_ENV=development" > .env
+```bash
+# Configure (minimum required)
+cat > .env << 'EOF'
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/cartcrft
+JWT_SECRET=change-me-in-production
+APP_ENV=development
+EOF
+```
 
-pnpm migrate   # applies all 18 SQL migrations (0001–0018)
-pnpm seed      # creates demo store + 12 products; prints cc_pub_ / cc_prv_ keys
+```bash
+pnpm migrate   # apply all 18 SQL migrations
+pnpm seed      # create the Crft Goods demo store; prints cc_pub_ / cc_prv_ keys
 pnpm dev       # Fastify on :3000
 ```
 
@@ -156,31 +129,92 @@ curl http://localhost:3000/healthz
 # {"status":"ok","version":"0.0.0","db":"ok"}
 ```
 
-**Buy with an AI agent in 10 minutes** — follow [docs/quickstart-mcp.md](./docs/quickstart-mcp.md).
+**Buy with an AI agent in 10 minutes** — see [quickstart-mcp.md](./docs/quickstart-mcp.md).
 
-Full local-dev guide (prereqs, env vars, first API calls): [docs/quickstart.md](./docs/quickstart.md).
+**Run the full stack with Docker** — `docker compose up` (see [self-host.md](./docs/self-host.md)).
 
-Or run the whole stack with Docker: `docker compose up` (see [docs/self-host.md](./docs/self-host.md)).
+**Capture screenshots** — `pnpm screenshots` (requires a running dev server).
+
+---
+
+## Architecture
+
+Cartcrft is fully headless. The backend exposes:
+
+- **REST API** — date-versioned OpenAPI 3.1, machine-readable error semantics, idempotency keys on all mutating storefront endpoints
+- **Webhooks** — outbound signed event delivery + inbound payment webhook router
+- **MCP server** — agent-native tool surface, enabled by default on every store
+- **Generated TS SDK** — `@cartcrft/sdk`, auto-generated from `openapi.json`
+
+The admin dashboard is a React SPA at `/dashboard` speaking the same public API with a `cc_prv_` key. Storefronts are your problem — or an agent's.
+
+Self-hosting requires nothing from `cloud/`. The cloud layer is metering + billing + tenant provisioning for cartcrft.com only.
+
+**Security** — multi-tenant isolation at two layers: (1) app-layer auth middleware verifies org ownership on every request; (2) PostgreSQL RLS enforced via `SET LOCAL ROLE cartcrft_app` (NOBYPASSRLS) inside every database transaction.
+
+### Monorepo layout
+
+```
+cartcrft/
+├── LICENSE                    # MIT (everything except cloud/)
+├── README.md
+├── roadmap.md / tasks.md      # planning docs
+├── assets/                    # logo + brand
+├── package.json               # pnpm workspace root
+├── backend/                   # TypeScript headless commerce core (MIT)
+│   ├── src/                   # Fastify + zod + pg; entrypoints: serve | worker | migrate
+│   ├── migrations/            # 18 Postgres SQL migration files (0001–0018)
+│   └── tests/                 # vitest test suites
+├── mcp/                       # MCP docs + conformance examples (MIT)
+├── sdk/                       # @cartcrft/sdk (generated from OpenAPI) (MIT)
+├── web/                       # Vite + React 19 app: marketing site + docs + admin dashboard
+│   └── src/
+│       ├── site/              # marketing pages + docs (react-router SPA)
+│       └── dashboard/         # admin SPA at /dashboard
+└── cloud/                     # Cloud billing layer (Cartcrft Cloud License — not MIT)
+    ├── LICENSE
+    └── billing/               # plans, Paystack, USD→ZAR fx, wallet, billing sim
+```
 
 ---
 
 ## Documentation
 
+Full docs are at **[/docs](./docs)** (served by the web app) or browse the markdown source:
+
 | Doc | What it covers |
 |-----|----------------|
 | [docs/quickstart.md](./docs/quickstart.md) | Local dev: prereqs, install, migrate, seed, first API calls |
-| [docs/quickstart-mcp.md](./docs/quickstart-mcp.md) | Agent flow: buy with an AI agent in 10 minutes |
+| [docs/quickstart-mcp.md](./docs/quickstart-mcp.md) | Agent flow: buy from a store with an AI agent in 10 minutes |
+| [docs/commerce](./docs/commerce.md) | Commerce overview — links to all 14 per-topic module docs |
 | [docs/api-overview.md](./docs/api-overview.md) | Auth, error envelope, idempotency, pagination, money encoding |
 | [docs/byo-keys.md](./docs/byo-keys.md) | Payment providers, LLM key for semantic search, secret encryption |
 | [docs/agent-native.md](./docs/agent-native.md) | MCP, semantic search, ACP adapter, agent registry, mandates |
-| [docs/cloud-vs-selfhost.md](./docs/cloud-vs-selfhost.md) | MIT core vs cloud/ license, self-host completeness |
+| [docs/checkout-links.md](./docs/checkout-links.md) | Shareable pre-filled payment links, iframe embed mode |
+| [docs/self-host.md](./docs/self-host.md) | Docker Compose, environment variables, production checklist |
+| [docs/cloud-vs-selfhost.md](./docs/cloud-vs-selfhost.md) | MIT core vs cloud license, feature comparison |
+| [docs/security.md](./docs/security.md) | Tenant isolation, RLS, IDOR sweep, auth secrets |
 | [docs/contributing.md](./docs/contributing.md) | Monorepo layout, pnpm commands, migration rules |
-| [docs/testing.md](./docs/testing.md) | Test harness, writing suites, billingsim |
+| [docs/testing.md](./docs/testing.md) | Test harness, writing suites, billing simulation |
 | [docs/parity-endpoints.md](./docs/parity-endpoints.md) | Full endpoint table with auth tiers |
-| [docs/acp.md](./docs/acp.md) | ACP adapter spec, field mapping, divergences |
-| [docs/ucp.md](./docs/ucp.md) | UCP adapter spec (Google surfaces / NRF 2026-01), field mapping, divergences |
-| [docs/security.md](./docs/security.md) | Tenant isolation posture, RLS, IDOR sweep, auth secrets |
-| [mcp/README.md](./mcp/README.md) | MCP tools reference, client config examples |
+
+---
+
+## Contributing
+
+We welcome contributions. See [docs/contributing.md](./docs/contributing.md) for
+the development workflow, monorepo commands, and migration rules.
+
+```bash
+pnpm install        # install all workspace deps
+pnpm dev            # backend on :3000, web on :5173
+pnpm test           # run all vitest suites
+pnpm migrate        # apply pending migrations
+pnpm --filter @cartcrft/web exec tsc --noEmit   # type-check the web app
+```
+
+Issues, bug reports, and pull requests are all welcome. See [roadmap.md](./roadmap.md)
+for what's being built and why.
 
 ---
 
@@ -190,12 +224,10 @@ Everything outside `cloud/` is **MIT** — see [LICENSE](./LICENSE).
 
 The `cloud/` directory is source-available under the
 [Cartcrft Cloud License v1.0](./cloud/LICENSE): free to view, modify, and use for
-development/testing; production and commercial use of `cloud/` code requires a written
-agreement with Webcrft Systems. Self-hosting Cartcrft does not require `cloud/` at all.
+development and testing; production and commercial use of `cloud/` code requires a
+written agreement with Webcrft Systems. **Self-hosting Cartcrft does not require
+`cloud/` at all.**
 
 ---
 
-## A Webcrft Systems project
-
-Built with care by [Webcrft Systems](https://webcrft.com).
-Contributions welcome — see [roadmap.md](./roadmap.md) for what's being built and why.
+<p align="center">Built with care by <a href="https://webcrft.com">Webcrft Systems</a>.</p>

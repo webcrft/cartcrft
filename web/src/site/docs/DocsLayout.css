@@ -50,6 +50,17 @@
   gap: 1.6rem;
 }
 
+.docs-nav-home { margin-bottom: 0.2rem; }
+
+.docs-nav-home-link {
+  font-size: 0.82rem;
+  color: var(--ink-subtle) !important;
+}
+
+.docs-nav-home-link:hover { color: var(--ink-muted) !important; }
+
+.docs-nav-home-link.is-active { color: var(--brand) !important; }
+
 .docs-nav-group-title {
   font-family: var(--font-mono);
   font-size: 0.68rem;

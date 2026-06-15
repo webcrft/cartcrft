@@ -58,7 +58,8 @@ function makeSnippet(body: string, query: string): string {
   return (start > 0 ? '… ' : '') + plain.slice(start, start + 140)
 }
 
-export default function DocSearch() {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export default function DocSearch({ variant: _variant }: { variant?: 'sidebar' | 'hero' } = {}) {
   const navigate = useNavigate()
   const mini = useMemo(buildIndex, [])
   const [open, setOpen] = useState(false)

@@ -1,0 +1,197 @@
+/* ============================================================================
+ * DocsHome — the /docs landing page. Uses docs tokens (from tokens.css) and
+ * complements the existing DocsLayout shell. No new custom properties needed.
+ * ========================================================================== */
+
+.docs-home {
+  max-width: none !important; /* override the prose maxw */
+}
+
+/* ── Hero ──────────────────────────────────────────────────────────────────── */
+.docs-home-hero {
+  margin-bottom: 3rem;
+  padding-bottom: 2.5rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.docs-home-title {
+  font-family: var(--font-display);
+  font-size: clamp(2.1rem, 4vw, 2.8rem);
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+  color: var(--ink);
+  margin: 0.6rem 0 1rem;
+  text-wrap: balance;
+}
+
+.docs-home-lead {
+  font-size: 1.06rem;
+  line-height: 1.7;
+  color: var(--ink-body);
+  max-width: 580px;
+  margin: 0 0 2rem;
+}
+
+/* ── Prominent search (hero variant) ──────────────────────────────────────── */
+.docs-home-search-wrap {
+  max-width: 520px;
+}
+
+/* The hero trigger is a larger, more prominent version of the sidebar trigger */
+.docs-home-search-wrap .docs-search-trigger {
+  padding: 0.8rem 1rem;
+  font-size: 0.975rem;
+  border-radius: var(--r-lg);
+  border-color: var(--line-strong);
+  background: var(--surface-2);
+  transition: border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+}
+
+.docs-home-search-wrap .docs-search-trigger:hover {
+  border-color: color-mix(in srgb, var(--brand) 55%, var(--line-strong));
+  background: var(--surface);
+  box-shadow: 0 0 0 3px var(--brand-tint), var(--shadow-sm);
+}
+
+.docs-home-search-wrap .docs-search-trigger svg {
+  color: var(--ink-muted);
+}
+
+/* ── Category cards ───────────────────────────────────────────────────────── */
+.docs-home-categories {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+  gap: 1rem;
+  margin-bottom: 3rem;
+}
+
+.docs-home-card {
+  display: flex;
+  gap: 1rem;
+  padding: 1.3rem 1.35rem;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.docs-home-card:hover {
+  border-color: color-mix(in srgb, var(--brand) 35%, var(--line));
+  background: var(--surface-2);
+}
+
+.docs-home-card-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+  padding-top: 0.15rem;
+  color: var(--brand);
+}
+
+.docs-home-card-body {
+  min-width: 0;
+}
+
+.docs-home-card-title {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  margin: 0 0 0.45rem;
+  /* Override the docs-article h2 styles */
+  border-top: none !important;
+  padding-top: 0 !important;
+}
+
+.docs-home-card-title a {
+  color: var(--ink);
+  text-decoration: none;
+  border-bottom: none;
+}
+
+.docs-home-card-title a:hover {
+  color: var(--brand);
+  border-bottom: none;
+}
+
+.docs-home-card-desc {
+  font-size: 0.875rem;
+  color: var(--ink-muted);
+  line-height: 1.55;
+  margin: 0 0 0.75rem;
+}
+
+.docs-home-card-links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+}
+
+.docs-home-card-links li a {
+  font-size: 0.85rem;
+  color: var(--brand);
+  text-decoration: none;
+  border-bottom: none;
+  opacity: 0.85;
+  transition: opacity 0.12s ease;
+}
+
+.docs-home-card-links li a:hover {
+  opacity: 1;
+  border-bottom: none;
+}
+
+/* ── Quick picks ──────────────────────────────────────────────────────────── */
+.docs-home-quickpicks {
+  padding-top: 2.5rem;
+  border-top: 1px solid var(--line);
+}
+
+.docs-home-qp-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink-subtle);
+  margin: 0 0 1rem;
+  /* Override docs-article h2 */
+  border-top: none !important;
+  padding-top: 0 !important;
+}
+
+.docs-home-qp-heading svg {
+  color: var(--brand);
+}
+
+.docs-home-qp-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.docs-home-qp-item {
+  display: inline-flex;
+  padding: 0.42rem 0.85rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  font-size: 0.85rem;
+  color: var(--ink-muted);
+  text-decoration: none;
+  transition: border-color 0.14s ease, color 0.14s ease, background 0.14s ease;
+}
+
+.docs-home-qp-item:hover {
+  border-color: var(--brand);
+  color: var(--brand);
+  background: var(--brand-tint);
+}
