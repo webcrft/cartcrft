@@ -32,6 +32,7 @@ import SiteLayout from '../SiteLayout'
 import { useDocumentMeta } from '../useDocumentMeta'
 import Hero from './components/Hero'
 import FeatureGrid, { type FeatureItem } from './components/FeatureGrid'
+import CommerceShowcase, { type ShowcaseCluster } from './components/CommerceShowcase'
 import Integrations from './components/Integrations'
 import './Landing.css'
 
@@ -81,97 +82,115 @@ const agentFeatures: FeatureItem[] = [
   },
 ]
 
-// ── Commerce core features ────────────────────────────────────────────────────
-const commerceFeatures: FeatureItem[] = [
+// ── Commerce core — clustered for CommerceShowcase ───────────────────────────
+const commerceClusters: ShowcaseCluster[] = [
   {
-    Icon: Package,
-    title: 'Catalog',
-    description: 'Products (simple, bundle, configurable, digital, service, subscription, rental), unlimited variants, collections, metafields, and full i18n. The model real catalogs need.',
-    href: '/api-overview',
+    label: 'catalog & products',
+    descriptor: 'the goods you sell',
+    features: [
+      {
+        Icon: Package,
+        title: 'Catalog',
+        description: 'Products (simple, bundle, configurable, digital, service, subscription, rental), unlimited variants, collections, metafields, and full i18n. The model real catalogs need.',
+        href: '/api-overview',
+      },
+      {
+        Icon: Boxes,
+        title: 'Inventory and warehousing',
+        description: 'Multi-warehouse stock, lot tracking with FEFO, and reorder points. Inventory is decremented inside the same transaction that places the order, so you never oversell.',
+        href: '/api-overview',
+      },
+      {
+        Icon: Container,
+        title: 'Digital products',
+        description: 'Sell downloads and licenses with digital delivery — first-class product types, not a workaround layered on physical goods.',
+        href: '/api-overview',
+      },
+      {
+        Icon: CalendarClock,
+        title: 'Bookings and rentals',
+        description: 'Time-based products with availability and iCal sync for bookings and rentals, sitting in the same catalog as everything else you sell.',
+        href: '/api-overview',
+      },
+      {
+        Icon: Search,
+        title: 'Channels, feeds and analytics',
+        description: 'Google Shopping XML and Meta / Facebook Catalog feeds, plus GA4 server-side purchase events and built-in ecommerce analytics. Reach shopping surfaces without a third-party app.',
+        href: '/api-overview',
+      },
+    ],
   },
   {
-    Icon: UserCircle,
-    title: 'Customer identity and accounts',
-    description: 'First-class customer accounts: register, login, magic-link, and social sign-in with Google, Microsoft, and Discord. Sessions, saved addresses, and customer groups — built in, not bolted on.',
-    href: '/api-overview',
+    label: 'selling & fulfilment',
+    descriptor: 'from cart to doorstep',
+    features: [
+      {
+        Icon: ShoppingCart,
+        title: 'Carts, checkout and orders',
+        description: 'Atomic checkout with price re-validation, inventory decrement, and discount burn in a single transaction. Order lifecycle state machines, cancellations, notes, and abandoned-cart recovery.',
+        href: '/api-overview',
+      },
+      {
+        Icon: CreditCard,
+        title: 'Payments — 4 providers, BYO',
+        description: 'Stripe, Paystack, Razorpay, and Xendit on your own credentials. AES-256-GCM secret encryption, an inbound webhook router with replay protection, and zero percent platform rake.',
+        href: '/byo-keys',
+      },
+      {
+        Icon: Truck,
+        title: 'Shipping',
+        description: 'Shipping zones, live carrier rates (BobGo), and collection points (PUDO). Rates and tax are calculated at checkout so the order total is correct before payment.',
+        href: '/api-overview',
+      },
+      {
+        Icon: Receipt,
+        title: 'Tax',
+        description: 'Configurable tax rules applied at checkout across regions, included in the atomic checkout calculation alongside shipping and discounts.',
+        href: '/api-overview',
+      },
+      {
+        Icon: Tag,
+        title: 'Discounts and promotions',
+        description: 'Codes, automatic discounts, and customer-group pricing. Discount burn is part of the single checkout transaction, so a code can never be double-spent.',
+        href: '/api-overview',
+      },
+      {
+        Icon: RotateCcw,
+        title: 'Returns and RMA',
+        description: 'A full return-merchandise flow — refund, exchange, store credit, or repair — with restock. The post-purchase side of commerce that most headless stacks leave out.',
+        href: '/api-overview',
+      },
+    ],
   },
   {
-    Icon: ShoppingCart,
-    title: 'Carts, checkout and orders',
-    description: 'Atomic checkout with price re-validation, inventory decrement, and discount burn in a single transaction. Order lifecycle state machines, cancellations, notes, and abandoned-cart recovery.',
-    href: '/api-overview',
-  },
-  {
-    Icon: CreditCard,
-    title: 'Payments — 4 providers, BYO',
-    description: 'Stripe, Paystack, Razorpay, and Xendit on your own credentials. AES-256-GCM secret encryption, an inbound webhook router with replay protection, and zero percent platform rake.',
-    href: '/byo-keys',
-  },
-  {
-    Icon: Boxes,
-    title: 'Inventory and warehousing',
-    description: 'Multi-warehouse stock, lot tracking with FEFO, and reorder points. Inventory is decremented inside the same transaction that places the order, so you never oversell.',
-    href: '/api-overview',
-  },
-  {
-    Icon: Building2,
-    title: 'B2B commerce',
-    description: 'Companies, credit limits and net terms, a full quotes/RFQ lifecycle, purchase orders, and customer-group pricing. Wholesale alongside DTC on one backend.',
-    href: '/api-overview',
-  },
-  {
-    Icon: Repeat,
-    title: 'Subscriptions and recurring orders',
-    description: 'Subscription plans with trials, pause/resume, and automatically generated orders on each cycle. Recurring revenue handled in the core, not a plugin.',
-    href: '/api-overview',
-  },
-  {
-    Icon: RotateCcw,
-    title: 'Returns and RMA',
-    description: 'A full return-merchandise flow — refund, exchange, store credit, or repair — with restock. The post-purchase side of commerce that most headless stacks leave out.',
-    href: '/api-overview',
-  },
-  {
-    Icon: Truck,
-    title: 'Shipping',
-    description: 'Shipping zones, live carrier rates (BobGo), and collection points (PUDO). Rates and tax are calculated at checkout so the order total is correct before payment.',
-    href: '/api-overview',
-  },
-  {
-    Icon: Receipt,
-    title: 'Tax',
-    description: 'Configurable tax rules applied at checkout across regions, included in the atomic checkout calculation alongside shipping and discounts.',
-    href: '/api-overview',
-  },
-  {
-    Icon: Tag,
-    title: 'Discounts and promotions',
-    description: 'Codes, automatic discounts, and customer-group pricing. Discount burn is part of the single checkout transaction, so a code can never be double-spent.',
-    href: '/api-overview',
-  },
-  {
-    Icon: Gift,
-    title: 'Wallet — gift cards and store credit',
-    description: 'Gift-card transactions and a store-credit ledger, usable at checkout and as a refund destination from the returns flow.',
-    href: '/api-overview',
-  },
-  {
-    Icon: Container,
-    title: 'Digital products',
-    description: 'Sell downloads and licenses with digital delivery — first-class product types, not a workaround layered on physical goods.',
-    href: '/api-overview',
-  },
-  {
-    Icon: CalendarClock,
-    title: 'Bookings and rentals',
-    description: 'Time-based products with availability and iCal sync for bookings and rentals, sitting in the same catalog as everything else you sell.',
-    href: '/api-overview',
-  },
-  {
-    Icon: Search,
-    title: 'Channels, feeds and analytics',
-    description: 'Google Shopping XML and Meta / Facebook Catalog feeds, plus GA4 server-side purchase events and built-in ecommerce analytics. Reach shopping surfaces without a third-party app.',
-    href: '/api-overview',
+    label: 'customers & loyalty',
+    descriptor: 'identity, retention, revenue',
+    features: [
+      {
+        Icon: UserCircle,
+        title: 'Customer identity and accounts',
+        description: 'First-class customer accounts: register, login, magic-link, and social sign-in with Google, Microsoft, and Discord. Sessions, saved addresses, and customer groups — built in, not bolted on.',
+        href: '/api-overview',
+      },
+      {
+        Icon: Building2,
+        title: 'B2B commerce',
+        description: 'Companies, credit limits and net terms, a full quotes/RFQ lifecycle, purchase orders, and customer-group pricing. Wholesale alongside DTC on one backend.',
+        href: '/api-overview',
+      },
+      {
+        Icon: Repeat,
+        title: 'Subscriptions and recurring orders',
+        description: 'Subscription plans with trials, pause/resume, and automatically generated orders on each cycle. Recurring revenue handled in the core, not a plugin.',
+        href: '/api-overview',
+      },
+      {
+        Icon: Gift,
+        title: 'Wallet — gift cards and store credit',
+        description: 'Gift-card transactions and a store-credit ledger, usable at checkout and as a refund destination from the returns flow.',
+        href: '/api-overview',
+      },
+    ],
   },
 ]
 
@@ -421,15 +440,8 @@ export default function Landing() {
           </div>
         </section>
 
-        {/* Commerce core features — moved up so completeness leads */}
-        <FeatureGrid
-          eyebrow="commerce core"
-          heading="Catalog, customers, payments, and everything between."
-          highlight="customers"
-          subheading="A complete commerce data model with first-class customer identity. Catalog, orders, payments, inventory, B2B, subscriptions, returns, shipping, tax, discounts, wallet, digital, and bookings — shipped and tested, not a prototype."
-          features={commerceFeatures}
-          columns={3}
-        />
+        {/* Commerce core features — clustered showcase (catalog, selling, customers) */}
+        <CommerceShowcase clusters={commerceClusters} />
 
         {/* Contextual screenshot: product catalog — illustrates "a real admin for your whole catalog" */}
         <section className="catalog-shot" data-reveal aria-label="Product catalog screenshot">

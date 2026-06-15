@@ -1,0 +1,318 @@
+/* ═══ CommerceShowcase — clustered commerce stack ════════════════════════
+ * Three labelled clusters, each with one wide "featured" card + tighter
+ * support grid. Agentic Terminal tokens: lime, mono labels, hairlines,
+ * Bricolage display, JetBrains Mono, warm-ink canvas.
+ * ======================================================================== */
+
+/* ─── Section wrapper ────────────────────────────────────────────────── */
+.cs-section {
+  padding: clamp(4rem, 7vw, 6rem) var(--gutter);
+  max-width: var(--maxw);
+  margin: 0 auto;
+}
+
+/* ─── Section header (mirrors FeatureGrid section-header) ───────────── */
+.cs-header {
+  max-width: 720px;
+  margin: 0 0 3rem;
+}
+
+/* Mono bracketed eyebrow */
+.cs-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--brand);
+  margin-bottom: 1.1rem;
+}
+.cs-ey-b { color: var(--ink-subtle); }
+.cs-ey-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--brand);
+  box-shadow: 0 0 10px var(--brand);
+  animation: cs-blink 1.8s steps(1) infinite;
+}
+@keyframes cs-blink { 0%, 60% { opacity: 1; } 61%, 100% { opacity: 0.25; } }
+
+/* Display heading */
+.cs-heading {
+  font-family: var(--font-display);
+  font-size: clamp(1.9rem, 3.4vw, 2.7rem);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  color: var(--ink);
+  margin-bottom: 0.9rem;
+  line-height: 1.02;
+  text-wrap: balance;
+}
+.cs-heading-hl { color: var(--brand); }
+
+.cs-subheading {
+  font-size: clamp(1rem, 1.3vw, 1.1rem);
+  color: var(--ink-muted);
+  max-width: 46em;
+  margin: 0;
+  line-height: 1.62;
+}
+
+/* ─── Clusters stack (vertical, separated by hairlines) ─────────────── */
+.cs-clusters {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* ─── Cluster ────────────────────────────────────────────────────────── */
+.cs-cluster {
+  border-top: 1px solid var(--line);
+  padding-top: 2.25rem;
+  padding-bottom: 2.25rem;
+}
+.cs-cluster:last-child {
+  border-bottom: 1px solid var(--line);
+}
+
+/* — Cluster label bar — */
+.cs-cluster-header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.9rem;
+  margin-bottom: 1.5rem;
+}
+
+.cs-cluster-label {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--brand);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.cs-cluster-desc {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  color: var(--ink-subtle);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* hairline that fills the rest of the label bar */
+.cs-cluster-line {
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+  align-self: center;
+}
+
+/* — Cluster body: featured card + support grid — */
+.cs-cluster-body {
+  display: grid;
+  grid-template-columns: 0.92fr 1.08fr;
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+
+@media (max-width: 900px) {
+  .cs-cluster-body {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ─── Featured card (left, taller) ──────────────────────────────────── */
+.cs-featured-card {
+  position: relative;
+  background: var(--surface);
+  /* subtle lime tint to distinguish the flagship card */
+  background: color-mix(in srgb, var(--brand) 3%, var(--surface));
+  transition: background 0.22s ease;
+}
+.cs-featured-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 1px solid transparent;
+  pointer-events: none;
+  transition: border-color 0.22s ease, box-shadow 0.28s ease;
+}
+.cs-featured-card:hover {
+  background: color-mix(in srgb, var(--brand) 7%, var(--surface));
+  z-index: 1;
+}
+.cs-featured-card:hover::after {
+  border-color: color-mix(in srgb, var(--brand) 55%, transparent);
+  box-shadow: var(--glow-brand), inset 0 0 0 1px color-mix(in srgb, var(--brand) 18%, transparent);
+}
+
+/* ─── Support cards (right, grid of 2–3) ────────────────────────────── */
+.cs-support-grid {
+  display: grid;
+  /* always 2 columns on the right side */
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1px;
+  background: var(--line);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+/*
+ * Customers cluster has 3 support cards in a 2-col grid:
+ * make first card span the full row so it reads 1 + 2 instead of 2 + 1
+ */
+.cs-cluster:last-child .cs-support-grid li:first-child {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 640px) {
+  .cs-support-grid {
+    grid-template-columns: 1fr;
+  }
+  .cs-cluster:last-child .cs-support-grid li:first-child {
+    grid-column: 1;
+  }
+}
+
+.cs-support-card {
+  position: relative;
+  background: var(--surface);
+  transition: background 0.22s ease;
+}
+.cs-support-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 1px solid transparent;
+  pointer-events: none;
+  transition: border-color 0.22s ease, box-shadow 0.28s ease;
+}
+.cs-support-card:hover {
+  background: color-mix(in srgb, var(--brand) 5%, var(--surface));
+  z-index: 1;
+}
+.cs-support-card:hover::after {
+  border-color: color-mix(in srgb, var(--brand) 55%, transparent);
+  box-shadow: var(--glow-brand), inset 0 0 0 1px color-mix(in srgb, var(--brand) 18%, transparent);
+}
+
+/* ─── Card inner (shared) ────────────────────────────────────────────── */
+.cs-card-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1.65rem 1.5rem;
+  height: 100%;
+  text-decoration: none;
+  color: inherit;
+}
+
+/* Featured card gets more generous padding and a vertical lime accent bar */
+.cs-card-inner--featured {
+  padding: 2rem 1.75rem;
+  position: relative;
+}
+.cs-card-inner--featured::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 1.75rem;
+  bottom: 1.75rem;
+  width: 2px;
+  background: linear-gradient(
+    to bottom,
+    var(--brand) 0%,
+    color-mix(in srgb, var(--brand) 30%, transparent) 100%
+  );
+  border-radius: 0 2px 2px 0;
+}
+
+.cs-card-link { cursor: pointer; }
+
+/* ─── Card anatomy ───────────────────────────────────────────────────── */
+.cs-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Icon badge */
+.cs-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: var(--r-sm);
+  background: var(--brand-tint);
+  color: var(--brand);
+  flex-shrink: 0;
+  transition: background 0.25s ease, color 0.25s ease, box-shadow 0.25s ease;
+}
+.cs-featured-card:hover .cs-icon,
+.cs-support-card:hover    .cs-icon {
+  background: var(--brand);
+  color: var(--brand-ink);
+  box-shadow: 0 0 22px color-mix(in srgb, var(--brand) 45%, transparent);
+}
+.cs-icon svg { width: 20px; height: 20px; }
+
+/* Mono index */
+.cs-card-index {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  color: var(--ink-subtle);
+  transition: color 0.25s ease;
+}
+.cs-featured-card:hover .cs-card-index,
+.cs-support-card:hover   .cs-card-index {
+  color: var(--brand);
+}
+
+/* Title */
+.cs-card-title {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+}
+.cs-card-title--lg {
+  font-size: clamp(1.15rem, 1.8vw, 1.35rem);
+  letter-spacing: -0.03em;
+}
+
+/* Description */
+.cs-card-desc {
+  font-size: 0.9rem;
+  color: var(--ink-muted);
+  line-height: 1.65;
+  flex: 1;
+  margin: 0;
+}
+
+/* ─── Reduced motion ─────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .cs-ey-dot { animation: none !important; }
+  .cs-featured-card,
+  .cs-featured-card::after,
+  .cs-support-card,
+  .cs-support-card::after,
+  .cs-icon,
+  .cs-card-index { transition: none; }
+}
