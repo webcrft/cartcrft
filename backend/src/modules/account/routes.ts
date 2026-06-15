@@ -23,7 +23,7 @@
 
 import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
-import { requireJwt } from "../../lib/auth/middleware.js";
+import { requireDashboardJwt } from "../../lib/auth/middleware.js";
 import {
   register,
   login,
@@ -199,7 +199,9 @@ export const accountPlugin: FastifyPluginAsync = async (app) => {
 
   // ── Authenticated surface (org access JWT, same as /commerce) ───────────────
   await app.register(async (secure) => {
-    secure.addHook("preHandler", requireJwt);
+    // P0-1: use requireDashboardJwt so OAuth access tokens are rejected on
+    // management routes (/account/me, /account/users, /account/users/invite …).
+    secure.addHook("preHandler", requireDashboardJwt);
 
     // GET /account/me
     secure.get("/account/me", async (request, reply) => {

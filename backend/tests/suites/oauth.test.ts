@@ -138,6 +138,47 @@ async function registerApp(
   return res.json;
 }
 
+/**
+ * P1-5 helper: GET /oauth/authorize to obtain a consent_nonce, then POST
+ * /oauth/authorize/consent with that nonce.  Returns the consent response.
+ *
+ * All tests that previously called /oauth/authorize/consent directly must
+ * go through this helper so the nonce is present.
+ */
+async function consentViaFlow(opts: {
+  cookie: string;
+  clientId: string;
+  redirectUri?: string;
+  scope: string;
+  approve: boolean;
+  codeChallenge?: string;
+  codeChallengeMethod?: string;
+}): Promise<RawResult> {
+  const redirectUri = opts.redirectUri ?? REDIRECT;
+  let authzPath = `/oauth/authorize?response_type=code&client_id=${encodeURIComponent(opts.clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(opts.scope)}`;
+  if (opts.codeChallenge) {
+    authzPath += `&code_challenge=${encodeURIComponent(opts.codeChallenge)}`;
+    authzPath += `&code_challenge_method=${encodeURIComponent(opts.codeChallengeMethod ?? "S256")}`;
+  }
+
+  const authz = await rawFetch({ method: "GET", path: authzPath, cookie: opts.cookie });
+  // May be auto_approved (remembered consent) — return it directly.
+  if (authz.json["auto_approved"]) return authz;
+
+  const nonce = authz.json["consent_nonce"] as string | undefined;
+
+  const consentBody: Record<string, unknown> = {
+    client_id: opts.clientId,
+    redirect_uri: redirectUri,
+    scope: opts.scope,
+    approve: opts.approve,
+    ...(opts.codeChallenge ? { code_challenge: opts.codeChallenge, code_challenge_method: opts.codeChallengeMethod ?? "S256" } : {}),
+    ...(nonce ? { consent_nonce: nonce } : {}),
+  };
+
+  return rawFetch({ method: "POST", path: "/oauth/authorize/consent", cookie: opts.cookie, body: consentBody });
+}
+
 // ── App management ───────────────────────────────────────────────────────────
 
 describe("app management", () => {
@@ -219,6 +260,9 @@ describe("authorization_code + PKCE happy path", () => {
     });
     expect(authz.status).toBe(200);
     expect(authz.json["consent_required"]).toBe(true);
+    // P1-5: nonce is returned with the consent descriptor.
+    expect(typeof authz.json["consent_nonce"]).toBe("string");
+    const consentNonce = authz.json["consent_nonce"] as string;
 
     // POST consent (approve) → redirect with code + state.
     const consent = await rawFetch({
@@ -233,6 +277,7 @@ describe("authorization_code + PKCE happy path", () => {
         code_challenge: challenge,
         code_challenge_method: "S256",
         approve: true,
+        consent_nonce: consentNonce,
       },
     });
     expect(consent.status).toBe(200);
@@ -290,12 +335,8 @@ describe("authorization_code + PKCE happy path", () => {
     const clientId = appJson["client_id"] as string;
     const clientSecret = appJson["client_secret"] as string;
 
-    const consent = await rawFetch({
-      method: "POST",
-      path: "/oauth/authorize/consent",
-      cookie: m.cookie,
-      body: { client_id: clientId, redirect_uri: REDIRECT, scope: "catalog:write", approve: true },
-    });
+    // P1-5: go through full authorize → consent flow to obtain nonce.
+    const consent = await consentViaFlow({ cookie: m.cookie, clientId, scope: "catalog:write", approve: true });
     const code = paramFrom(consent.json["redirect"] as string, "code");
 
     const tok = await rawFetch({
@@ -320,13 +361,8 @@ describe("authorization_code + PKCE happy path", () => {
     const appJson = await registerApp(m.accessToken, { client_type: "confidential", allowed_scopes: ["catalog:read"] });
     const clientId = appJson["client_id"] as string;
 
-    // First consent creates the grant.
-    await rawFetch({
-      method: "POST",
-      path: "/oauth/authorize/consent",
-      cookie: m.cookie,
-      body: { client_id: clientId, redirect_uri: REDIRECT, scope: "catalog:read", approve: true },
-    });
+    // First consent creates the grant (via full flow to get nonce).
+    await consentViaFlow({ cookie: m.cookie, clientId, scope: "catalog:read", approve: true });
 
     // Second authorize for the same scopes → auto-approved.
     const authz = await rawFetch({
@@ -349,11 +385,10 @@ describe("PKCE failure", () => {
     const clientId = appJson["client_id"] as string;
     const challenge = s256("c".repeat(64));
 
-    const consent = await rawFetch({
-      method: "POST",
-      path: "/oauth/authorize/consent",
-      cookie: m.cookie,
-      body: { client_id: clientId, redirect_uri: REDIRECT, scope: "catalog:read", code_challenge: challenge, code_challenge_method: "S256", approve: true },
+    // P1-5: must go through GET /oauth/authorize first to obtain nonce.
+    const consent = await consentViaFlow({
+      cookie: m.cookie, clientId, scope: "catalog:read",
+      codeChallenge: challenge, codeChallengeMethod: "S256", approve: true,
     });
     const code = paramFrom(consent.json["redirect"] as string, "code");
 
@@ -389,12 +424,7 @@ describe("authorization code single-use", () => {
     const clientId = appJson["client_id"] as string;
     const clientSecret = appJson["client_secret"] as string;
 
-    const consent = await rawFetch({
-      method: "POST",
-      path: "/oauth/authorize/consent",
-      cookie: m.cookie,
-      body: { client_id: clientId, redirect_uri: REDIRECT, scope: "catalog:read", approve: true },
-    });
+    const consent = await consentViaFlow({ cookie: m.cookie, clientId, scope: "catalog:read", approve: true });
     const code = paramFrom(consent.json["redirect"] as string, "code");
 
     const first = await rawFetch({
@@ -419,12 +449,7 @@ describe("authorization code single-use", () => {
     const clientId = appJson["client_id"] as string;
     const clientSecret = appJson["client_secret"] as string;
 
-    const consent = await rawFetch({
-      method: "POST",
-      path: "/oauth/authorize/consent",
-      cookie: m.cookie,
-      body: { client_id: clientId, redirect_uri: REDIRECT, scope: "catalog:read", approve: true },
-    });
+    const consent = await consentViaFlow({ cookie: m.cookie, clientId, scope: "catalog:read", approve: true });
     const code = paramFrom(consent.json["redirect"] as string, "code")!;
 
     // Force-expire the code directly via SQL (simulated time).
@@ -469,12 +494,7 @@ describe("redirect_uri allow-list", () => {
     const clientId = appJson["client_id"] as string;
     const clientSecret = appJson["client_secret"] as string;
 
-    const consent = await rawFetch({
-      method: "POST",
-      path: "/oauth/authorize/consent",
-      cookie: m.cookie,
-      body: { client_id: clientId, redirect_uri: REDIRECT, scope: "catalog:read", approve: true },
-    });
+    const consent = await consentViaFlow({ cookie: m.cookie, clientId, scope: "catalog:read", approve: true });
     const code = paramFrom(consent.json["redirect"] as string, "code");
 
     const tok = await rawFetch({
@@ -495,12 +515,7 @@ describe("confidential client secret", () => {
     const appJson = await registerApp(m.accessToken, { client_type: "confidential", allowed_scopes: ["catalog:read"] });
     const clientId = appJson["client_id"] as string;
 
-    const consent = await rawFetch({
-      method: "POST",
-      path: "/oauth/authorize/consent",
-      cookie: m.cookie,
-      body: { client_id: clientId, redirect_uri: REDIRECT, scope: "catalog:read", approve: true },
-    });
+    const consent = await consentViaFlow({ cookie: m.cookie, clientId, scope: "catalog:read", approve: true });
     const code = paramFrom(consent.json["redirect"] as string, "code");
 
     const wrong = await rawFetch({
@@ -522,12 +537,7 @@ describe("refresh rotation + reuse-detection", () => {
     const clientId = appJson["client_id"] as string;
     const clientSecret = appJson["client_secret"] as string;
 
-    const consent = await rawFetch({
-      method: "POST",
-      path: "/oauth/authorize/consent",
-      cookie: m.cookie,
-      body: { client_id: clientId, redirect_uri: REDIRECT, scope: "catalog:read", approve: true },
-    });
+    const consent = await consentViaFlow({ cookie: m.cookie, clientId, scope: "catalog:read", approve: true });
     const code = paramFrom(consent.json["redirect"] as string, "code");
     const tok = await rawFetch({
       method: "POST",
@@ -573,17 +583,12 @@ describe("refresh rotation + reuse-detection", () => {
     expect(after.status).toBe(400);
   });
 
-  it("revoke endpoint invalidates a refresh token", async () => {
+  it("revoke endpoint invalidates a refresh token (P1-4: requires client auth)", async () => {
     const m = await newMerchantWithStore("revoke");
     const appJson = await registerApp(m.accessToken, { client_type: "confidential", allowed_scopes: ["catalog:read"] });
     const clientId = appJson["client_id"] as string;
     const clientSecret = appJson["client_secret"] as string;
-    const consent = await rawFetch({
-      method: "POST",
-      path: "/oauth/authorize/consent",
-      cookie: m.cookie,
-      body: { client_id: clientId, redirect_uri: REDIRECT, scope: "catalog:read", approve: true },
-    });
+    const consent = await consentViaFlow({ cookie: m.cookie, clientId, scope: "catalog:read", approve: true });
     const code = paramFrom(consent.json["redirect"] as string, "code");
     const tok = await rawFetch({
       method: "POST",
@@ -592,7 +597,14 @@ describe("refresh rotation + reuse-detection", () => {
     });
     const refresh = tok.json["refresh_token"] as string;
 
-    const rev = await rawFetch({ method: "POST", path: "/oauth/revoke", body: { token: refresh } });
+    // P1-4: /oauth/revoke now requires client credentials.
+    const revNoAuth = await rawFetch({ method: "POST", path: "/oauth/revoke", body: { token: refresh } });
+    expect(revNoAuth.status).toBe(401); // no client_id → rejected
+
+    const rev = await rawFetch({
+      method: "POST", path: "/oauth/revoke",
+      body: { token: refresh, client_id: clientId, client_secret: clientSecret },
+    });
     expect(rev.status).toBe(200);
 
     const after = await rawFetch({
@@ -658,5 +670,91 @@ describe("authorize without a session", () => {
     });
     expect(authz.status).toBe(401);
     expect(authz.json["login_required"]).toBe(true);
+  });
+});
+
+// ── P0-1: OAuth token rejected on management routes ──────────────────────────
+
+describe("P0-1: OAuth tokens cannot reach /account management routes", () => {
+  it("OAuth access token rejected on /account/oauth-apps and /account/users", async () => {
+    const m = await newMerchantWithStore("p01");
+    const appJson = await registerApp(m.accessToken, {
+      client_type: "confidential",
+      allowed_scopes: ["catalog:read"],
+    });
+    const clientId = appJson["client_id"] as string;
+    const clientSecret = appJson["client_secret"] as string;
+
+    // Get an OAuth access token via client_credentials (not a dashboard JWT).
+    const tok = await rawFetch({
+      method: "POST",
+      path: "/oauth/token",
+      body: { grant_type: "client_credentials", client_id: clientId, client_secret: clientSecret, scope: "catalog:read" },
+    });
+    expect(tok.status).toBe(200);
+    const oauthToken = tok.json["access_token"] as string;
+
+    // OAuth token must be rejected on /account/oauth-apps (management route).
+    const listApps = await rawFetch({ method: "GET", path: "/account/oauth-apps", bearer: oauthToken });
+    expect(listApps.status).toBe(401);
+
+    // OAuth token must be rejected on /account/users (team management).
+    const listUsers = await rawFetch({ method: "GET", path: "/account/users", bearer: oauthToken });
+    expect(listUsers.status).toBe(401);
+
+    // But the dashboard JWT still works (access_token from registration = dashboard JWT).
+    const listAppsOk = await rawFetch({ method: "GET", path: "/account/oauth-apps", bearer: m.accessToken });
+    expect(listAppsOk.status).toBe(200);
+  });
+});
+
+// ── P1-5: consent nonce enforces scope binding ────────────────────────────────
+
+describe("P1-5: consent_nonce is required and scope-bound", () => {
+  it("rejects consent POST without a nonce", async () => {
+    const m = await newMerchantWithStore("nonce1");
+    const appJson = await registerApp(m.accessToken, {
+      client_type: "confidential",
+      allowed_scopes: ["catalog:read"],
+    });
+    const clientId = appJson["client_id"] as string;
+
+    // POST consent without going through GET /oauth/authorize (no nonce).
+    const res = await rawFetch({
+      method: "POST",
+      path: "/oauth/authorize/consent",
+      cookie: m.cookie,
+      body: { client_id: clientId, redirect_uri: REDIRECT, scope: "catalog:read", approve: true },
+    });
+    expect(res.status).toBe(400);
+    expect((res.json["error"] as Record<string, unknown>)["code"]).toBe("invalid_request");
+  });
+
+  it("rejects consent POST with a tampered scope (nonce bound to original scope)", async () => {
+    const m = await newMerchantWithStore("nonce2");
+    const appJson = await registerApp(m.accessToken, {
+      client_type: "confidential",
+      allowed_scopes: ["catalog:read", "catalog:write"],
+    });
+    const clientId = appJson["client_id"] as string;
+
+    // Obtain nonce for catalog:read.
+    const authz = await rawFetch({
+      method: "GET",
+      path: `/oauth/authorize?response_type=code&client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(REDIRECT)}&scope=catalog%3Aread`,
+      cookie: m.cookie,
+    });
+    expect(authz.status).toBe(200);
+    const nonce = authz.json["consent_nonce"] as string;
+
+    // POST consent with a different scope (catalog:write instead of catalog:read) — should be rejected.
+    const res = await rawFetch({
+      method: "POST",
+      path: "/oauth/authorize/consent",
+      cookie: m.cookie,
+      body: { client_id: clientId, redirect_uri: REDIRECT, scope: "catalog:write", approve: true, consent_nonce: nonce },
+    });
+    expect(res.status).toBe(400);
+    expect((res.json["error"] as Record<string, unknown>)["code"]).toBe("invalid_request");
   });
 });

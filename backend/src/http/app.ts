@@ -79,7 +79,19 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
   const enableOpenApi =
     opts.openapi ?? process.env["CARTCRFT_OPENAPI"] === "1";
 
+  // P0-2: configure trustProxy from env.
+  // TRUST_PROXY=1 → trust one hop (leftmost XFF entry).
+  // TRUST_PROXY=N → trust N hops.
+  // Unset (default) → trust no proxy; request.ip = raw socket peer.
+  const trustProxyEnv = process.env["TRUST_PROXY"];
+  let trustProxy: boolean | number = false;
+  if (trustProxyEnv) {
+    const n = Number(trustProxyEnv);
+    trustProxy = Number.isInteger(n) && n > 0 ? n : false;
+  }
+
   const app = Fastify({
+    trustProxy,
     logger: {
       level: process.env["APP_ENV"] === "production" ? "info" : "debug",
       // ── Log redaction (H1.3) ───────────────────────────────────────────

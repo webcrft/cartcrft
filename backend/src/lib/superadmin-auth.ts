@@ -251,11 +251,15 @@ export function _resetSuperAdminRateLimit(): void {
 
 // ── Request helpers ──────────────────────────────────────────────────────────
 
+/**
+ * P0-2: Return the client IP.
+ *
+ * Uses `request.ip` exclusively.  When `TRUST_PROXY` is configured, Fastify
+ * resolves the real IP from X-Forwarded-For before we ever see the request.
+ * Reading XFF directly here would let an unauthenticated caller forge their IP
+ * to bypass the SUPERADMIN_IP_ALLOWLIST.
+ */
 export function getClientIp(request: FastifyRequest): string {
-  const xff = request.headers["x-forwarded-for"];
-  if (typeof xff === "string") {
-    return xff.split(",")[0]?.trim() ?? request.ip;
-  }
   return request.ip;
 }
 

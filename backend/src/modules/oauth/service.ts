@@ -31,7 +31,7 @@ import { hashSync as argon2HashSync, verifySync as argon2VerifySync } from "@nod
 import { getPool, getReadDb } from "../../db/pool.js";
 import { config } from "../../config/config.js";
 import { JWT_ISSUER, JWT_AUDIENCE } from "../../lib/auth/jwt.js";
-import { verifyPkce, type CodeChallengeMethod } from "../../lib/oauth/pkce.js";
+import { verifyPkce, isValidCodeVerifier, type CodeChallengeMethod } from "../../lib/oauth/pkce.js";
 import { scopesCovered } from "../../lib/oauth/scopes.js";
 
 // ── Policy constants ─────────────────────────────────────────────────────────
@@ -400,6 +400,11 @@ export async function exchangeAuthorizationCode(opts: {
   redirectUri: string;
   codeVerifier?: string | null;
 }): Promise<{ ok: true; body: TokenResponse } | { ok: false; error: TokenError; message: string }> {
+  // P2-9: validate code_verifier syntax early (before touching the DB).
+  if (opts.codeVerifier && !isValidCodeVerifier(opts.codeVerifier)) {
+    return { ok: false, error: "invalid_grant", message: "code_verifier format invalid (RFC 7636: 43-128 unreserved chars)" };
+  }
+
   const app = await findAppByClientId(opts.clientId);
   if (!app || app.status !== "active") {
     return { ok: false, error: "invalid_client", message: "unknown or inactive client" };
@@ -447,10 +452,11 @@ export async function exchangeAuthorizationCode(opts: {
     if (!opts.codeVerifier) {
       return { ok: false, error: "invalid_grant", message: "code_verifier required (PKCE)" };
     }
+    // P2-9: default to S256 (not plain) when no method was stored.
     const ok = verifyPkce({
       verifier: opts.codeVerifier,
       challenge: code.code_challenge,
-      method: code.code_challenge_method ?? "plain",
+      method: code.code_challenge_method ?? "S256",
     });
     if (!ok) {
       return { ok: false, error: "invalid_grant", message: "PKCE verification failed" };
@@ -529,43 +535,56 @@ export async function exchangeRefreshToken(opts: {
 
   const tokenHash = sha256Hex(opts.refreshToken);
   const pool = getPool();
+
+  // P1-3: Atomic rotation via a single UPDATE...WHERE revoked_at IS NULL RETURNING.
+  // If the token is already revoked (replayed) the UPDATE returns 0 rows.
+  // We then SELECT the row to detect reuse (already-revoked family) vs
+  // a completely unknown token.
   const { rows } = await pool.query<{
     app_id: string;
     organization_id: string;
     subject: string;
     scopes: string[];
     expires_at: string;
-    revoked_at: string | null;
     expired: boolean;
   }>(
-    `SELECT app_id::text, organization_id::text, subject, scopes, expires_at::text,
-            revoked_at, (expires_at <= now()) AS expired
-       FROM oauth_refresh_tokens WHERE token_hash = $1`,
+    `UPDATE oauth_refresh_tokens
+        SET revoked_at = now()
+      WHERE token_hash = $1
+        AND revoked_at IS NULL
+        AND (expires_at <= now()) = false
+      RETURNING app_id::text, organization_id::text, subject, scopes,
+                expires_at::text, (expires_at <= now()) AS expired`,
     [tokenHash]
   );
   const tok = rows[0];
+
   if (!tok) {
-    return { ok: false, error: "invalid_grant", message: "unknown refresh token" };
+    // Either the token is completely unknown OR it was already revoked (reuse).
+    // Check which case — for reuse-detection we need to revoke the family.
+    const { rows: existing } = await pool.query<{ app_id: string; revoked_at: string | null; expires_at: string }>(
+      `SELECT app_id::text, revoked_at::text, expires_at::text
+         FROM oauth_refresh_tokens WHERE token_hash = $1`,
+      [tokenHash]
+    );
+    const prev = existing[0];
+    if (!prev) {
+      return { ok: false, error: "invalid_grant", message: "unknown refresh token" };
+    }
+    // Already revoked (was rotated earlier) → reuse-detection: revoke family.
+    if (prev.revoked_at) {
+      await revokeRefreshFamily(tokenHash);
+      return { ok: false, error: "invalid_grant", message: "refresh token reuse detected; family revoked" };
+    }
+    // Expired but not revoked.
+    return { ok: false, error: "invalid_grant", message: "refresh token expired" };
   }
+
   if (tok.app_id !== app.id) {
     return { ok: false, error: "invalid_grant", message: "refresh token was issued to a different client" };
   }
 
-  // ── Reuse-detection: a revoked (already-rotated) token presented again means
-  // the token was leaked/replayed → revoke the whole family and refuse. ───────
-  if (tok.revoked_at) {
-    await revokeRefreshFamily(tokenHash);
-    return { ok: false, error: "invalid_grant", message: "refresh token reuse detected; family revoked" };
-  }
-  if (tok.expired) {
-    return { ok: false, error: "invalid_grant", message: "refresh token expired" };
-  }
-
-  // Rotate: revoke the presented token, issue a fresh one chained via rotated_from.
-  await pool.query(
-    `UPDATE oauth_refresh_tokens SET revoked_at = now() WHERE token_hash = $1`,
-    [tokenHash]
-  );
+  // Token atomically consumed above. Issue a fresh rotation pair.
   const access = await mintAccessToken({
     subject: tok.subject,
     orgId: tok.organization_id,
@@ -630,11 +649,26 @@ export async function clientCredentialsGrant(opts: {
 
 // ── Revocation ───────────────────────────────────────────────────────────────
 
-/** Revoke a refresh token (RFC 7009). Best-effort, always 200 at the route. */
-export async function revokeToken(refreshToken: string): Promise<void> {
-  await getPool().query(
-    `UPDATE oauth_refresh_tokens SET revoked_at = now()
-      WHERE token_hash = $1 AND revoked_at IS NULL`,
-    [sha256Hex(refreshToken)]
-  );
+/**
+ * Revoke a refresh token (RFC 7009).
+ *
+ * P1-4: When `appId` is supplied, only revokes the token if it belongs to that
+ * client application (prevents one app from revoking another app's tokens).
+ * Best-effort — the route always returns 200 per RFC 7009.
+ */
+export async function revokeToken(refreshToken: string, appId?: string): Promise<void> {
+  const hash = sha256Hex(refreshToken);
+  if (appId) {
+    await getPool().query(
+      `UPDATE oauth_refresh_tokens SET revoked_at = now()
+        WHERE token_hash = $1 AND app_id = $2::uuid AND revoked_at IS NULL`,
+      [hash, appId]
+    );
+  } else {
+    await getPool().query(
+      `UPDATE oauth_refresh_tokens SET revoked_at = now()
+        WHERE token_hash = $1 AND revoked_at IS NULL`,
+      [hash]
+    );
+  }
 }

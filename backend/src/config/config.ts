@@ -77,6 +77,12 @@ const configSchema = z.object({
   // When absent, the OSS default in-memory KV and Postgres advisory locks are used.
   // No new infra required for self-hosted installs.
   REDIS_URL: z.string().optional(),
+
+  // P0-2: Reverse-proxy trust.
+  // Set to "1" to trust the leftmost X-Forwarded-For hop (single trusted proxy),
+  // or a positive integer N to trust N hops.  Leave unset to use the direct
+  // socket IP (default; prevents XFF spoofing when there is no proxy).
+  TRUST_PROXY: z.string().optional(),
 });
 
 export type RawConfig = z.infer<typeof configSchema>;

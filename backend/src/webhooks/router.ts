@@ -108,8 +108,9 @@ export function storeIdFromHost(host: string): string | null {
   if (!bareHost.endsWith(suffix)) return null;
 
   const storeId = bareHost.slice(0, bareHost.length - suffix.length);
-  // Must be a UUID (36 chars with dashes).
-  if (storeId.length !== 36) return null;
+  // P2-12: must be a valid UUID (36 chars with dashes in correct positions).
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!UUID_RE.test(storeId)) return null;
   return storeId;
 }
 
@@ -1242,7 +1243,25 @@ async function recordPaymentRefund(
     const orderTotal = parseFloat(orderRows[0].total);
     const totalRefunded = parseFloat(orderRows[0].total_refunded);
 
-    // 4. Insert refund row (idempotent via ON CONFLICT DO NOTHING).
+    // 4. P1-7: Over-refund cap — sum existing succeeded/pending refunds for this
+    //    payment and reject if adding `amount` would exceed paymentAmount + tolerance.
+    const { rows: existingRefundRows } = await client.query<{ total_refunded: string }>(
+      `SELECT coalesce(sum(amount), 0)::text AS total_refunded
+         FROM refunds
+        WHERE payment_id = $1::uuid
+          AND status IN ('succeeded', 'pending')`,
+      [paymentId]
+    );
+    const alreadyRefunded = parseFloat(existingRefundRows[0]?.total_refunded ?? "0");
+    if (alreadyRefunded + amount > paymentAmount + AMOUNT_TOLERANCE) {
+      console.warn(`recordPaymentRefund: over-refund rejected`, {
+        orderId, providerType, amount, alreadyRefunded, paymentAmount,
+      });
+      await client.query("ROLLBACK");
+      return;
+    }
+
+    // 4b. Insert refund row (idempotent via ON CONFLICT DO NOTHING).
     const idempotencyKey = refundRef || `${paymentRef}:${amount.toFixed(2)}`;
     const { rows: refundRows } = await client.query<{ id: string }>(
       `INSERT INTO refunds (payment_id, order_id, amount, status, provider_reference)

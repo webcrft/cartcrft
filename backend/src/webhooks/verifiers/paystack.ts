@@ -25,7 +25,7 @@ export interface PaystackEvent {
  * Verify X-Paystack-Signature and parse the event.
  *
  * Throws if the signature is invalid.
- * Pass an empty secret to skip validation (test fixture injection).
+ * P2-16: secret is always required; callers must ensure it is non-empty.
  */
 export function verifyAndParsePaystack(
   body: Buffer | string,
@@ -33,9 +33,7 @@ export function verifyAndParsePaystack(
   secret: string
 ): PaystackEvent {
   const bodyBuf = typeof body === "string" ? Buffer.from(body, "utf8") : body;
-  if (secret) {
-    verifyPaystackSignature(bodyBuf, sigHeader, secret);
-  }
+  verifyPaystackSignature(bodyBuf, sigHeader, secret);
   return parsePaystackEvent(bodyBuf);
 }
 

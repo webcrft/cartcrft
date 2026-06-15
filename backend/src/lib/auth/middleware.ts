@@ -80,12 +80,18 @@ export function initRateLimitKv(): void {
   void buildKv();
 }
 
+/**
+ * P0-2: Return the client IP.
+ *
+ * When `TRUST_PROXY` is set in the environment, Fastify is configured with
+ * `trustProxy` so `request.ip` already reflects the correct originating IP
+ * from X-Forwarded-For (handled by Fastify/find-my-way, not by us).
+ *
+ * When `TRUST_PROXY` is NOT set, `request.ip` is the raw socket peer address,
+ * which is safe. We must NOT read XFF directly because an untrusted caller can
+ * forge it to bypass rate-limiting or the SUPERADMIN_IP_ALLOWLIST.
+ */
 function getClientIp(request: FastifyRequest): string {
-  // Trust X-Forwarded-For in production (behind a load balancer).
-  const xff = request.headers["x-forwarded-for"];
-  if (typeof xff === "string") {
-    return xff.split(",")[0]?.trim() ?? request.ip;
-  }
   return request.ip;
 }
 
@@ -310,6 +316,10 @@ async function resolveStoreAuth(
  * (list/create) and /api-keys.
  *
  * Attaches { orgId, userId, authType: "jwt" } to request.auth.
+ *
+ * NOTE: this also accepts OAuth access tokens (which carry oauth_app + scope
+ * claims).  For /account/** management routes that must NOT be reachable by
+ * OAuth tokens, use `requireDashboardJwt` instead.
  */
 export const requireJwt: preHandlerHookHandler = async (request, reply) => {
   const authorization = request.headers["authorization"] ?? "";
@@ -334,6 +344,51 @@ export const requireJwt: preHandlerHookHandler = async (request, reply) => {
   };
 
   // Populate AsyncLocalStorage so withTx can set the RLS GUC.
+  setRequestCtx({ userId: claims.sub, orgId: claims.org });
+};
+
+/**
+ * P0-1 — requireDashboardJwt
+ *
+ * Like requireJwt but REJECTS tokens that carry an `oauth_app` claim.  OAuth
+ * access tokens must never reach management routes such as /account/oauth-apps
+ * or /account/users — otherwise a low-scope OAuth token could escalate to
+ * creating/rotating OAuth app secrets or managing team members.
+ *
+ * Use this preHandler on every /account/** management route.
+ * The /commerce/** and /oauth/** routes continue to use the existing helpers
+ * (storeAuthRead/Write/Admin for /commerce, open or requireJwt for /oauth).
+ */
+export const requireDashboardJwt: preHandlerHookHandler = async (request, reply) => {
+  const authorization = request.headers["authorization"] ?? "";
+  const bearer = authorization.startsWith("Bearer ")
+    ? authorization.slice(7)
+    : "";
+
+  if (!bearer) {
+    return sendUnauthorized(reply, "missing Authorization header");
+  }
+
+  const claims = await verifyJwt(bearer);
+  if (!claims) {
+    return sendUnauthorized(reply, "invalid or expired token");
+  }
+
+  // P0-1: OAuth access tokens carry oauth_app. Reject them here.
+  if (claims.oauth_app) {
+    return sendUnauthorized(
+      reply,
+      "OAuth access tokens cannot access account management endpoints; use a dashboard session token"
+    );
+  }
+
+  request.auth = {
+    storeId: "",
+    orgId: claims.org,
+    userId: claims.sub,
+    authType: "jwt",
+  };
+
   setRequestCtx({ userId: claims.sub, orgId: claims.org });
 };
 

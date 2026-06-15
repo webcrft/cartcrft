@@ -32,8 +32,9 @@
 
 import type { FastifyPluginAsync, FastifyRequest } from "fastify";
 import { z } from "zod";
-import { createHash } from "node:crypto";
-import { requireJwt } from "../../lib/auth/middleware.js";
+import { createHash, createHmac, timingSafeEqual, randomBytes } from "node:crypto";
+import { requireDashboardJwt } from "../../lib/auth/middleware.js";
+import { config } from "../../config/config.js";
 import { getPool } from "../../db/pool.js";
 import { verifyJwt } from "../../lib/auth/jwt.js";
 import {
@@ -108,6 +109,8 @@ const ConsentBody = z.object({
   code_challenge: z.string().optional(),
   code_challenge_method: z.enum(["S256", "plain"]).optional(),
   approve: z.boolean(),
+  /** P1-5: one-time consent nonce returned by GET /oauth/authorize */
+  consent_nonce: z.string().min(1).optional(),
 });
 
 const TokenBody = z.object({
@@ -127,6 +130,75 @@ const RevokeBody = z.object({ token: z.string().min(1) }).passthrough();
 
 function sha256Hex(value: string): string {
   return createHash("sha256").update(value).digest("hex");
+}
+
+// ── P1-5: one-time consent nonce ─────────────────────────────────────────────
+//
+// When GET /oauth/authorize returns a consent_required descriptor, it includes
+// a short-lived, HMAC-signed nonce that encodes the exact consent context
+// {client_id, redirect_uri, scope_hash, subject, expiry}.  The consent POST
+// must supply this nonce; we verify it matches the current request context
+// (exact scope + redirect_uri) and check it has not expired.
+//
+// Format (dot-separated): base64url(JSON payload) + "." + HMAC-SHA256 hex
+// The HMAC key is config.JWT_SECRET so it never leaves the server.
+
+const CONSENT_NONCE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
+interface ConsentNoncePayload {
+  cid: string;   // client_id
+  ruri: string;  // redirect_uri
+  sh: string;    // sha256 of canonical scope string
+  sub: string;   // subject
+  exp: number;   // unix ms expiry
+  jti: string;   // random jti (prevents re-use of the same nonce value)
+}
+
+function hmacKey(): string {
+  return config.JWT_SECRET;
+}
+
+function mintConsentNonce(payload: Omit<ConsentNoncePayload, "exp" | "jti">): string {
+  const full: ConsentNoncePayload = {
+    ...payload,
+    exp: Date.now() + CONSENT_NONCE_TTL_MS,
+    jti: randomBytes(16).toString("hex"),
+  };
+  const data = Buffer.from(JSON.stringify(full)).toString("base64url");
+  const sig = createHmac("sha256", hmacKey()).update(data).digest("hex");
+  return `${data}.${sig}`;
+}
+
+function verifyConsentNonce(
+  nonce: string,
+  expected: Omit<ConsentNoncePayload, "exp" | "jti">
+): boolean {
+  const dotIdx = nonce.lastIndexOf(".");
+  if (dotIdx === -1) return false;
+  const data = nonce.slice(0, dotIdx);
+  const sig = nonce.slice(dotIdx + 1);
+
+  // Constant-time sig verify.
+  const expectedSig = createHmac("sha256", hmacKey()).update(data).digest("hex");
+  const sigBuf = Buffer.from(sig, "hex");
+  const expBuf = Buffer.from(expectedSig, "hex");
+  if (sigBuf.length !== expBuf.length || !timingSafeEqual(sigBuf, expBuf)) {
+    return false;
+  }
+
+  let payload: ConsentNoncePayload;
+  try {
+    payload = JSON.parse(Buffer.from(data, "base64url").toString("utf8")) as ConsentNoncePayload;
+  } catch {
+    return false;
+  }
+
+  if (Date.now() > payload.exp) return false;
+  if (payload.cid !== expected.cid) return false;
+  if (payload.ruri !== expected.ruri) return false;
+  if (payload.sh !== expected.sh) return false;
+  if (payload.sub !== expected.sub) return false;
+  return true;
 }
 
 function readCookie(request: FastifyRequest, name: string): string | null {
@@ -200,10 +272,12 @@ function buildRedirect(redirectUri: string, params: Record<string, string>): str
 
 export const oauthPlugin: FastifyPluginAsync = async (app) => {
   // ════════════════════════════════════════════════════════════════════════
-  // App management (requireJwt, org-scoped) — /account/oauth-apps
+  // App management (requireDashboardJwt, org-scoped) — /account/oauth-apps
+  // P0-1: requireDashboardJwt rejects OAuth access tokens so they can never
+  // reach these management routes (create app, rotate secret, team mgmt).
   // ════════════════════════════════════════════════════════════════════════
 
-  app.get("/account/oauth-apps", { preHandler: [requireJwt] }, async (request, reply) => {
+  app.get("/account/oauth-apps", { preHandler: [requireDashboardJwt] }, async (request, reply) => {
     const { orgId } = request.auth!;
     const apps = await listApps(orgId);
     return reply.send({ apps });
@@ -211,7 +285,7 @@ export const oauthPlugin: FastifyPluginAsync = async (app) => {
 
   app.post(
     "/account/oauth-apps",
-    { preHandler: [requireJwt], schema: { body: CreateAppBody } },
+    { preHandler: [requireDashboardJwt], schema: { body: CreateAppBody } },
     async (request, reply) => {
       const { orgId } = request.auth!;
       const body = request.body as z.infer<typeof CreateAppBody>;
@@ -232,7 +306,7 @@ export const oauthPlugin: FastifyPluginAsync = async (app) => {
 
   app.get(
     "/account/oauth-apps/:id",
-    { preHandler: [requireJwt], schema: { params: AppIdParams } },
+    { preHandler: [requireDashboardJwt], schema: { params: AppIdParams } },
     async (request, reply) => {
       const { orgId } = request.auth!;
       const { id } = request.params as z.infer<typeof AppIdParams>;
@@ -244,7 +318,7 @@ export const oauthPlugin: FastifyPluginAsync = async (app) => {
 
   app.patch(
     "/account/oauth-apps/:id",
-    { preHandler: [requireJwt], schema: { params: AppIdParams, body: UpdateAppBody } },
+    { preHandler: [requireDashboardJwt], schema: { params: AppIdParams, body: UpdateAppBody } },
     async (request, reply) => {
       const { orgId } = request.auth!;
       const { id } = request.params as z.infer<typeof AppIdParams>;
@@ -265,7 +339,7 @@ export const oauthPlugin: FastifyPluginAsync = async (app) => {
 
   app.post(
     "/account/oauth-apps/:id/rotate-secret",
-    { preHandler: [requireJwt], schema: { params: AppIdParams } },
+    { preHandler: [requireDashboardJwt], schema: { params: AppIdParams } },
     async (request, reply) => {
       const { orgId } = request.auth!;
       const { id } = request.params as z.infer<typeof AppIdParams>;
@@ -280,7 +354,7 @@ export const oauthPlugin: FastifyPluginAsync = async (app) => {
 
   app.delete(
     "/account/oauth-apps/:id",
-    { preHandler: [requireJwt], schema: { params: AppIdParams } },
+    { preHandler: [requireDashboardJwt], schema: { params: AppIdParams } },
     async (request, reply) => {
       const { orgId } = request.auth!;
       const { id } = request.params as z.infer<typeof AppIdParams>;
@@ -371,6 +445,15 @@ export const oauthPlugin: FastifyPluginAsync = async (app) => {
         });
       }
 
+      // P1-5: mint a one-time consent nonce that binds this exact request context.
+      const canonicalScope = [...requested].sort().join(" ");
+      const consentNonce = mintConsentNonce({
+        cid: q.client_id,
+        ruri: q.redirect_uri,
+        sh: sha256Hex(canonicalScope),
+        sub: session.subject,
+      });
+
       // Otherwise return a consent descriptor for the frontend to render.
       return reply.send({
         consent_required: true,
@@ -378,6 +461,8 @@ export const oauthPlugin: FastifyPluginAsync = async (app) => {
         organization_id: session.organizationId,
         account: { email: session.email },
         scopes: requested.map((s) => ({ scope: s, description: SCOPE_DESCRIPTIONS[s as OAuthScope] ?? s })),
+        // P1-5: consent_nonce must be included in the consent POST.
+        consent_nonce: consentNonce,
         // Echo the params the frontend must POST back to /oauth/authorize/consent.
         request: {
           client_id: q.client_id,
@@ -395,6 +480,11 @@ export const oauthPlugin: FastifyPluginAsync = async (app) => {
    * POST /oauth/authorize/consent — the merchant approved (or denied). On
    * approve we mint a one-time code and return the redirect URL. On deny we
    * return an access_denied redirect.
+   *
+   * P1-5: The request must include a `consent_nonce` returned by the preceding
+   * GET /oauth/authorize.  The nonce is HMAC-signed and binds client_id,
+   * redirect_uri, scope, and subject — so a scope substitution attack (posting
+   * a different scope than the one the user saw) is rejected.
    */
   app.post(
     "/oauth/authorize/consent",
@@ -427,6 +517,24 @@ export const oauthPlugin: FastifyPluginAsync = async (app) => {
       const scopeCheck = validateRequestedScopes(requested, app_.allowed_scopes);
       if (!scopeCheck.ok) {
         return reply.status(400).send({ error: { code: "invalid_scope", message: scopeCheck.message } });
+      }
+
+      // P1-5: Verify the consent nonce.
+      // The nonce binds {client_id, redirect_uri, sha256(sorted scope), subject}.
+      // Absence, bad signature, wrong scope, or expired nonce → reject.
+      const canonicalScope = [...requested].sort().join(" ");
+      if (
+        !body.consent_nonce ||
+        !verifyConsentNonce(body.consent_nonce, {
+          cid: body.client_id,
+          ruri: body.redirect_uri,
+          sh: sha256Hex(canonicalScope),
+          sub: session.subject,
+        })
+      ) {
+        return reply.status(400).send({
+          error: { code: "invalid_request", message: "consent_nonce missing, invalid, or expired — restart the authorization flow" },
+        });
       }
 
       if (app_.client_type === "public") {
@@ -530,13 +638,54 @@ export const oauthPlugin: FastifyPluginAsync = async (app) => {
     }
   );
 
-  /** POST /oauth/revoke — revoke a refresh token (RFC 7009; always 200). */
+  /**
+   * POST /oauth/revoke — revoke a refresh token (RFC 7009).
+   *
+   * P1-4: Requires client authentication (HTTP Basic or body client_id/secret)
+   * so only the owning client can revoke its own tokens.  Per RFC 7009, the
+   * response is always 200 even for unknown tokens; but we return 401 when the
+   * client itself cannot be authenticated.
+   */
   app.post(
     "/oauth/revoke",
     { schema: { body: RevokeBody } },
     async (request, reply) => {
-      const body = request.body as z.infer<typeof RevokeBody>;
-      await revokeToken(body.token);
+      const body = request.body as z.infer<typeof RevokeBody> & {
+        client_id?: string;
+        client_secret?: string;
+      };
+
+      // Extract client credentials (same logic as /oauth/token).
+      let clientId = body.client_id;
+      let clientSecret = body.client_secret;
+      const authz = request.headers["authorization"];
+      if (typeof authz === "string" && authz.startsWith("Basic ")) {
+        const decoded = Buffer.from(authz.slice(6), "base64").toString("utf8");
+        const idx = decoded.indexOf(":");
+        if (idx !== -1) {
+          clientId = decodeURIComponent(decoded.slice(0, idx));
+          clientSecret = decodeURIComponent(decoded.slice(idx + 1));
+        }
+      }
+
+      if (!clientId) {
+        return reply.status(401).send({ error: "invalid_client", error_description: "client_id required" });
+      }
+
+      const app_ = await findAppByClientId(clientId);
+      if (!app_ || app_.status !== "active") {
+        return reply.status(401).send({ error: "invalid_client", error_description: "unknown or inactive client" });
+      }
+
+      // Confidential clients must provide their secret.
+      if (app_.client_type === "confidential") {
+        if (!clientSecret || !(await verifyClientSecret(clientId, clientSecret))) {
+          return reply.status(401).send({ error: "invalid_client", error_description: "client authentication failed" });
+        }
+      }
+
+      // Revoke only tokens belonging to this client (org safety).
+      await revokeToken(body.token, app_.id);
       return reply.send({ ok: true });
     }
   );

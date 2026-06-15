@@ -330,12 +330,15 @@ export async function refresh(opts: {
   const pool = getPool();
   const tokenHash = sha256Hex(opts.refreshToken);
 
+  // P1-3: Atomic consume — UPDATE…WHERE revoked_at IS NULL RETURNING.
+  // Zero rows ⟹ token is unknown, already revoked, or expired.
   const { rows } = await pool.query<{ id: string; platform_user_id: string }>(
-    `SELECT id::text, platform_user_id::text
-       FROM platform_sessions
+    `UPDATE platform_sessions
+        SET revoked_at = now()
       WHERE token_hash = $1
         AND revoked_at IS NULL
-        AND expires_at > now()`,
+        AND expires_at > now()
+      RETURNING id::text, platform_user_id::text`,
     [tokenHash]
   );
   const sess = rows[0];
@@ -350,12 +353,11 @@ export async function refresh(opts: {
   );
   const user = userRes.rows[0];
   if (!user || !user.is_active) {
-    await revokeSession(sess.id);
+    // Session was atomically consumed above; user inactive → just reject.
     return { ok: false, code: "INVALID_REFRESH", message: "account inactive" };
   }
 
-  // Rotate: revoke the consumed session, issue a fresh one.
-  await revokeSession(sess.id);
+  // Issue a fresh session (old one already atomically revoked).
   const session = await issueSession({ userId: user.id, orgId: user.org_id, email: user.email, ip: opts.ip, userAgent: opts.userAgent });
   return { ok: true, user: toPublicUser(user), session };
 }

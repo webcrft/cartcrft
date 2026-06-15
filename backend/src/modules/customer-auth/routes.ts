@@ -497,10 +497,11 @@ export const customerAuthPlugin: FastifyPluginAsyncZod = async (app) => {
       const cfg = await loadStoreConfig(pool, storeId, secretsKey);
 
       const nonce = randomBytes(16).toString("hex");
-      saveOAuthState(storeId, provider, nonce);
+      // P1-6: persist redirect_uri in state so callbacks can use it in token exchanges.
+      const redirectUri = q.redirect_uri ?? `${cfg.redirectUrl || "http://localhost:3000"}/auth/${provider}/callback`;
+      saveOAuthState(storeId, provider, nonce, redirectUri);
 
       let authUrl: string;
-      const redirectUri = q.redirect_uri ?? `${cfg.redirectUrl || "http://localhost:3000"}/auth/${provider}/callback`;
       const state = nonce;
 
       if (provider === "google") {
@@ -525,7 +526,9 @@ export const customerAuthPlugin: FastifyPluginAsyncZod = async (app) => {
     const pool = getPool();
     const secretsKey = config.AUTH_SECRETS_KEY ?? "";
 
-    if (!loadOAuthState(request.body.state, storeId, "google")) {
+    // P1-6: loadOAuthState now returns the persisted redirect_uri (or null on failure).
+    const redirectUri = loadOAuthState(request.body.state, storeId, "google");
+    if (redirectUri === null) {
       return reply.status(400).send({ error: { code: "BAD_REQUEST", message: "invalid OAuth state" } });
     }
 
@@ -534,7 +537,7 @@ export const customerAuthPlugin: FastifyPluginAsyncZod = async (app) => {
       return reply.status(400).send({ error: { code: "BAD_REQUEST", message: "Google auth is disabled" } });
     }
 
-    // Exchange code for token
+    // Exchange code for token — include redirect_uri per OAuth2 spec (P1-6).
     const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -542,6 +545,7 @@ export const customerAuthPlugin: FastifyPluginAsyncZod = async (app) => {
         code: request.body.code,
         client_id: cfg.googleClientId,
         client_secret: cfg.googleClientSecret,
+        redirect_uri: redirectUri,
         grant_type: "authorization_code",
       }).toString(),
     });
@@ -581,7 +585,9 @@ export const customerAuthPlugin: FastifyPluginAsyncZod = async (app) => {
     const pool = getPool();
     const secretsKey = config.AUTH_SECRETS_KEY ?? "";
 
-    if (!loadOAuthState(request.body.state, storeId, "microsoft")) {
+    // P1-6: capture persisted redirect_uri from state.
+    const redirectUri = loadOAuthState(request.body.state, storeId, "microsoft");
+    if (redirectUri === null) {
       return reply.status(400).send({ error: { code: "BAD_REQUEST", message: "invalid OAuth state" } });
     }
 
@@ -590,6 +596,7 @@ export const customerAuthPlugin: FastifyPluginAsyncZod = async (app) => {
       return reply.status(400).send({ error: { code: "BAD_REQUEST", message: "Microsoft auth is disabled" } });
     }
 
+    // Include redirect_uri per OAuth2 spec (P1-6).
     const tokenRes = await fetch("https://login.microsoftonline.com/common/oauth2/v2.0/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -597,6 +604,7 @@ export const customerAuthPlugin: FastifyPluginAsyncZod = async (app) => {
         code: request.body.code,
         client_id: cfg.msClientId,
         client_secret: cfg.msClientSecret,
+        redirect_uri: redirectUri,
         grant_type: "authorization_code",
         scope: "openid email profile",
       }).toString(),
@@ -633,7 +641,9 @@ export const customerAuthPlugin: FastifyPluginAsyncZod = async (app) => {
     const pool = getPool();
     const secretsKey = config.AUTH_SECRETS_KEY ?? "";
 
-    if (!loadOAuthState(request.body.state, storeId, "discord")) {
+    // P1-6: capture persisted redirect_uri from state.
+    const redirectUri = loadOAuthState(request.body.state, storeId, "discord");
+    if (redirectUri === null) {
       return reply.status(400).send({ error: { code: "BAD_REQUEST", message: "invalid OAuth state" } });
     }
 
@@ -642,6 +652,7 @@ export const customerAuthPlugin: FastifyPluginAsyncZod = async (app) => {
       return reply.status(400).send({ error: { code: "BAD_REQUEST", message: "Discord auth is disabled" } });
     }
 
+    // Include redirect_uri per OAuth2 spec (P1-6).
     const tokenRes = await fetch("https://discord.com/api/oauth2/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -649,6 +660,7 @@ export const customerAuthPlugin: FastifyPluginAsyncZod = async (app) => {
         code: request.body.code,
         client_id: cfg.discordClientId,
         client_secret: cfg.discordClientSecret,
+        redirect_uri: redirectUri,
         grant_type: "authorization_code",
       }).toString(),
     });

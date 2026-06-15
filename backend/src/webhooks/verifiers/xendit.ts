@@ -23,7 +23,7 @@ export interface XenditEvent {
  * Verify x-callback-token and parse the event.
  *
  * Throws if the token is invalid.
- * Pass an empty configuredToken to skip validation (test fixture injection).
+ * P2-16: configuredToken is always required; callers must ensure it is non-empty.
  */
 export function verifyAndParseXendit(
   body: Buffer | string,
@@ -31,9 +31,7 @@ export function verifyAndParseXendit(
   configuredToken: string
 ): XenditEvent {
   const bodyBuf = typeof body === "string" ? Buffer.from(body, "utf8") : body;
-  if (configuredToken) {
-    verifyXenditToken(callbackToken, configuredToken);
-  }
+  verifyXenditToken(callbackToken, configuredToken);
   return parseXenditEvent(bodyBuf);
 }
 

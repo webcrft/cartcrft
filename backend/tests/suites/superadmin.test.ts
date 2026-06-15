@@ -229,7 +229,7 @@ describe("audience isolation", () => {
 // ── IP allowlist ─────────────────────────────────────────────────────────────
 
 describe("IP allowlist", () => {
-  it("blocks requests from a non-allowlisted IP and allows on-list ones", async () => {
+  it("blocks requests from a non-allowlisted IP; forged XFF does NOT bypass the check (P0-2)", async () => {
     process.env["SUPERADMIN_IP_ALLOWLIST"] = "10.0.0.0/8";
     try {
       // Login itself is IP-gated.
@@ -237,15 +237,19 @@ describe("IP allowlist", () => {
       expect(blocked.status).toBe(403);
       expect((blocked.json["error"] as Record<string, unknown>)["code"]).toBe("IP_BLOCKED");
 
-      // Spoof an allowed IP via X-Forwarded-For (getClientIp trusts XFF).
+      // P0-2: getClientIp now returns request.ip (loopback 127.0.0.1), not the
+      // forged X-Forwarded-For value.  Even though "10.1.2.3" is within the
+      // allowlist CIDR, the server must NOT trust the XFF header unless
+      // TRUST_PROXY is configured.  The request must still be blocked (403).
       _resetSuperAdminRateLimit();
-      const allowed = await ctx.request({
+      const spoofAttempt = await ctx.request({
         method: "POST",
         path: "/superadmin/auth/login",
         body: { email: "ops@webcrft.systems", password: PASSWORD },
         headers: { "x-forwarded-for": "10.1.2.3" },
       });
-      expect(allowed.status).toBe(200);
+      expect(spoofAttempt.status).toBe(403);
+      expect((spoofAttempt.json["error"] as Record<string, unknown>)["code"]).toBe("IP_BLOCKED");
     } finally {
       delete process.env["SUPERADMIN_IP_ALLOWLIST"];
     }

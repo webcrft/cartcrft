@@ -89,6 +89,8 @@ export interface RotateResult {
 interface OAuthStateEntry {
   storeId: string;
   provider: string;
+  /** P1-6: persist redirect_uri so callbacks can include it in provider token exchanges. */
+  redirectUri: string;
   expiresAt: Date;
 }
 
@@ -101,22 +103,27 @@ function pruneOAuthState(): void {
   }
 }
 
-export function saveOAuthState(storeId: string, provider: string, nonce: string): void {
+export function saveOAuthState(storeId: string, provider: string, nonce: string, redirectUri: string): void {
   pruneOAuthState();
   _oauthState.set(nonce, {
     storeId,
     provider,
+    redirectUri,
     expiresAt: new Date(Date.now() + 10 * 60 * 1000),
   });
 }
 
-export function loadOAuthState(nonce: string, storeId: string, provider: string): boolean {
+/**
+ * Consume and validate an OAuth state nonce.
+ * Returns the persisted redirectUri on success, null on failure.
+ */
+export function loadOAuthState(nonce: string, storeId: string, provider: string): string | null {
   pruneOAuthState();
   const entry = _oauthState.get(nonce);
-  if (!entry) return false;
-  if (entry.storeId !== storeId || entry.provider !== provider) return false;
+  if (!entry) return null;
+  if (entry.storeId !== storeId || entry.provider !== provider) return null;
   _oauthState.delete(nonce);
-  return true;
+  return entry.redirectUri;
 }
 
 // ── Token helpers ─────────────────────────────────────────────────────────────
@@ -575,38 +582,50 @@ export async function rotateSession(
 ): Promise<RotateResult> {
   const hash = hashToken(rawToken);
 
+  // P1-3: Atomic consume — a single UPDATE...WHERE revoked_at IS NULL AND
+  // is_revoked = false AND expires_at > now() RETURNING.
+  // Zero rows means the session was already consumed (reuse) or expired/unknown.
   const { rows } = await pool.query<{
     id: string;
     customer_id: string;
     family_id: string | null;
     expires_at: Date;
-    revoked_at: Date | null;
-    is_revoked: boolean;
   }>(
-    `SELECT id::text, customer_id::text, family_id::text,
-            expires_at, revoked_at, is_revoked
-     FROM customer_sessions
-     WHERE refresh_token_hash = $1 AND store_id = $2::uuid`,
+    `UPDATE customer_sessions
+        SET revoked_at = now(), is_revoked = true
+      WHERE refresh_token_hash = $1
+        AND store_id = $2::uuid
+        AND revoked_at IS NULL
+        AND is_revoked = false
+        AND expires_at > now()
+      RETURNING id::text, customer_id::text, family_id::text, expires_at`,
     [hash, storeId]
   );
   const session = rows[0];
-  if (!session) throw Object.assign(new Error("invalid session token"), { statusCode: 401 });
 
-  if (session.revoked_at !== null || session.is_revoked) {
-    if (session.family_id) {
-      await revokeSessionFamily(pool, session.family_id);
+  if (!session) {
+    // Determine whether reuse or expired/unknown for best error message.
+    const { rows: existing } = await pool.query<{
+      revoked_at: Date | null;
+      is_revoked: boolean;
+      family_id: string | null;
+      expires_at: Date;
+    }>(
+      `SELECT revoked_at, is_revoked, family_id::text, expires_at
+         FROM customer_sessions
+        WHERE refresh_token_hash = $1 AND store_id = $2::uuid`,
+      [hash, storeId]
+    );
+    const prev = existing[0];
+    if (prev && (prev.revoked_at !== null || prev.is_revoked)) {
+      // Reuse-detection: revoke the entire token family.
+      if (prev.family_id) {
+        await revokeSessionFamily(pool, prev.family_id);
+      }
+      throw Object.assign(new Error("session token already used — possible replay attack"), { statusCode: 401 });
     }
-    throw Object.assign(new Error("session token already used — possible replay attack"), { statusCode: 401 });
+    throw Object.assign(new Error("invalid session token"), { statusCode: 401 });
   }
-
-  if (new Date() > session.expires_at) {
-    throw Object.assign(new Error("session token expired"), { statusCode: 401 });
-  }
-
-  await pool.query(
-    `UPDATE customer_sessions SET revoked_at = now(), is_revoked = true WHERE id = $1::uuid`,
-    [session.id]
-  );
 
   const { raw: newRaw, hash: newHash } = generateToken();
   const expiresAt = new Date(

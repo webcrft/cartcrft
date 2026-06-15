@@ -28,7 +28,7 @@ export interface RazorpayEvent {
  * Verify X-Razorpay-Signature and parse the event.
  *
  * Throws if the signature is invalid.
- * Pass an empty secret to skip validation.
+ * P2-16: secret is always required; callers must ensure it is non-empty.
  */
 export function verifyAndParseRazorpay(
   body: Buffer | string,
@@ -36,9 +36,7 @@ export function verifyAndParseRazorpay(
   secret: string
 ): RazorpayEvent {
   const bodyBuf = typeof body === "string" ? Buffer.from(body, "utf8") : body;
-  if (secret) {
-    verifyRazorpaySignature(bodyBuf, sigHeader, secret);
-  }
+  verifyRazorpaySignature(bodyBuf, sigHeader, secret);
   return parseRazorpayEvent(bodyBuf);
 }
 

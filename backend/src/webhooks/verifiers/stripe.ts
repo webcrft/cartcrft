@@ -35,7 +35,8 @@ export interface StripeEvent {
  * Verify the Stripe-Signature header and parse the event.
  *
  * Throws if the signature is invalid or the timestamp is stale.
- * Pass an empty secret to skip signature validation (test fixture injection).
+ * P2-16: secret is always required; callers must ensure it is non-empty before
+ * calling (the router already enforces this with a 401 early-return).
  */
 export function verifyAndParseStripe(
   body: Buffer | string,
@@ -43,10 +44,7 @@ export function verifyAndParseStripe(
   secret: string
 ): StripeEvent {
   const bodyBuf = typeof body === "string" ? Buffer.from(body, "utf8") : body;
-
-  if (secret) {
-    verifyStripeSignature(bodyBuf, sigHeader, secret);
-  }
+  verifyStripeSignature(bodyBuf, sigHeader, secret);
   return parseStripeEvent(bodyBuf);
 }
 

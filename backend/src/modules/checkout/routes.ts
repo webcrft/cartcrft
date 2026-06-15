@@ -314,19 +314,17 @@ export const checkoutPlugin: FastifyPluginAsync = async (app) => {
             // Razorpay: amount in smallest unit (paise for INR), integer
             const amountSmallest = Math.round(totalAmount * 100);
             const result = await createRazorpaySession(storeId, checkoutId, amountSmallest, currency);
-            // key_id is needed by the frontend SDK; read from config
-            const { rows: cfgRows } = await pool.query<{ config: Record<string, unknown> | string }>(
-              `SELECT config FROM payment_providers WHERE id = $1::uuid`,
+            // P2-15: use JSONB ->> operator to extract only key_id (avoids fetching full config object).
+            const { rows: cfgRows } = await pool.query<{ key_id: string | null }>(
+              `SELECT config->>'key_id' AS key_id FROM payment_providers WHERE id = $1::uuid`,
               [provider.id]
             );
-            const rawCfg = cfgRows[0]?.config;
-            const cfg = typeof rawCfg === "string" ? (JSON.parse(rawCfg) as Record<string, unknown>) : (rawCfg ?? {});
             sessionData = {
               provider: "razorpay",
               order_id: result.razorpayOrderId,
               amount: result.amount,
               currency: result.currency,
-              key_id: cfg["key_id"] ?? "",
+              key_id: cfgRows[0]?.key_id ?? "",
             };
             break;
           }
