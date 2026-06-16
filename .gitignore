@@ -45,3 +45,9 @@ e2e/playwright-report/
 
 # python caches
 __pycache__/
+
+# Fly scoped-login token (per-org) — never commit
+.envrc
+
+# Fly scoped-login token (per-org) — never commit
+.fly-token
