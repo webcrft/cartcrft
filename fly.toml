@@ -1,0 +1,34 @@
+# Fly.io config — CartCrft, DEV (cartcrft-dev).
+# Consolidated: one Fastify app serves the SPA (same-origin) + the API.
+# Build context is the repo root (pnpm workspace); Fly terminates TLS.
+#
+# Deploy:  fly deploy   (from the cartcrft repo root)
+
+app = "cartcrft-dev"
+primary_region = "fra"
+
+[build]
+  dockerfile = "backend/Dockerfile"
+
+[env]
+  APP_ENV = "development"
+  PORT = "3000"
+  CARTCRFT_CLOUD = "1"
+  CORS_ORIGINS = "https://dev.cartcrft.com"
+  WEB_DIST = "/app/web/dist"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  # Load balancing is automatic across machines via Fly's anycast proxy.
+  auto_stop_machines = "suspend"
+  auto_start_machines = true
+  min_machines_running = 1
+  [http_service.concurrency]
+    type = "requests"
+    hard_limit = 250
+    soft_limit = 200
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "1gb"

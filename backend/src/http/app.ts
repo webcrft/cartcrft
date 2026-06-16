@@ -22,6 +22,7 @@ import {
 } from "fastify-type-provider-zod";
 import fastifyCors from "@fastify/cors";
 import fastifyHelmet from "@fastify/helmet";
+import fastifyStatic from "@fastify/static";
 import http from "node:http";
 import { getPool } from "../db/pool.js";
 import { runInRequestScope } from "../lib/request-ctx.js";
@@ -315,8 +316,26 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
     });
   });
 
-  // ── Not-found handler ──────────────────────────────────────────────────
-  app.setNotFoundHandler((_request, reply) => {
+  // ── Static SPA (same-origin) + not-found handler ───────────────────────
+  // When WEB_DIST points at a built frontend, serve it as static files and
+  // fall back to index.html for client-side routes. Anything that isn't an
+  // HTML navigation (API clients, JSON) still gets the JSON 404 envelope, so
+  // existing API behaviour and tests are unchanged.
+  const webDist = process.env["WEB_DIST"];
+  if (webDist) {
+    await app.register(fastifyStatic, {
+      root: webDist,
+      wildcard: false, // serve real files only; unmatched paths hit notFound
+    });
+  }
+  app.setNotFoundHandler((request, reply) => {
+    if (
+      webDist &&
+      request.method === "GET" &&
+      (request.headers.accept ?? "").includes("text/html")
+    ) {
+      return reply.type("text/html").sendFile("index.html");
+    }
     return reply.status(404).send({
       error: { code: "NOT_FOUND", message: "Route not found" },
     });

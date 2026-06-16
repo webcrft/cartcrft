@@ -30,14 +30,10 @@ README.md
 roadmap.md
 tasks.md
 
-# ─── Web / SDK source (separate packages, not in the backend image) ───────────
-# Each package's package.json is still copied in the deps stage for workspace
-# resolution — only their source / build output is excluded here.  Do NOT
-# exclude the package directories wholesale or the deps-stage COPY would fail.
-web/src
-web/public
-web/dist
-sdk/src
+# ─── SDK source (separate packages, not in the backend image) ─────────────────
+# web/src + web/public are NOT excluded: the consolidated image builds the SPA
+# and serves it same-origin via @fastify/static. Their dist is still covered by
+# the **/dist rule above (rebuilt inside the image).
 sdk/dist
 sdk/storefront/src
 sdk/storefront/dist

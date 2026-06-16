@@ -49,6 +49,17 @@ RUN pnpm --filter @cartcrft/cloud-billing build
 # Build the backend
 RUN pnpm --filter backend build
 
+# Build the TS SDK first — the web imports @cartcrft/sdk and needs its dist.
+COPY sdk/tsconfig.json ./sdk/
+COPY sdk/src ./sdk/src
+RUN pnpm --filter @cartcrft/sdk build
+
+# Build the web SPA — served same-origin by the backend (@fastify/static).
+# PUBLIC_API_URL points the SPA at this same host (dev.cartcrft.com).
+ARG PUBLIC_API_URL=https://dev.cartcrft.com
+COPY web ./web
+RUN PUBLIC_API_URL="$PUBLIC_API_URL" pnpm --filter @cartcrft/web build
+
 
 # ─── Stage 3: runtime ─────────────────────────────────────────────────────────
 FROM node:22-slim AS runtime
@@ -79,6 +90,10 @@ COPY --from=builder --chown=cartcrft:cartcrft /app/node_modules ./node_modules
 # Migrations — included so `node backend/dist/main.js migrate` can find them.
 # The migrate runner resolves: backend/dist/main.js → ../../migrations → backend/migrations
 COPY --chown=cartcrft:cartcrft backend/migrations ./backend/migrations
+
+# Built SPA, served same-origin by the backend via @fastify/static.
+COPY --from=builder --chown=cartcrft:cartcrft /app/web/dist ./web/dist
+ENV WEB_DIST=/app/web/dist
 
 USER cartcrft
 
