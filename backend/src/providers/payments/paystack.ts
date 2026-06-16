@@ -21,6 +21,20 @@ export interface InitTransactionResponse {
   reference: string;
 }
 
+export interface RefundRequest {
+  /** The transaction reference of the captured payment (our provider_reference). */
+  transaction: string;
+  /** Amount in smallest currency unit (kobo/cents). Integer. */
+  amountKobo: number;
+  currency?: string | undefined;
+}
+
+export interface RefundResponse {
+  id: string;
+  /** Raw Paystack refund status: pending|processing|processed|failed. */
+  status: string;
+}
+
 const PAYSTACK_BASE_URL = "https://api.paystack.co";
 
 export class PaystackClient {
@@ -77,6 +91,46 @@ export class PaystackClient {
       authorizationUrl: envelope.data.authorization_url,
       accessCode: envelope.data.access_code,
       reference: envelope.data.reference,
+    };
+  }
+
+  async createRefund(req: RefundRequest): Promise<RefundResponse> {
+    const body: Record<string, unknown> = {
+      transaction: req.transaction,
+      amount: Math.round(req.amountKobo),
+    };
+    if (req.currency) body["currency"] = req.currency;
+
+    const res = await fetch(`${PAYSTACK_BASE_URL}/refund`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${this.secretKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    const raw = (await res.json()) as Record<string, unknown>;
+
+    if (!res.ok) {
+      throw new Error(
+        `paystack: status ${res.status}: ${String(raw["message"] ?? "unknown error")}`
+      );
+    }
+
+    const envelope = raw as {
+      status: boolean;
+      message: string;
+      data?: { id?: string | number; status?: string };
+    };
+
+    if (!envelope.status || !envelope.data) {
+      throw new Error(`paystack: ${envelope.message}`);
+    }
+
+    return {
+      id: String(envelope.data.id ?? ""),
+      status: String(envelope.data.status ?? "pending"),
     };
   }
 }

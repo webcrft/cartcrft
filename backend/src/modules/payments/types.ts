@@ -64,6 +64,17 @@ export interface CreateRefundInput {
 
 export interface CreateRefundResult {
   id: string;
+  /**
+   * Local refund status after attempting the provider refund.
+   *  - "pending":    local bookkeeping refund (no provider to call), or webhook
+   *                  reconciliation insert — unchanged legacy behavior.
+   *  - "processing": provider accepted the refund but it is still in flight.
+   *  - "succeeded":  provider confirmed the refund.
+   *  - "failed":     provider rejected the refund (row persisted for audit).
+   */
+  status?: "pending" | "processing" | "succeeded" | "failed" | undefined;
+  /** Provider error message when status === "failed". */
+  provider_error?: string | undefined;
 }
 
 // ── Payment provider (store-level) ─────────────────────────────────────────────

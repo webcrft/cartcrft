@@ -20,6 +20,19 @@ export interface CreateOrderResponse {
   receipt: string;
 }
 
+export interface RefundRequest {
+  /** The Razorpay payment id (pay_…) — our provider_reference. */
+  paymentId: string;
+  /** Amount in smallest currency unit (paise). Integer. */
+  amountSmallest: number;
+}
+
+export interface RefundResponse {
+  id: string;
+  /** Raw Razorpay refund status: pending|processed|failed. */
+  status: string;
+}
+
 const RAZORPAY_BASE_URL = "https://api.razorpay.com/v1";
 
 export class RazorpayClient {
@@ -64,6 +77,39 @@ export class RazorpayClient {
       currency: String(data["currency"]),
       status: String(data["status"]),
       receipt: String(data["receipt"]),
+    };
+  }
+
+  async createRefund(req: RefundRequest): Promise<RefundResponse> {
+    const creds = Buffer.from(`${this.keyId}:${this.keySecret}`).toString(
+      "base64"
+    );
+
+    const body = {
+      amount: Math.round(req.amountSmallest),
+    };
+
+    const res = await fetch(
+      `${RAZORPAY_BASE_URL}/payments/${req.paymentId}/refund`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${creds}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      }
+    );
+
+    const data = (await res.json()) as Record<string, unknown>;
+
+    if (!res.ok) {
+      throw new Error(`razorpay: status ${res.status}: ${JSON.stringify(data)}`);
+    }
+
+    return {
+      id: String(data["id"]),
+      status: String(data["status"] ?? "pending"),
     };
   }
 }

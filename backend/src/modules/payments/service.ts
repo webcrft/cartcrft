@@ -31,6 +31,253 @@ import type {
 
 const secretsKey = config.AUTH_SECRETS_KEY ?? "";
 
+// ── Provider refund execution ──────────────────────────────────────────────────
+
+/**
+ * Outcome of attempting a refund at the payment provider.
+ *
+ *  - kind "executed":  the provider was called; `status` is the mapped local
+ *                      refund status and `providerRefundId` (if any) is the
+ *                      provider's refund reference to persist.
+ *  - kind "local":     there is nothing to call at a provider (no provider /
+ *                      no provider_reference) — this is a local bookkeeping
+ *                      refund and keeps the existing 'pending' status.
+ */
+type ProviderRefundResult =
+  | {
+      kind: "executed";
+      status: "succeeded" | "processing" | "pending" | "failed";
+      providerRefundId: string | null;
+      providerError: string | null;
+    }
+  | { kind: "local" };
+
+/** Map a raw provider refund status to our local refunds.status enum. */
+function mapRefundStatus(
+  providerType: string,
+  raw: string
+): "succeeded" | "processing" | "pending" | "failed" {
+  const s = raw.toLowerCase();
+  switch (providerType) {
+    case "stripe":
+      // pending | requires_action | succeeded | failed | canceled
+      if (s === "succeeded") return "succeeded";
+      if (s === "failed" || s === "canceled") return "failed";
+      if (s === "pending" || s === "requires_action") return "processing";
+      return "processing";
+    case "paystack":
+      // pending | processing | processed | failed
+      if (s === "processed") return "succeeded";
+      if (s === "failed") return "failed";
+      if (s === "processing") return "processing";
+      return "pending";
+    case "razorpay":
+      // pending | processed | failed
+      if (s === "processed") return "succeeded";
+      if (s === "failed") return "failed";
+      return "processing";
+    case "xendit":
+      // SUCCEEDED | PENDING | FAILED | CANCELLED
+      if (s === "succeeded") return "succeeded";
+      if (s === "failed" || s === "cancelled") return "failed";
+      return "processing";
+    default:
+      return "pending";
+  }
+}
+
+/**
+ * Execute the refund against the payment's provider.
+ *
+ * Resolves the provider type + config for the payment (preferring the
+ * payment's provider_id FK, falling back to the store's single active
+ * provider of a known type), then calls the provider's refund REST endpoint
+ * via the provider client. Amounts in the DB are major units (numeric(15,2));
+ * Stripe/Paystack/Razorpay take minor units (×100), Xendit takes major units.
+ *
+ * `client` is the in-transaction pg client used to read provider config so the
+ * read participates in the same transaction/RLS context.
+ */
+async function executeProviderRefund(
+  client: import("pg").PoolClient,
+  storeId: string,
+  payment: {
+    provider_id: string | null;
+    provider_reference: string | null;
+    currency: string;
+  },
+  amount: number
+): Promise<ProviderRefundResult> {
+  const providerReference = payment.provider_reference?.trim() || null;
+
+  // Resolve the provider row (type + config) for this payment.
+  let providerType: string | null = null;
+  let providerConfig: Record<string, unknown> = {};
+
+  if (payment.provider_id) {
+    const { rows } = await client.query<{
+      type: string;
+      config: string | Record<string, unknown>;
+    }>(
+      `SELECT type, config FROM payment_providers
+       WHERE id = $1::uuid AND store_id = $2::uuid AND is_active = true
+       LIMIT 1`,
+      [payment.provider_id, storeId]
+    );
+    if (rows[0]) {
+      providerType = rows[0].type;
+      providerConfig = parseProviderConfig(rows[0].config);
+    }
+  }
+
+  // No provider on the payment (or it was deactivated) and no provider
+  // reference to refund against → local bookkeeping refund.
+  if (!providerType && !providerReference) {
+    return { kind: "local" };
+  }
+
+  // We have something to refund at a provider but couldn't resolve a provider
+  // row — fall back to the store's single active provider of a known type.
+  if (!providerType) {
+    const { rows } = await client.query<{
+      type: string;
+      config: string | Record<string, unknown>;
+    }>(
+      `SELECT type, config FROM payment_providers
+       WHERE store_id = $1::uuid AND is_active = true
+         AND type IN ('stripe','paystack','razorpay','xendit')
+       ORDER BY position, created_at
+       LIMIT 1`,
+      [storeId]
+    );
+    if (rows[0]) {
+      providerType = rows[0].type;
+      providerConfig = parseProviderConfig(rows[0].config);
+    }
+  }
+
+  // Providers that genuinely cannot refund programmatically (the generic
+  // "webhook" provider type, or an unresolvable provider) must fail loudly
+  // rather than silently succeeding.
+  const REFUNDABLE = new Set(["stripe", "paystack", "razorpay", "xendit"]);
+  if (!providerType || !REFUNDABLE.has(providerType)) {
+    const e = new Error(
+      `refunds are not supported for provider type '${providerType ?? "unknown"}'`
+    );
+    (e as NodeJS.ErrnoException).code = "VALIDATION_ERROR";
+    throw e;
+  }
+
+  if (!providerReference) {
+    const e = new Error(
+      `cannot refund ${providerType} payment: missing provider_reference`
+    );
+    (e as NodeJS.ErrnoException).code = "VALIDATION_ERROR";
+    throw e;
+  }
+
+  // Call the provider. On a provider-side failure we capture the error and
+  // map to 'failed' rather than throwing, so the refund row is preserved.
+  try {
+    const minorUnits = Math.round(amount * 100);
+    if (providerType === "stripe") {
+      const secretKey = providerConfig["secret_key"];
+      if (typeof secretKey !== "string" || !secretKey) {
+        throw new Error("stripe provider config missing secret_key");
+      }
+      const res = await new StripeClient(secretKey).createRefund({
+        providerReference,
+        amountCents: minorUnits,
+      });
+      return {
+        kind: "executed",
+        status: mapRefundStatus("stripe", res.status),
+        providerRefundId: res.id || null,
+        providerError: null,
+      };
+    }
+    if (providerType === "paystack") {
+      const secretKey = providerConfig["secret_key"];
+      if (typeof secretKey !== "string" || !secretKey) {
+        throw new Error("paystack provider config missing secret_key");
+      }
+      const res = await new PaystackClient(secretKey).createRefund({
+        transaction: providerReference,
+        amountKobo: minorUnits,
+        currency: payment.currency,
+      });
+      return {
+        kind: "executed",
+        status: mapRefundStatus("paystack", res.status),
+        providerRefundId: res.id || null,
+        providerError: null,
+      };
+    }
+    if (providerType === "razorpay") {
+      const keyId = providerConfig["key_id"];
+      const keySecret = providerConfig["key_secret"];
+      if (
+        typeof keyId !== "string" ||
+        !keyId ||
+        typeof keySecret !== "string" ||
+        !keySecret
+      ) {
+        throw new Error("razorpay provider config missing key_id or key_secret");
+      }
+      const res = await new RazorpayClient(keyId, keySecret).createRefund({
+        paymentId: providerReference,
+        amountSmallest: minorUnits,
+      });
+      return {
+        kind: "executed",
+        status: mapRefundStatus("razorpay", res.status),
+        providerRefundId: res.id || null,
+        providerError: null,
+      };
+    }
+    // xendit — amounts are in full currency units (NOT cents)
+    const apiKey = providerConfig["api_key"];
+    if (typeof apiKey !== "string" || !apiKey) {
+      throw new Error("xendit provider config missing api_key");
+    }
+    const res = await new XenditClient(apiKey).createRefund({
+      invoiceId: providerReference,
+      amount,
+      currency: payment.currency,
+    });
+    return {
+      kind: "executed",
+      status: mapRefundStatus("xendit", res.status),
+      providerRefundId: res.id || null,
+      providerError: null,
+    };
+  } catch (err) {
+    return {
+      kind: "executed",
+      status: "failed",
+      providerRefundId: null,
+      providerError: err instanceof Error ? err.message : String(err),
+    };
+  }
+}
+
+/** Coerce a payment_providers.config column (jsonb or text) to an object. */
+function parseProviderConfig(
+  cfg: string | Record<string, unknown>
+): Record<string, unknown> {
+  if (typeof cfg === "object" && cfg !== null) {
+    return cfg as Record<string, unknown>;
+  }
+  if (typeof cfg === "string") {
+    try {
+      return JSON.parse(cfg) as Record<string, unknown>;
+    } catch {
+      return {};
+    }
+  }
+  return {};
+}
+
 // ── Payments CRUD ──────────────────────────────────────────────────────────────
 
 export async function listPayments(
@@ -369,6 +616,25 @@ export async function createRefund(
       throw e;
     }
 
+    // Load the payment so we can call its provider's refund API. Scoped to the
+    // order to prevent cross-order refunds.
+    const { rows: payRows } = await client.query<{
+      provider_id: string | null;
+      provider_reference: string | null;
+      currency: string;
+    }>(
+      `SELECT provider_id::text, provider_reference, currency
+       FROM payments
+       WHERE id = $1::uuid AND order_id = $2::uuid`,
+      [paymentId, orderId]
+    );
+    if (!payRows[0]) {
+      const e = new Error("payment not found");
+      (e as NodeJS.ErrnoException).code = "NOT_FOUND";
+      throw e;
+    }
+    const payment = payRows[0];
+
     try {
       // Insert with ON CONFLICT on idempotency_key — concurrent duplicate
       // POSTs with the same key both race to insert; exactly one wins and the
@@ -415,6 +681,77 @@ export async function createRefund(
 
       if (rows[0]) {
         const refundId = rows[0].id;
+
+        // ── Execute the refund at the payment provider ────────────────────────
+        // Admin-initiated refunds (no input.provider_reference) call the
+        // provider's refund API for real. Webhook reconciliation inserts supply
+        // input.provider_reference (the provider's own refund id) and must NOT
+        // re-call the provider — that would double-refund.
+        let providerResult: ProviderRefundResult = { kind: "local" };
+        if (!input.provider_reference) {
+          providerResult = await executeProviderRefund(
+            client,
+            storeId,
+            payment,
+            amount
+          );
+        }
+
+        // On a provider-side failure, persist the refund row as 'failed' with
+        // the provider error in metadata and STOP: do not touch total_refunded,
+        // do not dispatch the refund notification, do not release B2B credit.
+        if (
+          providerResult.kind === "executed" &&
+          providerResult.status === "failed"
+        ) {
+          await client.query(
+            `UPDATE refunds
+             SET status = 'failed',
+                 metadata = metadata || jsonb_build_object(
+                   'provider_error', $2::text),
+                 updated_at = now()
+             WHERE id = $1::uuid`,
+            [refundId, providerResult.providerError ?? "provider refund failed"]
+          );
+
+          // Best-effort event log so the failure is auditable.
+          try {
+            await client.query("SAVEPOINT refund_event");
+            await client.query(
+              `INSERT INTO order_events (order_id, type, data, created_by)
+               VALUES ($1::uuid, 'refund_failed',
+                       jsonb_build_object('refund_id', $2::text, 'amount', $3::numeric,
+                                          'error', $4::text),
+                       $5)`,
+              [orderId, refundId, amount, providerResult.providerError ?? null, userId ?? null]
+            );
+            await client.query("RELEASE SAVEPOINT refund_event");
+          } catch {
+            await client.query("ROLLBACK TO SAVEPOINT refund_event");
+          }
+
+          // Return the persisted failed row (do NOT throw — that would roll
+          // back the record). The route surfaces this as a non-success status.
+          return {
+            id: refundId,
+            status: "failed",
+            provider_error:
+              providerResult.providerError ?? "provider refund failed",
+          };
+        }
+
+        // Provider call succeeded (or is in flight, or this is a local refund).
+        // Persist the mapped status and the provider's refund id.
+        if (providerResult.kind === "executed") {
+          await client.query(
+            `UPDATE refunds
+             SET status = $2,
+                 provider_reference = COALESCE($3, provider_reference),
+                 updated_at = now()
+             WHERE id = $1::uuid`,
+            [refundId, providerResult.status, providerResult.providerRefundId]
+          );
+        }
 
         // Update total_refunded on order
         const { rowCount: updateRowCount } = await client.query(
@@ -478,7 +815,13 @@ export async function createRefund(
           console.warn("[createRefund] credit release failed (non-fatal):", creditErr);
         }
 
-        return { id: refundId };
+        return {
+          id: refundId,
+          status:
+            providerResult.kind === "executed"
+              ? providerResult.status
+              : "pending",
+        };
       }
 
       // ON CONFLICT fired (concurrent duplicate with same idempotency_key) —

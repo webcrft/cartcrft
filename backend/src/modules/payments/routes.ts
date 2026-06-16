@@ -229,6 +229,19 @@ export const paymentsPlugin: FastifyPluginAsync = async (app) => {
           { ...data, idempotency_key: idempotencyKey },
           userId
         );
+
+        // Provider rejected the refund — the row is persisted (status=failed)
+        // for audit, but this is not a success. Surface 502 with the details.
+        if (result.status === "failed") {
+          return reply.status(502).send({
+            error: {
+              code: "PROVIDER_REFUND_FAILED",
+              message: result.provider_error ?? "provider refund failed",
+            },
+            refund: { id: result.id, status: result.status },
+          });
+        }
+
         return reply.status(201).send(result);
       } catch (err: unknown) {
         if (err instanceof Error) {

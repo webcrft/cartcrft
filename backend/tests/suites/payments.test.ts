@@ -411,3 +411,189 @@ describe("Provider client unit tests", () => {
     vi.unstubAllGlobals();
   });
 });
+
+// ── Provider client refund unit tests (mocked fetch) ──────────────────────────
+
+describe("Provider client refund unit tests", () => {
+  it("StripeClient.createRefund posts payment_intent + amount to /refunds", async () => {
+    const { StripeClient } = await import(
+      "../../src/providers/payments/stripe.js"
+    );
+
+    const mockFetch = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ id: "re_test123", status: "succeeded" }),
+    });
+    vi.stubGlobal("fetch", mockFetch);
+
+    const client = new StripeClient("sk_test_fake");
+    const result = await client.createRefund({
+      providerReference: "pi_abc123",
+      amountCents: 2500,
+    });
+
+    expect(result.id).toBe("re_test123");
+    expect(result.status).toBe("succeeded");
+
+    const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("https://api.stripe.com/v1/refunds");
+    expect(init.method).toBe("POST");
+    expect((init.headers as Record<string, string>)["Authorization"]).toBe(
+      "Bearer sk_test_fake"
+    );
+    const body = new URLSearchParams(init.body as string);
+    expect(body.get("payment_intent")).toBe("pi_abc123");
+    expect(body.get("amount")).toBe("2500");
+    expect(body.get("charge")).toBeNull();
+
+    vi.unstubAllGlobals();
+  });
+
+  it("StripeClient.createRefund sends a charge id as `charge`", async () => {
+    const { StripeClient } = await import(
+      "../../src/providers/payments/stripe.js"
+    );
+    const mockFetch = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ id: "re_ch", status: "pending" }),
+    });
+    vi.stubGlobal("fetch", mockFetch);
+
+    await new StripeClient("sk_test_fake").createRefund({
+      providerReference: "ch_xyz",
+      amountCents: 1000,
+    });
+
+    const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    const body = new URLSearchParams(init.body as string);
+    expect(body.get("charge")).toBe("ch_xyz");
+    expect(body.get("payment_intent")).toBeNull();
+
+    vi.unstubAllGlobals();
+  });
+
+  it("StripeClient.createRefund throws on provider error", async () => {
+    const { StripeClient } = await import(
+      "../../src/providers/payments/stripe.js"
+    );
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce({
+        ok: false,
+        status: 402,
+        json: async () => ({ error: { message: "charge already refunded" } }),
+      })
+    );
+
+    await expect(
+      new StripeClient("sk_test_fake").createRefund({
+        providerReference: "pi_abc",
+        amountCents: 100,
+      })
+    ).rejects.toThrow("charge already refunded");
+
+    vi.unstubAllGlobals();
+  });
+
+  it("PaystackClient.createRefund posts transaction + amount to /refund", async () => {
+    const { PaystackClient } = await import(
+      "../../src/providers/payments/paystack.js"
+    );
+    const mockFetch = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        status: true,
+        message: "Refund has been queued for processing",
+        data: { id: 9988, status: "pending" },
+      }),
+    });
+    vi.stubGlobal("fetch", mockFetch);
+
+    const result = await new PaystackClient("sk_test_fake").createRefund({
+      transaction: "txn_ref_001",
+      amountKobo: 5000,
+      currency: "ZAR",
+    });
+
+    expect(result.id).toBe("9988");
+    expect(result.status).toBe("pending");
+
+    const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("https://api.paystack.co/refund");
+    expect(init.method).toBe("POST");
+    expect((init.headers as Record<string, string>)["Authorization"]).toBe(
+      "Bearer sk_test_fake"
+    );
+    const body = JSON.parse(init.body as string) as Record<string, unknown>;
+    expect(body["transaction"]).toBe("txn_ref_001");
+    expect(body["amount"]).toBe(5000);
+    expect(body["currency"]).toBe("ZAR");
+
+    vi.unstubAllGlobals();
+  });
+
+  it("RazorpayClient.createRefund posts to /payments/{id}/refund with Basic auth", async () => {
+    const { RazorpayClient } = await import(
+      "../../src/providers/payments/razorpay.js"
+    );
+    const mockFetch = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ id: "rfnd_test", status: "processed" }),
+    });
+    vi.stubGlobal("fetch", mockFetch);
+
+    const result = await new RazorpayClient(
+      "key_id_test",
+      "key_secret_test"
+    ).createRefund({ paymentId: "pay_abc123", amountSmallest: 75000 });
+
+    expect(result.id).toBe("rfnd_test");
+    expect(result.status).toBe("processed");
+
+    const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe(
+      "https://api.razorpay.com/v1/payments/pay_abc123/refund"
+    );
+    const headers = init.headers as Record<string, string>;
+    expect(headers["Authorization"]).toBe(
+      `Basic ${Buffer.from("key_id_test:key_secret_test").toString("base64")}`
+    );
+    const body = JSON.parse(init.body as string) as Record<string, unknown>;
+    expect(body["amount"]).toBe(75000);
+
+    vi.unstubAllGlobals();
+  });
+
+  it("XenditClient.createRefund posts invoice_id + amount (major units) with Basic auth", async () => {
+    const { XenditClient } = await import(
+      "../../src/providers/payments/xendit.js"
+    );
+    const mockFetch = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ id: "rfd_xendit", status: "PENDING" }),
+    });
+    vi.stubGlobal("fetch", mockFetch);
+
+    const result = await new XenditClient("xnd_test_fake").createRefund({
+      invoiceId: "inv_123",
+      amount: 100,
+      currency: "IDR",
+    });
+
+    expect(result.id).toBe("rfd_xendit");
+    expect(result.status).toBe("PENDING");
+
+    const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("https://api.xendit.co/refunds");
+    const headers = init.headers as Record<string, string>;
+    expect(headers["Authorization"]).toBe(
+      `Basic ${Buffer.from("xnd_test_fake:").toString("base64")}`
+    );
+    const body = JSON.parse(init.body as string) as Record<string, unknown>;
+    expect(body["invoice_id"]).toBe("inv_123");
+    // major units — NOT multiplied by 100
+    expect(body["amount"]).toBe(100);
+
+    vi.unstubAllGlobals();
+  });
+});

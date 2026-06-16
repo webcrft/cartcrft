@@ -24,6 +24,24 @@ export interface PaymentIntentResponse {
   amount: number;
 }
 
+export interface RefundRequest {
+  /**
+   * The provider reference of the captured payment. For Stripe this is a
+   * PaymentIntent id (pi_…) or a Charge id (ch_…). PaymentIntent ids are
+   * detected by the "pi_" prefix and sent as `payment_intent`; everything
+   * else is sent as `charge`.
+   */
+  providerReference: string;
+  /** Amount in smallest currency unit (cents). Integer. */
+  amountCents: number;
+}
+
+export interface RefundResponse {
+  id: string;
+  /** Raw Stripe refund status: pending|succeeded|failed|canceled|requires_action. */
+  status: string;
+}
+
 const STRIPE_BASE_URL = "https://api.stripe.com/v1";
 
 export class StripeClient {
@@ -69,6 +87,39 @@ export class StripeClient {
       status: String(data["status"]),
       currency: String(data["currency"]),
       amount: Number(data["amount"]),
+    };
+  }
+
+  async createRefund(req: RefundRequest): Promise<RefundResponse> {
+    const params = new URLSearchParams();
+    if (req.providerReference.startsWith("pi_")) {
+      params.set("payment_intent", req.providerReference);
+    } else {
+      params.set("charge", req.providerReference);
+    }
+    params.set("amount", String(Math.round(req.amountCents)));
+
+    const res = await fetch(`${STRIPE_BASE_URL}/refunds`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${this.secretKey}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: params.toString(),
+    });
+
+    const data = (await res.json()) as Record<string, unknown>;
+
+    if (!res.ok) {
+      const errMsg =
+        (data["error"] as Record<string, unknown> | undefined)?.["message"] ??
+        `stripe: status ${res.status}`;
+      throw new Error(String(errMsg));
+    }
+
+    return {
+      id: String(data["id"]),
+      status: String(data["status"]),
     };
   }
 }

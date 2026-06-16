@@ -27,6 +27,20 @@ export interface CreateInvoiceResponse {
   currency: string;
 }
 
+export interface RefundRequest {
+  /** The Xendit invoice id — our provider_reference (set when the invoice was created). */
+  invoiceId: string;
+  /** Amount in full currency units (NOT cents). Xendit uses float. */
+  amount: number;
+  currency?: string | undefined;
+}
+
+export interface RefundResponse {
+  id: string;
+  /** Raw Xendit refund status: SUCCEEDED|PENDING|FAILED. */
+  status: string;
+}
+
 const XENDIT_BASE_URL = "https://api.xendit.co";
 
 export class XenditClient {
@@ -75,6 +89,37 @@ export class XenditClient {
       status: String(data["status"]),
       amount: Number(data["amount"]),
       currency: String(data["currency"]),
+    };
+  }
+
+  async createRefund(req: RefundRequest): Promise<RefundResponse> {
+    // HTTP Basic auth: apiKey as username, empty password
+    const creds = Buffer.from(`${this.apiKey}:`).toString("base64");
+
+    const payload: Record<string, unknown> = {
+      invoice_id: req.invoiceId,
+      amount: req.amount,
+    };
+    if (req.currency) payload["currency"] = req.currency;
+
+    const res = await fetch(`${XENDIT_BASE_URL}/refunds`, {
+      method: "POST",
+      headers: {
+        Authorization: `Basic ${creds}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = (await res.json()) as Record<string, unknown>;
+
+    if (!res.ok) {
+      throw new Error(`xendit: status ${res.status}: ${JSON.stringify(data)}`);
+    }
+
+    return {
+      id: String(data["id"]),
+      status: String(data["status"] ?? "PENDING"),
     };
   }
 }
