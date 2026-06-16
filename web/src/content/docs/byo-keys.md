@@ -8,7 +8,7 @@ sidebar:
 
 # BYO Keys Guide
 
-Cartcrft has zero take rate. You bring your own payment provider credentials,
+CartCrft has zero take rate. You bring your own payment provider credentials,
 your own LLM key for semantic search, and optionally your own email provider.
 No platform credentials required.
 

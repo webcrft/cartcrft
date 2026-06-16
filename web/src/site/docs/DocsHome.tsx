@@ -132,9 +132,9 @@ export default function DocsHome() {
   const articleRef = useRef<HTMLElement | null>(null)
 
   useDocumentMeta({
-    title: 'Documentation · Cartcrft',
+    title: 'Documentation · CartCrft',
     description:
-      'Cartcrft documentation — commerce, agent-native selling, API reference, and operations.',
+      'CartCrft documentation — commerce, agent-native selling, API reference, and operations.',
   })
 
   return (
@@ -149,7 +149,7 @@ export default function DocsHome() {
               documentation
             </p>
             <h1 className="docs-home-title">
-              Cartcrft<br />
+              CartCrft<br />
               <span className="docs-home-title-accent">Documentation</span>
             </h1>
             <p className="docs-home-lead">
@@ -205,7 +205,7 @@ export default function DocsHome() {
           <div className="docs-home-agent-callout">
             <Cpu size={18} aria-hidden="true" className="docs-home-callout-icon" />
             <div>
-              <strong>Cartcrft is headless — bring your own frontend.</strong>{' '}
+              <strong>CartCrft is headless — bring your own frontend.</strong>{' '}
               Your storefront calls the REST API directly using a{' '}
               <code>cc_pub_</code> key. Or skip the frontend entirely and expose
               your store to AI agents via MCP.{' '}

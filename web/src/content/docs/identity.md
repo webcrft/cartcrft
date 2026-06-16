@@ -5,7 +5,7 @@ description: "Storefront customer auth: register, login, magic-link, social sign
 
 # Customer identity & accounts
 
-Cartcrft ships a full per-store customer authentication system. Each store has
+CartCrft ships a full per-store customer authentication system. Each store has
 its own isolated customer namespace — customers registered on Store A cannot sign
 in to Store B. Auth configuration (enabled methods, OAuth credentials, JWT
 expiry, branding) is managed per store through the admin tier and stored
@@ -175,7 +175,7 @@ Returns the same `{ session_token, access_token }` pair as password login.
 
 ## Social sign-in — Google, Microsoft, Discord
 
-Cartcrft implements the OAuth2 authorization code flow for all three providers.
+CartCrft implements the OAuth2 authorization code flow for all three providers.
 Provider credentials are set in the store's auth config (see above) and stored
 encrypted with `AUTH_SECRETS_KEY`.
 

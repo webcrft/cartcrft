@@ -1,12 +1,12 @@
 ---
-title: "OAuth apps — Connect with Cartcrft"
+title: "OAuth apps — Connect with CartCrft"
 description: "Register an OAuth app, walk through the authorize → consent → token flow (auth-code + PKCE, refresh, client_credentials), manage scopes, and call the /commerce API with a scoped token."
 ---
 
-# OAuth apps — Connect with Cartcrft
+# OAuth apps — Connect with CartCrft
 
 The OAuth module lets third-party applications act on a merchant's behalf with
-scoped access to the Cartcrft commerce API. It implements OAuth 2.0
+scoped access to the CartCrft commerce API. It implements OAuth 2.0
 (RFC 6749) with PKCE (RFC 7636) and token revocation (RFC 7009).
 
 The module is implemented in `backend/src/modules/oauth/`. Scope definitions

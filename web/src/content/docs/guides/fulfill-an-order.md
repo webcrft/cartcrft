@@ -5,7 +5,7 @@ description: "Walk through the Orders list, order detail page, payment capture, 
 
 # Process & fulfil an order
 
-Orders land in Cartcrft as soon as a customer completes checkout. This guide covers the full lifecycle: finding the order, reviewing payment status, marking it shipped, and handling refunds or cancellations.
+Orders land in CartCrft as soon as a customer completes checkout. This guide covers the full lifecycle: finding the order, reviewing payment status, marking it shipped, and handling refunds or cancellations.
 
 ---
 
@@ -13,7 +13,7 @@ Orders land in Cartcrft as soon as a customer completes checkout. This guide cov
 
 In the sidebar, click **Sales → Orders**.
 
-![Cartcrft orders list](/screenshots/dashboard-orders.png)
+![CartCrft orders list](/screenshots/dashboard-orders.png)
 
 *The Orders list — order number, date, customer email, status badges, and total.*
 
@@ -37,7 +37,7 @@ Click any row to open the order detail view.
 
 ## 2. Review the order detail
 
-![Cartcrft order detail page](/screenshots/dashboard-order-detail.png)
+![CartCrft order detail page](/screenshots/dashboard-order-detail.png)
 
 *Order detail — line items, totals, payment card, shipment card, notes timeline, and customer sidebar.*
 

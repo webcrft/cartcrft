@@ -5,7 +5,7 @@ description: "Warehouses, stock levels, FEFO lot tracking, serial numbers, suppl
 
 # Inventory
 
-Cartcrft tracks stock across multiple warehouses with FEFO (first-expiry, first-out)
+CartCrft tracks stock across multiple warehouses with FEFO (first-expiry, first-out)
 lot allocation, serial numbers, and a full adjustment audit trail. All routes are
 under `/commerce/stores/:storeId/...`.
 

@@ -1,6 +1,6 @@
 # @cartcrft/sdk
 
-Cartcrft TypeScript SDK — typed fetch client for the Cartcrft headless commerce API.
+CartCrft TypeScript SDK — typed fetch client for the CartCrft headless commerce API.
 
 Generated from the OpenAPI 3.1 spec at `docs/openapi.json` using `openapi-typescript`.
 

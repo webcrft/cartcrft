@@ -10,7 +10,7 @@ re-validation, inventory decrement, and discount burn all happen atomically
 inside the `CompleteByID` transaction. Routes under
 `/commerce/stores/:storeId/...`.
 
-![Cartcrft orders dashboard](/screenshots/dashboard-orders.png)
+![CartCrft orders dashboard](/screenshots/dashboard-orders.png)
 
 *The orders dashboard — view financial and fulfillment status, cancel, and add notes.*
 

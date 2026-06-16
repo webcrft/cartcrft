@@ -1,4 +1,4 @@
-# Cartcrft Cloud — Unit Economics + Competitiveness Report
+# CartCrft Cloud — Unit Economics + Competitiveness Report
 
 **Generated:** June 2026 (updated with Nano tier, C-10e)
 **FX Rate:** USD/ZAR 18.60 (xe.com / oanda.com mid-market, June 2026)
@@ -14,9 +14,9 @@
 |----|---------|--------|
 | **Shopify** | **YES — strongly** | Wins at any GMV above ~$4k/mo. At $10k GMV: merchant saves $160/mo. At $50k GMV: $960/mo. At $200k GMV: $3,960/mo vs Shopify Basic. 0% rake is decisive for mid/large merchants. |
 | **Shopify at sub-$4k GMV (Nano)** | **YES — Nano closes the gap** | Cloud Nano ($19/mo) costs $49/mo total at $1k GMV (Paystack incl.) vs Shopify Basic $89/mo. Nano saves $40/mo at $1k GMV. Sub-$4k gap is **CLOSED**. |
-| **Medusa Cloud** | **YES — on price** | Cartcrft Starter ($79) undercuts Medusa Launch ($99) and Medusa Scale ($299) at every GMV band. Both are 0% rake; pure flat-fee comparison. Medusa has ecosystem/brand advantage currently. |
-| **Self-host** | **HONEST: self-host wins on cash cost** | Cartcrft Cloud adds a fixed $39/mo premium over minimal self-host ($40/mo infra). Premium buys managed Postgres+pgvector, backups, upgrades, SSL, and support. Justified for founder-led teams; not justified for teams with dedicated DevOps. |
-| **vs Shopify at X-Small ($1k GMV) — Starter** | **NO — Shopify cheaper (Starter)** | Shopify Basic = $89/mo total vs Cartcrft Starter = $109/mo. Starter not competitive sub-$4k. That gap is now addressed by the Nano tier at $19/mo. |
+| **Medusa Cloud** | **YES — on price** | CartCrft Starter ($79) undercuts Medusa Launch ($99) and Medusa Scale ($299) at every GMV band. Both are 0% rake; pure flat-fee comparison. Medusa has ecosystem/brand advantage currently. |
+| **Self-host** | **HONEST: self-host wins on cash cost** | CartCrft Cloud adds a fixed $39/mo premium over minimal self-host ($40/mo infra). Premium buys managed Postgres+pgvector, backups, upgrades, SSL, and support. Justified for founder-led teams; not justified for teams with dedicated DevOps. |
+| **vs Shopify at X-Small ($1k GMV) — Starter** | **NO — Shopify cheaper (Starter)** | Shopify Basic = $89/mo total vs CartCrft Starter = $109/mo. Starter not competitive sub-$4k. That gap is now addressed by the Nano tier at $19/mo. |
 
 ### PROFITABLE?
 
@@ -38,7 +38,7 @@
 ### Price chosen: $19/mo
 
 **Rationale:**
-- Below $29 (Medusa Develop) — Cartcrft undercuts Medusa's entry cloud tier
+- Below $29 (Medusa Develop) — CartCrft undercuts Medusa's entry cloud tier
 - At $19, Nano total ($19 + Paystack $30 at $1k GMV = **$49/mo**) beats Shopify Basic ($89/mo) by **$40/mo**
 - COGS at $19: $17.10/mo → $1.90 gross profit, 10.0% margin — positive, not a loss-leader
 - The $19–$29 range was proposed; $19 chosen for maximum sub-$4k competitive impact and to stay clearly below Medusa Develop ($29)
@@ -86,8 +86,8 @@ Nano beats Shopify Basic at every GMV band. The previous gap existed because Sta
 ══════════════════════════════════════════════════════════════════════════════════════════
 
   This model answers:
-    A) PROFITABILITY  — does Cartcrft make money per tenant?
-    B) COMPETITIVE    — is Cartcrft Cloud cheaper than alternatives for merchants?
+    A) PROFITABILITY  — does CartCrft make money per tenant?
+    B) COMPETITIVE    — is CartCrft Cloud cheaper than alternatives for merchants?
 
   Source: pricing from web/src/pages/pricing.astro (June 2026 preview).
   Infra costs sourced from neon.tech, supabase.com, fly.io, hetzner.com (June 2026).
@@ -95,7 +95,7 @@ Nano beats Shopify Basic at every GMV band. The previous gap existed because Sta
 
 
 ══════════════════════════════════════════════════════════════════════════════════════════
-  SECTION A — PROFITABILITY: Cartcrft Cloud P&L per Tier
+  SECTION A — PROFITABILITY: CartCrft Cloud P&L per Tier
 ══════════════════════════════════════════════════════════════════════════════════════════
 
   Tier                 Price/mo    Infra  Coll.Fee  Support     COGS   Gross$   Margin
@@ -133,7 +133,7 @@ Nano beats Shopify Basic at every GMV band. The previous gap existed because Sta
        $50,000      $1,495        $2,515      $1,020  Nano wins
       $200,000      $5,926        $9,946      $4,020  Nano wins
 
-  Merchant savings: Cartcrft Starter vs Shopify Basic:
+  Merchant savings: CartCrft Starter vs Shopify Basic:
            GMV    CC Starter   Shpfy Basic        Saving  Verdict
   ------------  ------------  ------------  ------------  ------------------------------
         $1,000          $109           $89          $-20  Shopify cheaper (use Nano)
@@ -259,7 +259,7 @@ Nano beats Shopify Basic at every GMV band. The previous gap existed because Sta
 
 All figures = plan fee + platform rake (if any) + Paystack gateway cost. Self-host excludes DevOps labour time.
 
-### Savings: Cartcrft Starter vs Shopify Basic
+### Savings: CartCrft Starter vs Shopify Basic
 
 | GMV | CC Starter | Shopify Basic | Monthly Saving | Verdict |
 |-----|-----------|--------------|---------------|---------|
@@ -270,7 +270,7 @@ All figures = plan fee + platform rake (if any) + Paystack gateway cost. Self-ho
 
 Crossover: ~$4,000/mo GMV. Above it, 0% rake advantage dominates. Below it, use Nano.
 
-### Cartcrft vs Medusa Cloud
+### CartCrft vs Medusa Cloud
 
 | GMV | CC Starter | Med Launch | Med Scale | vs Launch | vs Scale |
 |-----|-----------|-----------|----------|----------|---------|
@@ -279,7 +279,7 @@ Crossover: ~$4,000/mo GMV. Above it, 0% rake advantage dominates. Below it, use 
 | $50,000 | $1,555 | $1,575 | $1,775 | CC cheaper | CC cheaper |
 | $200,000 | $5,986 | $6,006 | $6,206 | CC cheaper | CC cheaper |
 
-### Cartcrft vs Self-Host (minimal $40/mo infra)
+### CartCrft vs Self-Host (minimal $40/mo infra)
 
 | GMV | CC Starter | Self-Host Min | Managed Premium |
 |-----|-----------|--------------|-----------------|
@@ -329,7 +329,7 @@ Crossover: ~$4,000/mo GMV. Above it, 0% rake advantage dominates. Below it, use 
 
 ### Caveats
 
-- Cartcrft Cloud prices are preview/illustrative (pricing.astro explicitly notes this)
+- CartCrft Cloud prices are preview/illustrative (pricing.astro explicitly notes this)
 - Enterprise $500/mo is a modelled midpoint; actual negotiated price will differ
 - Per-tenant infra costs are estimates on a shared infrastructure model
 - Shopify comparison uses external gateway path (Shopify Payments not available to SA merchants)

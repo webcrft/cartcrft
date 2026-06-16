@@ -162,7 +162,7 @@ function TerminalBlock() {
       <pre className="px-4 py-3 font-mono text-[11px] leading-[1.9] overflow-x-auto">
         <code>
           <span className="login-ln login-delay-1 block"><span style={{ color: 'rgba(133,134,122,0.7)' }}>{'//'} initialize store</span></span>
-          <span className="login-ln login-delay-2 block"><span style={{ color: 'rgba(181,255,46,0.9)' }}>const</span> <span style={{ color: 'rgba(236,234,224,0.9)' }}>sdk</span> <span style={{ color: 'rgba(133,134,122,0.7)' }}>=</span> <span style={{ color: 'rgba(87,224,255,0.85)' }}>new</span> <span style={{ color: 'rgba(181,255,46,1)' }}>Cartcrft</span><span style={{ color: 'rgba(236,234,224,0.6)' }}>{'({ baseUrl })'}</span></span>
+          <span className="login-ln login-delay-2 block"><span style={{ color: 'rgba(181,255,46,0.9)' }}>const</span> <span style={{ color: 'rgba(236,234,224,0.9)' }}>sdk</span> <span style={{ color: 'rgba(133,134,122,0.7)' }}>=</span> <span style={{ color: 'rgba(87,224,255,0.85)' }}>new</span> <span style={{ color: 'rgba(181,255,46,1)' }}>CartCrft</span><span style={{ color: 'rgba(236,234,224,0.6)' }}>{'({ baseUrl })'}</span></span>
           <span className="login-ln login-delay-3 block"><span style={{ color: 'rgba(181,255,46,0.9)' }}>const</span> <span style={{ color: 'rgba(236,234,224,0.9)' }}>order</span> <span style={{ color: 'rgba(133,134,122,0.7)' }}>=</span> <span style={{ color: 'rgba(181,255,46,0.7)' }}>await</span> <span style={{ color: 'rgba(236,234,224,0.7)' }}>sdk.orders.</span><span style={{ color: 'rgba(181,255,46,0.9)' }}>create</span><span style={{ color: 'rgba(236,234,224,0.6)' }}>{'(cart)'}</span></span>
           <span className="login-ln login-delay-4 block"><span style={{ color: 'rgba(181,255,46,1)', fontWeight: 600 }}>{'// ✓'}</span> <span style={{ color: 'rgba(181,255,46,0.7)' }}>order created in 42ms</span></span>
           <span className="login-ln login-delay-5 block"><span style={{ color: 'rgba(236,234,224,0.9)' }}>_</span><span className="login-caret" /></span>
@@ -461,7 +461,7 @@ export default function Login() {
 
             {/* Footer note */}
             <p className="mt-6 text-center text-[11px] text-[var(--cc-subtle)]">
-              Cartcrft Admin — headless commerce infrastructure
+              CartCrft Admin — headless commerce infrastructure
             </p>
           </div>
         </div>

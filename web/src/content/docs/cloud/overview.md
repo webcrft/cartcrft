@@ -1,19 +1,19 @@
 ---
-title: Cartcrft Cloud Overview
-description: Managed Cartcrft hosting — zero-downtime deploys, automated backups, and flat-fee pricing with 0% GMV rake.
+title: CartCrft Cloud Overview
+description: Managed CartCrft hosting — zero-downtime deploys, automated backups, and flat-fee pricing with 0% GMV rake.
 ---
 
 > **Cloud is in preview.** Pricing and feature availability are illustrative and subject to change. [Join the waitlist](mailto:hello@webcrft.io?subject=Cloud+waitlist) to be notified before billing starts.
 
-## What is Cartcrft Cloud?
+## What is CartCrft Cloud?
 
-Cartcrft Cloud is the managed-hosting layer on top of the MIT core. You get the same open-source codebase — running on infrastructure WebCrft operates, maintains, and upgrades for you.
+CartCrft Cloud is the managed-hosting layer on top of the MIT core. You get the same open-source codebase — running on infrastructure WebCrft operates, maintains, and upgrades for you.
 
 Key properties:
 
 - **Flat monthly fee** — $79–$199/mo, no GMV percentage, ever.
 - **Managed Postgres + pgvector** — included in the plan; we handle backups, PITR, and upgrades.
-- **Zero-downtime deploys** — your store stays up during Cartcrft version upgrades.
+- **Zero-downtime deploys** — your store stays up during CartCrft version upgrades.
 - **0% rake** — Stripe, Paystack, Razorpay, and Xendit credentials are yours. Payments go directly between your store and your provider.
 
 ## Self-host vs Cloud

@@ -3,7 +3,7 @@ import LegalLayout from '../LegalLayout'
 
 /**
  * Privacy Policy — /legal/privacy
- * Grounded in real Cartcrft data flows: Neon Postgres, Paystack, AWS SES,
+ * Grounded in real CartCrft data flows: Neon Postgres, Paystack, AWS SES,
  * Bunny CDN, Backblaze B2, analytics pixels (GA4, Meta, TikTok, etc.),
  * exchange-rate API, BYO LLM keys, multi-tenant controller/processor split.
  */
@@ -11,7 +11,7 @@ export default function Privacy() {
   return (
     <LegalLayout
       title="Privacy Policy"
-      description="Privacy Policy for Cartcrft Cloud — how WebCrft collects, uses, and protects personal information."
+      description="Privacy Policy for CartCrft Cloud — how WebCrft collects, uses, and protects personal information."
       lastUpdated="2026-06-14"
     >
       <div className="notice-box">
@@ -20,7 +20,7 @@ export default function Privacy() {
 
       <h2>1. Who We Are</h2>
       <p>
-        <strong>Webcrft Systems (Pty) Ltd</strong> is the company behind Cartcrft Cloud, a managed
+        <strong>Webcrft Systems (Pty) Ltd</strong> is the company behind CartCrft Cloud, a managed
         headless commerce platform, registered in the Republic of South Africa. We are the
         {' '}<strong>Responsible Party</strong> under POPIA and the <strong>Data Controller</strong> under
         GDPR in respect of the personal information described in this Policy.
@@ -32,12 +32,12 @@ export default function Privacy() {
       <h3>2.1 Cloud Account and Billing Data (WebCrft as Controller)</h3>
       <p>
         This Policy covers personal information that WebCrft collects about you (the merchant
-        or developer) when you create an account, subscribe, or interact with Cartcrft Cloud.
+        or developer) when you create an account, subscribe, or interact with CartCrft Cloud.
       </p>
 
       <h3>2.2 Your Store's End-Customer Data (You as Controller, WebCrft as Processor)</h3>
       <p>
-        When you use Cartcrft Cloud to operate your store, your end-customers' personal information
+        When you use CartCrft Cloud to operate your store, your end-customers' personal information
         is stored in your tenant's Postgres database on Neon.
         {' '}<strong>You are the data controller for that data; WebCrft processes it solely on
         your instructions.</strong> We do not access, sell, or use your end-customers' data for our
@@ -122,7 +122,7 @@ export default function Privacy() {
           </tr>
           <tr>
             <td><strong>Paystack (Paystack Payments Ltd)</strong></td>
-            <td>Cloud subscription billing — processes card payments for Cartcrft Cloud subscriptions; holds card data on PCI-DSS certified systems</td>
+            <td>Cloud subscription billing — processes card payments for CartCrft Cloud subscriptions; holds card data on PCI-DSS certified systems</td>
             <td>Account email, subscription details; payment card data held by Paystack only</td>
             <td>Nigeria / South Africa / Ireland (EU)</td>
           </tr>
@@ -187,7 +187,7 @@ export default function Privacy() {
         for your storefront; and complying with POPIA, GDPR, ePrivacy, and other applicable laws.
       </p>
       <p>
-        Cartcrft's GA4 server-side Measurement Protocol integration fires a <code>purchase</code> event
+        CartCrft's GA4 server-side Measurement Protocol integration fires a <code>purchase</code> event
         on payment capture using your configured GA4 API secret. No additional end-customer data is shared
         with Google beyond what you have already configured in your GA4 pixel.
       </p>

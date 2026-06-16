@@ -5,7 +5,7 @@ description: "Code-based and automatic discount rules — percentage, fixed, fre
 
 # Discounts
 
-Cartcrft supports two discount surfaces: merchant-issued codes (`/discounts`) and
+CartCrft supports two discount surfaces: merchant-issued codes (`/discounts`) and
 rule-based automatic discounts (`/auto-discounts`) that apply without a code.
 
 ---

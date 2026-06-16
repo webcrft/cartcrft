@@ -93,7 +93,7 @@ export default function AppShell() {
             >
               cart<span className="text-[var(--cc-lime)]">crft</span>
             </span>
-            <span className="sr-only">Cartcrft</span>
+            <span className="sr-only">CartCrft</span>
           </div>
           <button
             onClick={() => setSidebarOpen(false)}

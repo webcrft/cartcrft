@@ -3,14 +3,14 @@ import LegalLayout from '../LegalLayout'
 
 /**
  * Terms of Service — /legal/terms
- * Grounded in the actual Cartcrft product: headless commerce backend, BYO-keys,
+ * Grounded in the actual CartCrft product: headless commerce backend, BYO-keys,
  * multi-tenant cloud layer (cloud/), MIT core, Paystack billing, South African law.
  */
 export default function Terms() {
   return (
     <LegalLayout
       title="Terms of Service"
-      description="Terms of Service for Cartcrft Cloud — the managed hosting service operated by WebCrft."
+      description="Terms of Service for CartCrft Cloud — the managed hosting service operated by WebCrft."
       lastUpdated="2026-06-14"
     >
       <div className="notice-box">
@@ -19,7 +19,7 @@ export default function Terms() {
 
       <h2>1. Introduction and Acceptance</h2>
       <p>
-        These Terms of Service ("Terms") govern your access to and use of <strong>Cartcrft Cloud</strong>,
+        These Terms of Service ("Terms") govern your access to and use of <strong>CartCrft Cloud</strong>,
         the managed commerce-backend service at <a href="https://cartcrft.com">cartcrft.com</a>
         {' '}("Service"), operated by <strong>Webcrft Systems (Pty) Ltd</strong>, a company registered in
         the Republic of South Africa ("WebCrft", "we", "us", or "our").
@@ -32,23 +32,23 @@ export default function Terms() {
       </p>
 
       <h2>2. Service Description</h2>
-      <p>Cartcrft Cloud is a multi-tenant, headless commerce platform. It provides:</p>
+      <p>CartCrft Cloud is a multi-tenant, headless commerce platform. It provides:</p>
       <ul>
-        <li>A managed instance of the Cartcrft backend (REST API + MCP server), hosted on our infrastructure;</li>
+        <li>A managed instance of the CartCrft backend (REST API + MCP server), hosted on our infrastructure;</li>
         <li>Tenant provisioning, metering, and billing via the cloud layer;</li>
         <li>Asset delivery via Bunny CDN and object storage via Backblaze B2;</li>
         <li>Transactional email delivery via AWS Simple Email Service (SES);</li>
-        <li>Access to the Cartcrft admin dashboard SPA and generated TypeScript SDK (<code>@cartcrft/sdk</code>).</li>
+        <li>Access to the CartCrft admin dashboard SPA and generated TypeScript SDK (<code>@cartcrft/sdk</code>).</li>
       </ul>
       <p>
-        The Service does <strong>not</strong> include payment processing on your behalf. Cartcrft Cloud
+        The Service does <strong>not</strong> include payment processing on your behalf. CartCrft Cloud
         gives you infrastructure to connect your own payment provider credentials (Stripe, Paystack,
         Razorpay, Xendit, or a custom webhook provider). See Section 6.
       </p>
 
       <h3>2.1 Preview Status</h3>
       <p>
-        Cartcrft Cloud is currently in preview. Certain features — including live payment capture,
+        CartCrft Cloud is currently in preview. Certain features — including live payment capture,
         agentic checkout via ACP/UCP, and outbound webhooks — are completing production hardening.
         Preview-stage features are provided without service-level commitments (see Section 10).
       </p>
@@ -65,10 +65,10 @@ export default function Terms() {
         restricts your use of the MIT-licensed software.
       </p>
 
-      <h3>3.2 Cartcrft Cloud License</h3>
+      <h3>3.2 CartCrft Cloud License</h3>
       <p>
         The <code>cloud/</code> directory is distributed under the
-        {' '}<strong>Cartcrft Cloud License v1.0</strong>
+        {' '}<strong>CartCrft Cloud License v1.0</strong>
         {' '}(<a href="https://github.com/webcrftsystems/cartcrft/blob/main/cloud/LICENSE" target="_blank" rel="noopener noreferrer">cloud/LICENSE</a>):
         source-visible; viewing and development/testing use permitted; production or commercial
         deployment requires a separate written agreement with WebCrft.
@@ -76,8 +76,8 @@ export default function Terms() {
 
       <h3>3.3 These Terms</h3>
       <p>
-        These Terms govern your use of <em>Cartcrft Cloud as a hosted service</em>. They supplement,
-        and in case of conflict override, the Cartcrft Cloud License.
+        These Terms govern your use of <em>CartCrft Cloud as a hosted service</em>. They supplement,
+        and in case of conflict override, the CartCrft Cloud License.
       </p>
 
       <h2>4. Accounts</h2>
@@ -112,7 +112,7 @@ export default function Terms() {
       </ul>
 
       <h2>6. BYO Keys and Merchant Responsibilities</h2>
-      <p>Cartcrft operates on a <strong>bring-your-own-keys</strong> (BYO) model:</p>
+      <p>CartCrft operates on a <strong>bring-your-own-keys</strong> (BYO) model:</p>
       <ul>
         <li><strong>Payment providers:</strong> You configure your own credentials for Stripe,
             Paystack, Razorpay, or Xendit. WebCrft stores them AES-256-GCM encrypted and
@@ -135,7 +135,7 @@ export default function Terms() {
 
       <h3>7.1 Payment Processor</h3>
       <p>
-        Cartcrft Cloud subscriptions are billed through <strong>Paystack</strong>. By subscribing you
+        CartCrft Cloud subscriptions are billed through <strong>Paystack</strong>. By subscribing you
         also agree to
         {' '}<a href="https://paystack.com/terms" target="_blank" rel="noopener noreferrer">Paystack's Terms of Service</a>.
         WebCrft is the merchant of record for cloud subscription fees.
@@ -176,7 +176,7 @@ export default function Terms() {
 
       <h3>8.1 Controller / Processor Split</h3>
       <p>
-        For data about <strong>your Cartcrft Cloud account and billing</strong>, WebCrft is the
+        For data about <strong>your CartCrft Cloud account and billing</strong>, WebCrft is the
         data controller. For <strong>your store's end-customer data</strong> processed through the API
         on your behalf, you are the data controller and WebCrft acts as a data processor.
         See our <Link to="/legal/privacy">Privacy Policy</Link>,
@@ -194,7 +194,7 @@ export default function Terms() {
 
       <h2>9. Intellectual Property</h2>
       <ul>
-        <li>The Cartcrft name, logo, and brand are trademarks of WebCrft.</li>
+        <li>The CartCrft name, logo, and brand are trademarks of WebCrft.</li>
         <li>The MIT-licensed core is available under the MIT License; you retain all rights in
             your own code built on top of it.</li>
         <li>Your store data remains yours. You grant WebCrft a limited right to process

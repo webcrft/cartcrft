@@ -5,7 +5,7 @@ description: "Step-by-step: create a product in the dashboard — type, pricing,
 
 # Add your first product
 
-This guide walks through creating a product in the Cartcrft dashboard from blank to ready-to-sell — covering product type, pricing, the default variant, inventory tracking, and assigning it to a collection.
+This guide walks through creating a product in the CartCrft dashboard from blank to ready-to-sell — covering product type, pricing, the default variant, inventory tracking, and assigning it to a collection.
 
 ---
 
@@ -13,7 +13,7 @@ This guide walks through creating a product in the Cartcrft dashboard from blank
 
 In the sidebar, click **Catalog → Products**.
 
-![Cartcrft products list](/screenshots/dashboard-products.png)
+![CartCrft products list](/screenshots/dashboard-products.png)
 
 *The Products list — search, paginate, and jump into any product to edit.*
 
@@ -25,7 +25,7 @@ The page shows a searchable, paginated table of all products with columns for **
 
 Click **+ New Product** in the top-right corner. A modal opens.
 
-![Cartcrft new product form](/screenshots/dashboard-product-new.png)
+![CartCrft new product form](/screenshots/dashboard-product-new.png)
 
 *The New Product modal — title, type, status, pricing, and inventory fields.*
 

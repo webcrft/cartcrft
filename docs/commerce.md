@@ -1,6 +1,6 @@
 # Commerce Overview
 
-The commerce engine underneath Cartcrft's agent surface. Every capability here is
+The commerce engine underneath CartCrft's agent surface. Every capability here is
 exposed over the same date-versioned REST API the admin dashboard and AI agents
 use — there is no hidden internal API.
 

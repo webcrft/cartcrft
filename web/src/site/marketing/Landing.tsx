@@ -133,7 +133,7 @@ const commerceClusters: ShowcaseCluster[] = [
       {
         Icon: CreditCard,
         title: 'Payments — bring your own keys',
-        description: 'Connect your own Stripe, Paystack, Razorpay, or Xendit account — Cartcrft never sits in the payment flow and takes 0% of your sales. AES-256-GCM secret encryption and an inbound webhook router with replay protection.',
+        description: 'Connect your own Stripe, Paystack, Razorpay, or Xendit account — CartCrft never sits in the payment flow and takes 0% of your sales. AES-256-GCM secret encryption and an inbound webhook router with replay protection.',
         href: '/byo-keys',
       },
       {
@@ -245,7 +245,7 @@ export default function Landing() {
   useDocumentMeta({
     title: 'The complete commerce backend — also agent-native',
     description:
-      'Cartcrft is a complete open-source commerce backend: catalog, payments, customer accounts and social login, B2B, subscriptions, returns, shipping, tax. It also ships an MCP server and ACP/UCP adapters, making it the most agent-ready stack you can self-host. MIT licensed, zero take rate.',
+      'CartCrft is a complete open-source commerce backend: catalog, payments, customer accounts and social login, B2B, subscriptions, returns, shipping, tax. It also ships an MCP server and ACP/UCP adapters, making it the most agent-ready stack you can self-host. MIT licensed, zero take rate.',
   })
 
   return (
@@ -283,7 +283,7 @@ export default function Landing() {
         </section>
 
         {/* Two-audience section — "Two ways to ship" */}
-        <section className="two-paths" data-reveal aria-label="Two ways to use Cartcrft">
+        <section className="two-paths" data-reveal aria-label="Two ways to use CartCrft">
           <div className="two-paths-inner">
             <div className="mk-eyebrow">
               <span className="ey-b">[</span>
@@ -344,7 +344,7 @@ export default function Landing() {
                   </div>
                   <img
                     src="/screenshots/dashboard-overview.png"
-                    alt="Cartcrft admin dashboard — store overview with revenue metrics, recent orders, and full nav"
+                    alt="CartCrft admin dashboard — store overview with revenue metrics, recent orders, and full nav"
                     width="1512"
                     height="900"
                     loading="lazy"
@@ -372,7 +372,7 @@ export default function Landing() {
                   <span className="path-badge path-badge--cyan">For builders &amp; agents</span>
                   <h3>Build agent-native commerce</h3>
                   <p className="path-sub">
-                    Every Cartcrft store is MCP-accessible by default. Wire up any LLM, build an
+                    Every CartCrft store is MCP-accessible by default. Wire up any LLM, build an
                     AI shopping agent, or integrate ACP/UCP in hours.
                   </p>
                 </div>
@@ -432,7 +432,7 @@ export default function Landing() {
               First, it&rsquo;s a <span className="hl">full commerce platform</span>.
             </h2>
             <p>
-              Before the agent layer, Cartcrft is a complete, standard ecommerce backend. Catalog and
+              Before the agent layer, CartCrft is a complete, standard ecommerce backend. Catalog and
               inventory, carts and orders, payments, customer accounts, B2B, subscriptions, returns,
               shipping, tax, discounts, gift cards, digital products, and bookings — all shipped, all tested,
               all on a clean REST API and typed SDK. The agent-native part sits on top of a real store.
@@ -477,7 +477,7 @@ export default function Landing() {
               </div>
               <img
                 src="/screenshots/dashboard-products.png"
-                alt="Cartcrft admin dashboard — product catalog list with variants and pricing"
+                alt="CartCrft admin dashboard — product catalog list with variants and pricing"
                 width="1512"
                 height="900"
                 loading="lazy"
@@ -513,7 +513,7 @@ export default function Landing() {
               </div>
               <img
                 src="/screenshots/checkout.png"
-                alt="Cartcrft hosted checkout — branded payment page with line items and total"
+                alt="CartCrft hosted checkout — branded payment page with line items and total"
                 width="1512"
                 height="982"
                 loading="lazy"
@@ -571,14 +571,14 @@ export default function Landing() {
             </div>
             <div className="why-now-body">
               <p>
-                A complete commerce backend is table stakes. What makes Cartcrft different is that the same
+                A complete commerce backend is table stakes. What makes CartCrft different is that the same
                 store is agent-ready today. AI agents already browse, compare, and purchase on behalf of humans. MCP, ACP, and UCP are
                 shipping standards in 2025 and 2026 — not hypotheticals. But every major commerce platform treats
                 agent access as an afterthought: a webhook here, a plugin there.
               </p>
               <p>
                 Merchants face a new dilemma: surrender to Shopify's closed ecosystem, or hand control to
-                OpenAI and Google's native checkout surfaces. Cartcrft is the neutral, open layer you own —
+                OpenAI and Google's native checkout surfaces. CartCrft is the neutral, open layer you own —
                 the Switzerland of agentic commerce. Implement the protocols once; reach every agent platform.
               </p>
               <div className="protocol-pills">
@@ -713,7 +713,7 @@ export default function Landing() {
                 <h3>BYO keys, zero rake</h3>
                 <p>
                   Your Stripe, Paystack, Razorpay, or Xendit credentials. Your OpenAI-compatible
-                  embeddings key. Cartcrft takes 0% of your revenue — ever.
+                  embeddings key. CartCrft takes 0% of your revenue — ever.
                 </p>
               </div>
               <div className="fair-card">
@@ -725,7 +725,7 @@ export default function Landing() {
                 </div>
                 <h3>Self-host or fair cloud</h3>
                 <p>
-                  One Docker image, three subcommands. Deploy anywhere. Or use Cartcrft Cloud — a
+                  One Docker image, three subcommands. Deploy anywhere. Or use CartCrft Cloud — a
                   flat fee, no GMV percentage, no lock-in. Self-hosting requires nothing from
                   the cloud layer.
                 </p>
@@ -769,7 +769,7 @@ export default function Landing() {
               </div>
               <h2>See how we <span className="hl">stack up</span>.</h2>
               <p>
-                Side-by-side comparison of Cartcrft vs Shopify, Medusa v2, Vendure, Saleor, Swell, and
+                Side-by-side comparison of CartCrft vs Shopify, Medusa v2, Vendure, Saleor, Swell, and
                 WooCommerce — across licensing, pricing, agent-native capabilities, and commerce features.
                 No strawmen; where competitors lead, we say so.
               </p>
@@ -786,7 +786,7 @@ export default function Landing() {
                 <thead>
                   <tr>
                     <th>Feature</th>
-                    <th className="col-us">Cartcrft</th>
+                    <th className="col-us">CartCrft</th>
                     <th>Shopify</th>
                     <th>Medusa</th>
                   </tr>
@@ -856,7 +856,7 @@ export default function Landing() {
               <p>
                 Clone it, seed a demo store, and have it MCP-connected in minutes — no payment
                 credentials needed for test mode. Self-host for free under MIT, or run it on
-                Cartcrft Cloud.
+                CartCrft Cloud.
               </p>
               <div className="cta-band-actions">
                 <Link to="/quickstart" className="cc-btn cc-btn--primary cc-btn--on-dark cc-btn--lg">Read the quickstart →</Link>

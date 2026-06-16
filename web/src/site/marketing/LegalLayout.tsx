@@ -37,7 +37,7 @@ export default function LegalLayout({ title, description, lastUpdated, children 
           <header className="legal-header">
             <div className="legal-header-inner">
               <div className="legal-breadcrumb">
-                <Link to="/">Cartcrft</Link>
+                <Link to="/">CartCrft</Link>
                 <span aria-hidden="true">›</span>
                 <Link to="/legal/terms">Legal</Link>
                 <span aria-hidden="true">›</span>

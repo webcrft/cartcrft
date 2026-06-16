@@ -1,6 +1,6 @@
 ---
 title: "Quickstart"
-description: "Get a Cartcrft server running locally with a seeded demo store and make your first API calls in under five minutes."
+description: "Get a CartCrft server running locally with a seeded demo store and make your first API calls in under five minutes."
 sidebar:
   label: "Quickstart"
   order: 1
@@ -8,10 +8,10 @@ sidebar:
 
 # Quickstart — Local Development
 
-Get a Cartcrft server running locally with a seeded demo store and make your
+Get a CartCrft server running locally with a seeded demo store and make your
 first API calls in under five minutes.
 
-![Cartcrft admin dashboard — Overview](/screenshots/dashboard-overview.png)
+![CartCrft admin dashboard — Overview](/screenshots/dashboard-overview.png)
 
 *The admin dashboard after setup — create your first store and start managing catalog, orders, and customers.*
 

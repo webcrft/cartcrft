@@ -1,13 +1,13 @@
 ---
 title: "Build your store frontend"
-description: "Cartcrft is a headless backend — you bring your own storefront. This guide covers four ways to build and deploy a frontend against the Cartcrft REST API: WebCrft (visual, no-code), plain HTML/JS on free static hosting, a JavaScript framework with the @cartcrft/sdk, or an agent-native surface with no traditional UI at all."
+description: "CartCrft is a headless backend — you bring your own storefront. This guide covers four ways to build and deploy a frontend against the CartCrft REST API: WebCrft (visual, no-code), plain HTML/JS on free static hosting, a JavaScript framework with the @cartcrft/sdk, or an agent-native surface with no traditional UI at all."
 ---
 
 # Build your store frontend
 
-Cartcrft is a **headless commerce backend**. It handles products, inventory, carts, orders, payments, shipping, tax, agents, and every other commerce primitive — but it ships no storefront UI. You build (or skip) that part yourself.
+CartCrft is a **headless commerce backend**. It handles products, inventory, carts, orders, payments, shipping, tax, agents, and every other commerce primitive — but it ships no storefront UI. You build (or skip) that part yourself.
 
-This is intentional. Headless means your customer-facing presentation is completely under your control: you choose the framework, the hosting, and the design. Cartcrft exposes everything through a REST API and an `@cartcrft/sdk` TypeScript client so any frontend can connect.
+This is intentional. Headless means your customer-facing presentation is completely under your control: you choose the framework, the hosting, and the design. CartCrft exposes everything through a REST API and an `@cartcrft/sdk` TypeScript client so any frontend can connect.
 
 ---
 
@@ -20,16 +20,16 @@ This is intentional. Headless means your customer-facing presentation is complet
 | [JS framework (Next.js / Astro / etc.)](#3-javascript-framework) | Moderate | Medium | SEO-critical stores, complex catalogs, server rendering |
 | [Agent-native / no frontend](#4-agent-native--no-traditional-frontend) | Minimal config | Low | LLM-first commerce, B2B bots, voice/chat commerce |
 
-All four options authenticate via an API key that you create in **Store → API Keys** in the Cartcrft dashboard. Read-only storefront requests use a `cc_pub_` key (safe to embed in browser JavaScript). Server-side mutations use a `cc_prv_` key (keep secret, never ship to the browser).
+All four options authenticate via an API key that you create in **Store → API Keys** in the CartCrft dashboard. Read-only storefront requests use a `cc_pub_` key (safe to embed in browser JavaScript). Server-side mutations use a `cc_prv_` key (keep secret, never ship to the browser).
 
 ---
 
 ## 1. WebCrft (recommended)
 
-**[WebCrft](https://webcrft.io)** is the sister platform to Cartcrft. It is a visual storefront builder designed specifically to connect to a Cartcrft backend. You build your storefront pages, product grids, cart, and checkout UI in WebCrft's drag-and-drop editor, then wire it to your Cartcrft store with a single API key — no code required.
+**[WebCrft](https://webcrft.io)** is the sister platform to CartCrft. It is a visual storefront builder designed specifically to connect to a CartCrft backend. You build your storefront pages, product grids, cart, and checkout UI in WebCrft's drag-and-drop editor, then wire it to your CartCrft store with a single API key — no code required.
 
 **Why WebCrft:**
-- Built for Cartcrft's data model — products, variants, collections, and checkout links map 1:1.
+- Built for CartCrft's data model — products, variants, collections, and checkout links map 1:1.
 - Visual editor with real-time preview.
 - Handles hosting, CDN, and SSL.
 - You own the design entirely.
@@ -37,25 +37,25 @@ All four options authenticate via an API key that you create in **Store → API 
 ### Steps
 
 1. Create a free account at [webcrft.io](https://webcrft.io).
-2. Create a new project and choose **"Connect to Cartcrft"**.
-3. In your Cartcrft dashboard, go to **Store → API Keys** and generate a `cc_pub_` key.
+2. Create a new project and choose **"Connect to CartCrft"**.
+3. In your CartCrft dashboard, go to **Store → API Keys** and generate a `cc_pub_` key.
 4. Paste the key and your store's base URL (`https://api.cartcrft.dev` for cloud; your own host for self-hosted) into the WebCrft connection modal.
-5. Build your storefront pages visually. WebCrft's data blocks pull live product data directly from your Cartcrft store.
+5. Build your storefront pages visually. WebCrft's data blocks pull live product data directly from your CartCrft store.
 6. Publish. WebCrft handles deployment and CDN.
 
-For checkout, WebCrft uses Cartcrft's hosted checkout links — no payment-provider integration code is needed on your end.
+For checkout, WebCrft uses CartCrft's hosted checkout links — no payment-provider integration code is needed on your end.
 
 ---
 
 ## 2. Plain HTML + JavaScript
 
-A hand-written static site is the simplest way to call the Cartcrft API. You write HTML, CSS, and vanilla JavaScript, call `GET /commerce/stores/:storeId/products` with a `cc_pub_` key, render the results into the DOM, and redirect customers to a checkout link for payment. There is nothing to compile or deploy — just upload files to a static host.
+A hand-written static site is the simplest way to call the CartCrft API. You write HTML, CSS, and vanilla JavaScript, call `GET /commerce/stores/:storeId/products` with a `cc_pub_` key, render the results into the DOM, and redirect customers to a checkout link for payment. There is nothing to compile or deploy — just upload files to a static host.
 
 **Free static hosting options:** Firebase Hosting, Cloudflare Pages, Netlify, GitHub Pages.
 
 ### Getting a publishable key
 
-In the Cartcrft dashboard: **Store → API Keys → New Key → Scopes: `commerce:read`**.
+In the CartCrft dashboard: **Store → API Keys → New Key → Scopes: `commerce:read`**.
 
 Copy the `cc_pub_` value — this is the only time it is shown in full.
 
@@ -136,7 +136,7 @@ async function createCheckoutLink(variantId, quantity) {
 window.location.href = checkoutUrl;
 ```
 
-The customer lands on Cartcrft's hosted checkout page (`/pay/cl_...`), completes payment through your connected provider, and is redirected back to your `success_url`.
+The customer lands on CartCrft's hosted checkout page (`/pay/cl_...`), completes payment through your connected provider, and is redirected back to your `success_url`.
 
 > **Tip:** Never expose a `cc_prv_` key in browser JavaScript. Create a small serverless function (Cloudflare Worker, Netlify Function, Firebase Function) to generate checkout links and return only the URL to the browser.
 
@@ -153,7 +153,7 @@ Firebase, Netlify, and GitHub Pages work similarly — point them at your HTML f
 
 ## 3. JavaScript Framework
 
-For SEO-critical stores, complex catalogs, or server-rendered pages, use a JavaScript metaframework. Next.js, Astro, Remix, and SvelteKit all work well as storefronts against the Cartcrft API. Use the `@cartcrft/sdk` for typed, ergonomic access.
+For SEO-critical stores, complex catalogs, or server-rendered pages, use a JavaScript metaframework. Next.js, Astro, Remix, and SvelteKit all work well as storefronts against the CartCrft API. Use the `@cartcrft/sdk` for typed, ergonomic access.
 
 **Recommended hosting:** Vercel, Netlify, Cloudflare Pages (with Cloudflare Workers for server functions).
 
@@ -277,7 +277,7 @@ CARTCRFT_PRV_KEY=cc_prv_...   # server-only, never expose to the client
 
 ## 4. Agent-native / no traditional frontend
 
-Cartcrft is designed from the ground up for **LLM-first commerce**. Instead of building a UI at all, you can expose your store directly to AI agents via the built-in MCP server and the ACP/UCP adapters. The "storefront" is the agent surface itself.
+CartCrft is designed from the ground up for **LLM-first commerce**. Instead of building a UI at all, you can expose your store directly to AI agents via the built-in MCP server and the ACP/UCP adapters. The "storefront" is the agent surface itself.
 
 This is the right approach for:
 - **Conversational commerce** — a chatbot or voice assistant that lets customers buy through natural language.
@@ -286,7 +286,7 @@ This is the right approach for:
 
 ### MCP server
 
-Every Cartcrft store exposes an MCP (Model Context Protocol) endpoint. Any MCP-capable agent — Claude Desktop, Claude Code, a custom LLM pipeline — can connect and use tools to browse products, manage carts, and complete orders.
+Every CartCrft store exposes an MCP (Model Context Protocol) endpoint. Any MCP-capable agent — Claude Desktop, Claude Code, a custom LLM pipeline — can connect and use tools to browse products, manage carts, and complete orders.
 
 ```
 # HTTP/SSE transport (recommended)

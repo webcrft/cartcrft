@@ -21,7 +21,7 @@ inbound webhook router is at `/webhooks/:storeId/...`.
 
 ## Authentication
 
-Cartcrft has two independent auth systems that cover different callers.
+CartCrft has two independent auth systems that cover different callers.
 
 ### Management JWTs (dashboard / server-side)
 

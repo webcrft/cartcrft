@@ -13,7 +13,7 @@ The **Customers** section covers every person who has placed an order or registe
 
 Go to **Sales → Customers**.
 
-![Cartcrft customers page](/screenshots/dashboard-customers.png)
+![CartCrft customers page](/screenshots/dashboard-customers.png)
 
 *The Customers list — name, email, status (Active / Blocked), and join date.*
 

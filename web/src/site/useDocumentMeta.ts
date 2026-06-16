@@ -46,7 +46,7 @@ export function useDocumentMeta(opts: {
     setMeta('meta[name="twitter:image"]', 'name', 'twitter:image', ogImageURL)
     setMeta('meta[property="og:type"]', 'property', 'og:type', 'website')
     setMeta('meta[property="og:url"]', 'property', 'og:url', canonicalURL)
-    setMeta('meta[property="og:site_name"]', 'property', 'og:site_name', 'Cartcrft')
+    setMeta('meta[property="og:site_name"]', 'property', 'og:site_name', 'CartCrft')
     setMeta('meta[name="twitter:card"]', 'name', 'twitter:card', 'summary_large_image')
     setMeta('meta[name="twitter:site"]', 'name', 'twitter:site', '@cartcrft')
 

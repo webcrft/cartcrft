@@ -13,7 +13,7 @@ a single product's checkout on a marketing page.
 ## How it works
 
 1. The merchant creates a link from one or more `line_items` (variant + quantity).
-   Cartcrft snapshots the items and returns an unguessable token (`cl_<24 random
+   CartCrft snapshots the items and returns an unguessable token (`cl_<24 random
    bytes>`) and a hosted URL: `<PUBLIC_CHECKOUT_BASE>/pay/<token>`.
 2. The buyer opens the URL. The hosted page resolves the link (totals, currency,
    store branding) with **no authentication** — the token is the only credential.

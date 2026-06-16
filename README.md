@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="assets/logo.svg" width="112" alt="Cartcrft" />
+  <img src="assets/logo.svg" width="112" alt="CartCrft" />
 </p>
 
-<h1 align="center">Cartcrft</h1>
+<h1 align="center">CartCrft</h1>
 
 <p align="center">
   <strong>The open-source, agent-native headless commerce backend.</strong><br />
@@ -27,7 +27,7 @@
 
 ---
 
-Cartcrft is an open-source headless commerce backend built for the agentic era.
+CartCrft is an open-source headless commerce backend built for the agentic era.
 Every store ships with an **MCP server** that lets any AI agent — Claude, GPT, or
 your own — browse, search, and complete purchases out of the box: no plugins, no
 middleware, no proprietary agent layer.
@@ -42,27 +42,27 @@ and MIT-licensed outside the optional cloud billing layer.
 ## Screenshots
 
 <p align="center">
-  <img src="docs/screenshots/dashboard-overview.png" width="720" alt="Cartcrft admin dashboard — Overview" />
+  <img src="docs/screenshots/dashboard-overview.png" width="720" alt="CartCrft admin dashboard — Overview" />
 </p>
 <p align="center"><em>Admin dashboard — multi-store switcher, full catalog and sales nav.</em></p>
 
 <p align="center">
-  <img src="docs/screenshots/dashboard-products.png" width="720" alt="Cartcrft dashboard — Products" />
+  <img src="docs/screenshots/dashboard-products.png" width="720" alt="CartCrft dashboard — Products" />
 </p>
 <p align="center"><em>Product catalog — manage products, variants, collections, and inventory.</em></p>
 
 <p align="center">
-  <img src="docs/screenshots/dashboard-orders.png" width="720" alt="Cartcrft dashboard — Orders" />
+  <img src="docs/screenshots/dashboard-orders.png" width="720" alt="CartCrft dashboard — Orders" />
 </p>
 <p align="center"><em>Orders dashboard — financial and fulfillment status at a glance.</em></p>
 
 <p align="center">
-  <img src="docs/screenshots/checkout.png" width="720" alt="Cartcrft hosted checkout — branded payment page" />
+  <img src="docs/screenshots/checkout.png" width="720" alt="CartCrft hosted checkout — branded payment page" />
 </p>
 <p align="center"><em>Hosted checkout link — branded payment page, no storefront code required.</em></p>
 
 <p align="center">
-  <img src="docs/screenshots/landing.png" width="720" alt="Cartcrft marketing landing page" />
+  <img src="docs/screenshots/landing.png" width="720" alt="CartCrft marketing landing page" />
 </p>
 <p align="center"><em>Marketing site — Agentic Terminal theme.</em></p>
 
@@ -150,7 +150,7 @@ curl http://localhost:3000/healthz
 
 ## Architecture
 
-Cartcrft is fully headless. The backend exposes:
+CartCrft is fully headless. The backend exposes:
 
 - **REST API** — date-versioned OpenAPI 3.1, machine-readable error semantics, idempotency keys on all mutating storefront endpoints
 - **Webhooks** — outbound signed event delivery + inbound payment webhook router
@@ -182,7 +182,7 @@ cartcrft/
 │   └── src/
 │       ├── site/              # marketing pages + docs (react-router SPA)
 │       └── dashboard/         # admin SPA at /dashboard
-└── cloud/                     # Cloud billing layer (Cartcrft Cloud License — not MIT)
+└── cloud/                     # Cloud billing layer (CartCrft Cloud License — not MIT)
     ├── LICENSE
     └── billing/               # plans, Paystack, USD→ZAR fx, wallet, billing sim
 ```
@@ -236,9 +236,9 @@ for what's being built and why.
 Everything outside `cloud/` is **MIT** — see [LICENSE](./LICENSE).
 
 The `cloud/` directory is source-available under the
-[Cartcrft Cloud License v1.0](./cloud/LICENSE): free to view, modify, and use for
+[CartCrft Cloud License v1.0](./cloud/LICENSE): free to view, modify, and use for
 development and testing; production and commercial use of `cloud/` code requires a
-written agreement with Webcrft Systems (Pty) Ltd. **Self-hosting Cartcrft does not require
+written agreement with Webcrft Systems (Pty) Ltd. **Self-hosting CartCrft does not require
 `cloud/` at all.**
 
 ---

@@ -5,7 +5,7 @@ description: "Shipping zones, carrier rates, collection points, fulfillment orde
 
 # Shipping
 
-Cartcrft ships with a full zone-and-rate shipping system plus collection points
+CartCrft ships with a full zone-and-rate shipping system plus collection points
 (click-and-collect), live-rate providers (BobGo), shipment records, and tracking
 events. A public webhook at `/webhooks/:storeId/tracking/:shipmentId` accepts
 carrier tracking updates.
@@ -86,7 +86,7 @@ curl -s -X POST \
 POST /webhooks/:storeId/tracking/:shipmentId
 ```
 
-Carriers post tracking updates here. Cartcrft appends events to the shipment's
+Carriers post tracking updates here. CartCrft appends events to the shipment's
 tracking history and can fire store notification webhooks on status changes.
 
 ---

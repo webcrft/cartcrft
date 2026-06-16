@@ -1,6 +1,6 @@
-# Cartcrft Documentation
+# CartCrft Documentation
 
-Developer reference for the Cartcrft headless commerce backend.
+Developer reference for the CartCrft headless commerce backend.
 
 ---
 

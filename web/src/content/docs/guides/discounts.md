@@ -5,9 +5,9 @@ description: "Create discount codes customers enter at checkout and automatic pr
 
 # Run a discount or promotion
 
-Cartcrft supports two types of discounts: **codes** (customers enter a code at checkout) and **automatic** promotions (applied without a code). Both live under **Operations → Discounts**.
+CartCrft supports two types of discounts: **codes** (customers enter a code at checkout) and **automatic** promotions (applied without a code). Both live under **Operations → Discounts**.
 
-![Cartcrft discounts page](/screenshots/dashboard-discounts.png)
+![CartCrft discounts page](/screenshots/dashboard-discounts.png)
 
 *The Discounts page — tabbed between Codes and Automatic promotions, with type, value, and status at a glance.*
 

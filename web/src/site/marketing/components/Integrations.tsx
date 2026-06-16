@@ -79,7 +79,7 @@ export default function Integrations() {
             Bring your own keys. <span className="hl">Plug in the rest.</span>
           </h2>
           <p>
-            Cartcrft is provider-neutral. Connect your own payment, identity, channel, and analytics
+            CartCrft is provider-neutral. Connect your own payment, identity, channel, and analytics
             accounts — no platform rake, no lock-in. Every adapter is BYO-credentials and the surface is
             extensible, so adding another provider is a module, not a rewrite.
           </p>
@@ -105,7 +105,7 @@ export default function Integrations() {
         </ul>
 
         <p className="integrations-foot">
-          Names and marks belong to their owners. Cartcrft works with these services via your own keys —
+          Names and marks belong to their owners. CartCrft works with these services via your own keys —
           no partnership implied.
         </p>
       </div>

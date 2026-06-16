@@ -6,7 +6,7 @@ sidebar:
   order: 1
 ---
 
-# Cartcrft Security Model
+# CartCrft Security Model
 
 > **Hardening wave H1.1** — 2026-06-13. Reviewed against all 53 confirmed findings
 > from the 2026-06-13 fan-out security review.
@@ -15,7 +15,7 @@ sidebar:
 
 ## Tenant isolation
 
-Cartcrft is a multi-tenant headless commerce backend. Each **store** belongs to one
+CartCrft is a multi-tenant headless commerce backend. Each **store** belongs to one
 **org** (organisation). Every API endpoint is scoped to a `storeId` route parameter;
 access is denied if the authenticated principal does not own that store.
 

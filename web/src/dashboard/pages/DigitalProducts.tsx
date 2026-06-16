@@ -265,7 +265,7 @@ export default function DigitalProducts() {
               type="number"
             />
             <p className="text-xs text-slate-500">
-              The URL should be a direct link to your file (e.g., S3, Cloudflare R2, or any public/pre-signed URL). Cartcrft wraps it with a time-limited download token.
+              The URL should be a direct link to your file (e.g., S3, Cloudflare R2, or any public/pre-signed URL). CartCrft wraps it with a time-limited download token.
             </p>
             <div className="flex gap-2 pt-2 border-t border-white/[0.06]">
               <Btn onClick={() => handleAddFile(addingFile)} loading={savingFile}>Attach File</Btn>

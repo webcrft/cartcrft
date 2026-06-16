@@ -1,16 +1,16 @@
 ---
 title: Cloud Onboarding
-description: Connect your store to Cartcrft Cloud — step-by-step guide from sign-up to first sale.
+description: Connect your store to CartCrft Cloud — step-by-step guide from sign-up to first sale.
 ---
 
 > **Cloud is in preview.** The onboarding flow is under active development. [Join the waitlist](mailto:hello@webcrft.io?subject=Cloud+waitlist) to be notified when it opens.
 
 ## Overview
 
-Cartcrft Cloud onboarding takes you from a fresh account to a fully-configured store in four stages:
+CartCrft Cloud onboarding takes you from a fresh account to a fully-configured store in four stages:
 
 1. **Account setup** — create your account, verify your email, choose a plan.
-2. **Store provisioning** — Cartcrft provisions a managed Postgres instance and deploys the backend.
+2. **Store provisioning** — CartCrft provisions a managed Postgres instance and deploys the backend.
 3. **Agent surface configuration** — configure your MCP server, connect payment providers, set up semantic search (optional).
 4. **Go live** — your store is reachable at your custom domain over HTTPS.
 
@@ -25,7 +25,7 @@ Your card is not charged until provisioning completes and you confirm.
 
 ## Step 2 — Store provisioning
 
-After payment confirmation, Cartcrft automatically:
+After payment confirmation, CartCrft automatically:
 
 - Creates a managed Postgres 16 + pgvector instance in your chosen region.
 - Runs the latest schema migration.
@@ -61,15 +61,15 @@ Point any MCP-capable agent at this URL with your `cc_pub_` key. See [Agent-nati
 
 ### Register on agent shopping surfaces (2-click)
 
-Beyond protocol conformance, Cartcrft can register your catalog on the surfaces
+Beyond protocol conformance, CartCrft can register your catalog on the surfaces
 where AI shopping agents discover and transact — **Google AI shopping** (via
 Google Merchant Center) and **ChatGPT** (via ACP feed registration).
 
 Go to **Dashboard → Agent Surfaces**. For each surface:
 
-1. Click **Connect**. Cartcrft stores the connection and (for Google) walks you
+1. Click **Connect**. CartCrft stores the connection and (for Google) walks you
    through OAuth; for ChatGPT you paste your OpenAI merchant id + token.
-2. Click **Submit feed now**. Cartcrft generates your product feed and submits
+2. Click **Submit feed now**. CartCrft generates your product feed and submits
    it to the surface, then shows the connection status and last sync.
 
 Under the hood:
@@ -78,7 +78,7 @@ Under the hood:
   the [Content API for Shopping](https://developers.google.com/shopping-content)
   (`products.custombatch` insert). This is the same product data as the Google
   Shopping XML feed, in the Content API JSON product shape.
-- **ChatGPT (ACP)** — Cartcrft registers your live ACP feed
+- **ChatGPT (ACP)** — CartCrft registers your live ACP feed
   (`/acp/<storeId>/feed`) with OpenAI's commerce API. No catalog is copied; the
   surface pulls from your feed endpoint.
 
@@ -105,7 +105,7 @@ full connect → submit flow without real credentials.
 
 ## Migrating from self-host
 
-If you have an existing self-hosted Cartcrft instance:
+If you have an existing self-hosted CartCrft instance:
 
 1. Export your database: `pg_dump -Fc mydb > mydb.dump`
 2. Contact support at [hello@webcrft.io](mailto:hello@webcrft.io?subject=Cloud+migration) with your account ID to initiate a managed import.

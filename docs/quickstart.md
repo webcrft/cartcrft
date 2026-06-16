@@ -1,6 +1,6 @@
 # Quickstart — Local Development
 
-Get a Cartcrft server running locally with a seeded demo store and make your
+Get a CartCrft server running locally with a seeded demo store and make your
 first API calls in under five minutes.
 
 ---

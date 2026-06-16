@@ -79,7 +79,7 @@ export default function SiteLayout({ children, noFooter = false }: { children: R
     <>
       <header className={`site-header${scrolled ? ' is-scrolled' : ''}`}>
         <div className="header-inner">
-          <Link to="/" className="header-logo" aria-label="Cartcrft home">
+          <Link to="/" className="header-logo" aria-label="CartCrft home">
             <img src="/logo.svg" alt="" width={30} height={30} />
             <span className="wordmark">cart<span className="wm-accent">crft</span></span>
           </Link>
@@ -89,7 +89,7 @@ export default function SiteLayout({ children, noFooter = false }: { children: R
             <Link to="/compare">Compare</Link>
             <Link to="/pricing">Pricing</Link>
             {CLOUD && <Link to="/cloud/overview">Cloud</Link>}
-            <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className="nav-github" aria-label="View Cartcrft on GitHub">
+            <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className="nav-github" aria-label="View CartCrft on GitHub">
               <GitHubIcon size={20} />
               <span className="nav-github-label">GitHub</span>
             </a>
@@ -141,11 +141,11 @@ export default function SiteLayout({ children, noFooter = false }: { children: R
       <footer className="site-footer">
         <div className="footer-inner">
           <div className="footer-brand">
-            <Link to="/" aria-label="Cartcrft home">
+            <Link to="/" aria-label="CartCrft home">
               <span className="footer-logo"><img src="/logo.svg" alt="" width={30} height={30} /><span className="wordmark wordmark--footer">cart<span className="wm-accent">crft</span></span></span>
             </Link>
             <p className="footer-tagline">Headless commerce for<br />agent-native storefronts.</p>
-            <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className="footer-github" aria-label="View Cartcrft on GitHub">
+            <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className="footer-github" aria-label="View CartCrft on GitHub">
               <GitHubIcon size={18} />
               Star on GitHub
             </a>

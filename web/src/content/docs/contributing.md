@@ -1,6 +1,6 @@
 ---
 title: "Contributing"
-description: "Developer guide for the Cartcrft monorepo — layout, pnpm commands, migration rules, commit style."
+description: "Developer guide for the CartCrft monorepo — layout, pnpm commands, migration rules, commit style."
 sidebar:
   label: "Contributing"
   order: 1
@@ -8,7 +8,7 @@ sidebar:
 
 # Contributing
 
-Developer guide for the Cartcrft monorepo.
+Developer guide for the CartCrft monorepo.
 
 ---
 
@@ -48,7 +48,7 @@ cartcrft/
 ├── mcp/                        # MCP usage docs + client config examples (MIT)
 ├── sdk/                        # @cartcrft/sdk (generated from OpenAPI) (MIT)
 ├── cloud/
-│   ├── LICENSE                 # Cartcrft Cloud License v1.0
+│   ├── LICENSE                 # CartCrft Cloud License v1.0
 │   └── billing/                # cloud metering + billing (not MIT)
 └── docs/                       # this directory
 ```

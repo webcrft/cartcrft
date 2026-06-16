@@ -9,7 +9,7 @@ export default function Gdpr() {
   return (
     <LegalLayout
       title="GDPR Disclosure"
-      description="GDPR disclosure for EU/EEA/UK data subjects using Cartcrft Cloud, operated by Webcrft Systems (Pty) Ltd."
+      description="GDPR disclosure for EU/EEA/UK data subjects using CartCrft Cloud, operated by Webcrft Systems (Pty) Ltd."
       lastUpdated="2026-06-14"
     >
       <div className="notice-box">
@@ -25,7 +25,7 @@ export default function Gdpr() {
       <h2>1. Territorial Scope</h2>
       <p>
         The GDPR applies to WebCrft's processing where we offer goods or services to individuals
-        in the EU/EEA/UK (Art. 3(2)(a)) or monitor their behaviour (Art. 3(2)(b)). Because Cartcrft
+        in the EU/EEA/UK (Art. 3(2)(a)) or monitor their behaviour (Art. 3(2)(b)). Because CartCrft
         Cloud is available globally and may be used by EU/EEA/UK merchants or end-customers, we
         maintain full GDPR compliance.
       </p>
@@ -34,7 +34,7 @@ export default function Gdpr() {
 
       <h3>2.1 WebCrft as Data Controller</h3>
       <p>
-        For personal data of <strong>Cartcrft Cloud account holders</strong> (merchants and developers),
+        For personal data of <strong>CartCrft Cloud account holders</strong> (merchants and developers),
         WebCrft is the data controller:
       </p>
       <p>
@@ -65,7 +65,7 @@ export default function Gdpr() {
 
       <h3>2.4 WebCrft as Data Processor</h3>
       <p>
-        For personal data of a <strong>merchant's end-customers</strong> processed through the Cartcrft
+        For personal data of a <strong>merchant's end-customers</strong> processed through the CartCrft
         API, the merchant is the data controller and WebCrft is a data processor (Art. 28).
         A <strong>Data Processing Agreement (DPA)</strong> is available on request:
         {' '}<a href="mailto:legal@webcrft.io">legal@webcrft.io</a>.
@@ -81,7 +81,7 @@ export default function Gdpr() {
           <tr>
             <td>Account registration and Service delivery</td>
             <td>Contract (Art. 6(1)(b))</td>
-            <td>Necessary to perform the Cartcrft Cloud subscription agreement</td>
+            <td>Necessary to perform the CartCrft Cloud subscription agreement</td>
           </tr>
           <tr>
             <td>Subscription billing via Paystack, including USD/ZAR invoicing</td>
@@ -167,7 +167,7 @@ export default function Gdpr() {
           <tr>
             <td>Automated decision-making</td>
             <td>Art. 22</td>
-            <td>Not to be subject to solely automated decisions with significant legal effects — Cartcrft Cloud does not make such decisions on account holders</td>
+            <td>Not to be subject to solely automated decisions with significant legal effects — CartCrft Cloud does not make such decisions on account holders</td>
           </tr>
         </tbody>
       </table>
@@ -234,7 +234,7 @@ export default function Gdpr() {
         <li><strong>Backblaze Inc.</strong> — object storage for media</li>
       </ul>
       <p>
-        Paystack is engaged only for Cartcrft Cloud subscription billing (WebCrft's own controller
+        Paystack is engaged only for CartCrft Cloud subscription billing (WebCrft's own controller
         activity), not as a sub-processor for end-customer data.
       </p>
       <p>We will notify controllers of intended sub-processor changes in advance, giving the controller the opportunity to object.</p>

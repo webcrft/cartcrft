@@ -21,9 +21,9 @@ Run through this checklist before switching your store to production traffic. Ea
 - [ ] Provider Mode = **Live**
 - [ ] Secret Key and Publishable Key are live credentials (not `_test_` or `_sandbox_`)
 - [ ] Webhook URL registered with the payment provider
-- [ ] Webhook signature secret entered in Cartcrft
+- [ ] Webhook signature secret entered in CartCrft
 
-> **Reminder:** Cartcrft never touches payment money. All transactions process through your own account — 0% rake.
+> **Reminder:** CartCrft never touches payment money. All transactions process through your own account — 0% rake.
 
 See [Set up your store — payment provider](./getting-started.md#5-connect-your-payment-provider) and [BYO Keys](../byo-keys.md) for full details.
 
@@ -151,7 +151,7 @@ To list products on Google Shopping or Facebook:
 
 | | Cloud (`app.cartcrft.io`) | Self-hosted |
 |---|---|---|
-| Infrastructure | Managed by Cartcrft | Your own servers / cloud provider |
+| Infrastructure | Managed by CartCrft | Your own servers / cloud provider |
 | SSL, backups, updates | Automatic | Your responsibility |
 | `AUTH_SECRETS_KEY` | Managed | Required in production — 64-char hex; server refuses to start without it |
 | Billing | Cloud subscription | None (MIT licence) |

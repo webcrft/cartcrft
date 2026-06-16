@@ -1,6 +1,6 @@
-# Self-Hosting Cartcrft
+# Self-Hosting CartCrft
 
-Cartcrft runs as a single Docker image with three subcommands (`serve`, `worker`, `migrate`).
+CartCrft runs as a single Docker image with three subcommands (`serve`, `worker`, `migrate`).
 The only required infrastructure is **Postgres 16 + pgvector**.  Everything else (payments, email,
 LLM embeddings, exchange rates) is BYO-keys and optional at start-up.
 
@@ -61,7 +61,7 @@ Never commit values — only commit an `.env.example` with placeholder text.
 | `AWS_SES_REGION` | No | — | AWS region for SES transactional email |
 | `AWS_SES_ACCESS_KEY_ID` | No | — | AWS access key for SES |
 | `AWS_SES_SECRET_ACCESS_KEY` | No | — | AWS secret key for SES |
-| `EMAIL_FROM` | No | — | From address for transactional email (e.g. `Cartcrft <noreply@example.com>`) |
+| `EMAIL_FROM` | No | — | From address for transactional email (e.g. `CartCrft <noreply@example.com>`) |
 | `EXCHANGE_RATE_API_KEY` | No | — | exchangerate-api.com v6 key for USD→ZAR fx refreshes |
 | `BILLING_SIM_ENABLED` | No | `false` | Enable compressed-time billing simulation (dev/test only) |
 | `BILLING_SIM_DAY_SECONDS` | No | `86400` | Simulated billing day length in real seconds |
@@ -126,7 +126,7 @@ There are no down-migrations by design (append-only schema evolution).  To roll 
 
 ## BYO Keys — Payments, LLM, Email
 
-Cartcrft uses a BYO-keys model: you supply your own API credentials directly to the backend.
+CartCrft uses a BYO-keys model: you supply your own API credentials directly to the backend.
 Keys are stored encrypted at rest (AES-256-GCM, `AUTH_SECRETS_KEY`).
 
 - **Payments** — configure per-store via `POST /commerce/stores/:storeId/payment-providers`

@@ -9,7 +9,7 @@ The catalog module covers everything you sell: products, variants, options, medi
 bundles, digital files, collections, price lists, and i18n translations. All routes
 are under `/commerce/stores/:storeId/...`.
 
-![Cartcrft product catalog — dashboard view](/screenshots/dashboard-products.png)
+![CartCrft product catalog — dashboard view](/screenshots/dashboard-products.png)
 
 *The products dashboard — add products, manage variants, and organise collections.*
 

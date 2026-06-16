@@ -5,11 +5,11 @@ description: "Tax categories, zones, and rate configuration — static rate tabl
 
 # Tax
 
-Cartcrft uses static tax rate tables: tax categories classify what you sell,
+CartCrft uses static tax rate tables: tax categories classify what you sell,
 tax zones pair a geographic region with rates, and the combination is applied at
 checkout time.
 
-> **No external tax provider** — Cartcrft computes tax from your configured zones
+> **No external tax provider** — CartCrft computes tax from your configured zones
 > and rates. If you need real-time tax via TaxJar or Avalara, those are planned
 > integrations.
 

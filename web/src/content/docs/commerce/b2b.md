@@ -66,7 +66,7 @@ POST       /commerce/stores/:storeId/quotes/:quoteId/reject
 
 ## Purchase orders
 
-POs let companies reference their own PO number against a Cartcrft order.
+POs let companies reference their own PO number against a CartCrft order.
 
 ```
 GET/POST   /commerce/stores/:storeId/purchase-orders

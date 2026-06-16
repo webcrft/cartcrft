@@ -20,7 +20,7 @@ checkout page is `web/src/checkout/CheckoutApp.tsx`.
 1. Your backend calls `POST /commerce/stores/:storeId/checkout-links` with the
    desired line items (and optional customer email, success/cancel URLs, and
    expiry).
-2. Cartcrft returns a `token` (`cl_<random>`, 24 random bytes) and a hosted URL
+2. CartCrft returns a `token` (`cl_<random>`, 24 random bytes) and a hosted URL
    (`/pay/<token>`).
 3. Share the URL with the customer. When they open it, the hosted page resolves
    the link, shows a branded checkout summary, and lets them pay.
@@ -198,7 +198,7 @@ Errors:
 
 ## Hosted checkout page — /pay/:token
 
-![Cartcrft hosted checkout — branded payment page](/screenshots/checkout.png)
+![CartCrft hosted checkout — branded payment page](/screenshots/checkout.png)
 
 *The hosted checkout page: store-branded, no storefront code required. Customers land here directly from the shareable link.*
 
@@ -206,7 +206,7 @@ The hosted page (`/pay/<token>`) is a self-contained React app that:
 
 1. Calls `GET /storefront/checkout-links/:token` to load the store branding,
    line items, and totals.
-2. Renders a clean checkout card: store name + Cartcrft mark, line-item list,
+2. Renders a clean checkout card: store name + CartCrft mark, line-item list,
    totals, an email field (if no email was pre-filled), and a Pay button.
 3. On Pay, calls `POST .../start-payment` and redirects the browser to the
    provider URL.

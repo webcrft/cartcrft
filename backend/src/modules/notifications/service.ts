@@ -449,7 +449,7 @@ async function deliverEmail(
   const fromName =
     typeof provider.config["from_name"] === "string"
       ? provider.config["from_name"]
-      : "Cartcrft";
+      : "CartCrft";
   const fromEmail =
     typeof provider.config["from_email"] === "string" && provider.config["from_email"]
       ? provider.config["from_email"]

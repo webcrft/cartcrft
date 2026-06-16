@@ -42,7 +42,7 @@ function valueClass(v: boolean | string | null, isOurs: boolean): string {
   return `${base} cell--text`
 }
 
-export default function ComparisonTable({ competitors, rows, caption, ourName = 'Cartcrft' }: ComparisonTableProps) {
+export default function ComparisonTable({ competitors, rows, caption, ourName = 'CartCrft' }: ComparisonTableProps) {
   let lastCategory = ''
 
   return (

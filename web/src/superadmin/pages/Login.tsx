@@ -330,7 +330,7 @@ export default function Login() {
             style={{ fontFamily: 'var(--cc-font-mono)' }}
           >
             <Lock size={10} />
-            Cartcrft Operator Console &middot; Access is logged
+            CartCrft Operator Console &middot; Access is logged
           </p>
         </div>
       </div>

@@ -9,7 +9,7 @@ export default function Popia() {
   return (
     <LegalLayout
       title="POPIA Disclosure"
-      description="Protection of Personal Information Act (POPIA) disclosure for Cartcrft Cloud, operated by Webcrft Systems (Pty) Ltd."
+      description="Protection of Personal Information Act (POPIA) disclosure for CartCrft Cloud, operated by Webcrft Systems (Pty) Ltd."
       lastUpdated="2026-06-14"
     >
       <div className="notice-box">
@@ -39,16 +39,16 @@ export default function Popia() {
 
       <h2>2. Scope of this Disclosure</h2>
 
-      <h3>2.1 Cartcrft as Responsible Party (Controller)</h3>
+      <h3>2.1 CartCrft as Responsible Party (Controller)</h3>
       <p>
         WebCrft determines the purpose and means of processing personal information relating
-        to <strong>Cartcrft Cloud account holders</strong> (merchants and developers): account
+        to <strong>CartCrft Cloud account holders</strong> (merchants and developers): account
         registration data, billing records via Paystack, and correspondence.
       </p>
 
-      <h3>2.2 Cartcrft as Operator (Processor)</h3>
+      <h3>2.2 CartCrft as Operator (Processor)</h3>
       <p>
-        When a merchant uses Cartcrft Cloud, their end-customers' personal information is processed
+        When a merchant uses CartCrft Cloud, their end-customers' personal information is processed
         by WebCrft <em>on behalf of the merchant</em>:
       </p>
       <ul>
@@ -72,7 +72,7 @@ export default function Popia() {
       <h3>Condition 3 — Purpose Specification (ss. 13–14)</h3>
       <p>We collect personal information for the following specific, explicitly defined, and lawful purposes:</p>
       <ul>
-        <li>Provision and operation of Cartcrft Cloud (contractual necessity — s.11(1)(b));</li>
+        <li>Provision and operation of CartCrft Cloud (contractual necessity — s.11(1)(b));</li>
         <li>Subscription billing and invoice generation via Paystack, including USD/ZAR exchange-rate snapshots from exchangerate-api.com (contractual necessity);</li>
         <li>Transactional emails via AWS SES: account verification, password reset, magic links, billing notices (contractual necessity);</li>
         <li>Multi-tenant isolation: the database session variables <code>app.org_id</code> and <code>app.user_id</code> used in PostgreSQL row-level security policies (legitimate interest / contractual necessity);</li>
@@ -109,7 +109,7 @@ export default function Popia() {
       <h2>4. Special Personal Information (ss. 26–32)</h2>
       <p>
         POPIA section 26 prohibits processing special personal information (health, religious beliefs,
-        race, sex life, criminal records, etc.) without specific conditions. Cartcrft Cloud does not
+        race, sex life, criminal records, etc.) without specific conditions. CartCrft Cloud does not
         intentionally collect special personal information from cloud account holders.
       </p>
       <p>

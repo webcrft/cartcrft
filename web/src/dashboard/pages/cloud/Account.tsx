@@ -55,7 +55,7 @@ export default function CloudAccountPage() {
     <div className="space-y-6">
       <PageHeader
         title="Account"
-        description="Manage your Cartcrft Cloud account and organisation settings."
+        description="Manage your CartCrft Cloud account and organisation settings."
       />
 
       {loading && (

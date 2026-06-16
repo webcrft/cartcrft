@@ -26,13 +26,13 @@ import './Compare.css'
  * ComparisonTable and PricingCalculator are preserved unchanged.
  */
 
-const PAGE_TITLE = 'How Cartcrft compares'
+const PAGE_TITLE = 'How CartCrft compares'
 const PAGE_DESCRIPTION =
-  'A grounded comparison of Cartcrft vs Shopify, Medusa v2, Vendure, Saleor, Swell, and WooCommerce across licensing, pricing, agent-native capabilities, and commerce features.'
+  'A grounded comparison of CartCrft vs Shopify, Medusa v2, Vendure, Saleor, Swell, and WooCommerce across licensing, pricing, agent-native capabilities, and commerce features.'
 const METHODOLOGY =
   "Pricing and feature status verified June 2026 from official pricing pages and documentation. Commerce capabilities are assessed against each platform's documented defaults — plugins and custom integrations are noted where relevant. Verify current figures before making decisions."
 
-const competitors = ['Cartcrft', 'Shopify', 'Medusa v2', 'Vendure', 'Saleor', 'Swell', 'WooCommerce']
+const competitors = ['CartCrft', 'Shopify', 'Medusa v2', 'Vendure', 'Saleor', 'Swell', 'WooCommerce']
 
 const rows: ComparisonRow[] = [
   // License and ownership
@@ -40,7 +40,7 @@ const rows: ComparisonRow[] = [
     category: 'License & ownership',
     feature: 'Core license',
     values: {
-      Cartcrft: 'MIT',
+      CartCrft: 'MIT',
       Shopify: 'Closed / SaaS',
       'Medusa v2': 'MIT',
       Vendure: 'GPLv3 (core)',
@@ -54,7 +54,7 @@ const rows: ComparisonRow[] = [
     category: 'License & ownership',
     feature: 'Self-hostable',
     values: {
-      Cartcrft: true,
+      CartCrft: true,
       Shopify: false,
       'Medusa v2': true,
       Vendure: true,
@@ -67,7 +67,7 @@ const rows: ComparisonRow[] = [
     category: 'License & ownership',
     feature: 'Source available / open',
     values: {
-      Cartcrft: true,
+      CartCrft: true,
       Shopify: false,
       'Medusa v2': true,
       Vendure: true,
@@ -82,7 +82,7 @@ const rows: ComparisonRow[] = [
     category: 'Pricing & fees',
     feature: 'Transaction fee (external gateway)',
     values: {
-      Cartcrft: '0%',
+      CartCrft: '0%',
       Shopify: '0.6%–2% (varies by plan)',
       'Medusa v2': '0%',
       Vendure: '0%',
@@ -96,7 +96,7 @@ const rows: ComparisonRow[] = [
     category: 'Pricing & fees',
     feature: 'Managed cloud entry price',
     values: {
-      Cartcrft: 'Flat fee (contact)',
+      CartCrft: 'Flat fee (contact)',
       Shopify: '$29/mo (Basic)',
       'Medusa v2': '$29/mo (Develop)',
       Vendure: 'GA Q4 2026 (design partners)',
@@ -109,7 +109,7 @@ const rows: ComparisonRow[] = [
     category: 'Pricing & fees',
     feature: 'GMV / revenue percentage',
     values: {
-      Cartcrft: '0%',
+      CartCrft: '0%',
       Shopify: null,
       'Medusa v2': '0%',
       Vendure: '0% (flat Platform fee)',
@@ -124,7 +124,7 @@ const rows: ComparisonRow[] = [
     category: 'Agent-native',
     feature: 'MCP server (built-in)',
     values: {
-      Cartcrft: 'Shipped',
+      CartCrft: 'Shipped',
       Shopify: 'Shipped (Storefront MCP, Apr 2026)',
       'Medusa v2': false,
       Vendure: false,
@@ -138,7 +138,7 @@ const rows: ComparisonRow[] = [
     category: 'Agent-native',
     feature: 'ACP adapter (Agentic Commerce Protocol)',
     values: {
-      Cartcrft: 'Shipped (test mode)',
+      CartCrft: 'Shipped (test mode)',
       Shopify: 'Via ChatGPT Buy / ACP standard',
       'Medusa v2': false,
       Vendure: false,
@@ -152,7 +152,7 @@ const rows: ComparisonRow[] = [
     category: 'Agent-native',
     feature: 'UCP adapter (Universal Commerce Protocol)',
     values: {
-      Cartcrft: 'Shipped (test mode)',
+      CartCrft: 'Shipped (test mode)',
       Shopify: 'Shipped (UCP co-author, NRF 2026)',
       'Medusa v2': false,
       Vendure: false,
@@ -166,7 +166,7 @@ const rows: ComparisonRow[] = [
     category: 'Agent-native',
     feature: 'Live delegated / agentic payment',
     values: {
-      Cartcrft: 'In development (Phase H5)',
+      CartCrft: 'In development (Phase H5)',
       Shopify: 'Live (US merchants, Apr 2026)',
       'Medusa v2': false,
       Vendure: false,
@@ -179,7 +179,7 @@ const rows: ComparisonRow[] = [
     category: 'Agent-native',
     feature: 'Signed agent mandates (ed25519)',
     values: {
-      Cartcrft: true,
+      CartCrft: true,
       Shopify: false,
       'Medusa v2': false,
       Vendure: false,
@@ -193,7 +193,7 @@ const rows: ComparisonRow[] = [
     category: 'Agent-native',
     feature: 'Semantic / vector search (built-in)',
     values: {
-      Cartcrft: true,
+      CartCrft: true,
       Shopify: 'Paid add-on',
       'Medusa v2': false,
       Vendure: false,
@@ -208,7 +208,7 @@ const rows: ComparisonRow[] = [
     category: 'API & architecture',
     feature: 'REST API',
     values: {
-      Cartcrft: true,
+      CartCrft: true,
       Shopify: true,
       'Medusa v2': true,
       Vendure: false,
@@ -221,7 +221,7 @@ const rows: ComparisonRow[] = [
     category: 'API & architecture',
     feature: 'GraphQL API',
     values: {
-      Cartcrft: false,
+      CartCrft: false,
       Shopify: true,
       'Medusa v2': false,
       Vendure: true,
@@ -234,7 +234,7 @@ const rows: ComparisonRow[] = [
     category: 'API & architecture',
     feature: 'Fully headless (API-only core)',
     values: {
-      Cartcrft: true,
+      CartCrft: true,
       Shopify: true,
       'Medusa v2': true,
       Vendure: true,
@@ -247,7 +247,7 @@ const rows: ComparisonRow[] = [
     category: 'API & architecture',
     feature: 'Primary language',
     values: {
-      Cartcrft: 'TypeScript',
+      CartCrft: 'TypeScript',
       Shopify: 'Ruby / closed',
       'Medusa v2': 'TypeScript',
       Vendure: 'TypeScript',
@@ -260,7 +260,7 @@ const rows: ComparisonRow[] = [
     category: 'API & architecture',
     feature: 'Postgres-native',
     values: {
-      Cartcrft: true,
+      CartCrft: true,
       Shopify: null,
       'Medusa v2': true,
       Vendure: true,
@@ -275,7 +275,7 @@ const rows: ComparisonRow[] = [
     category: 'Commerce features',
     feature: 'Product types (configurable / bundle / digital / subscription / rental)',
     values: {
-      Cartcrft: 'All 7 types (core)',
+      CartCrft: 'All 7 types (core)',
       Shopify: 'Simple + digital; bundles via app; subscription via app',
       'Medusa v2': 'Simple + digital; bundles via module; subscription in progress',
       Vendure: 'Configurable + digital; bundles via plugin',
@@ -289,7 +289,7 @@ const rows: ComparisonRow[] = [
     category: 'Commerce features',
     feature: 'Unlimited variants & options (no hard cap)',
     values: {
-      Cartcrft: true,
+      CartCrft: true,
       Shopify: 'Capped: 3 options, 100 variants per product',
       'Medusa v2': true,
       Vendure: true,
@@ -302,7 +302,7 @@ const rows: ComparisonRow[] = [
     category: 'Commerce features',
     feature: 'Collections & metafields (smart rules + typed metafields)',
     values: {
-      Cartcrft: true,
+      CartCrft: true,
       Shopify: true,
       'Medusa v2': 'Collections yes; metafields via module',
       Vendure: 'Collections yes; custom fields via schema extension',
@@ -315,7 +315,7 @@ const rows: ComparisonRow[] = [
     category: 'Commerce features',
     feature: 'Multi-warehouse inventory (per-location levels + audit log)',
     values: {
-      Cartcrft: true,
+      CartCrft: true,
       Shopify: 'Locations yes; lot tracking/serial numbers require app',
       'Medusa v2': true,
       Vendure: true,
@@ -329,7 +329,7 @@ const rows: ComparisonRow[] = [
     category: 'Commerce features',
     feature: 'Lot tracking / FEFO / serial numbers (built-in)',
     values: {
-      Cartcrft: true,
+      CartCrft: true,
       Shopify: false,
       'Medusa v2': false,
       Vendure: false,
@@ -343,7 +343,7 @@ const rows: ComparisonRow[] = [
     category: 'Commerce features',
     feature: 'B2B (companies, credit limits, quotes/RFQ, purchase orders)',
     values: {
-      Cartcrft: true,
+      CartCrft: true,
       Shopify: 'Plus only ($2,300+/mo)',
       'Medusa v2': true,
       Vendure: 'Platform tier',
@@ -356,7 +356,7 @@ const rows: ComparisonRow[] = [
     category: 'Commerce features',
     feature: 'Customer groups & price lists (tiered / wholesale pricing)',
     values: {
-      Cartcrft: true,
+      CartCrft: true,
       Shopify: 'Plus only (or third-party app)',
       'Medusa v2': true,
       Vendure: true,
@@ -369,7 +369,7 @@ const rows: ComparisonRow[] = [
     category: 'Commerce features',
     feature: 'Subscriptions / recurring orders',
     values: {
-      Cartcrft: true,
+      CartCrft: true,
       Shopify: 'App/plugin (e.g. Recharge)',
       'Medusa v2': 'In progress',
       Vendure: 'Plugin',
@@ -382,7 +382,7 @@ const rows: ComparisonRow[] = [
     category: 'Commerce features',
     feature: 'Returns / RMA (refund + exchange + store credit + repair flows)',
     values: {
-      Cartcrft: true,
+      CartCrft: true,
       Shopify: 'Basic returns; exchange/RMA via app',
       'Medusa v2': true,
       Vendure: 'Plugin',
@@ -395,7 +395,7 @@ const rows: ComparisonRow[] = [
     category: 'Commerce features',
     feature: 'Gift cards & store credit wallet',
     values: {
-      Cartcrft: true,
+      CartCrft: true,
       Shopify: 'Gift cards yes; store credit via app',
       'Medusa v2': 'Gift cards via plugin',
       Vendure: 'Plugin',
@@ -408,7 +408,7 @@ const rows: ComparisonRow[] = [
     category: 'Commerce features',
     feature: 'Digital product delivery (download links, limits, expiry)',
     values: {
-      Cartcrft: true,
+      CartCrft: true,
       Shopify: 'Via Digital Downloads app (free)',
       'Medusa v2': true,
       Vendure: 'Plugin',
@@ -421,7 +421,7 @@ const rows: ComparisonRow[] = [
     category: 'Commerce features',
     feature: 'Bookings / rentals (accommodation, vehicles, desks — iCal + OTA channel sync)',
     values: {
-      Cartcrft: true,
+      CartCrft: true,
       Shopify: 'App (Sesami / BookThatApp)',
       'Medusa v2': false,
       Vendure: false,
@@ -435,7 +435,7 @@ const rows: ComparisonRow[] = [
     category: 'Commerce features',
     feature: 'Multi-currency (FX rates + per-currency price lists)',
     values: {
-      Cartcrft: 'Base currency + FX conversion + per-currency price lists (storefront currency selector not built-in)',
+      CartCrft: 'Base currency + FX conversion + per-currency price lists (storefront currency selector not built-in)',
       Shopify: 'Markets (multi-currency checkout, auto FX)',
       'Medusa v2': 'Price lists per currency; storefront selector requires custom build',
       Vendure: 'Core (channels per currency)',
@@ -448,7 +448,7 @@ const rows: ComparisonRow[] = [
     category: 'Commerce features',
     feature: 'Tax engine (categories, zones, region rates)',
     values: {
-      Cartcrft: true,
+      CartCrft: true,
       Shopify: true,
       'Medusa v2': true,
       Vendure: true,
@@ -461,7 +461,7 @@ const rows: ComparisonRow[] = [
     category: 'Commerce features',
     feature: 'Shipping zones & live carrier rates',
     values: {
-      Cartcrft: 'Zones + static rates + BobGo live rates + collection points',
+      CartCrft: 'Zones + static rates + BobGo live rates + collection points',
       Shopify: 'Zones + static + live rates (Basic: no calculated, Advanced+)',
       'Medusa v2': 'Zones + static; live carriers via fulfillment providers',
       Vendure: 'Zones + static; live carriers via plugin',
@@ -474,7 +474,7 @@ const rows: ComparisonRow[] = [
     category: 'Commerce features',
     feature: 'Abandoned-cart recovery (email + recovery link)',
     values: {
-      Cartcrft: true,
+      CartCrft: true,
       Shopify: true,
       'Medusa v2': 'Via custom notification module',
       Vendure: 'Plugin',
@@ -487,7 +487,7 @@ const rows: ComparisonRow[] = [
     category: 'Commerce features',
     feature: 'Wishlists',
     values: {
-      Cartcrft: true,
+      CartCrft: true,
       Shopify: 'App/plugin',
       'Medusa v2': false,
       Vendure: false,
@@ -500,7 +500,7 @@ const rows: ComparisonRow[] = [
     category: 'Commerce features',
     feature: 'Product feeds (Google Shopping + Meta/Facebook XML)',
     values: {
-      Cartcrft: true,
+      CartCrft: true,
       Shopify: true,
       'Medusa v2': 'Plugin / custom build',
       Vendure: 'Plugin',
@@ -532,7 +532,7 @@ const competitorCards: CompetitorCardData[] = [
     framing:
       'Shopify is the undisputed scale leader and, since January 2026, a genuine agentic commerce player — their Storefront MCP server is live and US merchants can accept purchases through ChatGPT\'s Buy flow (published April 30, 2026). On agent-native distribution, Shopify moves fast.',
     theyWin: [
-      'Live delegated / agentic payments (US merchants, Apr 2026) — Cartcrft is still in Phase H5',
+      'Live delegated / agentic payments (US merchants, Apr 2026) — CartCrft is still in Phase H5',
       'Massive app ecosystem, brand trust, and merchant install base',
       'UCP co-author (NRF 2026) — simultaneous protocol influence',
       'Opinionated hosted experience — less to assemble',
@@ -545,7 +545,7 @@ const competitorCards: CompetitorCardData[] = [
       'Built-in pgvector semantic search — Shopify charges extra',
       'Bring your own infra, your own data, your own Postgres',
     ],
-    verdict: 'If ChatGPT Instant Checkout today is the priority, Shopify leads. If owning your stack matters, Cartcrft is the answer.',
+    verdict: 'If ChatGPT Instant Checkout today is the priority, Shopify leads. If owning your stack matters, CartCrft is the answer.',
     Icon: ShoppingBag,
   },
   {
@@ -567,7 +567,7 @@ const competitorCards: CompetitorCardData[] = [
       'Lot tracking / FEFO inventory out of the box',
       'Built-in pgvector semantic search — no custom integration needed',
     ],
-    verdict: 'Medusa requires custom work to reach agent-native. Cartcrft ships it from day one.',
+    verdict: 'Medusa requires custom work to reach agent-native. CartCrft ships it from day one.',
     Icon: Code2,
   },
   {
@@ -589,7 +589,7 @@ const competitorCards: CompetitorCardData[] = [
       'MIT license — GPLv3 copyleft has implications for proprietary extensions',
       'Managed cloud live — Vendure Cloud still in design-partner phase (Q4 2026 GA)',
     ],
-    verdict: 'GraphQL lovers: Vendure is excellent. Agent-native and REST-first: Cartcrft is the fit.',
+    verdict: 'GraphQL lovers: Vendure is excellent. Agent-native and REST-first: CartCrft is the fit.',
     Icon: GitBranch,
   },
   {
@@ -606,12 +606,12 @@ const competitorCards: CompetitorCardData[] = [
     ],
     weWin: [
       'MCP server + ACP + UCP adapters — Saleor has no agent-native layer',
-      'Signed ed25519 agent mandates — unique to Cartcrft',
+      'Signed ed25519 agent mandates — unique to CartCrft',
       'TypeScript end-to-end vs. Python backend (easier to hire, one language)',
       'REST/OpenAPI (agent tooling friendly) vs. GraphQL-only',
       'Managed cloud with 0% GMV fee vs. Saleor\'s $1,599/mo entry + 0.8% overage',
     ],
-    verdict: 'Saleor Cloud\'s pricing cliff makes self-hosted Saleor the real alternative — and against that, Cartcrft adds agent-native at no extra cost.',
+    verdict: 'Saleor Cloud\'s pricing cliff makes self-hosted Saleor the real alternative — and against that, CartCrft adds agent-native at no extra cost.',
     Icon: Layers,
   },
   {
@@ -633,7 +633,7 @@ const competitorCards: CompetitorCardData[] = [
       'Full agent-native stack: MCP + ACP + UCP + mandates',
       'Paystack + Razorpay — non-US payment coverage Swell lacks built-in',
     ],
-    verdict: 'If managed SaaS with per-revenue pricing is acceptable, Swell is pleasant to use. For open source, self-hosting, zero rake, and agent-native, Cartcrft is a different category.',
+    verdict: 'If managed SaaS with per-revenue pricing is acceptable, Swell is pleasant to use. For open source, self-hosting, zero rake, and agent-native, CartCrft is a different category.',
     Icon: DollarSign,
   },
   {
@@ -655,7 +655,7 @@ const competitorCards: CompetitorCardData[] = [
       'Postgres-native (pgvector) vs. MySQL / MariaDB — better for vector search and modern tooling',
       'B2B, subscriptions, returns built-in — WooCommerce requires paid plugins',
     ],
-    verdict: 'WooCommerce is the right answer for WordPress-native content + commerce. Cartcrft is the right answer for API-first, TypeScript, agent-native commerce.',
+    verdict: 'WooCommerce is the right answer for WordPress-native content + commerce. CartCrft is the right answer for API-first, TypeScript, agent-native commerce.',
     Icon: Globe,
   },
 ]
@@ -680,7 +680,7 @@ export default function Compare() {
               feature comparison
               <span className="ey-b">]</span>
             </div>
-            <h1>How Cartcrft <span className="hl">compares</span></h1>
+            <h1>How CartCrft <span className="hl">compares</span></h1>
             <p className="cmp-header-lead">{PAGE_DESCRIPTION}</p>
             <p className="cmp-methodology">{METHODOLOGY}</p>
           </div>
@@ -692,7 +692,7 @@ export default function Compare() {
             <ComparisonTable
               competitors={competitors}
               rows={rows}
-              ourName="Cartcrft"
+              ourName="CartCrft"
               caption="Figures as of June 2026. Verify with official sources before making purchasing decisions."
             />
           </div>
@@ -750,7 +750,7 @@ export default function Compare() {
               Vendure license and Cloud status from vendure.io/pricing (GPLv3 core, Commercial Platform tier, Cloud GA Q4 2026).
               WooCommerce from wordpress.org/plugins/woocommerce (GPL-2.0+, self-hosted, 0% WC transaction fees).
               Shopify agentic commerce (MCP, ACP, UCP) from shopify.com/blog/how-agentic-commerce-works (published April 30, 2026).
-              Cartcrft ACP/UCP status from internal docs (docs/acp.md, docs/ucp.md): test mode shipped, live delegated payment in development (roadmap Phase H5).
+              CartCrft ACP/UCP status from internal docs (docs/acp.md, docs/ucp.md): test mode shipped, live delegated payment in development (roadmap Phase H5).
             </p>
             <p className="cmp-sources-caveat">
               Commerce capabilities are assessed against each platform's documented defaults — plugins and custom integrations are noted where relevant.
@@ -762,7 +762,7 @@ export default function Compare() {
         {/* ── CTA band ────────────────────────────────────────────────────── */}
         <section className="cmp-cta" data-reveal>
           <div className="cmp-cta-inner">
-            <h2>Ready to try Cartcrft?</h2>
+            <h2>Ready to try CartCrft?</h2>
             <p>Get a store running and MCP-connected in under 10 minutes.</p>
             <div className="cmp-cta-actions">
               <Link to="/quickstart" className="cc-btn cc-btn--lg cc-btn--on-dark cc-btn--primary">Get started free</Link>
@@ -820,7 +820,7 @@ function CompetitorCard({ card }: { card: CompetitorCardData }) {
         <div className="cmp-card-col cmp-card-col--us">
           <div className="cmp-col-label">
             <CheckCircle size={11} strokeWidth={2} aria-hidden="true" />
-            <span>Where Cartcrft wins</span>
+            <span>Where CartCrft wins</span>
           </div>
           <ul className="cmp-points">
             {weWin.map((pt, i) => (

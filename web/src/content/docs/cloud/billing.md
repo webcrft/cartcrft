@@ -1,13 +1,13 @@
 ---
 title: Billing & Pricing
-description: How Cartcrft Cloud billing works — USD flat fees, Paystack or Stripe payment, and USD→ZAR invoicing.
+description: How CartCrft Cloud billing works — USD flat fees, Paystack or Stripe payment, and USD→ZAR invoicing.
 ---
 
 > **Preview pricing.** Numbers are illustrative and not yet locked in. Waitlist members will be notified of final pricing before any billing starts.
 
 ## Billing model
 
-Cartcrft Cloud charges a **flat monthly subscription fee** — no percentage of your GMV, ever.
+CartCrft Cloud charges a **flat monthly subscription fee** — no percentage of your GMV, ever.
 
 | Plan | Monthly (USD) | Annual (USD, ~17% off) |
 |---|---|---|
@@ -21,13 +21,13 @@ Every Cloud plan includes:
 
 - Managed Postgres 16 + pgvector (storage allocation varies by plan)
 - Automated daily backups + point-in-time recovery
-- Zero-downtime Cartcrft version upgrades
+- Zero-downtime CartCrft version upgrades
 - Managed SSL + custom domain support
 - Email support (response times vary by plan)
 
 ### What's NOT included (you pay at cost, directly)
 
-- **Payment processing** — Stripe, Paystack, Razorpay, Xendit. You hold the contract; you pay their fees directly. Cartcrft never handles or touches payment funds.
+- **Payment processing** — Stripe, Paystack, Razorpay, Xendit. You hold the contract; you pay their fees directly. CartCrft never handles or touches payment funds.
 - **LLM / embeddings keys** — if you enable semantic search, you supply your own OpenAI-compatible key. You pay that provider directly.
 
 ## Payment methods
@@ -53,7 +53,7 @@ Exchange rates fluctuate; budget in USD for predictability.
 
 - Invoices are emailed to the account owner after each successful payment.
 - PDF receipts are available in the Dashboard under **Billing → Invoices**.
-- VAT: Cartcrft Cloud invoices include VAT where required by law (South Africa: 15% VAT applies to B2B digital services; consult your accountant).
+- VAT: CartCrft Cloud invoices include VAT where required by law (South Africa: 15% VAT applies to B2B digital services; consult your accountant).
 
 ## Cancellation and refunds
 

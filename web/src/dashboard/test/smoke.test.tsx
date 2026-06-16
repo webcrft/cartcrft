@@ -415,7 +415,7 @@ describe('AppShell with mocked auth + stores', () => {
     })
 
     // Sidebar brand
-    expect(screen.getByText('Cartcrft')).toBeInTheDocument()
+    expect(screen.getByText('CartCrft')).toBeInTheDocument()
 
     // Store name appears in the switcher
     await waitFor(() =>

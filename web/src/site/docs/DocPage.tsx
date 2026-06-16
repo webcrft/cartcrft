@@ -25,7 +25,7 @@ export default function DocPage({ slug }: { slug: string }) {
 
   // Always call hooks unconditionally; fall back to a safe title if missing.
   useDocumentMeta({
-    title: doc ? `${doc.title} · Cartcrft Docs` : 'Cartcrft Docs',
+    title: doc ? `${doc.title} · CartCrft Docs` : 'CartCrft Docs',
     description: doc?.description,
   })
 

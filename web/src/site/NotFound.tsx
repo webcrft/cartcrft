@@ -3,7 +3,7 @@ import SiteLayout from './SiteLayout'
 import { useDocumentMeta } from './useDocumentMeta'
 
 export default function NotFound() {
-  useDocumentMeta({ title: '404 — Not found | Cartcrft', noindex: true })
+  useDocumentMeta({ title: '404 — Not found | CartCrft', noindex: true })
   return (
     <SiteLayout>
       <section style={{ maxWidth: 640, margin: '0 auto', padding: '8rem 1.5rem', textAlign: 'center' }}>

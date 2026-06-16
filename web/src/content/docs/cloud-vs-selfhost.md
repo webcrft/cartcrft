@@ -8,7 +8,7 @@ sidebar:
 
 # Cloud vs Self-Host
 
-Cartcrft is designed so that self-hosting requires nothing from `cloud/`. This
+CartCrft is designed so that self-hosting requires nothing from `cloud/`. This
 document explains the licensing split, what the cloud layer adds, and what you
 get when you self-host.
 
@@ -19,12 +19,12 @@ get when you self-host.
 | Directory | License | Summary |
 |-----------|---------|---------|
 | Everything except `cloud/` | **MIT** | Use, modify, distribute freely |
-| `cloud/` | **Cartcrft Cloud License v1.0** | Source-visible; development/testing free; production requires written agreement with WebCrft |
+| `cloud/` | **CartCrft Cloud License v1.0** | Source-visible; development/testing free; production requires written agreement with WebCrft |
 
 The MIT core is the product. `cloud/` is metering + billing + tenant
 provisioning for the hosted cartcrft.com service only.
 
-**Self-hosting Cartcrft never requires `cloud/`.**
+**Self-hosting CartCrft never requires `cloud/`.**
 
 The cloud license follows the GitLab EE / Elastic model: you can read the code,
 run it locally for development and CI, and submit contributions — but you cannot
@@ -47,7 +47,7 @@ about not having any gaps that require cloud. Specifically:
 - The admin dashboard (`admin/`) is MIT.
 - The generated TypeScript SDK (`sdk/`) is MIT.
 
-You can run a production Cartcrft store without ever opening the `cloud/`
+You can run a production CartCrft store without ever opening the `cloud/`
 directory.
 
 ---

@@ -5,13 +5,13 @@ description: "Create an account, create a store, tour the dashboard, connect you
 
 # Set up your store
 
-This guide walks you through the first-time setup of a Cartcrft store: signing in, creating a store, touring the dashboard, and wiring up payments and shipping before you take your first order.
+This guide walks you through the first-time setup of a CartCrft store: signing in, creating a store, touring the dashboard, and wiring up payments and shipping before you take your first order.
 
 ---
 
 ## 1. Sign in to the dashboard
 
-Navigate to your Cartcrft dashboard URL (cloud: `app.cartcrft.io`; self-hosted: wherever you deployed the admin).
+Navigate to your CartCrft dashboard URL (cloud: `app.cartcrft.io`; self-hosted: wherever you deployed the admin).
 
 The login screen has two modes:
 
@@ -20,7 +20,7 @@ The login screen has two modes:
 
 Enter your email and password and click **Sign in**.
 
-> **Note:** Account registration is handled by your platform admin or organisation owner. If you do not have credentials, contact whoever provisioned your Cartcrft instance.
+> **Note:** Account registration is handled by your platform admin or organisation owner. If you do not have credentials, contact whoever provisioned your CartCrft instance.
 
 ---
 
@@ -44,7 +44,7 @@ The new store is immediately active. You can create additional stores from the *
 
 ## 3. Tour the dashboard
 
-![Cartcrft admin dashboard — Overview](/screenshots/dashboard-overview.png)
+![CartCrft admin dashboard — Overview](/screenshots/dashboard-overview.png)
 
 *The Overview page: revenue, orders, average order value, and customers — plus recent orders at a glance.*
 
@@ -75,7 +75,7 @@ Fill in or confirm:
 
 Click **Save Settings**.
 
-![Cartcrft settings page](/screenshots/dashboard-settings.png)
+![CartCrft settings page](/screenshots/dashboard-settings.png)
 
 *Store Settings — name, contact details, country, and timezone.*
 
@@ -83,7 +83,7 @@ Click **Save Settings**.
 
 ## 5. Connect your payment provider
 
-Cartcrft is **bring-your-own-keys**. Transactions go directly through your own Stripe, Paystack, Razorpay, or Xendit account. Cartcrft never touches payment money and charges 0% transaction rake.
+CartCrft is **bring-your-own-keys**. Transactions go directly through your own Stripe, Paystack, Razorpay, or Xendit account. CartCrft never touches payment money and charges 0% transaction rake.
 
 Go to **Store → Payments**.
 
@@ -97,7 +97,7 @@ Go to **Store → Payments**.
    - **Webhook Secret** — for signature verification on inbound webhook events.
 3. Click **Save**.
 
-After saving, a **Webhook URL** is shown next to the provider — copy it and paste it into your payment provider's webhook dashboard so Cartcrft receives payment events.
+After saving, a **Webhook URL** is shown next to the provider — copy it and paste it into your payment provider's webhook dashboard so CartCrft receives payment events.
 
 > **Note:** Secret fields are write-only. Leave them blank when editing to keep the existing value.
 

@@ -382,7 +382,7 @@ export default function CloudOnboardingPage() {
 
             {connectModal.info.authorize_url ? (
               <p className="text-xs text-slate-400">
-                You’ll be redirected to authorize Cartcrft, then returned here.
+                You’ll be redirected to authorize CartCrft, then returned here.
               </p>
             ) : (
               <>

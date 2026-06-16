@@ -5,7 +5,7 @@ description: "BYO payment providers (Stripe, Paystack, Razorpay, Xendit), webhoo
 
 # Payments
 
-Cartcrft uses a bring-your-own-keys model: you configure your own Stripe,
+CartCrft uses a bring-your-own-keys model: you configure your own Stripe,
 Paystack, Razorpay, or Xendit credentials per store. No platform fee — your
 provider processes payments directly.
 

@@ -6,7 +6,7 @@ sidebar:
   order: 2
 ---
 
-# Cartcrft ACP Adapter
+# CartCrft ACP Adapter
 
 **Pinned spec version:** 2026-04 baseline
 **Adapter location:** `backend/src/agent/acp/v2026_04/`
@@ -93,7 +93,7 @@ All ACP endpoints are mounted at `/acp/:storeId/...` (unversioned, pinned to lat
 
 ## Error Code Mapping
 
-| Cartcrft code | ACP code | HTTP |
+| CartCrft code | ACP code | HTTP |
 |---------------|----------|------|
 | `NOT_FOUND` | `session_not_found` | 404 |
 | `VALIDATION_ERROR` | `invalid_request` | 400 |
@@ -141,7 +141,7 @@ ACP sessions do not currently require an agent mandate. The `verifyAgentCheckout
 
 ### 5. `preorder` availability not yet mapped
 
-The `availability` field supports `"preorder"` in the ACP spec. Cartcrft's schema has `allow_backorder` on variants but no explicit preorder status. Mapping `allow_backorder = true AND qty = 0 → preorder` is a TODO.
+The `availability` field supports `"preorder"` in the ACP spec. CartCrft's schema has `allow_backorder` on variants but no explicit preorder status. Mapping `allow_backorder = true AND qty = 0 → preorder` is a TODO.
 
 ### 6. Multi-currency price lists
 

@@ -8,7 +8,7 @@ import './PricingCalculator.css'
  * Payment-gateway processing (~2.9% + 30¢) is IDENTICAL across all of these
  * (everyone is bring-your-own-keys) so it is excluded — the differentiator is the
  * platform's own take rate. Sources:
- *   - Cartcrft Cloud: cloud/billing/model/REPORT.md — Nano $19 / Starter $79 /
+ *   - CartCrft Cloud: cloud/billing/model/REPORT.md — Nano $19 / Starter $79 /
  *     Scale $199, 0% GMV rake, BYO keys.
  *   - Shopify: public plan pricing — Basic $39 / Shopify $105 / Advanced $399,
  *     with third-party-gateway transaction fees of 2% / 1% / 0.6% respectively.
@@ -20,7 +20,7 @@ type Quote = { key: string; name: string; plan: string; cost: number; rakePct: n
 
 function cartcrft(gmv: number): Quote {
   const t = gmv <= 4000 ? { plan: 'Nano', sub: 19 } : gmv <= 50000 ? { plan: 'Starter', sub: 79 } : { plan: 'Scale', sub: 199 }
-  return { key: 'cc', name: 'Cartcrft Cloud', plan: t.plan, cost: t.sub, rakePct: 0, us: true }
+  return { key: 'cc', name: 'CartCrft Cloud', plan: t.plan, cost: t.sub, rakePct: 0, us: true }
 }
 function shopify(gmv: number): Quote {
   const plans = [
@@ -149,7 +149,7 @@ export default function PricingCalculator() {
       </div>
 
       <p className="calc-note">
-        Grounded June 2026: Cartcrft Nano $19 / Starter $79 / Scale $199 (0% rake) · Shopify Basic $39 / $105 / $399 with 2% / 1% / 0.6% third-party-gateway fees · Medusa Launch $99 · self-host ~$40 infra. Platform cost only — your payment gateway is bring-your-own and identical across all.
+        Grounded June 2026: CartCrft Nano $19 / Starter $79 / Scale $199 (0% rake) · Shopify Basic $39 / $105 / $399 with 2% / 1% / 0.6% third-party-gateway fees · Medusa Launch $99 · self-host ~$40 infra. Platform cost only — your payment gateway is bring-your-own and identical across all.
       </p>
     </div>
   )

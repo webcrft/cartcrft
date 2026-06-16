@@ -1,6 +1,6 @@
 ---
 title: Quotas & Tiers
-description: Resource limits and quotas for Cartcrft Cloud plans — storage, compute, stores, and API rate limits.
+description: Resource limits and quotas for CartCrft Cloud plans — storage, compute, stores, and API rate limits.
 ---
 
 > **Preview.** Quota numbers are illustrative and subject to change before GA.
@@ -22,7 +22,7 @@ description: Resource limits and quotas for Cartcrft Cloud plans — storage, co
 
 ## Compute
 
-Cartcrft Cloud runs your store on shared compute in GCP `us-central1` (primary) and `af-south1` (South Africa — available on Cloud Scale and Enterprise). Region selection is configured during onboarding.
+CartCrft Cloud runs your store on shared compute in GCP `us-central1` (primary) and `af-south1` (South Africa — available on Cloud Scale and Enterprise). Region selection is configured during onboarding.
 
 ## Storage overage
 

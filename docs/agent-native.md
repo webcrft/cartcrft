@@ -1,6 +1,6 @@
 # Agent-Native Commerce
 
-Cartcrft is designed from the data model up for agent-driven commerce. This doc
+CartCrft is designed from the data model up for agent-driven commerce. This doc
 covers the four agent surfaces: the MCP server, semantic search, the ACP adapter,
 and the mandate / trust layer.
 
@@ -8,7 +8,7 @@ and the mandate / trust layer.
 
 ## MCP server
 
-Every Cartcrft store exposes a Model Context Protocol (MCP) server. Any
+Every CartCrft store exposes a Model Context Protocol (MCP) server. Any
 MCP-capable agent — Claude Desktop, Claude Code, a custom LLM agent — can
 browse and buy from the store using the tools described in
 [mcp/README.md](../mcp/README.md).

@@ -1,11 +1,11 @@
 ---
 title: "Commerce overview"
-description: "All of Cartcrft's standard-commerce modules at a glance — products, inventory, orders, payments, and every module in between."
+description: "All of CartCrft's standard-commerce modules at a glance — products, inventory, orders, payments, and every module in between."
 ---
 
 # Commerce overview
 
-Cartcrft is a headless commerce platform built as a set of Fastify modules, each
+CartCrft is a headless commerce platform built as a set of Fastify modules, each
 owning a slice of the commerce surface. Every route is under
 `/commerce/stores/:storeId/...` and is protected by the store-auth middleware.
 See [API Overview](./api-overview.md) for auth conventions and error codes.

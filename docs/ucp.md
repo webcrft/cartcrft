@@ -1,4 +1,4 @@
-# Cartcrft UCP Adapter
+# CartCrft UCP Adapter
 
 **Pinned spec version:** 2026-01 NRF baseline, provisional
 **Adapter location:** `backend/src/agent/ucp/v2026_01/`
@@ -72,7 +72,7 @@ All UCP endpoints are mounted at:
 | `track_inventory = true`, `qty_on_hand = 0`, `allow_backorder = true` | `BACKORDER` |
 | `track_inventory = true`, `qty_on_hand = 0`, `allow_backorder = false` | `OUT_OF_STOCK` |
 
-> Note: `PREORDER` is not yet mapped. Cartcrft's schema does not have an explicit preorder status column. Future work: add `preorder_available_from` to `product_variants` and map `PREORDER` when that date is in the future.
+> Note: `PREORDER` is not yet mapped. CartCrft's schema does not have an explicit preorder status column. Future work: add `preorder_available_from` to `product_variants` and map `PREORDER` when that date is in the future.
 
 ### UcpItemGroup (inside `item_group{}`)
 
@@ -139,7 +139,7 @@ The adapter performs bidirectional remapping on PATCH (inbound UCP → core) and
 
 ## Error Code Mapping
 
-| Cartcrft code | UCP code | HTTP |
+| CartCrft code | UCP code | HTTP |
 |---------------|----------|------|
 | `NOT_FOUND` | `ENTITY_NOT_FOUND` | 404 |
 | `VALIDATION_ERROR` | `INVALID_REQUEST` | 400 |
@@ -193,7 +193,7 @@ UCP catalog uses `page` / `page_size` pagination. ACP uses opaque base64url curs
 
 ### 5. PREORDER availability not mapped
 
-Cartcrft does not have an explicit `preorder_available_from` column on `product_variants`. The `PREORDER` enum value in `UcpOffer.availability` is defined but never emitted. `allow_backorder = true, qty = 0` maps to `BACKORDER` instead. Future work: add preorder date support to variants schema and emit `PREORDER` when appropriate.
+CartCrft does not have an explicit `preorder_available_from` column on `product_variants`. The `PREORDER` enum value in `UcpOffer.availability` is defined but never emitted. `allow_backorder = true, qty = 0` maps to `BACKORDER` instead. Future work: add preorder date support to variants schema and emit `PREORDER` when appropriate.
 
 ### 6. Multi-currency price lists
 

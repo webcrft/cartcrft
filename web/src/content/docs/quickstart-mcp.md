@@ -8,7 +8,7 @@ sidebar:
 
 # Quickstart: Buy with an AI Agent in 10 Minutes
 
-This guide sets up a running Cartcrft store with a demo catalog and walks an AI agent
+This guide sets up a running CartCrft store with a demo catalog and walks an AI agent
 through a complete purchase — search → cart → checkout → order — over the MCP protocol.
 
 ---

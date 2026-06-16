@@ -1,4 +1,4 @@
-# Cartcrft Parity Endpoints
+# CartCrft Parity Endpoints
 
 Full endpoint inventory ported from webcrft-mono `backend/cmd/server/main.go` route registrations.
 Each row marks the owning Wave 2 task (T2.1–T2.10).
@@ -22,7 +22,7 @@ Management dashboard tokens use HS256 signed with `JWT_SECRET` from config.
 ```
 
 **`sub`** — the user's UUID (principal identity).  
-**`org`** — the org the user is acting in. Embedded in the token so Cartcrft doesn't need an `organization_members` table (no platform profiles yet).  
+**`org`** — the org the user is acting in. Embedded in the token so CartCrft doesn't need an `organization_members` table (no platform profiles yet).  
 Every store endpoint verifies `org` matches `stores.organization_id`.
 
 Test helper: `mintTestJwt({ userId, orgId })` in `backend/src/lib/auth/jwt.ts`. Import in suites: `import { mintJwt } from '../shared/helpers.js'`.

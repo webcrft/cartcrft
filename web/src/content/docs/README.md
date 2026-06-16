@@ -1,14 +1,14 @@
 ---
 title: "Docs Overview"
-description: "Reading order and quick links for the Cartcrft developer reference."
+description: "Reading order and quick links for the CartCrft developer reference."
 sidebar:
   label: "Docs Overview"
   order: 2
 ---
 
-# Cartcrft Documentation
+# CartCrft Documentation
 
-Developer reference for the Cartcrft headless commerce backend.
+Developer reference for the CartCrft headless commerce backend.
 
 ---
 

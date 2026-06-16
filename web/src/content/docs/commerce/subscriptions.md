@@ -5,7 +5,7 @@ description: "Subscription plans, billing cadence, lifecycle management (pause, 
 
 # Subscriptions
 
-Cartcrft supports recurring billing through subscription plans and subscriber
+CartCrft supports recurring billing through subscription plans and subscriber
 lifecycle management. The renewal scheduler runs as part of the background worker
 (`pnpm dev worker`) and automatically bills subscriptions on their renewal date.
 

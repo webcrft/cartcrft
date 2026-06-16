@@ -8,7 +8,7 @@ sidebar:
 
 # Testing Guide
 
-Cartcrft uses Vitest with a suite-per-concern layout. Integration suites boot
+CartCrft uses Vitest with a suite-per-concern layout. Integration suites boot
 the real Fastify app against a real Postgres database in an isolated schema —
 no mocking of the database layer.
 

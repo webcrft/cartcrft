@@ -74,7 +74,7 @@ export default function CloudBillingPage() {
     <div className="space-y-6">
       <PageHeader
         title="Billing"
-        description="Manage your Cartcrft Cloud subscription, invoices, and payment method."
+        description="Manage your CartCrft Cloud subscription, invoices, and payment method."
       />
 
       {loading && (

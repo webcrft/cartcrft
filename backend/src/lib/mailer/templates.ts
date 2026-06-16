@@ -1,5 +1,5 @@
 /**
- * lib/mailer/templates.ts — Branded HTML email templates for Cartcrft.
+ * lib/mailer/templates.ts — Branded HTML email templates for CartCrft.
  *
  * Renderer approach: pure TypeScript tagged-template strings, no external deps.
  *
@@ -76,7 +76,7 @@ const DEFAULT_BRAND_COLOR = "#4F46E5";
 
 /** Wraps a rendered body segment in the full branded email chrome. */
 function wrap(content: string, brand: BrandVars, preview?: string): string {
-  const storeName = esc(brand.storeName ?? "Cartcrft");
+  const storeName = esc(brand.storeName ?? "CartCrft");
   const color = /^#[0-9A-Fa-f]{3,6}$/.test(brand.brandColor ?? "")
     ? brand.brandColor!
     : DEFAULT_BRAND_COLOR;
@@ -111,7 +111,7 @@ ${previewText}
       </td></tr>
       <tr><td style="padding:24px 0 0;text-align:center;">
         <p style="margin:0;font-size:12px;color:#9ca3af;">
-          Sent by <strong>${storeName}</strong> via Cartcrft &middot;
+          Sent by <strong>${storeName}</strong> via CartCrft &middot;
           <a href="https://cartcrft.com" style="color:#9ca3af;text-decoration:none;">cartcrft.com</a>
         </p>
       </td></tr>
@@ -187,7 +187,7 @@ export interface OrderConfirmationVars extends BrandVars {
 
 export function renderOrderConfirmation(vars: OrderConfirmationVars): { subject: string; bodyHtml: string; bodyText: string } {
   const color = /^#[0-9A-Fa-f]{3,6}$/.test(vars.brandColor ?? "") ? vars.brandColor! : DEFAULT_BRAND_COLOR;
-  const storeNamePlain = plain(vars.storeName ?? "Cartcrft");
+  const storeNamePlain = plain(vars.storeName ?? "CartCrft");
   // Raw values are HTML-escaped inside dataTable/subheading; plain() is used for subjects/bodyText
   const orderNum = vars.orderNumber ?? "";
   const customerName = vars.customerName ?? "";
@@ -242,7 +242,7 @@ export interface PaymentReceivedVars extends BrandVars {
 
 export function renderPaymentReceived(vars: PaymentReceivedVars): { subject: string; bodyHtml: string; bodyText: string } {
   const color = /^#[0-9A-Fa-f]{3,6}$/.test(vars.brandColor ?? "") ? vars.brandColor! : DEFAULT_BRAND_COLOR;
-  const storeNamePlain = plain(vars.storeName ?? "Cartcrft");
+  const storeNamePlain = plain(vars.storeName ?? "CartCrft");
   const orderNum = vars.orderNumber ?? "";
   const amount = vars.amount ?? "";
   const currency = vars.currency ?? "";
@@ -291,7 +291,7 @@ export interface ShipmentVars extends BrandVars {
 
 export function renderShipmentDispatched(vars: ShipmentVars): { subject: string; bodyHtml: string; bodyText: string } {
   const color = /^#[0-9A-Fa-f]{3,6}$/.test(vars.brandColor ?? "") ? vars.brandColor! : DEFAULT_BRAND_COLOR;
-  const storeNamePlain = plain(vars.storeName ?? "Cartcrft");
+  const storeNamePlain = plain(vars.storeName ?? "CartCrft");
   const orderNum = vars.orderNumber ?? "";
   const trackUrl = vars.trackingUrl ?? "#";
 
@@ -329,7 +329,7 @@ export function renderShipmentDispatched(vars: ShipmentVars): { subject: string;
 
 export function renderShipmentDelivered(vars: ShipmentVars): { subject: string; bodyHtml: string; bodyText: string } {
   const color = /^#[0-9A-Fa-f]{3,6}$/.test(vars.brandColor ?? "") ? vars.brandColor! : DEFAULT_BRAND_COLOR;
-  const storeNamePlain = plain(vars.storeName ?? "Cartcrft");
+  const storeNamePlain = plain(vars.storeName ?? "CartCrft");
   const orderNum = vars.orderNumber ?? "";
   const trackUrl = vars.trackingUrl ?? "#";
 
@@ -378,7 +378,7 @@ export interface RefundVars extends BrandVars {
 
 export function renderRefundIssued(vars: RefundVars): { subject: string; bodyHtml: string; bodyText: string } {
   const color = /^#[0-9A-Fa-f]{3,6}$/.test(vars.brandColor ?? "") ? vars.brandColor! : DEFAULT_BRAND_COLOR;
-  const storeNamePlain = plain(vars.storeName ?? "Cartcrft");
+  const storeNamePlain = plain(vars.storeName ?? "CartCrft");
   const orderNum = vars.orderNumber ?? "";
   const amount = vars.refundAmount ?? "";
   const currency = vars.currency ?? "";
@@ -428,7 +428,7 @@ export interface AuthEmailVars extends BrandVars {
 
 export function renderEmailVerify(vars: AuthEmailVars): { subject: string; bodyHtml: string; bodyText: string } {
   const color = /^#[0-9A-Fa-f]{3,6}$/.test(vars.brandColor ?? "") ? vars.brandColor! : DEFAULT_BRAND_COLOR;
-  const storeNamePlain = plain(vars.storeName ?? "Cartcrft");
+  const storeNamePlain = plain(vars.storeName ?? "CartCrft");
   const link = vars.link ?? vars.token ?? "#";
 
   const subject = `Verify your email — ${storeNamePlain}`;
@@ -453,7 +453,7 @@ export function renderEmailVerify(vars: AuthEmailVars): { subject: string; bodyH
 
 export function renderPasswordReset(vars: AuthEmailVars): { subject: string; bodyHtml: string; bodyText: string } {
   const color = /^#[0-9A-Fa-f]{3,6}$/.test(vars.brandColor ?? "") ? vars.brandColor! : DEFAULT_BRAND_COLOR;
-  const storeNamePlain = plain(vars.storeName ?? "Cartcrft");
+  const storeNamePlain = plain(vars.storeName ?? "CartCrft");
   const link = vars.link ?? vars.token ?? "#";
 
   const subject = `Reset your password — ${storeNamePlain}`;
@@ -479,7 +479,7 @@ export function renderPasswordReset(vars: AuthEmailVars): { subject: string; bod
 
 export function renderMagicLink(vars: AuthEmailVars): { subject: string; bodyHtml: string; bodyText: string } {
   const color = /^#[0-9A-Fa-f]{3,6}$/.test(vars.brandColor ?? "") ? vars.brandColor! : DEFAULT_BRAND_COLOR;
-  const storeNamePlain = plain(vars.storeName ?? "Cartcrft");
+  const storeNamePlain = plain(vars.storeName ?? "CartCrft");
   const link = vars.link ?? vars.token ?? "#";
 
   const subject = `Sign in to ${storeNamePlain}`;
@@ -503,7 +503,7 @@ export function renderMagicLink(vars: AuthEmailVars): { subject: string; bodyHtm
 
 export function renderInvite(vars: AuthEmailVars): { subject: string; bodyHtml: string; bodyText: string } {
   const color = /^#[0-9A-Fa-f]{3,6}$/.test(vars.brandColor ?? "") ? vars.brandColor! : DEFAULT_BRAND_COLOR;
-  const storeNamePlain = plain(vars.storeName ?? "Cartcrft");
+  const storeNamePlain = plain(vars.storeName ?? "CartCrft");
   const link = vars.link ?? vars.token ?? "#";
 
   const subject = `You've been invited to ${storeNamePlain}`;
@@ -527,7 +527,7 @@ export function renderInvite(vars: AuthEmailVars): { subject: string; bodyHtml: 
 
 export function renderWelcome(vars: AuthEmailVars): { subject: string; bodyHtml: string; bodyText: string } {
   const color = /^#[0-9A-Fa-f]{3,6}$/.test(vars.brandColor ?? "") ? vars.brandColor! : DEFAULT_BRAND_COLOR;
-  const storeNamePlain = plain(vars.storeName ?? "Cartcrft");
+  const storeNamePlain = plain(vars.storeName ?? "CartCrft");
   const redirectUrl = vars.redirectUrl ?? vars.link ?? "#";
   const name = plain(vars.name ?? vars.email ?? "");
 
@@ -657,7 +657,7 @@ export function renderAuthEmail(
     default:
       // Fallback: plain notification
       return {
-        subject: `${esc(vars.storeName ?? "Cartcrft")} notification`,
+        subject: `${esc(vars.storeName ?? "CartCrft")} notification`,
         bodyHtml: wrap(body(vars.link ? `<a href="${safeUrl(vars.link)}">${safeUrl(vars.link)}</a>` : ""), vars),
         bodyText: vars.link ?? "",
       };

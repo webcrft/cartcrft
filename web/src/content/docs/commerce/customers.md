@@ -5,7 +5,7 @@ description: "Customer accounts, admin CRUD, tags, audit log, saved addresses, a
 
 # Customers
 
-Cartcrft provides per-store customer management: CRUD, tagging, blocking, saved
+CartCrft provides per-store customer management: CRUD, tagging, blocking, saved
 addresses, audit log, and invite dispatch. Customer authentication (login, OAuth,
 magic links, sessions) is covered in [Customer identity & accounts](../identity.md).
 
