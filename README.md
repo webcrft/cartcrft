@@ -197,10 +197,12 @@ Full docs are at **[/docs](./docs)** (served by the web app) or browse the markd
 |-----|----------------|
 | [docs/quickstart.md](./docs/quickstart.md) | Local dev: prereqs, install, migrate, seed, first API calls |
 | [docs/quickstart-mcp.md](./docs/quickstart-mcp.md) | Agent flow: buy from a store with an AI agent in 10 minutes |
-| [docs/commerce](./docs/commerce.md) | Commerce overview — links to all 14 per-topic module docs |
+| [docs/commerce.md](./docs/commerce.md) | Commerce engine overview — catalog, inventory, orders, payments, B2B, subscriptions, bookings |
 | [docs/api-overview.md](./docs/api-overview.md) | Auth, error envelope, idempotency, pagination, money encoding |
 | [docs/byo-keys.md](./docs/byo-keys.md) | Payment providers, LLM key for semantic search, secret encryption |
 | [docs/agent-native.md](./docs/agent-native.md) | MCP, semantic search, ACP adapter, agent registry, mandates |
+| [docs/acp.md](./docs/acp.md) | Agentic Commerce Protocol adapter — spec pin, endpoints, field mapping |
+| [docs/ucp.md](./docs/ucp.md) | Universal Commerce Protocol adapter — catalog entities + checkout |
 | [docs/checkout-links.md](./docs/checkout-links.md) | Shareable pre-filled payment links, iframe embed mode |
 | [docs/self-host.md](./docs/self-host.md) | Docker Compose, environment variables, production checklist |
 | [docs/cloud-vs-selfhost.md](./docs/cloud-vs-selfhost.md) | MIT core vs cloud license, feature comparison |

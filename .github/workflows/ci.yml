@@ -43,6 +43,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # The web package typechecks against @cartcrft/sdk's emitted .d.ts (its
+      # dist/ is gitignored), so the SDK must be built before typecheck runs.
+      - name: Build SDK (typecheck dependency)
+        run: pnpm --filter @cartcrft/sdk build
+
       - name: Typecheck all packages
         run: pnpm -r typecheck
 
