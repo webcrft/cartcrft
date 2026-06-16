@@ -1,7 +1,7 @@
 /**
  * lib/superadmin-auth.ts — Hardened SUPER-ADMIN authentication.
  *
- * This is the platform-operator (Webcrft Systems god-mode) auth layer. It is
+ * This is the platform-operator (WebCrft god-mode) auth layer. It is
  * deliberately DISTINCT from org auth (lib/auth/*) and customer auth so that:
  *
  *   - An org/customer JWT can NEVER pass requireSuperAdmin (different audience

@@ -11,7 +11,7 @@ export default function Privacy() {
   return (
     <LegalLayout
       title="Privacy Policy"
-      description="Privacy Policy for Cartcrft Cloud — how Webcrft Systems collects, uses, and protects personal information."
+      description="Privacy Policy for Cartcrft Cloud — how WebCrft collects, uses, and protects personal information."
       lastUpdated="2026-06-14"
     >
       <div className="notice-box">
@@ -25,29 +25,29 @@ export default function Privacy() {
         {' '}<strong>Responsible Party</strong> under POPIA and the <strong>Data Controller</strong> under
         GDPR in respect of the personal information described in this Policy.
       </p>
-      <p>Contact our Information Officer at <a href="mailto:privacy@webcrft.com">privacy@webcrft.com</a>.</p>
+      <p>Contact our Information Officer at <a href="mailto:privacy@webcrft.io">privacy@webcrft.io</a>.</p>
 
       <h2>2. Scope</h2>
 
-      <h3>2.1 Cloud Account and Billing Data (Webcrft Systems as Controller)</h3>
+      <h3>2.1 Cloud Account and Billing Data (WebCrft as Controller)</h3>
       <p>
-        This Policy covers personal information that Webcrft Systems collects about you (the merchant
+        This Policy covers personal information that WebCrft collects about you (the merchant
         or developer) when you create an account, subscribe, or interact with Cartcrft Cloud.
       </p>
 
-      <h3>2.2 Your Store's End-Customer Data (You as Controller, Webcrft as Processor)</h3>
+      <h3>2.2 Your Store's End-Customer Data (You as Controller, WebCrft as Processor)</h3>
       <p>
         When you use Cartcrft Cloud to operate your store, your end-customers' personal information
         is stored in your tenant's Postgres database on Neon.
-        {' '}<strong>You are the data controller for that data; Webcrft Systems processes it solely on
+        {' '}<strong>You are the data controller for that data; WebCrft processes it solely on
         your instructions.</strong> We do not access, sell, or use your end-customers' data for our
         own purposes. End-customers should contact the store operator directly about their rights.
       </p>
 
       <h3>2.3 Self-Hosted Deployments</h3>
       <p>
-        If you self-host the MIT-licensed core, all data stays in your own infrastructure. Webcrft
-        Systems receives no personal information and this Policy does not apply.
+        If you self-host the MIT-licensed core, all data stays in your own infrastructure. WebCrft
+        receives no personal information and this Policy does not apply.
       </p>
 
       <h2>3. Information We Collect</h2>
@@ -77,7 +77,7 @@ export default function Privacy() {
 
       <h3>3.4 Store Configuration Data</h3>
       <ul>
-        <li>Payment-provider configuration (provider type, webhook secrets — AES-256-GCM encrypted; unreadable by Webcrft staff)</li>
+        <li>Payment-provider configuration (provider type, webhook secrets — AES-256-GCM encrypted; unreadable by WebCrft staff)</li>
         <li>BYO LLM provider API key (stored encrypted in <code>stores.metadata</code>; transmitted only to your configured embedding endpoint)</li>
         <li>Tracking pixel configuration (<code>store_tracking_pixels</code> table — pixel type, tracking ID, API secret)</li>
         <li>Shipping provider configuration (BobGo live rates, PUDO collection points)</li>
@@ -164,7 +164,7 @@ export default function Privacy() {
 
       <h2>6. International Data Transfers</h2>
       <p>
-        Webcrft Systems is based in South Africa. Personal data is transferred to subprocessors in
+        WebCrft is based in South Africa. Personal data is transferred to subprocessors in
         the US and other jurisdictions under EU Standard Contractual Clauses (for EU data subjects)
         and POPIA section 72 conditions (substantially similar data-protection obligations, or transfer
         necessary for performance of a contract).
@@ -218,11 +218,11 @@ export default function Privacy() {
         <li><strong>Webhook verification:</strong> HMAC-SHA256 (Stripe/Razorpay), HMAC-SHA512 (Paystack), with replay protection.</li>
         <li><strong>Scoped API keys:</strong> <code>cc_pub_</code> (read-only) and <code>cc_prv_</code> (write/admin) tiers.</li>
       </ul>
-      <p>Report security vulnerabilities to <a href="mailto:security@webcrft.com">security@webcrft.com</a>.</p>
+      <p>Report security vulnerabilities to <a href="mailto:security@webcrft.io">security@webcrft.io</a>.</p>
 
       <h2>10. Your Rights</h2>
       <p>
-        Email <a href="mailto:privacy@webcrft.com">privacy@webcrft.com</a> to exercise any of these rights.
+        Email <a href="mailto:privacy@webcrft.io">privacy@webcrft.io</a> to exercise any of these rights.
         We will respond within 30 days (1 month for GDPR requests).
       </p>
       <ul>
@@ -240,7 +240,7 @@ export default function Privacy() {
       </p>
 
       <h2>11. Children</h2>
-      <p>The Service is not directed at children under 18. Contact us at <a href="mailto:privacy@webcrft.com">privacy@webcrft.com</a> if you become aware that a child has provided personal information.</p>
+      <p>The Service is not directed at children under 18. Contact us at <a href="mailto:privacy@webcrft.io">privacy@webcrft.io</a> if you become aware that a child has provided personal information.</p>
 
       <h2>12. Changes to This Policy</h2>
       <p>Material changes will be communicated to the email on your account at least 30 days before they take effect.</p>
@@ -251,7 +251,7 @@ export default function Privacy() {
         Information Officer: <strong>[PLACEHOLDER: name of Information Officer]</strong><br />
         Registration number: <strong>[PLACEHOLDER: company registration number]</strong><br />
         Registered address: <strong>[PLACEHOLDER: registered office address, South Africa]</strong><br />
-        Privacy enquiries: <a href="mailto:privacy@webcrft.com">privacy@webcrft.com</a>
+        Privacy enquiries: <a href="mailto:privacy@webcrft.io">privacy@webcrft.io</a>
       </p>
 
       <p>

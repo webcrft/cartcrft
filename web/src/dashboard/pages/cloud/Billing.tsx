@@ -114,11 +114,11 @@ export default function CloudBillingPage() {
                   </p>
                 </div>
                 <div className="flex gap-2">
-                  <Btn variant="secondary" onClick={() => window.open('mailto:hello@webcrft.systems?subject=Plan+change', '_blank')}>
+                  <Btn variant="secondary" onClick={() => window.open('mailto:hello@webcrft.io?subject=Plan+change', '_blank')}>
                     Change plan
                   </Btn>
                   {!plan.cancel_at_period_end && (
-                    <Btn variant="danger" onClick={() => window.open('mailto:hello@webcrft.systems?subject=Cancel+subscription', '_blank')}>
+                    <Btn variant="danger" onClick={() => window.open('mailto:hello@webcrft.io?subject=Cancel+subscription', '_blank')}>
                       Cancel
                     </Btn>
                   )}
@@ -194,7 +194,7 @@ export default function CloudBillingPage() {
               <Btn
                 variant="secondary"
                 onClick={() =>
-                  window.open('mailto:hello@webcrft.systems?subject=Payment+method+update', '_blank')
+                  window.open('mailto:hello@webcrft.io?subject=Payment+method+update', '_blank')
                 }
               >
                 Update payment method

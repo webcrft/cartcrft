@@ -1,5 +1,5 @@
 -- ============================================================================
--- 0025_super_admin — Hardened SUPER-ADMIN portal (Webcrft Systems operator god-mode)
+-- 0025_super_admin — Hardened SUPER-ADMIN portal (WebCrft operator god-mode)
 --
 -- Phase 1 of 4 (backend only).  This migration provisions the platform-operator
 -- identity, session, and audit tables that back the /superadmin/* API.
@@ -40,7 +40,7 @@ create table if not exists public.super_admins (
   updated_at      timestamptz not null default now()
 );
 
-comment on table  public.super_admins is 'Webcrft Systems platform operators (god-mode). Distinct principal class from org users / customers.';
+comment on table  public.super_admins is 'WebCrft platform operators (god-mode). Distinct principal class from org users / customers.';
 comment on column public.super_admins.totp_secret_enc is 'AES-256-GCM encrypted TOTP secret (lib/secrets). When set, login requires a valid RFC6238 code.';
 comment on column public.super_admins.failed_attempts is 'Consecutive failed login attempts; reset on success. Drives lockout.';
 comment on column public.super_admins.locked_until is 'When set and in the future, login is refused regardless of credentials.';

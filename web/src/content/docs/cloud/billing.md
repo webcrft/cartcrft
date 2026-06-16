@@ -73,4 +73,4 @@ Enterprise customers can negotiate:
 - Purchase order (PO) billing
 - Custom payment terms
 
-Contact [hello@webcrft.systems](mailto:hello@webcrft.systems?subject=Enterprise+billing).
+Contact [hello@webcrft.io](mailto:hello@webcrft.io?subject=Enterprise+billing).

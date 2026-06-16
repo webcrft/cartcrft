@@ -61,7 +61,7 @@ function DiscountEditor({ storeId, isAutomatic, onClose, onSaved }: {
       const sdk = getSdk()
       const body = {
         code: isAutomatic ? (form.title.trim().toUpperCase().replace(/\s+/g, '_')) : form.code.trim(),
-        discount_type: form.discount_type,
+        type: form.discount_type,
         value: form.value || '0',
         title: form.title || undefined,
         is_automatic: isAutomatic,
@@ -227,10 +227,10 @@ export default function Discounts() {
                   <Td>
                     <span className="font-mono text-sm text-white">{discount.code}</span>
                   </Td>
-                  <Td><Badge color="slate">{discount.discount_type.replace(/_/g, ' ')}</Badge></Td>
+                  <Td><Badge color="slate">{(discount.type ?? '').replace(/_/g, ' ')}</Badge></Td>
                   <Td className="font-mono text-slate-300">
-                    {discount.discount_type === 'percentage' ? `${discount.value}%` :
-                     discount.discount_type === 'free_shipping' ? 'Free' :
+                    {discount.type === 'percentage' ? `${discount.value}%` :
+                     discount.type === 'free_shipping' ? 'Free' :
                      discount.value}
                   </Td>
                   <Td>

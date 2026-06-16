@@ -115,7 +115,7 @@ export default function CloudAccountPage() {
             <Btn
               variant="danger"
               onClick={() =>
-                window.open('mailto:hello@webcrft.systems?subject=Delete+cloud+account', '_blank')
+                window.open('mailto:hello@webcrft.io?subject=Delete+cloud+account', '_blank')
               }
             >
               Request account deletion

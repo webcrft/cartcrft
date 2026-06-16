@@ -263,6 +263,7 @@ async function main(): Promise<void> {
     // ── 4. Products ──────────────────────────────────────────────────────────
     console.log("\n[4] Products …");
     const variantIds: string[] = [];
+    const variants: { id: string; title: string; price: number; sku: string; product: string }[] = [];
     for (const p of PRODUCTS) {
       const prodRes = await client.query<{ id: string }>(
         `INSERT INTO products (store_id, title, slug, description, type, status)
@@ -278,8 +279,9 @@ async function main(): Promise<void> {
           `SELECT id::text FROM product_variants WHERE product_id = $1::uuid AND sku = $2 LIMIT 1`,
           [productId, v.sku]
         );
+        let vid: string;
         if (existV.rows[0]) {
-          variantIds.push(existV.rows[0].id);
+          vid = existV.rows[0].id;
         } else {
           const vRes = await client.query<{ id: string }>(
             `INSERT INTO product_variants (product_id, title, price, sku)
@@ -287,8 +289,10 @@ async function main(): Promise<void> {
              RETURNING id::text`,
             [productId, v.title, v.price, v.sku]
           );
-          variantIds.push(vRes.rows[0]!.id);
+          vid = vRes.rows[0]!.id;
         }
+        variantIds.push(vid);
+        variants.push({ id: vid, title: v.title, price: v.price, sku: v.sku, product: p.title });
       }
     }
     console.log(`    ✓ ${PRODUCTS.length} products, ${variantIds.length} variants`);
@@ -378,29 +382,72 @@ async function main(): Promise<void> {
       { status: "open",      financial_status: "pending",  fulfillment_status: "unfulfilled", subtotal: 499.00,  total: 499.00,  is_test: false },
     ];
     let ordersCreated = 0;
+    let orderLinesCreated = 0;
     for (let i = 0; i < orderSpecs.length; i++) {
       const spec = orderSpecs[i]!;
       const cust = customerIds[i % customerIds.length]!;
+
+      // Build 1–3 realistic line items from the seeded variants.
+      const lineCount = variants.length ? 1 + (i % 3) : 0;
+      const start = variants.length ? (i * 2) % variants.length : 0;
+      const lines: { variant: typeof variants[number]; qty: number; total: number }[] = [];
+      for (let j = 0; j < lineCount; j++) {
+        const variant = variants[(start + j) % variants.length]!;
+        const qty = 1 + ((i + j) % 2); // 1 or 2
+        lines.push({ variant, qty, total: +(variant.price * qty).toFixed(2) });
+      }
+      const subtotal = lines.length
+        ? +lines.reduce((s, l) => s + l.total, 0).toFixed(2)
+        : spec.subtotal;
+
       // Get next order number via DB function
       const numRes = await client.query<{ next_order_number: string }>(
         `SELECT next_order_number($1::uuid) AS next_order_number`,
         [storeId]
       );
       const orderNumber = numRes.rows[0]!.next_order_number;
-      await client.query(
+      const orderRes = await client.query<{ id: string }>(
         `INSERT INTO orders
            (store_id, customer_id, order_number, status, financial_status,
             fulfillment_status, currency, subtotal, shipping_total, tax_total,
             discount_total, total, is_test)
          VALUES
            ($1::uuid, $2::uuid, $3, $4, $5, $6, 'ZAR', $7, 0, 0, 0, $8, $9)
-         ON CONFLICT (store_id, order_number) DO NOTHING`,
+         ON CONFLICT (store_id, order_number) DO NOTHING
+         RETURNING id::text`,
         [storeId, cust, orderNumber, spec.status, spec.financial_status,
-         spec.fulfillment_status, spec.subtotal, spec.total, spec.is_test]
+         spec.fulfillment_status, subtotal, subtotal, spec.is_test]
       );
       ordersCreated++;
+
+      const orderId = orderRes.rows[0]?.id;
+      if (orderId) {
+        // A "fulfilled" order has fully-fulfilled lines; everything else unfulfilled.
+        const lineFulfillment =
+          spec.fulfillment_status === "fulfilled" ? "fulfilled" : "unfulfilled";
+        for (const l of lines) {
+          await client.query(
+            `INSERT INTO order_lines
+               (order_id, variant_id, title, sku, quantity, quantity_fulfilled,
+                price, total, fulfillment_status)
+             VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6, $7, $8, $9)`,
+            [
+              orderId,
+              l.variant.id,
+              `${l.variant.product} — ${l.variant.title}`,
+              l.variant.sku,
+              l.qty,
+              lineFulfillment === "fulfilled" ? l.qty : 0,
+              l.variant.price,
+              l.total,
+              lineFulfillment,
+            ]
+          );
+          orderLinesCreated++;
+        }
+      }
     }
-    console.log(`    ✓ ${ordersCreated} orders`);
+    console.log(`    ✓ ${ordersCreated} orders, ${orderLinesCreated} line items`);
 
     // ── 10. Discount codes ───────────────────────────────────────────────────
     console.log("\n[10] Discount codes …");

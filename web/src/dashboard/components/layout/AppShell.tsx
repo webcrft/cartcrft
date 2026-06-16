@@ -12,9 +12,9 @@ function MiniMark() {
   return (
     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-full w-full" aria-hidden="true">
       <polygon points="12,2 21,7 21,17 12,22 3,17 3,7" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" fill="none" opacity="0.5" />
-      <path d="M8 10h2.5l1.5 5.5h5l1.5-4H10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-      <circle cx="11.5" cy="16.5" r="0.8" fill="currentColor" opacity="0.85" />
-      <circle cx="15.5" cy="16.5" r="0.8" fill="currentColor" opacity="0.85" />
+      <path d="M7.7 8.5 H16.3 L14.9 14.3 H9.1 Z" fill="currentColor" />
+      <circle cx="10.4" cy="16.5" r="1" fill="currentColor" />
+      <circle cx="13.6" cy="16.5" r="1" fill="currentColor" />
     </svg>
   )
 }

@@ -37,6 +37,7 @@ const SIDEBAR: SidebarGroup[] = [
       { slug: 'guides/fulfill-an-order' },
       { slug: 'guides/discounts' },
       { slug: 'guides/customers' },
+      { slug: 'guides/build-your-storefront' },
       { slug: 'guides/go-live' },
     ],
   },

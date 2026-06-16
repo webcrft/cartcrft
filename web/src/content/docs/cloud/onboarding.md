@@ -3,7 +3,7 @@ title: Cloud Onboarding
 description: Connect your store to Cartcrft Cloud — step-by-step guide from sign-up to first sale.
 ---
 
-> **Cloud is in preview.** The onboarding flow is under active development. [Join the waitlist](mailto:hello@webcrft.systems?subject=Cloud+waitlist) to be notified when it opens.
+> **Cloud is in preview.** The onboarding flow is under active development. [Join the waitlist](mailto:hello@webcrft.io?subject=Cloud+waitlist) to be notified when it opens.
 
 ## Overview
 
@@ -108,13 +108,13 @@ full connect → submit flow without real credentials.
 If you have an existing self-hosted Cartcrft instance:
 
 1. Export your database: `pg_dump -Fc mydb > mydb.dump`
-2. Contact support at [hello@webcrft.systems](mailto:hello@webcrft.systems?subject=Cloud+migration) with your account ID to initiate a managed import.
+2. Contact support at [hello@webcrft.io](mailto:hello@webcrft.io?subject=Cloud+migration) with your account ID to initiate a managed import.
 3. We'll coordinate a maintenance window and import your dump into the managed instance.
 
 No data format changes are required — the cloud backend runs the same schema as the open-source release.
 
 ## Support
 
-- **Email** — [hello@webcrft.systems](mailto:hello@webcrft.systems)
+- **Email** — [hello@webcrft.io](mailto:hello@webcrft.io)
 - **GitHub Issues** — [github.com/webcrftsystems/cartcrft](https://github.com/webcrftsystems/cartcrft)
 - **Dashboard → Support** — available on Cloud Scale and Enterprise.

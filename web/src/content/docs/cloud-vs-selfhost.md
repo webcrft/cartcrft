@@ -19,7 +19,7 @@ get when you self-host.
 | Directory | License | Summary |
 |-----------|---------|---------|
 | Everything except `cloud/` | **MIT** | Use, modify, distribute freely |
-| `cloud/` | **Cartcrft Cloud License v1.0** | Source-visible; development/testing free; production requires written agreement with Webcrft Systems |
+| `cloud/` | **Cartcrft Cloud License v1.0** | Source-visible; development/testing free; production requires written agreement with WebCrft |
 
 The MIT core is the product. `cloud/` is metering + billing + tenant
 provisioning for the hosted cartcrft.com service only.
@@ -30,7 +30,7 @@ The cloud license follows the GitLab EE / Elastic model: you can read the code,
 run it locally for development and CI, and submit contributions — but you cannot
 run it in production or offer it as a service without a commercial agreement.
 
-Contact `legal@webcrft.com` for production cloud license enquiries.
+Contact `legal@webcrft.io` for production cloud license enquiries.
 
 ---
 

@@ -646,8 +646,9 @@ class OrdersResource extends BaseResource {
   list(storeId: string, query?: ListOrdersQuery) {
     return this.req<{ orders: Order[]; total: number }>(`/commerce/stores/${storeId}/orders`, { query: query as Record<string, string | number | boolean | undefined | null> });
   }
+  /** Returns the order flat (top-level fields, with embedded `lines`, `payments`, `shipments`, `events`). */
   get(storeId: string, orderId: string) {
-    return this.req<{ order: Order }>(`/commerce/stores/${storeId}/orders/${orderId}`);
+    return this.req<Order>(`/commerce/stores/${storeId}/orders/${orderId}`);
   }
   cancel(storeId: string, orderId: string, body?: { reason?: string }) {
     return this.req<{ order: Order }>(`/commerce/stores/${storeId}/orders/${orderId}/cancel`, { method: "POST", body: body ?? {} });
@@ -849,7 +850,8 @@ export interface Discount {
   id: string;
   store_id: string;
   code: string;
-  discount_type: string;
+  /** Discount type — matches the API/DB column `type` (e.g. "percentage", "fixed_amount", "free_shipping"). */
+  type: string;
   value: string;
   is_active: boolean;
   created_at: string;
@@ -870,7 +872,7 @@ class DiscountsResource extends BaseResource {
   validate(storeId: string, query: { code: string; customer_id?: string; order_total?: string }) {
     return this.req<{ discount_id: string; code: string; type: string; value: string; computed_amount?: string }>(`/commerce/stores/${storeId}/discounts/validate`, { query });
   }
-  create(storeId: string, body: { code: string; discount_type: string; value: string; [key: string]: unknown }) {
+  create(storeId: string, body: { code: string; type: string; value: string; [key: string]: unknown }) {
     return this.req<{ discount: Discount }>(`/commerce/stores/${storeId}/discounts`, { method: "POST", body });
   }
 }

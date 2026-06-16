@@ -1,7 +1,7 @@
 # Cartcrft Roadmap
 
 > The open-source, agent-native, headless commerce backend. TypeScript end-to-end.
-> A Webcrft Systems project. This file is the destination map; `tasks.md` is the work queue.
+> A WebCrft project. This file is the destination map; `tasks.md` is the work queue.
 
 Last updated: 2026-06-13 (post-build hardening)
 

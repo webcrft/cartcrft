@@ -24,7 +24,7 @@ export default function Gdpr() {
 
       <h2>1. Territorial Scope</h2>
       <p>
-        The GDPR applies to Webcrft Systems' processing where we offer goods or services to individuals
+        The GDPR applies to WebCrft's processing where we offer goods or services to individuals
         in the EU/EEA/UK (Art. 3(2)(a)) or monitor their behaviour (Art. 3(2)(b)). Because Cartcrft
         Cloud is available globally and may be used by EU/EEA/UK merchants or end-customers, we
         maintain full GDPR compliance.
@@ -32,21 +32,21 @@ export default function Gdpr() {
 
       <h2>2. Data Controller and Processor</h2>
 
-      <h3>2.1 Webcrft Systems as Data Controller</h3>
+      <h3>2.1 WebCrft as Data Controller</h3>
       <p>
         For personal data of <strong>Cartcrft Cloud account holders</strong> (merchants and developers),
-        Webcrft Systems is the data controller:
+        WebCrft is the data controller:
       </p>
       <p>
         <strong>Webcrft Systems (Pty) Ltd</strong><br />
         Registration number: <strong>[PLACEHOLDER: company registration number]</strong><br />
         Registered address: <strong>[PLACEHOLDER: registered office address, South Africa]</strong><br />
-        Contact: <a href="mailto:privacy@webcrft.com">privacy@webcrft.com</a>
+        Contact: <a href="mailto:privacy@webcrft.io">privacy@webcrft.io</a>
       </p>
 
       <h3>2.2 EU/EEA/UK Representative (Art. 27)</h3>
       <p>
-        As Webcrft Systems is established outside the EU/EEA/UK, we designate a representative
+        As WebCrft is established outside the EU/EEA/UK, we designate a representative
         under GDPR Article 27:
       </p>
       <p>
@@ -57,18 +57,18 @@ export default function Gdpr() {
 
       <h3>2.3 Data Protection Officer (Art. 37)</h3>
       <p>
-        <strong>[PLACEHOLDER: confirm whether a DPO is required. A DPO is mandatory if Webcrft Systems
+        <strong>[PLACEHOLDER: confirm whether a DPO is required. A DPO is mandatory if WebCrft
         processes special category data at scale, engages in large-scale systematic monitoring, or is a
         public authority. Review with counsel.]</strong>
       </p>
       <p>DPO contact (if designated): <strong>[PLACEHOLDER: DPO name and email]</strong></p>
 
-      <h3>2.4 Webcrft Systems as Data Processor</h3>
+      <h3>2.4 WebCrft as Data Processor</h3>
       <p>
         For personal data of a <strong>merchant's end-customers</strong> processed through the Cartcrft
-        API, the merchant is the data controller and Webcrft Systems is a data processor (Art. 28).
+        API, the merchant is the data controller and WebCrft is a data processor (Art. 28).
         A <strong>Data Processing Agreement (DPA)</strong> is available on request:
-        {' '}<a href="mailto:legal@webcrft.com">legal@webcrft.com</a>.
+        {' '}<a href="mailto:legal@webcrft.io">legal@webcrft.io</a>.
       </p>
 
       <h2>3. Lawful Bases for Processing (Art. 6)</h2>
@@ -119,7 +119,7 @@ export default function Gdpr() {
       <h2>4. Data Subject Rights (Arts. 15–22)</h2>
       <p>
         Submit a <strong>Data Subject Access Request (DSAR)</strong> to
-        {' '}<a href="mailto:privacy@webcrft.com">privacy@webcrft.com</a>. We will respond within
+        {' '}<a href="mailto:privacy@webcrft.io">privacy@webcrft.io</a>. We will respond within
         {' '}<strong>one month</strong> (extendable to three months for complex requests, with notice).
         Requests are free of charge for the first instance.
       </p>
@@ -211,7 +211,7 @@ export default function Gdpr() {
         </tbody>
       </table>
 
-      <p>Copies of applicable SCCs or transfer mechanisms are available on request from <a href="mailto:privacy@webcrft.com">privacy@webcrft.com</a>.</p>
+      <p>Copies of applicable SCCs or transfer mechanisms are available on request from <a href="mailto:privacy@webcrft.io">privacy@webcrft.io</a>.</p>
 
       <h2>6. Data Retention</h2>
       <ul>
@@ -224,7 +224,7 @@ export default function Gdpr() {
 
       <h2>7. Sub-processors (Art. 28(4))</h2>
       <p>
-        As a data processor for merchants' end-customer data, Webcrft Systems engages the following
+        As a data processor for merchants' end-customer data, WebCrft engages the following
         sub-processors, each under a GDPR-equivalent data-processing agreement:
       </p>
       <ul>
@@ -234,18 +234,18 @@ export default function Gdpr() {
         <li><strong>Backblaze Inc.</strong> — object storage for media</li>
       </ul>
       <p>
-        Paystack is engaged only for Cartcrft Cloud subscription billing (Webcrft Systems' own controller
+        Paystack is engaged only for Cartcrft Cloud subscription billing (WebCrft's own controller
         activity), not as a sub-processor for end-customer data.
       </p>
       <p>We will notify controllers of intended sub-processor changes in advance, giving the controller the opportunity to object.</p>
 
       <h2>8. Personal Data Breach Notification (Arts. 33–34)</h2>
       <ul>
-        <li><strong>Controller obligations (Art. 33):</strong> Webcrft Systems will notify the lead supervisory authority within <strong>72 hours</strong> of becoming aware of a breach likely to result in risk to individuals' rights and freedoms.</li>
+        <li><strong>Controller obligations (Art. 33):</strong> WebCrft will notify the lead supervisory authority within <strong>72 hours</strong> of becoming aware of a breach likely to result in risk to individuals' rights and freedoms.</li>
         <li><strong>High-risk breaches (Art. 34):</strong> Where the breach is likely to result in high risk, we will also notify affected data subjects without undue delay.</li>
         <li><strong>Processor obligations (Art. 33(2)):</strong> Where acting as a processor for a merchant, we will notify the merchant (controller) of any breach without undue delay.</li>
       </ul>
-      <p>Report suspected security incidents to <a href="mailto:security@webcrft.com">security@webcrft.com</a>.</p>
+      <p>Report suspected security incidents to <a href="mailto:security@webcrft.io">security@webcrft.io</a>.</p>
 
       <h2>9. Right to Lodge a Complaint</h2>
       <p>You have the right to lodge a complaint with the supervisory authority in your EU/EEA member state, place of work, or place of the alleged infringement. Key authorities include:</p>
@@ -255,11 +255,11 @@ export default function Gdpr() {
         <li><strong>Germany</strong> (BfDI): <a href="https://www.bfdi.bund.de" target="_blank" rel="noopener noreferrer">www.bfdi.bund.de</a></li>
         <li><strong>[PLACEHOLDER: add the authority for your primary EU market(s)]</strong></li>
       </ul>
-      <p>We encourage you to contact us first at <a href="mailto:privacy@webcrft.com">privacy@webcrft.com</a>.</p>
+      <p>We encourage you to contact us first at <a href="mailto:privacy@webcrft.io">privacy@webcrft.io</a>.</p>
 
       <h2>10. Automated Decision-Making and Profiling (Art. 22)</h2>
       <p>
-        Webcrft Systems does not make solely automated decisions that produce legal or similarly
+        WebCrft does not make solely automated decisions that produce legal or similarly
         significant effects on account holders. No profiling for marketing purposes is performed on
         individual account holders without consent.
       </p>
@@ -272,7 +272,7 @@ export default function Gdpr() {
       <h2>11. Contact</h2>
       <p>
         <strong>Data Controller (Account Data):</strong><br />
-        Webcrft Systems (Pty) Ltd — <a href="mailto:privacy@webcrft.com">privacy@webcrft.com</a><br />
+        Webcrft Systems (Pty) Ltd — <a href="mailto:privacy@webcrft.io">privacy@webcrft.io</a><br />
         Address: <strong>[PLACEHOLDER: registered office address, South Africa]</strong>
       </p>
       <p>

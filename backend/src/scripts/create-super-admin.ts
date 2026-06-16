@@ -6,12 +6,12 @@
  *
  * Usage:
  *   # via env (recommended — keeps the password out of shell history):
- *   SUPERADMIN_EMAIL=ops@webcrft.systems SUPERADMIN_PASSWORD='…' \
+ *   SUPERADMIN_EMAIL=ops@webcrft.io SUPERADMIN_PASSWORD='…' \
  *     pnpm --filter backend exec tsx src/scripts/create-super-admin.ts
  *
  *   # via args:
  *   pnpm --filter backend exec tsx src/scripts/create-super-admin.ts \
- *     --email ops@webcrft.systems --password '…'
+ *     --email ops@webcrft.io --password '…'
  *
  *   # with MFA (TOTP): pass a base32 secret to enable TOTP on first login.
  *   …  --totp-secret JBSWY3DPEHPK3PXP

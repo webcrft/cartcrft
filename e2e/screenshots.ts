@@ -202,6 +202,76 @@ test('dashboard: orders', async ({ page }) => {
   });
 });
 
+/** Navigate the authenticated dashboard via the in-app sidebar (no reload —
+ *  a full goto would drop the in-memory access token and bounce to /login). */
+async function navTo(page: import('@playwright/test').Page, label: RegExp): Promise<void> {
+  await page.waitForSelector('aside');
+  await page.locator('aside a', { hasText: label }).first().click();
+  await page.waitForLoadState('networkidle');
+}
+
+test('dashboard: discounts', async ({ page }) => {
+  await loginToDashboard(page);
+  await navTo(page, /Discounts/i);
+  await snap(page, 'dashboard-discounts.png', {
+    sentinel: 'h2, table',
+    settleMs: 800,
+    clip: { x: 0, y: 0, width: 1512, height: 900 },
+  });
+});
+
+test('dashboard: customers', async ({ page }) => {
+  await loginToDashboard(page);
+  await navTo(page, /Customers/i);
+  await snap(page, 'dashboard-customers.png', {
+    sentinel: 'table, [class*="EmptyState"], [class*="empty-state"]',
+    settleMs: 700,
+    clip: { x: 0, y: 0, width: 1512, height: 900 },
+  });
+});
+
+test('dashboard: settings', async ({ page }) => {
+  await loginToDashboard(page);
+  await navTo(page, /^Settings$/i);
+  await snap(page, 'dashboard-settings.png', {
+    sentinel: 'form, input',
+    settleMs: 700,
+    clip: { x: 0, y: 0, width: 1512, height: 900 },
+  });
+});
+
+test('dashboard: product-new modal', async ({ page }) => {
+  await loginToDashboard(page);
+  await navTo(page, /^Products$/i);
+  await page.waitForSelector('table tr:nth-child(2), [class*="EmptyState"], [class*="empty-state"]');
+  const addBtn = page.locator('button', { hasText: /new product|add product|^new$/i }).first();
+  if ((await addBtn.count()) > 0) {
+    await addBtn.click();
+    await page.waitForSelector('[role="dialog"]', { timeout: 5_000 }).catch(() => {});
+  }
+  await snap(page, 'dashboard-product-new.png', {
+    sentinel: '[role="dialog"], input',
+    settleMs: 600,
+    clip: { x: 0, y: 0, width: 1512, height: 900 },
+  });
+});
+
+test('dashboard: order-detail', async ({ page }) => {
+  await loginToDashboard(page);
+  await navTo(page, /^Orders$/i);
+  await page.waitForSelector('table tr:nth-child(2), [class*="EmptyState"], [class*="empty-state"]');
+  const row = page.locator('table tbody tr').first();
+  if ((await row.count()) > 0) {
+    await row.click();
+    await page.waitForLoadState('networkidle');
+  }
+  await snap(page, 'dashboard-order-detail.png', {
+    sentinel: 'main, [class*="detail"], h1',
+    settleMs: 800,
+    clip: { x: 0, y: 0, width: 1512, height: 900 },
+  });
+});
+
 // ── Super-admin screenshots ───────────────────────────────────────────────────
 
 test('superadmin: analytics', async ({ page }) => {

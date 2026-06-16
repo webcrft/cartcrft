@@ -43,7 +43,7 @@ export default function DocPage({ slug }: { slug: string }) {
   }
 
   return (
-    <SiteLayout>
+    <SiteLayout noFooter>
       <DocsLayout slug={slug} articleRef={articleRef}>
         <article className="docs-article" ref={articleRef}>
           <ReactMarkdown

@@ -33,3 +33,15 @@ backend/bin/
 *.njsproj
 *.sln
 *.sw?
+
+# planning / scratch docs — kept local, never tracked (purged from history)
+tasks.md
+
+# build artifacts
+*.tsbuildinfo
+
+# generated test reports
+e2e/playwright-report/
+
+# python caches
+__pycache__/

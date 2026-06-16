@@ -12,7 +12,8 @@
     "seed": "pnpm --filter backend seed",
     "build:web": "pnpm --filter @cartcrft/web build",
     "dev:web": "pnpm --filter @cartcrft/web dev",
-    "screenshots": "pnpm --filter backend exec tsx src/scripts/seed-demo.ts && pnpm --filter @cartcrft/e2e run screenshots"
+    "screenshots": "pnpm --filter backend exec tsx src/scripts/seed-demo.ts && pnpm --filter @cartcrft/e2e run screenshots && pnpm screenshots:sync",
+    "screenshots:sync": "mkdir -p web/public/screenshots && cp docs/screenshots/*.png web/public/screenshots/"
   },
   "engines": {
     "node": ">=22",

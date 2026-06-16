@@ -829,13 +829,13 @@ export default function Landing() {
           </div>
         </section>
 
-        {/* Part of Webcrft Systems */}
+        {/* Part of WebCrft */}
         <section className="webcrft-band" data-reveal>
-          <a className="webcrft-band-inner" href="https://webcrft.systems" target="_blank" rel="noopener noreferrer">
+          <a className="webcrft-band-inner" href="https://webcrft.io" target="_blank" rel="noopener noreferrer">
             <img src="/webcrft.svg" alt="" width={44} height={44} />
             <div className="webcrft-band-text">
               <span className="webcrft-eyebrow">[ part of the family ]</span>
-              <p>A <strong>Webcrft Systems</strong> project — built by the team behind the webcrft platform.</p>
+              <p>A <strong>WebCrft</strong> product — built by the team behind webcrft.io.</p>
             </div>
             <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" className="webcrft-arrow"><path fill="currentColor" d="M6.22 3.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 1 1-1.06-1.06L9.94 8 6.22 4.28a.75.75 0 0 1 0-1.06z" /></svg>
           </a>

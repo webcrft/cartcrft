@@ -1,13 +1,14 @@
 /* ============================================================================
- * DocsHome — the /docs landing page. Uses docs tokens (from tokens.css) and
- * complements the existing DocsLayout shell. No new custom properties needed.
+ * DocsHome — /docs landing page.
+ * Uses tokens from tokens.css. No new custom properties.
  * ========================================================================== */
 
 .docs-home {
-  max-width: none !important; /* override the prose maxw */
+  max-width: none !important; /* override prose maxw */
 }
 
-/* ── Hero ──────────────────────────────────────────────────────────────────── */
+/* ── Hero ────────────────────────────────────────────────────────────────── */
+
 .docs-home-hero {
   margin-bottom: 3rem;
   padding-bottom: 2.5rem;
@@ -16,29 +17,34 @@
 
 .docs-home-title {
   font-family: var(--font-display);
-  font-size: clamp(2.1rem, 4vw, 2.8rem);
-  font-weight: 700;
-  line-height: 1.08;
-  letter-spacing: -0.035em;
+  font-size: clamp(2.4rem, 5vw, 3.4rem);
+  font-weight: 800;
+  line-height: 1.0;
+  letter-spacing: -0.04em;
   color: var(--ink);
-  margin: 0.6rem 0 1rem;
+  margin: 0.75rem 0 1.1rem;
   text-wrap: balance;
 }
 
+.docs-home-title-accent {
+  color: var(--brand);
+}
+
 .docs-home-lead {
-  font-size: 1.06rem;
+  font-size: 1.05rem;
   line-height: 1.7;
   color: var(--ink-body);
-  max-width: 580px;
+  max-width: 560px;
   margin: 0 0 2rem;
 }
 
-/* ── Prominent search (hero variant) ──────────────────────────────────────── */
+/* ── Prominent search (hero variant) ─────────────────────────────────────── */
+
 .docs-home-search-wrap {
   max-width: 520px;
+  margin-bottom: 1.5rem;
 }
 
-/* The hero trigger is a larger, more prominent version of the sidebar trigger */
 .docs-home-search-wrap .docs-search-trigger {
   padding: 0.8rem 1rem;
   font-size: 0.975rem;
@@ -58,49 +64,95 @@
   color: var(--ink-muted);
 }
 
-/* ── Category cards ───────────────────────────────────────────────────────── */
+/* ── Hero CTAs ───────────────────────────────────────────────────────────── */
+
+.docs-home-hero-ctas {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 1.75rem;
+}
+
+/* Keep the shared button colours intact (a generic docs `a` colour rule would
+ * otherwise tint the primary CTA lime-on-lime). */
+.docs-home-hero-ctas .cc-btn--primary,
+.docs-home-hero-ctas .cc-btn--primary svg { color: var(--brand-ink); }
+.docs-home-hero-ctas .cc-btn--ghost { color: var(--ink); }
+
+/* ── Category cards grid ─────────────────────────────────────────────────── */
+
 .docs-home-categories {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
-  gap: 1rem;
-  margin-bottom: 3rem;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+  gap: 1px;
+  margin-bottom: 2rem;
+  /* Hairline grid by using outline on the container */
+  border: 1px solid var(--line);
+  border-radius: var(--r-xl);
+  overflow: hidden;
+  background: var(--line); /* gap colour = line colour */
 }
 
 .docs-home-card {
   display: flex;
-  gap: 1rem;
-  padding: 1.3rem 1.35rem;
-  border: 1px solid var(--line);
-  border-radius: var(--r-lg);
+  flex-direction: column;
+  gap: 0;
+  padding: 1.5rem 1.6rem 1.4rem;
   background: var(--surface);
-  transition: border-color 0.15s ease, background 0.15s ease;
+  transition: background 0.15s ease;
+  position: relative;
 }
 
 .docs-home-card:hover {
-  border-color: color-mix(in srgb, var(--brand) 35%, var(--line));
   background: var(--surface-2);
 }
 
-.docs-home-card-icon {
-  flex-shrink: 0;
-  display: flex;
-  align-items: flex-start;
-  padding-top: 0.15rem;
-  color: var(--brand);
+/* Cyan accent card */
+.docs-home-card--cyan .docs-home-card-icon {
+  color: var(--accent);
+}
+.docs-home-card--cyan .docs-home-card-title a:hover {
+  color: var(--accent);
+}
+.docs-home-card--cyan .docs-home-card-links li a {
+  color: var(--accent);
 }
 
-.docs-home-card-body {
-  min-width: 0;
+/* ── Card top row: icon + mono label ─────────────────────────────────────── */
+
+.docs-home-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
 }
+
+.docs-home-card-icon {
+  display: flex;
+  align-items: center;
+  color: var(--brand);
+  flex-shrink: 0;
+}
+
+.docs-home-card-label {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  color: var(--ink-subtle);
+  text-transform: lowercase;
+}
+
+/* ── Card body ────────────────────────────────────────────────────────────── */
 
 .docs-home-card-title {
   font-family: var(--font-display);
-  font-size: 1.05rem;
+  font-size: 1.1rem;
   font-weight: 700;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.025em;
   color: var(--ink);
-  margin: 0 0 0.45rem;
-  /* Override the docs-article h2 styles */
+  margin: 0 0 0.5rem;
+  /* Override docs-article h2 styles */
   border-top: none !important;
   padding-top: 0 !important;
 }
@@ -119,9 +171,12 @@
 .docs-home-card-desc {
   font-size: 0.875rem;
   color: var(--ink-muted);
-  line-height: 1.55;
-  margin: 0 0 0.75rem;
+  line-height: 1.6;
+  margin: 0 0 1rem;
+  flex: 1;
 }
+
+/* ── Card link list ──────────────────────────────────────────────────────── */
 
 .docs-home-card-links {
   list-style: none;
@@ -129,37 +184,96 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.28rem;
+  gap: 0.3rem;
+  border-top: 1px solid var(--line);
+  padding-top: 0.9rem;
 }
 
 .docs-home-card-links li a {
-  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.84rem;
   color: var(--brand);
   text-decoration: none;
   border-bottom: none;
-  opacity: 0.85;
-  transition: opacity 0.12s ease;
+  opacity: 0.8;
+  transition: opacity 0.12s ease, gap 0.12s ease;
 }
 
 .docs-home-card-links li a:hover {
   opacity: 1;
+  gap: 0.55rem;
   border-bottom: none;
 }
 
-/* ── Quick picks ──────────────────────────────────────────────────────────── */
+.docs-home-link-arrow {
+  opacity: 0.5;
+  transition: opacity 0.12s ease;
+}
+
+.docs-home-card-links li a:hover .docs-home-link-arrow {
+  opacity: 1;
+}
+
+/* ── Agent-native callout ────────────────────────────────────────────────── */
+
+.docs-home-agent-callout {
+  display: flex;
+  gap: 0.85rem;
+  align-items: flex-start;
+  padding: 1.1rem 1.3rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, var(--line));
+  border-radius: var(--r-lg);
+  background: color-mix(in srgb, var(--accent) 5%, var(--surface));
+  font-size: 0.9rem;
+  color: var(--ink-body);
+  line-height: 1.6;
+  margin-bottom: 2.5rem;
+}
+
+.docs-home-callout-icon {
+  flex-shrink: 0;
+  color: var(--accent);
+  margin-top: 0.15rem;
+}
+
+.docs-home-agent-callout strong {
+  color: var(--ink);
+}
+
+.docs-home-agent-callout code {
+  font-family: var(--font-mono);
+  font-size: 0.82em;
+  color: var(--brand);
+  background: var(--brand-tint);
+  padding: 0.1em 0.35em;
+  border-radius: var(--r-xs);
+}
+
+.docs-home-agent-callout a {
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  transition: border-color 0.12s ease;
+}
+
+.docs-home-agent-callout a:hover {
+  border-color: var(--accent);
+}
+
+/* ── Quick picks / common tasks ──────────────────────────────────────────── */
+
 .docs-home-quickpicks {
-  padding-top: 2.5rem;
+  padding-top: 2rem;
   border-top: 1px solid var(--line);
 }
 
 .docs-home-qp-heading {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
   font-family: var(--font-mono);
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 500;
-  text-transform: uppercase;
+  text-transform: lowercase;
   letter-spacing: 0.1em;
   color: var(--ink-subtle);
   margin: 0 0 1rem;
@@ -168,23 +282,19 @@
   padding-top: 0 !important;
 }
 
-.docs-home-qp-heading svg {
-  color: var(--brand);
-}
-
 .docs-home-qp-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: 0.45rem;
 }
 
 .docs-home-qp-item {
   display: inline-flex;
-  padding: 0.42rem 0.85rem;
+  padding: 0.4rem 0.8rem;
   border: 1px solid var(--line-strong);
   border-radius: var(--r-pill);
   background: var(--surface);
-  font-size: 0.85rem;
+  font-size: 0.84rem;
   color: var(--ink-muted);
   text-decoration: none;
   transition: border-color 0.14s ease, color 0.14s ease, background 0.14s ease;
@@ -194,4 +304,19 @@
   border-color: var(--brand);
   color: var(--brand);
   background: var(--brand-tint);
+}
+
+/* ── Responsive ─────────────────────────────────────────────────────────── */
+
+@media (max-width: 600px) {
+  .docs-home-title {
+    font-size: 2.2rem;
+  }
+  .docs-home-hero-ctas {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .docs-home-categories {
+    border-radius: var(--r-lg);
+  }
 }

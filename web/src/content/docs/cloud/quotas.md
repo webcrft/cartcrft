@@ -40,4 +40,4 @@ Each concurrent MCP session (SSE connection) counts against the limit. Connectio
 
 ## Requesting a quota increase
 
-For Cloud Scale and Enterprise, quota increases can be requested by emailing [hello@webcrft.systems](mailto:hello@webcrft.systems?subject=Quota+increase+request) with your account ID and the resource you need increased.
+For Cloud Scale and Enterprise, quota increases can be requested by emailing [hello@webcrft.io](mailto:hello@webcrft.io?subject=Quota+increase+request) with your account ID and the resource you need increased.

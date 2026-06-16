@@ -225,9 +225,9 @@ Everything outside `cloud/` is **MIT** — see [LICENSE](./LICENSE).
 The `cloud/` directory is source-available under the
 [Cartcrft Cloud License v1.0](./cloud/LICENSE): free to view, modify, and use for
 development and testing; production and commercial use of `cloud/` code requires a
-written agreement with Webcrft Systems. **Self-hosting Cartcrft does not require
+written agreement with Webcrft Systems (Pty) Ltd. **Self-hosting Cartcrft does not require
 `cloud/` at all.**
 
 ---
 
-<p align="center">Built with care by <a href="https://webcrft.com">Webcrft Systems</a>.</p>
+<p align="center">Built with care by <a href="https://webcrft.io">WebCrft</a>.</p>

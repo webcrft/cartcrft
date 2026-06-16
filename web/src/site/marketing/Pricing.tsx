@@ -56,7 +56,7 @@ const tiers: PricingCardProps[] = [
     ],
     cta: {
       label: 'Join the waitlist',
-      href: 'mailto:hello@webcrft.systems?subject=Cloud+Nano+waitlist',
+      href: 'mailto:hello@webcrft.io?subject=Cloud+Nano+waitlist',
     },
     highlighted: false,
     badge: 'Preview pricing',
@@ -81,7 +81,7 @@ const tiers: PricingCardProps[] = [
     ],
     cta: {
       label: 'Join the waitlist',
-      href: 'mailto:hello@webcrft.systems?subject=Cloud+Starter+waitlist',
+      href: 'mailto:hello@webcrft.io?subject=Cloud+Starter+waitlist',
     },
     highlighted: true,
     badge: 'Preview pricing',
@@ -103,7 +103,7 @@ const tiers: PricingCardProps[] = [
     ],
     cta: {
       label: 'Join the waitlist',
-      href: 'mailto:hello@webcrft.systems?subject=Cloud+Scale+waitlist',
+      href: 'mailto:hello@webcrft.io?subject=Cloud+Scale+waitlist',
     },
     highlighted: false,
     badge: 'Preview pricing',
@@ -125,7 +125,7 @@ const tiers: PricingCardProps[] = [
     ],
     cta: {
       label: 'Talk to us',
-      href: 'mailto:hello@webcrft.systems?subject=Enterprise+inquiry',
+      href: 'mailto:hello@webcrft.io?subject=Enterprise+inquiry',
     },
     highlighted: false,
     badge: undefined,
@@ -334,7 +334,7 @@ export default function Pricing() {
           <span>
             <strong>Cloud pricing is in preview.</strong>{' '}
             Tier structure and final prices are illustrative — not yet locked in. Self-host is free, forever.{' '}
-            <a href="mailto:hello@webcrft.systems?subject=Cloud+waitlist">Join the waitlist</a> to be notified before billing starts.
+            <a href="mailto:hello@webcrft.io?subject=Cloud+waitlist">Join the waitlist</a> to be notified before billing starts.
           </span>
         </div>
 
@@ -675,7 +675,7 @@ export default function Pricing() {
             <p>Same codebase. No data lock-in. Flat fee only, ever.</p>
             <div className="cta-buttons">
               <Link to="/quickstart" className="cc-btn cc-btn--lg cc-btn--on-dark cc-btn--primary">Get started free</Link>
-              <a href="mailto:hello@webcrft.systems?subject=Cloud+waitlist" className="cc-btn cc-btn--lg cc-btn--on-dark cc-btn--ghost">
+              <a href="mailto:hello@webcrft.io?subject=Cloud+waitlist" className="cc-btn cc-btn--lg cc-btn--on-dark cc-btn--ghost">
                 Join cloud waitlist
               </a>
             </div>

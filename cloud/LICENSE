@@ -1,5 +1,5 @@
 Cartcrft Cloud License v1.0
-Copyright (c) 2026 Webcrft Systems
+Copyright (c) 2026 Webcrft Systems (Pty) Ltd
 
 This license governs the files contained in the cloud/ directory of the
 Cartcrft repository. All other files in this repository are licensed under
@@ -7,7 +7,7 @@ the MIT License (see root LICENSE).
 
 1. GRANT OF RIGHTS
 
-   Subject to the terms of this license, Webcrft Systems grants you a
+   Subject to the terms of this license, Webcrft Systems (Pty) Ltd grants you a
    limited, non-exclusive, non-transferable right to:
 
    a. View and read the source code in this directory.
@@ -19,7 +19,7 @@ the MIT License (see root LICENSE).
 2. RESTRICTIONS
 
    The following uses are NOT permitted without a separate written agreement
-   with Webcrft Systems:
+   with Webcrft Systems (Pty) Ltd:
 
    a. Running the code in this directory in production for any purpose.
    b. Providing the functionality of this directory as a commercial service
@@ -32,22 +32,21 @@ the MIT License (see root LICENSE).
    Self-hosting Cartcrft does NOT require any code from this directory.
    The core backend, MCP server, SDK, and admin dashboard are all MIT-licensed
    and fully functional without cloud/. This directory exists solely for the
-   cartcrft.com hosted service operated by Webcrft Systems.
+   cartcrft.com hosted service operated by Webcrft Systems (Pty) Ltd.
 
 4. CONTRIBUTIONS
 
    Contributions to files in this directory are accepted under the same terms
    as contributions to the rest of the project. By submitting a contribution
-   you grant Webcrft Systems a perpetual, royalty-free license to use your
-   contribution under this license or any future license Webcrft Systems
+   you grant Webcrft Systems (Pty) Ltd a perpetual, royalty-free license to use your
+   contribution under this license or any future license Webcrft Systems (Pty) Ltd
    chooses for this directory.
 
 5. NO WARRANTY
 
-   This software is provided "as is", without warranty of any kind. Webcrft
-   Systems shall not be liable for any damages arising from its use.
+   This software is provided "as is", without warranty of any kind. Webcrft Systems (Pty) Ltd shall not be liable for any damages arising from its use.
 
 6. CONTACT
 
    To obtain a production/commercial use agreement, contact:
-   legal@webcrft.com
+   legal@webcrft.io

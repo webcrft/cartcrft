@@ -46,7 +46,7 @@ beforeAll(async () => {
   const hash = hashSuperAdminPassword(PASSWORD);
   const sa = await ctx.pool.query<{ id: string }>(
     `INSERT INTO super_admins (email, password_hash) VALUES ($1, $2) RETURNING id::text`,
-    ["ops@webcrft.systems", hash]
+    ["ops@webcrft.io", hash]
   );
   superAdminId = sa.rows[0]!.id;
 
@@ -85,7 +85,7 @@ beforeEach(() => {
 
 async function login(extra: Record<string, unknown> = {}): Promise<{ status: number; token?: string; json: Record<string, unknown> }> {
   const res = await post(ctx, "/superadmin/auth/login", {
-    email: "ops@webcrft.systems",
+    email: "ops@webcrft.io",
     password: PASSWORD,
     ...extra,
   });
@@ -107,7 +107,7 @@ describe("login", () => {
   });
 
   it("rejects a bad password with 401 INVALID_CREDENTIALS", async () => {
-    const res = await post(ctx, "/superadmin/auth/login", { email: "ops@webcrft.systems", password: "wrong" });
+    const res = await post(ctx, "/superadmin/auth/login", { email: "ops@webcrft.io", password: "wrong" });
     expect(res.status).toBe(401);
     expect((res.json["error"] as Record<string, unknown>)["code"]).toBe("INVALID_CREDENTIALS");
   });
@@ -117,16 +117,16 @@ describe("login", () => {
     const hash = hashSuperAdminPassword(PASSWORD);
     await ctx.pool.query(
       `INSERT INTO super_admins (email, password_hash) VALUES ($1, $2)`,
-      ["lockme@webcrft.systems", hash]
+      ["lockme@webcrft.io", hash]
     );
     let lastCode = "";
     for (let i = 0; i < 5; i++) {
-      const r = await post(ctx, "/superadmin/auth/login", { email: "lockme@webcrft.systems", password: "nope" });
+      const r = await post(ctx, "/superadmin/auth/login", { email: "lockme@webcrft.io", password: "nope" });
       lastCode = (r.json["error"] as Record<string, unknown>)["code"] as string;
     }
     expect(lastCode).toBe("LOCKED");
     // Even the correct password is now refused while locked.
-    const good = await post(ctx, "/superadmin/auth/login", { email: "lockme@webcrft.systems", password: PASSWORD });
+    const good = await post(ctx, "/superadmin/auth/login", { email: "lockme@webcrft.io", password: PASSWORD });
     expect(good.status).toBe(423);
     expect((good.json["error"] as Record<string, unknown>)["code"]).toBe("LOCKED");
   });
@@ -153,23 +153,23 @@ describe("MFA / TOTP", () => {
     const enc = encodeSecretValue(base32Secret, process.env["AUTH_SECRETS_KEY"] ?? "");
     await ctx.pool.query(
       `INSERT INTO super_admins (email, password_hash, totp_secret_enc) VALUES ($1, $2, $3)`,
-      ["mfa@webcrft.systems", hash, enc]
+      ["mfa@webcrft.io", hash, enc]
     );
 
     // Without a code → MFA_REQUIRED
-    const noCode = await post(ctx, "/superadmin/auth/login", { email: "mfa@webcrft.systems", password: PASSWORD });
+    const noCode = await post(ctx, "/superadmin/auth/login", { email: "mfa@webcrft.io", password: PASSWORD });
     expect(noCode.status).toBe(401);
     expect((noCode.json["error"] as Record<string, unknown>)["code"]).toBe("MFA_REQUIRED");
 
     // Wrong code → MFA_INVALID
-    const badCode = await post(ctx, "/superadmin/auth/login", { email: "mfa@webcrft.systems", password: PASSWORD, totp: "123456" });
+    const badCode = await post(ctx, "/superadmin/auth/login", { email: "mfa@webcrft.io", password: PASSWORD, totp: "123456" });
     expect(badCode.status).toBe(401);
     expect((badCode.json["error"] as Record<string, unknown>)["code"]).toBe("MFA_INVALID");
 
     // Correct code: derive it the same way the verifier does.
     const code = currentTotp(base32Secret);
     expect(verifyTotp(base32Secret, code)).toBe(true);
-    const good = await post(ctx, "/superadmin/auth/login", { email: "mfa@webcrft.systems", password: PASSWORD, totp: code });
+    const good = await post(ctx, "/superadmin/auth/login", { email: "mfa@webcrft.io", password: PASSWORD, totp: code });
     expect(good.status).toBe(200);
   });
 });
@@ -213,7 +213,7 @@ describe("audience isolation", () => {
   });
 
   it("rejects a super-admin JWT on an org route", async () => {
-    const superToken = await mintSuperAdminJwt({ superAdminId, sessionId: randomUUID(), email: "ops@webcrft.systems" });
+    const superToken = await mintSuperAdminJwt({ superAdminId, sessionId: randomUUID(), email: "ops@webcrft.io" });
     // /commerce/stores is a JWT-only org route. A super JWT (aud=cartcrft-superadmin,
     // no org claim) must NOT be accepted.
     const res = await get(ctx, "/commerce/stores", bearer(superToken));
@@ -233,7 +233,7 @@ describe("IP allowlist", () => {
     process.env["SUPERADMIN_IP_ALLOWLIST"] = "10.0.0.0/8";
     try {
       // Login itself is IP-gated.
-      const blocked = await post(ctx, "/superadmin/auth/login", { email: "ops@webcrft.systems", password: PASSWORD });
+      const blocked = await post(ctx, "/superadmin/auth/login", { email: "ops@webcrft.io", password: PASSWORD });
       expect(blocked.status).toBe(403);
       expect((blocked.json["error"] as Record<string, unknown>)["code"]).toBe("IP_BLOCKED");
 
@@ -245,7 +245,7 @@ describe("IP allowlist", () => {
       const spoofAttempt = await ctx.request({
         method: "POST",
         path: "/superadmin/auth/login",
-        body: { email: "ops@webcrft.systems", password: PASSWORD },
+        body: { email: "ops@webcrft.io", password: PASSWORD },
         headers: { "x-forwarded-for": "10.1.2.3" },
       });
       expect(spoofAttempt.status).toBe(403);

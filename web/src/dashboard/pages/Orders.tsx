@@ -55,7 +55,7 @@ function OrderDetail({ storeId, orderId, onBack }: {
         sdk.shipping.listShipments(storeId, { order_id: orderId }),
         sdk.orders.listEvents(storeId, orderId),
       ])
-      if (orderRes.status === 'fulfilled') setOrder(orderRes.value.order)
+      if (orderRes.status === 'fulfilled') setOrder(orderRes.value)
       if (paymentsRes.status === 'fulfilled') setPayments(paymentsRes.value.payments ?? [])
       if (shipmentsRes.status === 'fulfilled') setShipments((shipmentsRes.value.shipments ?? []) as Shipment[])
       if (eventsRes.status === 'fulfilled') setEvents((eventsRes.value.events ?? []) as OrderEvent[])
@@ -181,7 +181,7 @@ function OrderDetail({ storeId, orderId, onBack }: {
                         <span className="ml-2 text-xs text-[var(--cc-subtle)]">× {String(l['quantity'] ?? 1)}</span>
                       </div>
                       <span className="text-sm font-mono text-[var(--cc-body)]">
-                        {order.currency} {String(l['line_total'] ?? l['unit_price'] ?? '0')}
+                        {order.currency} {String(l['total'] ?? l['price'] ?? '0')}
                       </span>
                     </div>
                   )

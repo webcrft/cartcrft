@@ -27,7 +27,7 @@ function GitHubIcon({ size = 20 }: { size?: number }) {
   )
 }
 
-export default function SiteLayout({ children }: { children: ReactNode }) {
+export default function SiteLayout({ children, noFooter = false }: { children: ReactNode; noFooter?: boolean }) {
   const location = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
@@ -137,6 +137,7 @@ export default function SiteLayout({ children }: { children: ReactNode }) {
 
       <main>{children}</main>
 
+      {!noFooter && (
       <footer className="site-footer">
         <div className="footer-inner">
           <div className="footer-brand">
@@ -148,9 +149,9 @@ export default function SiteLayout({ children }: { children: ReactNode }) {
               <GitHubIcon size={18} />
               Star on GitHub
             </a>
-            <a className="footer-webcrft" href="https://webcrft.systems" target="_blank" rel="noopener noreferrer">
+            <a className="footer-webcrft" href="https://webcrft.io" target="_blank" rel="noopener noreferrer">
               <img src="/webcrft.svg" alt="" width={20} height={20} />
-              <span>A <strong>Webcrft Systems</strong> project</span>
+              <span>A <strong>WebCrft</strong> product</span>
             </a>
           </div>
 
@@ -208,6 +209,7 @@ export default function SiteLayout({ children }: { children: ReactNode }) {
           <p className="footer-mit">MIT licensed · Zero take rate · Self-host or cloud</p>
         </div>
       </footer>
+      )}
     </>
   )
 }

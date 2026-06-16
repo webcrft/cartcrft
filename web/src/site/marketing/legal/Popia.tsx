@@ -26,14 +26,14 @@ export default function Popia() {
         <strong>Webcrft Systems (Pty) Ltd</strong><br />
         Registration number: <strong>[PLACEHOLDER: company registration number]</strong><br />
         Registered address: <strong>[PLACEHOLDER: registered office address, South Africa]</strong><br />
-        Email: <a href="mailto:privacy@webcrft.com">privacy@webcrft.com</a>
+        Email: <a href="mailto:privacy@webcrft.io">privacy@webcrft.io</a>
       </p>
 
       <h3>1.1 Information Officer (s. 55)</h3>
       <p>
         Name: <strong>[PLACEHOLDER: full name of Information Officer]</strong><br />
         Title: <strong>[PLACEHOLDER: e.g. Director / CTO / General Counsel]</strong><br />
-        Email: <a href="mailto:privacy@webcrft.com">privacy@webcrft.com</a><br />
+        Email: <a href="mailto:privacy@webcrft.io">privacy@webcrft.io</a><br />
         Postal address: <strong>[PLACEHOLDER]</strong>
       </p>
 
@@ -41,7 +41,7 @@ export default function Popia() {
 
       <h3>2.1 Cartcrft as Responsible Party (Controller)</h3>
       <p>
-        Webcrft Systems determines the purpose and means of processing personal information relating
+        WebCrft determines the purpose and means of processing personal information relating
         to <strong>Cartcrft Cloud account holders</strong> (merchants and developers): account
         registration data, billing records via Paystack, and correspondence.
       </p>
@@ -49,22 +49,22 @@ export default function Popia() {
       <h3>2.2 Cartcrft as Operator (Processor)</h3>
       <p>
         When a merchant uses Cartcrft Cloud, their end-customers' personal information is processed
-        by Webcrft Systems <em>on behalf of the merchant</em>:
+        by WebCrft <em>on behalf of the merchant</em>:
       </p>
       <ul>
         <li>The <strong>merchant is the Responsible Party</strong> for end-customers' data;</li>
-        <li>Webcrft Systems is the <strong>Operator</strong> (POPIA s. 1), processing only as
+        <li>WebCrft is the <strong>Operator</strong> (POPIA s. 1), processing only as
             instructed by the merchant.</li>
       </ul>
-      <p>An Operator Agreement is available on request: <a href="mailto:legal@webcrft.com">legal@webcrft.com</a>.</p>
+      <p>An Operator Agreement is available on request: <a href="mailto:legal@webcrft.io">legal@webcrft.io</a>.</p>
 
       <h3>2.3 Self-Hosted Deployments</h3>
-      <p>If you self-host the MIT-licensed core, all data stays in your own infrastructure. Webcrft Systems is neither Responsible Party nor Operator.</p>
+      <p>If you self-host the MIT-licensed core, all data stays in your own infrastructure. WebCrft is neither Responsible Party nor Operator.</p>
 
       <h2>3. The Eight POPIA Conditions for Lawful Processing</h2>
 
       <h3>Condition 1 — Accountability (s. 8)</h3>
-      <p>Webcrft Systems is accountable for compliance. The Information Officer (Section 1.1) ensures POPIA obligations are implemented and maintained.</p>
+      <p>WebCrft is accountable for compliance. The Information Officer (Section 1.1) ensures POPIA obligations are implemented and maintained.</p>
 
       <h3>Condition 2 — Processing Limitation (ss. 9–12)</h3>
       <p>We collect personal information only where adequate, relevant, and not excessive for the stated purposes. We do not collect personal information in a manner incompatible with those purposes.</p>
@@ -128,27 +128,27 @@ export default function Popia() {
           <tr>
             <td>Access to personal information</td>
             <td>s. 23</td>
-            <td>Email <a href="mailto:privacy@webcrft.com">privacy@webcrft.com</a>; response within 30 days</td>
+            <td>Email <a href="mailto:privacy@webcrft.io">privacy@webcrft.io</a>; response within 30 days</td>
           </tr>
           <tr>
             <td>Correction or deletion of inaccurate information</td>
             <td>s. 24</td>
-            <td>Email <a href="mailto:privacy@webcrft.com">privacy@webcrft.com</a>; account data may also be updated via the dashboard</td>
+            <td>Email <a href="mailto:privacy@webcrft.io">privacy@webcrft.io</a>; account data may also be updated via the dashboard</td>
           </tr>
           <tr>
             <td>Destroy or delete information no longer needed</td>
             <td>s. 24(3)</td>
-            <td>Email <a href="mailto:privacy@webcrft.com">privacy@webcrft.com</a>; subject to legal retention obligations</td>
+            <td>Email <a href="mailto:privacy@webcrft.io">privacy@webcrft.io</a>; subject to legal retention obligations</td>
           </tr>
           <tr>
             <td>Object to processing</td>
             <td>s. 11(3)</td>
-            <td>Email <a href="mailto:privacy@webcrft.com">privacy@webcrft.com</a> with reasons; we assess and respond within 30 days</td>
+            <td>Email <a href="mailto:privacy@webcrft.io">privacy@webcrft.io</a> with reasons; we assess and respond within 30 days</td>
           </tr>
           <tr>
             <td>Withdraw consent (where consent-based)</td>
             <td>s. 11(1)(a)</td>
-            <td>Unsubscribe link in marketing emails, or email <a href="mailto:privacy@webcrft.com">privacy@webcrft.com</a></td>
+            <td>Unsubscribe link in marketing emails, or email <a href="mailto:privacy@webcrft.io">privacy@webcrft.io</a></td>
           </tr>
           <tr>
             <td>Lodge a complaint with the Information Regulator</td>
@@ -197,7 +197,7 @@ export default function Popia() {
       <p>
         We send direct marketing (newsletters, product updates) only with your prior consent. Withdraw
         at any time via the unsubscribe link in any marketing email, or by emailing
-        {' '}<a href="mailto:privacy@webcrft.com">privacy@webcrft.com</a>. Transactional emails are not
+        {' '}<a href="mailto:privacy@webcrft.io">privacy@webcrft.io</a>. Transactional emails are not
         direct marketing and do not require opt-in.
       </p>
 
@@ -205,16 +205,16 @@ export default function Popia() {
       <p>
         All Operators (sub-processors) listed in Section 6 process personal information under a
         written Operator Agreement requiring security safeguards substantially equivalent to those
-        required of Webcrft Systems, and prompt notification of security compromises.
+        required of WebCrft, and prompt notification of security compromises.
       </p>
       <p>
-        Merchants should enter into an Operator Agreement with Webcrft Systems for processing
-        end-customer data. Contact <a href="mailto:legal@webcrft.com">legal@webcrft.com</a>.
+        Merchants should enter into an Operator Agreement with WebCrft for processing
+        end-customer data. Contact <a href="mailto:legal@webcrft.io">legal@webcrft.io</a>.
       </p>
 
       <h2>9. Records of Processing Activities</h2>
       <p>
-        Webcrft Systems maintains an internal record of processing activities per POPIA and its
+        WebCrft maintains an internal record of processing activities per POPIA and its
         Regulations, documenting: purposes, categories of data subjects and information, recipients,
         cross-border transfers, retention periods, and security measures. Available to the Information
         Regulator on request.
@@ -229,11 +229,11 @@ export default function Popia() {
         Postal address: P.O. Box 31533, Braamfontein, Johannesburg, 2017<br />
         Telephone: +27 (0)10 023 5207
       </p>
-      <p>We encourage you to contact us first at <a href="mailto:privacy@webcrft.com">privacy@webcrft.com</a>.</p>
+      <p>We encourage you to contact us first at <a href="mailto:privacy@webcrft.io">privacy@webcrft.io</a>.</p>
 
       <h2>11. Contact</h2>
       <p>
-        Email: <a href="mailto:privacy@webcrft.com">privacy@webcrft.com</a><br />
+        Email: <a href="mailto:privacy@webcrft.io">privacy@webcrft.io</a><br />
         Postal address: <strong>[PLACEHOLDER: registered office address]</strong><br />
         Response timeframe: 30 days from receipt of a complete request.
       </p>

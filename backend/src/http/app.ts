@@ -347,7 +347,7 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
   await app.register(notificationsPlugin);
   await app.register(analyticsPlugin);
 
-  // ── Super-admin portal (Webcrft Systems operator god-mode) ────────────────
+  // ── Super-admin portal (WebCrft operator god-mode) ────────────────
   // Hardened, distinct-audience JWT auth; cross-tenant reads; full audit trail.
   await app.register(superadminPlugin);
 

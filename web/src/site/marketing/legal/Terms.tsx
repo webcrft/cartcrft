@@ -10,7 +10,7 @@ export default function Terms() {
   return (
     <LegalLayout
       title="Terms of Service"
-      description="Terms of Service for Cartcrft Cloud — the managed hosting service operated by Webcrft Systems."
+      description="Terms of Service for Cartcrft Cloud — the managed hosting service operated by WebCrft."
       lastUpdated="2026-06-14"
     >
       <div className="notice-box">
@@ -22,7 +22,7 @@ export default function Terms() {
         These Terms of Service ("Terms") govern your access to and use of <strong>Cartcrft Cloud</strong>,
         the managed commerce-backend service at <a href="https://cartcrft.com">cartcrft.com</a>
         {' '}("Service"), operated by <strong>Webcrft Systems (Pty) Ltd</strong>, a company registered in
-        the Republic of South Africa ("Webcrft Systems", "we", "us", or "our").
+        the Republic of South Africa ("WebCrft", "we", "us", or "our").
       </p>
       <p>
         By creating an account, accessing the dashboard, or making any API call against the Service
@@ -61,7 +61,7 @@ export default function Terms() {
         admin dashboard, and supporting packages — is distributed under the
         {' '}<strong>MIT License</strong>
         {' '}(see <a href="https://github.com/webcrftsystems/cartcrft/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">LICENSE</a>).
-        Self-hosting the MIT core requires no agreement with Webcrft Systems. Nothing in these Terms
+        Self-hosting the MIT core requires no agreement with WebCrft. Nothing in these Terms
         restricts your use of the MIT-licensed software.
       </p>
 
@@ -71,7 +71,7 @@ export default function Terms() {
         {' '}<strong>Cartcrft Cloud License v1.0</strong>
         {' '}(<a href="https://github.com/webcrftsystems/cartcrft/blob/main/cloud/LICENSE" target="_blank" rel="noopener noreferrer">cloud/LICENSE</a>):
         source-visible; viewing and development/testing use permitted; production or commercial
-        deployment requires a separate written agreement with Webcrft Systems.
+        deployment requires a separate written agreement with WebCrft.
       </p>
 
       <h3>3.3 These Terms</h3>
@@ -85,7 +85,7 @@ export default function Terms() {
         <li>You must provide accurate registration information and keep it up to date.</li>
         <li>You are responsible for maintaining the confidentiality of your credentials, API keys
             (<code>cc_pub_</code> and <code>cc_prv_</code>), and JWT secrets.</li>
-        <li>Notify us immediately at <a href="mailto:security@webcrft.com">security@webcrft.com</a>
+        <li>Notify us immediately at <a href="mailto:security@webcrft.io">security@webcrft.io</a>
             {' '}of any suspected unauthorised access.</li>
         <li>One person or legal entity may not maintain more than one free-tier account without
             prior written consent.</li>
@@ -115,13 +115,13 @@ export default function Terms() {
       <p>Cartcrft operates on a <strong>bring-your-own-keys</strong> (BYO) model:</p>
       <ul>
         <li><strong>Payment providers:</strong> You configure your own credentials for Stripe,
-            Paystack, Razorpay, or Xendit. Webcrft Systems stores them AES-256-GCM encrypted and
+            Paystack, Razorpay, or Xendit. WebCrft stores them AES-256-GCM encrypted and
             does not use them for any purpose beyond routing your transactions.</li>
         <li><strong>LLM/embeddings key:</strong> If you enable semantic search, you supply an
             OpenAI-compatible API key stored encrypted per-store; transmitted only to the endpoint
             you configure.</li>
         <li><strong>Merchant of record:</strong> For your store's end-customer transactions, you are
-            the merchant of record. Webcrft Systems is not a payment processor in respect of your
+            the merchant of record. WebCrft is not a payment processor in respect of your
             store's transactions.</li>
         <li><strong>Compliance:</strong> You are solely responsible for ensuring use of BYO payment
             providers complies with their terms, applicable financial regulations, and KYC/AML
@@ -138,7 +138,7 @@ export default function Terms() {
         Cartcrft Cloud subscriptions are billed through <strong>Paystack</strong>. By subscribing you
         also agree to
         {' '}<a href="https://paystack.com/terms" target="_blank" rel="noopener noreferrer">Paystack's Terms of Service</a>.
-        Webcrft Systems is the merchant of record for cloud subscription fees.
+        WebCrft is the merchant of record for cloud subscription fees.
       </p>
 
       <h3>7.2 Currency and Exchange Rate</h3>
@@ -160,7 +160,7 @@ export default function Terms() {
 
       <h3>7.4 Refunds</h3>
       <p>
-        Refund requests must be submitted to <a href="mailto:billing@webcrft.com">billing@webcrft.com</a>
+        Refund requests must be submitted to <a href="mailto:billing@webcrft.io">billing@webcrft.io</a>
         {' '}within <strong>14 days</strong> of the charge. We evaluate requests case-by-case; no refund
         is guaranteed except as required by the Consumer Protection Act 68 of 2008 where applicable.
       </p>
@@ -176,9 +176,9 @@ export default function Terms() {
 
       <h3>8.1 Controller / Processor Split</h3>
       <p>
-        For data about <strong>your Cartcrft Cloud account and billing</strong>, Webcrft Systems is the
+        For data about <strong>your Cartcrft Cloud account and billing</strong>, WebCrft is the
         data controller. For <strong>your store's end-customer data</strong> processed through the API
-        on your behalf, you are the data controller and Webcrft Systems acts as a data processor.
+        on your behalf, you are the data controller and WebCrft acts as a data processor.
         See our <Link to="/legal/privacy">Privacy Policy</Link>,
         {' '}<Link to="/legal/popia">POPIA disclosure</Link>, and <Link to="/legal/gdpr">GDPR disclosure</Link>.
       </p>
@@ -194,12 +194,12 @@ export default function Terms() {
 
       <h2>9. Intellectual Property</h2>
       <ul>
-        <li>The Cartcrft name, logo, and brand are trademarks of Webcrft Systems.</li>
+        <li>The Cartcrft name, logo, and brand are trademarks of WebCrft.</li>
         <li>The MIT-licensed core is available under the MIT License; you retain all rights in
             your own code built on top of it.</li>
-        <li>Your store data remains yours. You grant Webcrft Systems a limited right to process
+        <li>Your store data remains yours. You grant WebCrft a limited right to process
             it solely to provide the Service.</li>
-        <li>Feedback you provide may be used by Webcrft Systems without obligation.</li>
+        <li>Feedback you provide may be used by WebCrft without obligation.</li>
       </ul>
 
       <h2>10. Uptime and Service Levels</h2>
@@ -213,7 +213,7 @@ export default function Terms() {
       <h2>11. Warranties and Disclaimers</h2>
       <p>
         TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE SERVICE IS PROVIDED "AS IS" WITHOUT
-        WARRANTY OF ANY KIND, EXPRESS OR IMPLIED. WEBCRFT SYSTEMS DOES NOT WARRANT UNINTERRUPTED
+        WARRANTY OF ANY KIND, EXPRESS OR IMPLIED. WEBCRFT DOES NOT WARRANT UNINTERRUPTED
         OR ERROR-FREE OPERATION. Nothing in these Terms excludes liability that cannot lawfully be
         excluded under South African law.
       </p>
@@ -223,7 +223,7 @@ export default function Terms() {
       <ul>
         <li>Neither party is liable for indirect, incidental, or consequential damages, including
             loss of revenue, data, or profits;</li>
-        <li>Webcrft Systems' aggregate liability for any claim shall not exceed the greater of
+        <li>WebCrft's aggregate liability for any claim shall not exceed the greater of
             (a) fees you paid in the <strong>three months preceding the event</strong> giving rise to
             the claim, or (b) ZAR 1,000.</li>
       </ul>
@@ -268,9 +268,9 @@ export default function Terms() {
         <strong>Webcrft Systems (Pty) Ltd</strong><br />
         Registration number: <strong>[PLACEHOLDER: company registration number]</strong><br />
         Registered address: <strong>[PLACEHOLDER: registered office address, South Africa]</strong><br />
-        Legal: <a href="mailto:legal@webcrft.com">legal@webcrft.com</a><br />
-        Billing: <a href="mailto:billing@webcrft.com">billing@webcrft.com</a><br />
-        Security: <a href="mailto:security@webcrft.com">security@webcrft.com</a>
+        Legal: <a href="mailto:legal@webcrft.io">legal@webcrft.io</a><br />
+        Billing: <a href="mailto:billing@webcrft.io">billing@webcrft.io</a><br />
+        Security: <a href="mailto:security@webcrft.io">security@webcrft.io</a>
       </p>
 
       <p>
