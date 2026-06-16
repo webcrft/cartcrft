@@ -171,7 +171,7 @@ function AuthConfigTab({ storeId }: { storeId: string }) {
         <div className="grid grid-cols-2 gap-3">
           <FormInput label="Redirect URL" value={config.auth_redirect_url ?? ''} onChange={v => set('auth_redirect_url')(v)} placeholder="https://store.example.com/account" />
           <FormInput label="Logo URL" value={config.auth_logo_url ?? ''} onChange={v => set('auth_logo_url')(v)} placeholder="https://..." />
-          <FormInput label="Brand Color" value={config.auth_brand_color ?? ''} onChange={v => set('auth_brand_color')(v)} placeholder="#6366f1" />
+          <FormInput label="Brand Color" value={config.auth_brand_color ?? ''} onChange={v => set('auth_brand_color')(v)} placeholder="#b5ff2e" />
         </div>
       </div>
 

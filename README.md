@@ -1,30 +1,41 @@
 <p align="center">
-  <img src="assets/logo.svg" width="96" alt="Cartcrft logo" />
+  <img src="assets/logo.svg" width="112" alt="Cartcrft" />
 </p>
 
 <h1 align="center">Cartcrft</h1>
 
 <p align="center">
-  <strong>The open-source, agent-native headless commerce backend.<br />TypeScript end-to-end.</strong>
+  <strong>The open-source, agent-native headless commerce backend.</strong><br />
+  <sub>Every store ships an MCP server out of the box. TypeScript end-to-end. MIT-licensed.</sub>
 </p>
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-b5ff2e?style=flat-square&labelColor=16170f" alt="MIT License" /></a>
+  <a href="docs/agent-native.md"><img src="https://img.shields.io/badge/agent--native-MCP%20%2B%20ACP%20%2B%20UCP-b5ff2e?style=flat-square&labelColor=16170f" alt="Agent-native" /></a>
   <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-5.x-57e0ff?style=flat-square&labelColor=16170f" alt="TypeScript" /></a>
   <a href="https://www.postgresql.org/"><img src="https://img.shields.io/badge/PostgreSQL-16-57e0ff?style=flat-square&labelColor=16170f" alt="PostgreSQL 16" /></a>
-  <a href="CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-welcome-b5ff2e?style=flat-square&labelColor=16170f" alt="PRs welcome" /></a>
+  <a href="docs/contributing.md"><img src="https://img.shields.io/badge/PRs-welcome-b5ff2e?style=flat-square&labelColor=16170f" alt="PRs welcome" /></a>
+</p>
+
+<p align="center">
+  <a href="docs/quickstart.md">Quickstart</a> ·
+  <a href="docs/quickstart-mcp.md">Buy with an agent</a> ·
+  <a href="docs/agent-native.md">Agent-native</a> ·
+  <a href="docs/self-host.md">Self-host</a> ·
+  <a href="docs">Docs</a>
 </p>
 
 ---
 
 Cartcrft is an open-source headless commerce backend built for the agentic era.
-Every store ships with an MCP server that lets any AI agent (Claude, GPT, or your
-own) browse, search, and complete purchases out of the box — no plugins, no
-middleware, no proprietary agent layer. Under that agent surface sits a complete
-ecommerce engine: products, inventory, orders, payments (Stripe / Paystack /
-Razorpay / Xendit), B2B, subscriptions, returns, digital products, bookings, and
-more. Fully headless, TypeScript end-to-end, MIT-licensed outside the cloud billing
-layer.
+Every store ships with an **MCP server** that lets any AI agent — Claude, GPT, or
+your own — browse, search, and complete purchases out of the box: no plugins, no
+middleware, no proprietary agent layer.
+
+Under that agent surface sits a complete ecommerce engine — products, inventory,
+orders, payments (Stripe / Paystack / Razorpay / Xendit), B2B, subscriptions,
+returns, digital products, and bookings. Fully headless, TypeScript end-to-end,
+and MIT-licensed outside the optional cloud billing layer.
 
 ---
 
@@ -63,7 +74,7 @@ layer.
 - **Catalog** — products (simple, bundle, configurable, digital, service, subscription, rental), options, variants, media, collections (manual + smart), tags, metafields, SEO, i18n translations, CSV import/export
 - **Inventory** — warehouses, stock levels, FEFO lot tracking, serial numbers, reorder points, suppliers
 - **Orders & checkout** — carts with price snapshots, checkout sessions, atomic `CompleteByID` (price re-validation + inventory decrement + discount burn in one transaction), abandoned-cart recovery, wishlists
-- **Payments** — Stripe, Paystack, Razorpay, Xendit; BYO keys; AES-256-GCM secret encryption; inbound webhook router with replay protection; GA4 server-side purchase events
+- **Payments** — Stripe, Paystack, Razorpay, Xendit; BYO keys; AES-256-GCM secret encryption; live provider refunds; inbound webhook router with replay protection; GA4 server-side purchase events
 - **Shipping** — zones, rates, live rates (BobGo), collection points (PUDO/click-and-collect), shipments, tracking events, fulfillment orders
 - **Tax** — categories, zones, rates (inclusive/exclusive static tables)
 - **Discounts** — code-based (%, fixed, free-shipping, BOGO, buy-X-get-Y) and automatic discounts; usage limits; once-per-customer atomicity
@@ -95,7 +106,7 @@ layer.
 ## Quickstart
 
 ```bash
-git clone https://github.com/webcrftsystems/cartcrft
+git clone https://github.com/webcrft/cartcrft
 cd cartcrft
 pnpm install
 ```
@@ -119,7 +130,7 @@ EOF
 ```
 
 ```bash
-pnpm migrate   # apply all 18 SQL migrations
+pnpm migrate   # apply all 30 SQL migrations
 pnpm seed      # create the Crft Goods demo store; prints cc_pub_ / cc_prv_ keys
 pnpm dev       # Fastify on :3000
 ```
@@ -158,12 +169,12 @@ Self-hosting requires nothing from `cloud/`. The cloud layer is metering + billi
 cartcrft/
 ├── LICENSE                    # MIT (everything except cloud/)
 ├── README.md
-├── roadmap.md / tasks.md      # planning docs
+├── roadmap.md                 # planning doc
 ├── assets/                    # logo + brand
 ├── package.json               # pnpm workspace root
 ├── backend/                   # TypeScript headless commerce core (MIT)
 │   ├── src/                   # Fastify + zod + pg; entrypoints: serve | worker | migrate
-│   ├── migrations/            # 18 Postgres SQL migration files (0001–0018)
+│   ├── migrations/            # 30 Postgres SQL migration files (0001–0030)
 │   └── tests/                 # vitest test suites
 ├── mcp/                       # MCP docs + conformance examples (MIT)
 ├── sdk/                       # @cartcrft/sdk (generated from OpenAPI) (MIT)
@@ -230,4 +241,7 @@ written agreement with Webcrft Systems (Pty) Ltd. **Self-hosting Cartcrft does n
 
 ---
 
-<p align="center">Built with care by <a href="https://webcrft.io">WebCrft</a>.</p>
+<p align="center">
+  <img src="assets/logo.svg" width="32" alt="" /><br />
+  <sub>Built with care by <a href="https://webcrft.io">WebCrft</a> · <strong>Webcrft Systems (Pty) Ltd</strong></sub>
+</p>
