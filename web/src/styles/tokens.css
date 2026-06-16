@@ -68,7 +68,7 @@
   /* — Layout — */
   --maxw: 1220px;
   --maxw-prose: 720px;
-  --gutter: 1.5rem;
+  --gutter: clamp(1rem, 4vw, 1.5rem);
 
   /* — Texture — */
   --grid-line: color-mix(in srgb, var(--ink) 5%, transparent);

@@ -246,7 +246,13 @@
 .footer-mit { font-family: var(--font-mono); font-size: 0.74rem; color: var(--ink-subtle); margin: 0; }
 
 @media (max-width: 640px) {
-  .footer-inner { gap: 2.5rem; }
+  .footer-inner { gap: 2rem; padding-top: 2.5rem; }
   .footer-brand { flex: 0 0 100%; }
+  .footer-links { gap: 1.5rem; }
   .footer-bottom { justify-content: center; text-align: center; }
+}
+
+@media (max-width: 480px) {
+  .footer-links { flex-direction: column; gap: 1.75rem; }
+  .site-footer { margin-top: 4rem; }
 }

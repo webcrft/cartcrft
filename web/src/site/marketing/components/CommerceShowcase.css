@@ -77,6 +77,8 @@
   align-items: baseline;
   gap: 0.9rem;
   margin-bottom: 1.35rem;
+  flex-wrap: wrap;
+  min-width: 0;
 }
 .cs-cluster-num {
   font-family: var(--font-mono);
@@ -119,6 +121,12 @@
   color: var(--ink-subtle);
   white-space: nowrap;
   flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  .cs-cluster-line,
+  .cs-cluster-count { display: none; }
+  .cs-cluster-desc { display: none; }
 }
 
 /* — Cluster body: showcase tile + support grid — */
