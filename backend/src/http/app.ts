@@ -22,7 +22,9 @@ import {
 } from "fastify-type-provider-zod";
 import fastifyCors from "@fastify/cors";
 import fastifyHelmet from "@fastify/helmet";
+import http from "node:http";
 import { getPool } from "../db/pool.js";
+import { runInRequestScope } from "../lib/request-ctx.js";
 import { authPlugin, rateLimitHook } from "../lib/auth/middleware.js";
 import { storesPlugin } from "../modules/stores/routes.js";
 import { apiKeysPlugin } from "../modules/apikeys/routes.js";
@@ -92,6 +94,15 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
 
   const app = Fastify({
     trustProxy,
+    // ── Per-request AsyncLocalStorage isolation (RLS tenant safety) ─────────
+    // Wrap every incoming request in its own ALS frame so that the auth
+    // middleware's setRequestCtx()/enterWith() can never leak the tenant
+    // context to an ancestor frame (which would let a later non-request DB
+    // call inherit a stale app.org_id and trip RLS for the wrong tenant).
+    serverFactory: (handler) =>
+      http.createServer((req, res) =>
+        runInRequestScope(() => handler(req, res))
+      ),
     logger: {
       level: process.env["APP_ENV"] === "production" ? "info" : "debug",
       // ── Log redaction (H1.3) ───────────────────────────────────────────

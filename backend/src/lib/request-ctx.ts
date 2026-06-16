@@ -58,40 +58,64 @@ export interface RequestCtx {
 
 // ── Singleton store ───────────────────────────────────────────────────────────
 
-const _store = new AsyncLocalStorage<RequestCtx>();
+// The store holds a *mutable per-request holder*, not the context value
+// directly. The holder is created once per request by runInRequestScope()
+// (wired into the HTTP server via Fastify's serverFactory) and then mutated in
+// place by setRequestCtx() from the auth middleware. This deliberately avoids
+// AsyncLocalStorage.enterWith() on the request path: enterWith() can leak its
+// value to an ancestor async frame (and is documented to "break out of run()"),
+// which previously bled one request's tenant context into unrelated work — a
+// later non-request DB call would inherit a stale app.org_id, switch to the
+// cartcrft_app role, and trip RLS for the wrong tenant.
+interface CtxHolder {
+  ctx?: RequestCtx;
+}
+
+const _store = new AsyncLocalStorage<CtxHolder>();
 
 /**
- * Set the request context for the current async scope and all future
- * continuations derived from it.
- *
- * Uses AsyncLocalStorage.enterWith() so the value persists beyond the current
- * call frame — Fastify's preHandler hook and the route handler it triggers are
- * separate async continuations, but enterWith() propagates through them because
- * they share the same async resource context (the request's HTTP handler).
- *
- * Call this from the auth middleware after resolving auth.
+ * Run `fn` (and all its async continuations) inside a fresh per-request scope
+ * with its own empty holder. Wired into the HTTP server via serverFactory (see
+ * http/app.ts) so every request gets an isolated holder; the holder and any
+ * context written into it vanish the moment the request's async work unwinds.
  */
-export function setRequestCtx(ctx: RequestCtx): void {
-  _store.enterWith(ctx);
+export function runInRequestScope<T>(fn: () => T): T {
+  return _store.run({}, fn);
 }
 
 /**
- * Set the request context for the current async scope.
+ * Record the resolved auth context for the current request by mutating the
+ * per-request holder. Call from the auth middleware after resolving auth.
  *
- * Call this from the auth middleware immediately after resolving auth.
- * The context persists for the lifetime of the current async call chain
- * (the Fastify request handler and everything it awaits).
+ * If there is no holder — i.e. not running inside a serverFactory-wrapped
+ * request (e.g. app.inject()) — we fall back to enterWith() so RLS is still
+ * enforced. That fallback can leak, but neither the real HTTP server nor the
+ * test harness use it; both run every request inside a holder.
+ */
+export function setRequestCtx(ctx: RequestCtx): void {
+  const holder = _store.getStore();
+  if (holder) {
+    holder.ctx = ctx;
+  } else {
+    _store.enterWith({ ctx });
+  }
+}
+
+/**
+ * Establish a request context for the duration of `fn` in a fresh scope.
+ * Used by entry points that aren't a normal Fastify preHandler (e.g. the MCP
+ * tool dispatcher). Scoped via run(), so it never leaks past `fn`.
  */
 export function runWithRequestCtx<T>(ctx: RequestCtx, fn: () => T): T {
-  return _store.run(ctx, fn);
+  return _store.run({ ctx }, fn);
 }
 
 /**
  * Retrieve the request context for the current async scope.
  *
  * Returns undefined when called outside a request context (worker jobs,
- * migrations, test fixture inserts).
+ * migrations, test fixture inserts) or before auth has resolved.
  */
 export function getRequestCtx(): RequestCtx | undefined {
-  return _store.getStore();
+  return _store.getStore()?.ctx;
 }
