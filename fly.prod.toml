@@ -1,0 +1,49 @@
+# Fly.io config — CartCrft, PRODUCTION (cartcrft-prod), served at cartcrft.com.
+# One Fastify app serves the SPA (same-origin) + the API, mirroring fly.toml (dev).
+# Build context is the repo root (pnpm workspace); Fly terminates TLS.
+#
+# Deploy:
+#   - Automatically via CI on push to `main` (see .github/workflows/ci.yml
+#     `deploy-prod` job; requires the FLY_API_TOKEN repo secret).
+#   - Manually:  fly deploy -c fly.prod.toml   (from the repo root)
+#
+# NON-secret env lives below. SECRETS (DATABASE_URL, JWT_SECRET, AUTH_SECRETS_KEY,
+# provider keys, etc.) are set with `fly secrets set ... -a cartcrft-prod` and are
+# NEVER committed. See DEPLOY.md for the one-time setup.
+
+app = "cartcrft-prod"
+primary_region = "fra"
+
+[build]
+  dockerfile = "backend/Dockerfile"
+
+[env]
+  APP_ENV = "production"
+  PORT = "3000"
+  CARTCRFT_CLOUD = "1"
+  CORS_ORIGINS = "https://cartcrft.com,https://www.cartcrft.com"
+  FRONTEND_URL = "https://cartcrft.com"
+  BASE_DOMAIN = "cartcrft.com"
+  WEB_DIST = "/app/web/dist"
+  # Fly's edge terminates TLS and sets X-Forwarded-For; trust it so request.ip
+  # (used for rate-limit + audit IPs) reflects the real client.
+  TRUST_PROXY = "true"
+  # Real subscription billing — sim must be OFF in production (config guard
+  # rejects BILLING_SIM_ENABLED=true when APP_ENV=production).
+  BILLING_SIM_ENABLED = "false"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = "suspend"
+  auto_start_machines = true
+  # Production runs at least 2 machines for availability + zero-downtime deploys.
+  min_machines_running = 2
+  [http_service.concurrency]
+    type = "requests"
+    hard_limit = 250
+    soft_limit = 200
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "1gb"
