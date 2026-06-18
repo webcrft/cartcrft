@@ -251,6 +251,15 @@ const TranslationLocaleParams = z.object({
 const PaginationQuery = z.object({
   limit: z.coerce.number().int().min(1).max(200).optional(),
   offset: z.coerce.number().int().min(0).optional(),
+  // Wave-17: optional B2B company context (admin preview / B2B storefront).
+  // When present, catalog reads are gated to the company's allow-list and the
+  // company's price list is applied. Absent → non-B2B path, byte-identical.
+  company_id: UUID.optional(),
+});
+
+// Wave-17: a single ?company_id= context carrier for getProduct.
+const CompanyContextQuery = z.object({
+  company_id: UUID.optional(),
 });
 
 // ── Body schemas ──────────────────────────────────────────────────────────────
@@ -285,6 +294,8 @@ const ProductsQuery = z.object({
   status: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(200).optional(),
   offset: z.coerce.number().int().min(0).optional(),
+  // Wave-17: optional B2B company context (see PaginationQuery.company_id).
+  company_id: UUID.optional(),
 });
 
 const CreateVariantBody = z.object({
@@ -556,7 +567,13 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
     async (request, reply) => {
       const { storeId } = request.params as z.infer<typeof StoreParams>;
       const q = request.query as z.infer<typeof ProductsQuery>;
-      const products = await listProducts(storeId, q);
+      // Wave-17: thread an optional company context (additive). Absent → unchanged.
+      const ctx = q.company_id ? { storeId, companyId: q.company_id } : undefined;
+      const products = await listProducts(
+        storeId,
+        { status: q.status, limit: q.limit, offset: q.offset },
+        ctx
+      );
       return reply.send({ products });
     }
   );
@@ -594,11 +611,14 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
     "/commerce/stores/:storeId/products/:productId",
     {
       preHandler: [storeAuthRead("catalog")],
-      schema: { params: ProductParams },
+      schema: { params: ProductParams, querystring: CompanyContextQuery },
     },
     async (request, reply) => {
       const { storeId, productId } = request.params as z.infer<typeof ProductParams>;
-      const product = await getProduct(storeId, productId);
+      const { company_id } = request.query as z.infer<typeof CompanyContextQuery>;
+      // Wave-17: optional company context (additive). Absent → unchanged path.
+      const ctx = company_id ? { storeId, companyId: company_id } : undefined;
+      const product = await getProduct(storeId, productId, ctx);
       if (!product) return reply.status(404).send(notFound("product not found"));
       return reply.send(product);
     }
@@ -1079,7 +1099,13 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
     async (request, reply) => {
       const { storeId } = request.params as z.infer<typeof StoreParams>;
       const q = request.query as z.infer<typeof PaginationQuery>;
-      const collections = await listCollections(storeId, q);
+      // Wave-17: thread an optional company context (additive). Absent → unchanged.
+      const ctx = q.company_id ? { storeId, companyId: q.company_id } : undefined;
+      const collections = await listCollections(
+        storeId,
+        { limit: q.limit, offset: q.offset },
+        ctx
+      );
       return reply.send({ collections });
     }
   );

@@ -12,6 +12,7 @@
 import type pg from "pg";
 import { getPool, getReadDb, withTx } from "../../db/pool.js";
 import { round2 } from "../../lib/money.js";
+import { companyAllowedProductIds } from "../b2b/service.js";
 import type {
   ProductPublic,
   CreateProductInput,
@@ -85,6 +86,80 @@ function isDuplicateError(err: unknown): boolean {
   );
 }
 
+// ── B2B company context (Wave-17: per-company catalog gating) ───────────────────
+//
+// A `companyContext` is an ADDITIVE, optional read parameter. When ABSENT the
+// read paths behave EXACTLY as before (the non-B2B path is byte-identical — see
+// the guarded branches in listProducts/getProduct/listCollections, each of which
+// short-circuits when companyContext is undefined). When PRESENT, reads:
+//   • restrict products/collections to the company's allow-list (only when the
+//     company actually has access rows; a company with none is unrestricted), and
+//   • resolve per-variant pricing via the company's assigned price_list_id.
+//
+// The gating model lives in b2b/service.ts (companyAllowedProductIds) so the
+// catalog read path and the checkout-time guard share one source of truth.
+
+export interface CompanyContext {
+  storeId: string;
+  companyId: string;
+}
+
+/**
+ * resolveCompanyGating — for a company context, fetch the allow-list (null when
+ * unrestricted) and the company's price_list_id (null when none). Returns null
+ * for the whole result when there is no company context, so callers can branch
+ * once and keep the non-company path untouched.
+ */
+async function resolveCompanyGating(
+  ctx: CompanyContext | undefined
+): Promise<{ allowedProductIds: string[] | null; priceListId: string | null } | null> {
+  if (!ctx) return null;
+  const pool = getReadDb();
+  const [allowedProductIds, plRes] = await Promise.all([
+    companyAllowedProductIds(ctx.storeId, ctx.companyId),
+    pool.query<{ price_list_id: string | null }>(
+      `SELECT price_list_id::text FROM companies WHERE id = $1::uuid AND store_id = $2::uuid`,
+      [ctx.companyId, ctx.storeId]
+    ),
+  ]);
+  return {
+    allowedProductIds,
+    priceListId: plRes.rows[0]?.price_list_id ?? null,
+  };
+}
+
+/**
+ * applyPriceListToVariants — overwrite each variant's `price` with the price
+ * from the company's price list where an item exists for that variant. Uses the
+ * lowest applicable min_qty tier (single-unit base price). Variants without a
+ * price-list entry keep their default catalog price. Mutates in place.
+ */
+async function applyPriceListToVariants(
+  storeId: string,
+  priceListId: string,
+  variants: VariantPublic[]
+): Promise<void> {
+  if (variants.length === 0) return;
+  const pool = getReadDb();
+  const { rows } = await pool.query<{ variant_id: string; price: string }>(
+    `SELECT DISTINCT ON (pli.variant_id)
+            pli.variant_id::text AS variant_id, pli.price::text AS price
+       FROM price_list_items pli
+       JOIN price_lists pl ON pl.id = pli.price_list_id
+      WHERE pli.price_list_id = $1::uuid
+        AND pl.store_id = $2::uuid
+        AND pli.variant_id = ANY($3::uuid[])
+      ORDER BY pli.variant_id, pli.min_qty ASC`,
+    [priceListId, storeId, variants.map((v) => v.id)]
+  );
+  if (rows.length === 0) return;
+  const priceByVariant = new Map(rows.map((r) => [r.variant_id, r.price]));
+  for (const v of variants) {
+    const p = priceByVariant.get(v.id);
+    if (p !== undefined) v.price = p;
+  }
+}
+
 // ── Products ──────────────────────────────────────────────────────────────────
 
 const PRODUCT_COLS = `
@@ -111,14 +186,27 @@ export async function listProducts(
     status?: string | undefined;
     limit?: number | undefined;
     offset?: number | undefined;
-  } = {}
+  } = {},
+  companyContext?: CompanyContext | undefined
 ): Promise<ProductPublic[]> {
   // RLS-enforced read path (P4/item-2).
   const pool = getReadDb();
   const limit = Math.min(Math.max(opts.limit ?? 50, 1), 200);
   const offset = opts.offset ?? 0;
 
+  // Wave-17: only engage gating when a company context is present AND the
+  // company has access rows. When companyContext is undefined the entire branch
+  // is skipped and the query below is byte-identical to the pre-gating version.
+  let accessClause = "";
   const params: unknown[] = [storeId];
+  if (companyContext) {
+    const gating = await resolveCompanyGating(companyContext);
+    if (gating && gating.allowedProductIds !== null) {
+      params.push(gating.allowedProductIds);
+      accessClause = ` AND p.id = ANY($${params.length}::uuid[])`;
+    }
+  }
+
   let statusClause = "";
   if (opts.status) {
     params.push(opts.status);
@@ -141,7 +229,7 @@ export async function listProducts(
       ) AS media
     FROM products p
     LEFT JOIN product_media m ON m.product_id = p.id
-    WHERE p.store_id = $1::uuid${statusClause}
+    WHERE p.store_id = $1::uuid${accessClause}${statusClause}
     GROUP BY p.id
     ORDER BY p.created_at DESC
     LIMIT $${limitIdx} OFFSET $${offsetIdx}
@@ -153,10 +241,18 @@ export async function listProducts(
 
 export async function getProduct(
   storeId: string,
-  productId: string
+  productId: string,
+  companyContext?: CompanyContext | undefined
 ): Promise<ProductPublic | null> {
   // RLS-enforced read path (P4/item-2).
   const pool = getReadDb();
+
+  // Wave-17: resolve company gating up-front (no-op when no company context).
+  const gating = await resolveCompanyGating(companyContext);
+  if (gating && gating.allowedProductIds !== null && !gating.allowedProductIds.includes(productId)) {
+    // A gated company asking for a disallowed product gets a 404 for it.
+    return null;
+  }
 
   const { rows } = await pool.query(
     `SELECT ${PRODUCT_COLS}
@@ -180,6 +276,13 @@ export async function getProduct(
     [productId]
   );
   product.variants = varRes.rows as VariantPublic[];
+
+  // Wave-17: when a company with an assigned price list is the reader, resolve
+  // per-variant pricing from that price list (no-op without a company context
+  // or a price list — the default catalog price is left untouched).
+  if (gating && gating.priceListId) {
+    await applyPriceListToVariants(storeId, gating.priceListId, product.variants);
+  }
 
   // Fetch options with values (product_options has no created_at/updated_at)
   const optRes = await pool.query(
@@ -1134,19 +1237,54 @@ const COLLECTION_COLS = `
 
 export async function listCollections(
   storeId: string,
-  opts: { limit?: number | undefined; offset?: number | undefined } = {}
+  opts: { limit?: number | undefined; offset?: number | undefined } = {},
+  companyContext?: CompanyContext | undefined
 ): Promise<CollectionPublic[]> {
   // RLS-enforced read path (P4/item-2).
   const pool = getReadDb();
   const limit = Math.min(Math.max(opts.limit ?? 50, 1), 200);
   const offset = opts.offset ?? 0;
+
+  // Wave-17: only engage gating when a company context is present AND the
+  // company has access rows. Skipped entirely otherwise → byte-identical query.
+  let accessClause = "";
+  const params: unknown[] = [storeId];
+  if (companyContext) {
+    const gating = await resolveCompanyGating(companyContext);
+    if (gating && gating.allowedProductIds !== null) {
+      // A gated company sees a collection iff it is directly granted OR it
+      // contains at least one product the company is allowed to see.
+      params.push(companyContext.companyId);
+      const companyIdx = params.length;
+      params.push(gating.allowedProductIds);
+      const allowedIdx = params.length;
+      accessClause = `
+        AND (
+          EXISTS (
+            SELECT 1 FROM company_catalog_access a
+             WHERE a.store_id = $1::uuid AND a.company_id = $${companyIdx}::uuid
+               AND a.collection_id = collections.id
+          )
+          OR EXISTS (
+            SELECT 1 FROM product_collections pc
+             WHERE pc.collection_id = collections.id
+               AND pc.product_id = ANY($${allowedIdx}::uuid[])
+          )
+        )`;
+    }
+  }
+  params.push(limit);
+  const limitIdx = params.length;
+  params.push(offset);
+  const offsetIdx = params.length;
+
   const { rows } = await pool.query(
     `SELECT ${COLLECTION_COLS}
      FROM collections
-     WHERE store_id = $1::uuid
+     WHERE store_id = $1::uuid${accessClause}
      ORDER BY title
-     LIMIT $2 OFFSET $3`,
-    [storeId, limit, offset]
+     LIMIT $${limitIdx} OFFSET $${offsetIdx}`,
+    params
   );
   return rows as CollectionPublic[];
 }

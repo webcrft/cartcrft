@@ -47,6 +47,23 @@ export interface UpdateCompanyInput {
   metadata?: Record<string, unknown> | null | undefined;
 }
 
+// ── Company catalog access (Wave-17: per-company catalog gating) ────────────────
+
+export interface CompanyCatalogAccess {
+  id: string;
+  store_id: string;
+  company_id: string;
+  access_type: "allow";
+  product_id: string | null;
+  collection_id: string | null;
+  created_at: Date;
+}
+
+export interface GrantCatalogAccessInput {
+  product_id?: string | null | undefined;
+  collection_id?: string | null | undefined;
+}
+
 // ── Company customers ──────────────────────────────────────────────────────────
 
 export interface CompanyCustomer {

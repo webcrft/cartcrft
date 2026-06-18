@@ -25,6 +25,8 @@ import type {
   CreateCompanyInput,
   UpdateCompanyInput,
   CompanyCustomer,
+  CompanyCatalogAccess,
+  GrantCatalogAccessInput,
   CustomerGroup,
   CreateCustomerGroupInput,
   UpdateCustomerGroupInput,
@@ -283,6 +285,219 @@ export async function removeCompanyCustomer(
     [companyId, customerId, storeId]
   );
   return (rowCount ?? 0) > 0;
+}
+
+// ── Company catalog access (Wave-17: per-company catalog gating) ────────────────
+//
+// Model: an OPT-IN allow-list. A company with NO company_catalog_access rows
+// sees the FULL catalog (no restriction). Once a company has at least one
+// 'allow' row it sees ONLY the products it is directly allowed plus every
+// product belonging to an allowed collection. This is the single source of
+// truth for catalog gating — catalog/service.ts consults the same model via
+// companyAllowedProductIds() / companyHasCatalogAccess().
+
+/**
+ * companyHasCatalogAccess — true iff the company has at least one allow row.
+ * When false the company is UNRESTRICTED (sees the full catalog). Uses the
+ * RLS-enforced read path; harmless when no request context (owner role).
+ */
+export async function companyHasCatalogAccess(
+  storeId: string,
+  companyId: string
+): Promise<boolean> {
+  const pool = getReadDb();
+  const { rows } = await pool.query<{ exists: boolean }>(
+    `SELECT EXISTS (
+       SELECT 1 FROM company_catalog_access
+       WHERE store_id = $1::uuid AND company_id = $2::uuid
+     ) AS exists`,
+    [storeId, companyId]
+  );
+  return rows[0]?.exists ?? false;
+}
+
+/**
+ * companyAllowedProductIds — the full set of product UUIDs a company may see:
+ * directly-allowed products UNION every product in an allowed collection.
+ * Returns null when the company has NO access rows (meaning: unrestricted —
+ * the caller MUST NOT filter). Returns a (possibly empty) array otherwise.
+ */
+export async function companyAllowedProductIds(
+  storeId: string,
+  companyId: string
+): Promise<string[] | null> {
+  const pool = getReadDb();
+  // One round-trip: count of access rows (to tell "unrestricted" apart from
+  // "restricted but matches nothing") plus the matching product ids.
+  const { rows } = await pool.query<{ rule_count: string; product_ids: string[] }>(
+    `SELECT
+       (SELECT COUNT(*)::text
+          FROM company_catalog_access a
+         WHERE a.store_id = $1::uuid AND a.company_id = $2::uuid) AS rule_count,
+       COALESCE(
+         (SELECT array_agg(p.id::text)
+            FROM products p
+           WHERE p.store_id = $1::uuid
+             AND (
+               EXISTS (
+                 SELECT 1 FROM company_catalog_access a
+                  WHERE a.store_id = $1::uuid AND a.company_id = $2::uuid
+                    AND a.product_id = p.id
+               )
+               OR EXISTS (
+                 SELECT 1 FROM company_catalog_access a
+                   JOIN product_collections pc ON pc.collection_id = a.collection_id
+                  WHERE a.store_id = $1::uuid AND a.company_id = $2::uuid
+                    AND a.collection_id IS NOT NULL
+                    AND pc.product_id = p.id
+               )
+             )),
+         ARRAY[]::text[]
+       ) AS product_ids`,
+    [storeId, companyId]
+  );
+  const row = rows[0];
+  // No rules → unrestricted; the caller MUST NOT filter.
+  if (!row || parseInt(row.rule_count, 10) === 0) return null;
+  return row.product_ids;
+}
+
+export async function listCompanyCatalogAccess(
+  storeId: string,
+  companyId: string
+): Promise<CompanyCatalogAccess[]> {
+  const pool = getReadDb();
+  const { rows } = await pool.query<CompanyCatalogAccess>(
+    `SELECT id::text, store_id::text, company_id::text, access_type,
+            product_id::text, collection_id::text, created_at
+       FROM company_catalog_access
+      WHERE store_id = $1::uuid AND company_id = $2::uuid
+      ORDER BY created_at`,
+    [storeId, companyId]
+  );
+  return rows;
+}
+
+/**
+ * grantCatalogAccess — add an 'allow' row for a product OR a collection.
+ * Exactly one of product_id / collection_id must be provided. Idempotent
+ * (ON CONFLICT DO NOTHING via the partial unique indexes). Verifies the
+ * company belongs to the store first.
+ */
+export async function grantCatalogAccess(
+  storeId: string,
+  companyId: string,
+  input: GrantCatalogAccessInput
+): Promise<string | null> {
+  const productId = input.product_id ?? null;
+  const collectionId = input.collection_id ?? null;
+  if ((productId === null) === (collectionId === null)) {
+    const e = new Error("exactly one of product_id or collection_id is required");
+    (e as NodeJS.ErrnoException).code = "INVALID_INPUT";
+    throw e;
+  }
+
+  const pool = getPool();
+  const { rows: check } = await pool.query<{ id: string }>(
+    `SELECT id::text FROM companies WHERE id = $1::uuid AND store_id = $2::uuid`,
+    [companyId, storeId]
+  );
+  if (!check[0]) {
+    const e = new Error("company not found");
+    (e as NodeJS.ErrnoException).code = "NOT_FOUND";
+    throw e;
+  }
+
+  const conflict = productId !== null ? "(company_id, product_id) WHERE product_id IS NOT NULL"
+    : "(company_id, collection_id) WHERE collection_id IS NOT NULL";
+  const { rows } = await pool.query<{ id: string }>(
+    `INSERT INTO company_catalog_access (store_id, company_id, access_type, product_id, collection_id)
+     VALUES ($1::uuid, $2::uuid, 'allow', $3::uuid, $4::uuid)
+     ON CONFLICT ${conflict} DO NOTHING
+     RETURNING id::text`,
+    [storeId, companyId, productId, collectionId]
+  );
+  return rows[0]?.id ?? null;
+}
+
+/**
+ * revokeCatalogAccess — remove an allow row by its id, scoped to the company
+ * and store. Returns true when a row was deleted.
+ */
+export async function revokeCatalogAccess(
+  storeId: string,
+  companyId: string,
+  accessId: string
+): Promise<boolean> {
+  const pool = getPool();
+  const { rowCount } = await pool.query(
+    `DELETE FROM company_catalog_access
+      WHERE id = $1::uuid AND company_id = $2::uuid AND store_id = $3::uuid`,
+    [accessId, companyId, storeId]
+  );
+  return (rowCount ?? 0) > 0;
+}
+
+/**
+ * assignPriceList — assign (or clear, with null) the company's price list.
+ * Reuses the existing companies.price_list_id mechanism. Returns true when
+ * the company exists in the store.
+ */
+export async function assignPriceList(
+  storeId: string,
+  companyId: string,
+  priceListId: string | null
+): Promise<boolean> {
+  const pool = getPool();
+  const { rowCount } = await pool.query(
+    `UPDATE companies
+        SET price_list_id = $3::uuid, updated_at = now()
+      WHERE id = $1::uuid AND store_id = $2::uuid`,
+    [companyId, storeId, priceListId]
+  );
+  return (rowCount ?? 0) > 0;
+}
+
+/**
+ * assertCompanyCanPurchase — checkout-time guard. Throws CATALOG_RESTRICTED if
+ * the company (when catalog-gated) tries to buy a variant whose product it is
+ * not allowed to see. NO-OP when the company has no access rows (unrestricted)
+ * or when variantIds is empty. Safe to call from the API layer; the gating
+ * model is identical to the read path so reads and checkout stay consistent.
+ */
+export async function assertCompanyCanPurchase(
+  storeId: string,
+  companyId: string,
+  variantIds: string[]
+): Promise<void> {
+  if (variantIds.length === 0) return;
+  const allowed = await companyAllowedProductIds(storeId, companyId);
+  if (allowed === null) return; // unrestricted company
+
+  const pool = getReadDb();
+  // Find the product each variant belongs to (scoped to this store), then
+  // reject any whose product is not in the allowed set.
+  const { rows } = await pool.query<{ variant_id: string; product_id: string }>(
+    `SELECT v.id::text AS variant_id, v.product_id::text AS product_id
+       FROM product_variants v
+       JOIN products p ON p.id = v.product_id
+      WHERE p.store_id = $1::uuid AND v.id = ANY($2::uuid[])`,
+    [storeId, variantIds]
+  );
+  const allowedSet = new Set(allowed);
+  const found = new Set(rows.map((r) => r.variant_id));
+  for (const vid of variantIds) {
+    const row = rows.find((r) => r.variant_id === vid);
+    // A variant not found in this store, or whose product is not allowed, is
+    // rejected — a gated company may not purchase outside its allow-list.
+    if (!row || !allowedSet.has(row.product_id) || !found.has(vid)) {
+      const e = new Error(
+        `variant ${vid} is not available to this company's catalog`
+      );
+      (e as NodeJS.ErrnoException).code = "CATALOG_RESTRICTED";
+      throw e;
+    }
+  }
 }
 
 // ── Customer groups ────────────────────────────────────────────────────────────

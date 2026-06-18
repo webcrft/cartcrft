@@ -24,6 +24,10 @@ import {
   listCompanyCustomers,
   addCompanyCustomer,
   removeCompanyCustomer,
+  listCompanyCatalogAccess,
+  grantCatalogAccess,
+  revokeCatalogAccess,
+  assignPriceList,
   listCustomerGroups,
   createCustomerGroup,
   updateCustomerGroup,
@@ -59,6 +63,7 @@ function unprocessable(msg: string, code = "INVALID_TRANSITION") {
 const StoreParams = z.object({ storeId: UUID });
 const CompanyParams = z.object({ storeId: UUID, companyId: UUID });
 const CompanyCustomerParams = z.object({ storeId: UUID, companyId: UUID, customerId: UUID });
+const CatalogAccessParams = z.object({ storeId: UUID, companyId: UUID, accessId: UUID });
 const GroupParams = z.object({ storeId: UUID, groupId: UUID });
 const GroupMemberParams = z.object({ storeId: UUID, groupId: UUID, customerId: UUID });
 const QuoteParams = z.object({ storeId: UUID, quoteId: UUID });
@@ -106,6 +111,21 @@ const UpdateGroupBody = z.object({
 });
 
 const AddGroupMemberBody = z.object({ customer_id: UUID });
+
+// Wave-17: exactly one of product_id / collection_id (refined below).
+const GrantCatalogAccessBody = z
+  .object({
+    product_id: UUID.optional(),
+    collection_id: UUID.optional(),
+  })
+  .refine(
+    (b) => (b.product_id != null) !== (b.collection_id != null),
+    { message: "exactly one of product_id or collection_id is required" }
+  );
+
+const AssignPriceListBody = z.object({
+  price_list_id: UUID.optional().nullable(),
+});
 
 const QuotesQuerystring = z.object({
   status: z.string().optional(),
@@ -244,6 +264,74 @@ export const b2bPlugin: FastifyPluginAsyncZod = async (app) => {
         request.params.companyId,
         request.params.customerId
       );
+      return reply.send({ ok: true });
+    }
+  );
+
+  // ── Company catalog access (Wave-17: per-company catalog gating) ──────────────
+
+  app.get(
+    "/commerce/stores/:storeId/companies/:companyId/catalog-access",
+    { preHandler: storeAuthAdmin, schema: { params: CompanyParams } },
+    async (request, reply) => {
+      const access = await listCompanyCatalogAccess(
+        request.params.storeId,
+        request.params.companyId
+      );
+      return reply.send({ access });
+    }
+  );
+
+  app.post(
+    "/commerce/stores/:storeId/companies/:companyId/catalog-access",
+    { preHandler: storeAuthAdmin, schema: { params: CompanyParams, body: GrantCatalogAccessBody } },
+    async (request, reply) => {
+      try {
+        const id = await grantCatalogAccess(
+          request.params.storeId,
+          request.params.companyId,
+          request.body
+        );
+        // id === null means the row already existed (idempotent grant).
+        return reply.status(201).send({ id });
+      } catch (err) {
+        if (err instanceof Error) {
+          const code = (err as NodeJS.ErrnoException).code;
+          if (code === "NOT_FOUND") return reply.status(404).send(notFound("company not found"));
+          if (code === "INVALID_INPUT") {
+            return reply.status(422).send(unprocessable(err.message, "INVALID_INPUT"));
+          }
+        }
+        throw err;
+      }
+    }
+  );
+
+  app.delete(
+    "/commerce/stores/:storeId/companies/:companyId/catalog-access/:accessId",
+    { preHandler: storeAuthAdmin, schema: { params: CatalogAccessParams } },
+    async (request, reply) => {
+      const ok = await revokeCatalogAccess(
+        request.params.storeId,
+        request.params.companyId,
+        request.params.accessId
+      );
+      if (!ok) return reply.status(404).send(notFound("catalog access rule not found"));
+      return reply.send({ ok: true });
+    }
+  );
+
+  // Assign (or clear with null) the company's price list.
+  app.put(
+    "/commerce/stores/:storeId/companies/:companyId/price-list",
+    { preHandler: storeAuthWrite, schema: { params: CompanyParams, body: AssignPriceListBody } },
+    async (request, reply) => {
+      const ok = await assignPriceList(
+        request.params.storeId,
+        request.params.companyId,
+        request.body.price_list_id ?? null
+      );
+      if (!ok) return reply.status(404).send(notFound("company not found"));
       return reply.send({ ok: true });
     }
   );
