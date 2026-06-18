@@ -17,6 +17,7 @@
  */
 
 import { getPool, getReadDb, withTx } from "../../db/pool.js";
+import { dispatchStoreEvent } from "../notifications/service.js";
 
 // ── Reason enum ────────────────────────────────────────────────────────────────
 
@@ -652,4 +653,206 @@ export async function deleteSupplier(storeId: string, supplierId: string) {
     [supplierId, storeId]
   );
   return (rowCount ?? 0) > 0;
+}
+
+// ── Low-stock reorder-point alerts ──────────────────────────────────────────────
+//
+// A polling worker (inventory/worker.ts) calls detectLowStock() each tick. For
+// every tracked variant whose quantity_on_hand has dropped to/below its
+// reorder_point (reorder_point > 0), we decide whether this is a NEW transition
+// into low and, if so, emit an `inventory.low` notification event. Per-(variant,
+// warehouse) idempotency state lives in inventory_low_alerts so we don't re-alert
+// every tick while stock stays low.
+//
+// dispatch is injectable so tests can assert without real webhook delivery.
+
+/** Cooldown after which a still-low item re-alerts even without a recovery. */
+export const LOW_STOCK_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+
+export interface LowStockDeps {
+  /** Notification dispatcher. Defaults to the real dispatchStoreEvent. */
+  dispatch?: (
+    storeId: string,
+    eventType: string,
+    payload: Record<string, unknown>
+  ) => void;
+  /** Cooldown override (ms) for re-alerting a still-low item. */
+  cooldownMs?: number;
+  /** Clock override for "now" — keeps SimClock parity in tests. */
+  now?: () => Date;
+}
+
+interface LowStockRow {
+  store_id: string;
+  variant_id: string;
+  warehouse_id: string;
+  on_hand: number;
+  reorder_point: number;
+  sku: string | null;
+  last_alerted_at: Date | null;
+  last_on_hand: number | null;
+}
+
+/**
+ * Detect low-stock variants and emit `inventory.low` on new transitions into low.
+ *
+ * Selection: inventory_levels rows for TRACKED variants (product_variants.track_inventory)
+ * where quantity_on_hand <= reorder_point AND reorder_point > 0, scoped to the
+ * owning store (via product → products.store_id). If storeId is provided, only
+ * that store is evaluated; otherwise all stores are scanned (worker mode).
+ *
+ * Alert rule — fire only when it's a NEW transition into low:
+ *   - no inventory_low_alerts row yet, OR
+ *   - the prior alert's last_on_hand was ABOVE reorder_point (recovered, then
+ *     dropped again), OR
+ *   - the cooldown (default 24h) elapsed since last_alerted_at.
+ * Otherwise we stay quiet but still refresh last_on_hand so a recovery is recorded.
+ *
+ * @returns the number of inventory.low events fired this run.
+ */
+export async function detectLowStock(
+  storeId?: string,
+  deps: LowStockDeps = {}
+): Promise<number> {
+  const dispatch = deps.dispatch ?? dispatchStoreEvent;
+  const cooldownMs = deps.cooldownMs ?? LOW_STOCK_COOLDOWN_MS;
+  const now = deps.now ? deps.now() : new Date();
+
+  const pool = getPool();
+
+  // LEFT JOIN the alert state so we get prior last_on_hand / last_alerted_at in
+  // one round-trip. la.store_id is matched on (variant, warehouse) which is unique.
+  const args: unknown[] = [];
+  let storeFilter = "";
+  if (storeId) {
+    args.push(storeId);
+    storeFilter = ` AND p.store_id = $1::uuid`;
+  }
+  const { rows } = await pool.query<LowStockRow>(
+    `SELECT p.store_id::text       AS store_id,
+            il.variant_id::text    AS variant_id,
+            il.warehouse_id::text  AS warehouse_id,
+            il.quantity_on_hand    AS on_hand,
+            il.reorder_point       AS reorder_point,
+            pv.sku                 AS sku,
+            la.last_alerted_at     AS last_alerted_at,
+            la.last_on_hand        AS last_on_hand
+     FROM inventory_levels il
+     JOIN product_variants pv ON pv.id = il.variant_id
+     JOIN products p ON p.id = pv.product_id
+     LEFT JOIN inventory_low_alerts la
+       ON la.variant_id = il.variant_id AND la.warehouse_id = il.warehouse_id
+     WHERE pv.track_inventory = true
+       AND il.reorder_point IS NOT NULL
+       AND il.reorder_point > 0
+       AND il.quantity_on_hand <= il.reorder_point${storeFilter}`,
+    args
+  );
+
+  let fired = 0;
+  for (const row of rows) {
+    const isNewRow = row.last_alerted_at === null && row.last_on_hand === null;
+    const recoveredThenDropped =
+      row.last_on_hand !== null && row.last_on_hand > row.reorder_point;
+    const cooldownElapsed =
+      row.last_alerted_at !== null &&
+      now.getTime() - new Date(row.last_alerted_at).getTime() >= cooldownMs;
+
+    const shouldAlert = isNewRow || recoveredThenDropped || cooldownElapsed;
+
+    if (shouldAlert) {
+      const payload: Record<string, unknown> = {
+        variant_id: row.variant_id,
+        warehouse_id: row.warehouse_id,
+        on_hand: row.on_hand,
+        reorder_point: row.reorder_point,
+      };
+      if (row.sku !== null) payload["sku"] = row.sku;
+      dispatch(row.store_id, "inventory.low", payload);
+      fired++;
+      await upsertLowAlertState(pool, row.store_id, row.variant_id, row.warehouse_id, {
+        last_alerted_at: now,
+        last_on_hand: row.on_hand,
+      });
+    } else {
+      // Still low but already alerted within cooldown — refresh last_on_hand only.
+      await upsertLowAlertState(pool, row.store_id, row.variant_id, row.warehouse_id, {
+        last_on_hand: row.on_hand,
+      });
+    }
+  }
+
+  // Record recovery: items that have a stale alert row but are now ABOVE reorder
+  // point. Setting last_on_hand above reorder_point means a future drop re-alerts.
+  const recoveryArgs: unknown[] = [];
+  let recoveryStoreFilter = "";
+  if (storeId) {
+    recoveryArgs.push(storeId);
+    recoveryStoreFilter = ` AND p.store_id = $1::uuid`;
+  }
+  await pool.query(
+    `UPDATE inventory_low_alerts la
+     SET last_on_hand = il.quantity_on_hand, updated_at = now()
+     FROM inventory_levels il
+     JOIN product_variants pv ON pv.id = il.variant_id
+     JOIN products p ON p.id = pv.product_id
+     WHERE la.variant_id = il.variant_id
+       AND la.warehouse_id = il.warehouse_id
+       AND (il.reorder_point IS NULL OR il.reorder_point <= 0
+            OR il.quantity_on_hand > il.reorder_point)
+       AND la.last_on_hand IS DISTINCT FROM il.quantity_on_hand${recoveryStoreFilter}`,
+    recoveryArgs
+  );
+
+  return fired;
+}
+
+/** Upsert the per-(variant, warehouse) low-alert state row. */
+async function upsertLowAlertState(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- pg.Pool | PoolClient
+  client: { query: (...a: any[]) => Promise<unknown> },
+  storeId: string,
+  variantId: string,
+  warehouseId: string,
+  data: { last_alerted_at?: Date; last_on_hand: number }
+): Promise<void> {
+  await client.query(
+    `INSERT INTO inventory_low_alerts
+       (store_id, variant_id, warehouse_id, last_alerted_at, last_on_hand)
+     VALUES ($1::uuid, $2::uuid, $3::uuid, $4, $5)
+     ON CONFLICT (variant_id, warehouse_id) DO UPDATE
+       SET last_alerted_at = COALESCE($4, inventory_low_alerts.last_alerted_at),
+           last_on_hand    = $5,
+           updated_at      = now()`,
+    [storeId, variantId, warehouseId, data.last_alerted_at ?? null, data.last_on_hand]
+  );
+}
+
+/**
+ * List current low-stock items for a store (dashboard view). RLS-enforced read
+ * path. Returns tracked variants at/below their reorder_point.
+ */
+export async function listLowStockItems(storeId: string) {
+  const pool = getReadDb();
+  const { rows } = await pool.query(
+    `SELECT il.variant_id::text, il.warehouse_id::text,
+            il.quantity_on_hand AS on_hand, il.reorder_point, il.reorder_qty,
+            pv.sku, pv.title AS variant_title, p.title AS product_title,
+            w.name AS warehouse_name,
+            la.last_alerted_at
+     FROM inventory_levels il
+     JOIN product_variants pv ON pv.id = il.variant_id
+     JOIN products p ON p.id = pv.product_id
+     JOIN warehouses w ON w.id = il.warehouse_id
+     LEFT JOIN inventory_low_alerts la
+       ON la.variant_id = il.variant_id AND la.warehouse_id = il.warehouse_id
+     WHERE p.store_id = $1::uuid
+       AND pv.track_inventory = true
+       AND il.reorder_point IS NOT NULL
+       AND il.reorder_point > 0
+       AND il.quantity_on_hand <= il.reorder_point
+     ORDER BY (il.reorder_point - il.quantity_on_hand) DESC, p.title, pv.title`,
+    [storeId]
+  );
+  return rows;
 }

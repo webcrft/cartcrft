@@ -33,6 +33,8 @@ export interface ProductPublic {
   seo_title: string | null;
   seo_desc: string | null;
   metadata: Record<string, unknown> | null;
+  avg_rating: string;
+  review_count: number;
   created_at: string;
   updated_at: string;
   variants?: VariantPublic[] | undefined;

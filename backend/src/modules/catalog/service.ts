@@ -98,6 +98,8 @@ const PRODUCT_COLS = `
   p.seo_title,
   p.seo_desc,
   p.metadata,
+  p.avg_rating::text,
+  p.review_count,
   p.created_at,
   p.updated_at
 `;
@@ -893,18 +895,106 @@ export async function updateReview(
   reviewId: string,
   input: UpdateReviewInput
 ): Promise<boolean> {
-  const pool = getPool();
-  const { rowCount } = await pool.query(
-    `UPDATE product_reviews SET
-       status     = COALESCE($3, status),
-       reply      = COALESCE($4, reply),
-       replied_at = CASE WHEN $4 IS NOT NULL THEN now() ELSE replied_at END,
-       published_at = CASE WHEN $3 = 'approved' AND published_at IS NULL THEN now() ELSE published_at END,
-       updated_at = now()
-     WHERE id = $1::uuid AND store_id = $2::uuid`,
-    [reviewId, storeId, input.status ?? null, input.reply ?? null]
+  return withTx(async (client) => {
+    const { rows } = await client.query<{ product_id: string }>(
+      `UPDATE product_reviews SET
+         status     = COALESCE($3, status),
+         reply      = COALESCE($4, reply),
+         replied_at = CASE WHEN $4 IS NOT NULL THEN now() ELSE replied_at END,
+         published_at = CASE WHEN $3 = 'approved' AND published_at IS NULL THEN now() ELSE published_at END,
+         updated_at = now()
+       WHERE id = $1::uuid AND store_id = $2::uuid
+       RETURNING product_id::text`,
+      [reviewId, storeId, input.status ?? null, input.reply ?? null]
+    );
+    const row = rows[0];
+    if (!row) return false;
+    // Status may have changed → recompute the product's cached aggregates.
+    if (input.status !== undefined) {
+      await recomputeProductRating(client, storeId, row.product_id);
+    }
+    return true;
+  });
+}
+
+/**
+ * Moderate a single review: set its status to approved|rejected, then recompute
+ * the parent product's cached avg_rating + review_count from the approved set.
+ * Atomic (single transaction), fully parameterised. Returns false if the review
+ * does not exist within the store.
+ */
+export async function moderateReview(
+  storeId: string,
+  reviewId: string,
+  status: "approved" | "rejected"
+): Promise<boolean> {
+  return withTx(async (client) => {
+    const { rows } = await client.query<{ product_id: string }>(
+      `UPDATE product_reviews SET
+         status       = $3,
+         published_at = CASE
+                          WHEN $3 = 'approved' AND published_at IS NULL THEN now()
+                          ELSE published_at
+                        END,
+         updated_at   = now()
+       WHERE id = $1::uuid AND store_id = $2::uuid
+       RETURNING product_id::text`,
+      [reviewId, storeId, status]
+    );
+    const row = rows[0];
+    if (!row) return false;
+    await recomputeProductRating(client, storeId, row.product_id);
+    return true;
+  });
+}
+
+/**
+ * Delete a review and recompute the parent product's cached aggregates.
+ * Returns false if the review does not exist within the store.
+ */
+export async function deleteReview(
+  storeId: string,
+  reviewId: string
+): Promise<boolean> {
+  return withTx(async (client) => {
+    const { rows } = await client.query<{ product_id: string }>(
+      `DELETE FROM product_reviews
+       WHERE id = $1::uuid AND store_id = $2::uuid
+       RETURNING product_id::text`,
+      [reviewId, storeId]
+    );
+    const row = rows[0];
+    if (!row) return false;
+    await recomputeProductRating(client, storeId, row.product_id);
+    return true;
+  });
+}
+
+/**
+ * Recompute products.avg_rating + products.review_count from APPROVED reviews
+ * for a single product. Runs inside the caller's transaction so the status
+ * change and the aggregate update commit atomically.
+ */
+async function recomputeProductRating(
+  client: pg.PoolClient,
+  storeId: string,
+  productId: string
+): Promise<void> {
+  await client.query(
+    `UPDATE products p
+     SET avg_rating = COALESCE(agg.avg_rating, 0),
+         review_count = COALESCE(agg.review_count, 0),
+         updated_at = now()
+     FROM (
+       SELECT $1::uuid AS product_id,
+              round(avg(rating)::numeric, 2) AS avg_rating,
+              count(*)::int                  AS review_count
+       FROM product_reviews
+       WHERE product_id = $1::uuid AND store_id = $2::uuid AND status = 'approved'
+     ) agg
+     WHERE p.id = $1::uuid AND p.store_id = $2::uuid`,
+    [productId, storeId]
   );
-  return (rowCount ?? 0) > 0;
 }
 
 // ── Product tags ──────────────────────────────────────────────────────────────

@@ -10,6 +10,7 @@
  *   POST   /commerce/stores/:storeId/inventory/set
  *   POST   /commerce/stores/:storeId/inventory/adjust
  *   GET    /commerce/stores/:storeId/inventory/adjustments
+ *   GET    /commerce/stores/:storeId/inventory/low-stock   (storeAuthRead)
  *   GET    /commerce/stores/:storeId/inventory/lots
  *   POST   /commerce/stores/:storeId/inventory/lots
  *   PUT    /commerce/stores/:storeId/inventory/lots/:lotId
@@ -26,8 +27,9 @@
 
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { z } from "zod";
-import { storeAuthAdmin, storeAuthWrite } from "../../lib/auth/middleware.js";
+import { storeAuthAdmin, storeAuthRead, storeAuthWrite } from "../../lib/auth/middleware.js";
 import {
+  listLowStockItems,
   listWarehouses,
   createWarehouse,
   updateWarehouse,
@@ -227,6 +229,16 @@ export const inventoryPlugin: FastifyPluginAsyncZod = async (app) => {
     const { storeId } = request.params;
     const adjustments = await listInventoryAdjustments(storeId, request.query);
     return reply.send({ adjustments });
+  });
+
+  // Low-stock dashboard view — tracked variants at/below their reorder_point.
+  app.get(`${base}/inventory/low-stock`, {
+    schema: { params: StoreParams },
+    preHandler: [storeAuthRead],
+  }, async (request, reply) => {
+    const { storeId } = request.params;
+    const items = await listLowStockItems(storeId);
+    return reply.send({ items });
   });
 
   // ── Lots ───────────────────────────────────────────────────────────────────

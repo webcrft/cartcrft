@@ -23,6 +23,7 @@ import { startIcalPullWorkerJob } from "./modules/bookings/ical-pull.js";
 import { startFxRefreshJob } from "./modules/exchange-rates/fx-refresh.js";
 import { startChannelSyncWorkerJob } from "./modules/channels/worker.js";
 import { startThreePlStatusWorkerJob } from "./modules/threepl/worker.js";
+import { startInventoryLowStockWorkerJob } from "./modules/inventory/worker.js";
 import { ConsoleMailer } from "./lib/mailer/console.js";
 import { SesMailer } from "./lib/mailer/ses.js";
 
@@ -219,6 +220,18 @@ async function runWorker(): Promise<void> {
   });
   console.log("[worker] 3PL status-pull job registered (10-min poll interval)");
 
+  // Wave 12 — Inventory reorder-point low-stock alerts. Scans inventory_levels
+  // for tracked variants at/below reorder_point and emits inventory.low events on
+  // new transitions into low. Distributed-locked inside the worker so multiple
+  // replicas don't double-alert; detectLowStock is graceful + idempotent.
+  const stopInventoryLow = startInventoryLowStockWorkerJob({
+    intervalMs:
+      config.BILLING_SIM_ENABLED && config.BILLING_SIM_DAY_SECONDS > 0
+        ? Math.max(5_000, Math.min(120_000, config.BILLING_SIM_DAY_SECONDS * 1000))
+        : 10 * 60 * 1000,
+  });
+  console.log("[worker] inventory low-stock alert job registered (10-min poll interval)");
+
   // Keep alive.
   await new Promise<void>((resolve) => {
     const shutdown = () => {
@@ -231,6 +244,7 @@ async function runWorker(): Promise<void> {
       stopFxRefresh();
       stopChannelSync();
       stopThreePlSync();
+      stopInventoryLow();
       if (subLockToken) {
         void releaseLock(SUB_LOCK_NAME, subLockToken).catch(() => { /* best-effort */ });
       }

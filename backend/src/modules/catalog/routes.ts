@@ -42,6 +42,8 @@ import {
   listReviews,
   createReview,
   updateReview,
+  moderateReview,
+  deleteReview,
   getProductTags,
   setProductTags,
   listCollections,
@@ -378,6 +380,16 @@ const CreateReviewBody = z.object({
 const UpdateReviewBody = z.object({
   status: ReviewStatusEnum.optional(),
   reply: z.string().optional(),
+});
+
+const ModerateReviewBody = z.object({
+  status: z.enum(["approved", "rejected"]),
+});
+
+const ProductReviewParams = z.object({
+  storeId: UUID,
+  productId: UUID,
+  reviewId: UUID,
 });
 
 const SetTagsBody = z.object({
@@ -976,6 +988,40 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
 
       const updated = await updateReview(storeId, reviewId, data);
       if (!updated) return reply.status(404).send(notFound("review not found"));
+      return reply.send({ ok: true });
+    }
+  );
+
+  // POST /commerce/stores/:storeId/products/:productId/reviews/:reviewId/moderate
+  // Admin moderation: approve|reject a review, then recompute cached aggregates.
+  app.post(
+    "/commerce/stores/:storeId/products/:productId/reviews/:reviewId/moderate",
+    {
+      preHandler: [storeAuthAdmin("catalog")],
+      schema: { params: ProductReviewParams, body: ModerateReviewBody },
+    },
+    async (request, reply) => {
+      const { storeId, reviewId } = request.params as z.infer<typeof ProductReviewParams>;
+      const { status } = request.body as z.infer<typeof ModerateReviewBody>;
+
+      const ok = await moderateReview(storeId, reviewId, status);
+      if (!ok) return reply.status(404).send(notFound("review not found"));
+      return reply.send({ ok: true, status });
+    }
+  );
+
+  // DELETE /commerce/stores/:storeId/products/:productId/reviews/:reviewId
+  // Admin delete: removes the review and recomputes cached aggregates.
+  app.delete(
+    "/commerce/stores/:storeId/products/:productId/reviews/:reviewId",
+    {
+      preHandler: [storeAuthAdmin("catalog")],
+      schema: { params: ProductReviewParams },
+    },
+    async (request, reply) => {
+      const { storeId, reviewId } = request.params as z.infer<typeof ProductReviewParams>;
+      const ok = await deleteReview(storeId, reviewId);
+      if (!ok) return reply.status(404).send(notFound("review not found"));
       return reply.send({ ok: true });
     }
   );
