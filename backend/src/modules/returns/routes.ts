@@ -11,7 +11,7 @@
 
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { z } from "zod";
-import { storeAuthAdmin } from "../../lib/auth/middleware.js";
+import { storeAuthAdmin, storeAuthWrite } from "../../lib/auth/middleware.js";
 import {
   listReturns,
   getReturn,
@@ -19,6 +19,8 @@ import {
   updateReturn,
   listReturnEvents,
   addReturnEvent,
+  generateReturnLabel,
+  ReturnLabelError,
 } from "./service.js";
 
 const UUID = z.string().uuid();
@@ -161,6 +163,43 @@ export const returnsPlugin: FastifyPluginAsyncZod = async (app) => {
       );
       if (!ok) return reply.status(404).send(notFound("return not found"));
       return reply.send({ ok: true });
+    }
+  );
+
+  // ── Prepaid return shipping label (Shippo) ─────────────────────────────────
+
+  app.post(
+    "/commerce/stores/:storeId/returns/:returnId/label",
+    { preHandler: storeAuthWrite, schema: { params: ReturnParams } },
+    async (request, reply) => {
+      try {
+        const label = await generateReturnLabel(
+          request.params.storeId,
+          request.params.returnId
+        );
+        return reply.status(201).send(label);
+      } catch (err) {
+        if (err instanceof ReturnLabelError) {
+          if (err.code === "NOT_FOUND") {
+            return reply.status(404).send(notFound(err.message));
+          }
+          if (err.code === "INVALID_STATE") {
+            return reply
+              .status(409)
+              .send({ error: { code: err.code, message: err.message } });
+          }
+          if (err.code === "NO_PROVIDER" || err.code === "NO_WAREHOUSE") {
+            return reply
+              .status(422)
+              .send({ error: { code: err.code, message: err.message } });
+          }
+          // NO_RATES / PROVIDER_ERROR — upstream failure
+          return reply
+            .status(502)
+            .send({ error: { code: err.code, message: err.message } });
+        }
+        throw err;
+      }
     }
   );
 

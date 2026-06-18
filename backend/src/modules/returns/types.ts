@@ -27,9 +27,27 @@ export interface ReturnRequest {
   metadata: unknown;
   /** Set when resolved as exchange — the replacement order created for the exchanged variant(s). */
   replacement_order_id: string | null;
+  /** Prepaid return shipping-label URL (Shippo label_url PDF). Null until purchased. */
+  return_label_url: string | null;
+  /** Carrier tracking number for the prepaid return label. */
+  return_tracking_number: string | null;
+  /** Carrier/provider name for the prepaid return label. */
+  return_carrier: string | null;
+  /** Timestamp the prepaid return label was purchased. */
+  return_label_purchased_at: Date | null;
   created_at: Date;
   updated_at: Date;
   order_number?: string;
+}
+
+/** Result of generating (or returning an existing) prepaid return label. */
+export interface ReturnLabel {
+  return_label_url: string;
+  return_tracking_number: string;
+  return_carrier: string | null;
+  return_label_purchased_at: string;
+  /** true when an existing label was returned without a new purchase. */
+  already_existed: boolean;
 }
 
 export interface ReturnLine {

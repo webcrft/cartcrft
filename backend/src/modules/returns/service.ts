@@ -30,8 +30,14 @@ import type {
   UpdateReturnInput,
   AddReturnEventInput,
   ReturnEvent,
+  ReturnLabel,
 } from "./types.js";
 import { issueStoreCredit } from "../wallet/service.js";
+import {
+  newShippoClient,
+  type ShippoClient,
+  type ShippoAddress,
+} from "../../providers/shipping/shippo.js";
 
 // ── RMA number generation ─────────────────────────────────────────────────────
 
@@ -93,6 +99,8 @@ export async function listReturns(
   const { rows } = await pool.query(
     `SELECT rr.id::text, rr.store_id::text, rr.order_id::text, rr.customer_id::text,
             rr.rma_number, rr.status, rr.return_type, rr.notes, rr.metadata,
+            rr.return_label_url, rr.return_tracking_number, rr.return_carrier,
+            rr.return_label_purchased_at,
             rr.created_at, rr.updated_at, o.order_number
      FROM return_requests rr
      JOIN orders o ON o.id = rr.order_id
@@ -115,6 +123,8 @@ export async function getReturn(
     `SELECT rr.id::text, rr.store_id::text, rr.order_id::text, rr.customer_id::text,
             rr.rma_number, rr.status, rr.return_type, rr.notes, rr.metadata,
             rr.replacement_order_id::text,
+            rr.return_label_url, rr.return_tracking_number, rr.return_carrier,
+            rr.return_label_purchased_at,
             rr.created_at, rr.updated_at
      FROM return_requests rr
      WHERE rr.id = $1::uuid AND rr.store_id = $2::uuid`,
@@ -135,6 +145,240 @@ export async function getReturn(
   );
   ret.lines = lineRows as ReturnWithLines["lines"];
   return ret;
+}
+
+// ── Prepaid return shipping label (Shippo) ─────────────────────────────────────
+
+/**
+ * A coded error for return-label generation failures. The `code` discriminates
+ * the failure mode so routes can map it to an appropriate HTTP status.
+ */
+export class ReturnLabelError extends Error {
+  constructor(
+    public readonly code:
+      | "NOT_FOUND"
+      | "INVALID_STATE"
+      | "NO_PROVIDER"
+      | "NO_WAREHOUSE"
+      | "NO_RATES"
+      | "PROVIDER_ERROR",
+    message: string
+  ) {
+    super(message);
+    this.name = "ReturnLabelError";
+  }
+}
+
+/** States in which generating a prepaid return label is meaningful. */
+const LABEL_ELIGIBLE_STATUSES = new Set(["approved", "in_transit"]);
+
+export interface GenerateReturnLabelDeps {
+  /** Injectable Shippo client factory (defaults to the real client). Tests pass a fake. */
+  makeShippoClient?: ((apiKey: string) => ShippoClient) | undefined;
+}
+
+/**
+ * generateReturnLabel — buy a prepaid return shipping label via Shippo.
+ *
+ * The parcel ships FROM the customer (order.shipping_address) TO the store's
+ * default warehouse (mirrors fetchShippoRates' warehouse + credential lookup).
+ *
+ * - Requires the return to be in an eligible state (approved / in_transit).
+ * - IDEMPOTENT: if a label already exists on the return it is returned as-is,
+ *   without purchasing again (no second Shippo call).
+ * - Resolves the Shippo api_key from the active shippo shipping provider's
+ *   config and the warehouse address the same way the rate-quote path does.
+ * - Picks the cheapest rate, purchases the label, and persists
+ *   return_label_url / tracking_number / carrier / purchased_at atomically.
+ * - On any Shippo / configuration failure throws a ReturnLabelError with no
+ *   partial DB state written.
+ */
+export async function generateReturnLabel(
+  storeId: string,
+  returnId: string,
+  deps: GenerateReturnLabelDeps = {}
+): Promise<ReturnLabel> {
+  const pool = getPool();
+
+  // Load the return (write pool — we may UPDATE it) with its order address.
+  const { rows: retRows } = await pool.query<{
+    status: string;
+    shipping_address: Record<string, unknown> | null;
+    return_label_url: string | null;
+    return_tracking_number: string | null;
+    return_carrier: string | null;
+    return_label_purchased_at: Date | null;
+  }>(
+    `SELECT rr.status,
+            o.shipping_address,
+            rr.return_label_url,
+            rr.return_tracking_number,
+            rr.return_carrier,
+            rr.return_label_purchased_at
+     FROM return_requests rr
+     JOIN orders o ON o.id = rr.order_id
+     WHERE rr.id = $1::uuid AND rr.store_id = $2::uuid`,
+    [returnId, storeId]
+  );
+  const ret = retRows[0];
+  if (!ret) {
+    throw new ReturnLabelError("NOT_FOUND", "return not found");
+  }
+
+  // Idempotency: a label already exists — return it without re-purchasing.
+  if (ret.return_label_url) {
+    return {
+      return_label_url: ret.return_label_url,
+      return_tracking_number: ret.return_tracking_number ?? "",
+      return_carrier: ret.return_carrier,
+      return_label_purchased_at:
+        ret.return_label_purchased_at?.toISOString() ?? new Date().toISOString(),
+      already_existed: true,
+    };
+  }
+
+  if (!LABEL_ELIGIBLE_STATUSES.has(ret.status)) {
+    throw new ReturnLabelError(
+      "INVALID_STATE",
+      `return label can only be generated for an approved return (status is '${ret.status}')`
+    );
+  }
+
+  // Resolve the active shippo provider + api_key (mirrors fetchShippoRates).
+  const { rows: provRows } = await pool.query<{ config: Record<string, unknown> }>(
+    `SELECT COALESCE(config, '{}') AS config
+     FROM shipping_providers
+     WHERE store_id = $1::uuid
+       AND (config->>'provider' = 'shippo' OR name ILIKE '%shippo%')
+       AND is_active = true
+     LIMIT 1`,
+    [storeId]
+  );
+  const prov = provRows[0];
+  if (!prov) {
+    throw new ReturnLabelError("NO_PROVIDER", "no active shippo shipping provider configured");
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- config is jsonb
+  const cfg = prov.config as Record<string, any>;
+  const apiKey = typeof cfg["api_key"] === "string" ? cfg["api_key"] : "";
+  if (!apiKey) {
+    throw new ReturnLabelError("NO_PROVIDER", "shippo provider is missing an api_key");
+  }
+
+  // TO = store's default warehouse address (same lookup fetchShippoRates uses).
+  const { rows: whRows } = await pool.query<{ address: Record<string, unknown> | null }>(
+    `SELECT COALESCE(address, '{}') AS address
+     FROM warehouses WHERE store_id = $1::uuid AND is_default = true LIMIT 1`,
+    [storeId]
+  );
+  const warehouseAddr = whRows[0]?.address ?? {};
+  if (!whRows[0] || !warehouseAddr["country_code"]) {
+    throw new ReturnLabelError("NO_WAREHOUSE", "no default warehouse address configured");
+  }
+
+  // FROM = customer's address from the order's shipping_address jsonb.
+  const from = ret.shipping_address ?? {};
+  const addressFrom: ShippoAddress = {
+    name: String(from["name"] ?? ""),
+    street1: String(from["address1"] ?? from["street_address"] ?? ""),
+    city: String(from["city"] ?? ""),
+    state: String(from["province_code"] ?? from["state"] ?? ""),
+    zip: String(from["zip"] ?? from["postal_code"] ?? ""),
+    country: String(from["country_code"] ?? "US").toUpperCase(),
+    ...(from["phone"] ? { phone: String(from["phone"]) } : {}),
+    ...(from["email"] ? { email: String(from["email"]) } : {}),
+  };
+  const addressTo: ShippoAddress = {
+    name: String(warehouseAddr["name"] ?? "Returns"),
+    street1: String(warehouseAddr["street_address"] ?? ""),
+    city: String(warehouseAddr["city"] ?? ""),
+    state: String(warehouseAddr["province_code"] ?? warehouseAddr["zone"] ?? ""),
+    zip: String(warehouseAddr["postal_code"] ?? ""),
+    country: String(warehouseAddr["country_code"] ?? "US").toUpperCase(),
+  };
+
+  const makeClient = deps.makeShippoClient ?? newShippoClient;
+  const client = makeClient(apiKey);
+
+  let labelUrl: string;
+  let trackingNumber: string;
+  let carrier: string | null;
+  try {
+    const rates = await client.getRates({
+      address_from: addressFrom,
+      address_to: addressTo,
+      parcels: [
+        {
+          length: 20,
+          width: 15,
+          height: 10,
+          distance_unit: "cm",
+          weight: 0.5,
+          mass_unit: "kg",
+        },
+      ],
+    });
+    if (rates.length === 0) {
+      throw new ReturnLabelError("NO_RATES", "shippo returned no rates for the return shipment");
+    }
+    // Pick the cheapest rate.
+    const cheapest = rates.reduce((best, r) =>
+      Number(r.amount) < Number(best.amount) ? r : best
+    );
+    const txn = await client.purchaseLabel(cheapest.object_id);
+    if (!txn.label_url) {
+      throw new ReturnLabelError("PROVIDER_ERROR", "shippo transaction returned no label_url");
+    }
+    labelUrl = txn.label_url;
+    trackingNumber = txn.tracking_number ?? "";
+    carrier = cheapest.provider ?? null;
+  } catch (err) {
+    if (err instanceof ReturnLabelError) throw err;
+    throw new ReturnLabelError(
+      "PROVIDER_ERROR",
+      `shippo label purchase failed: ${err instanceof Error ? err.message : String(err)}`
+    );
+  }
+
+  // Persist atomically. Guard on return_label_url IS NULL so a concurrent
+  // purchase can't be overwritten (idempotency at the SQL level too).
+  const purchasedAt = new Date();
+  const { rows: updRows } = await pool.query<{
+    return_label_url: string;
+    return_tracking_number: string | null;
+    return_carrier: string | null;
+    return_label_purchased_at: Date;
+  }>(
+    `UPDATE return_requests
+        SET return_label_url          = COALESCE(return_label_url, $3),
+            return_tracking_number    = COALESCE(return_tracking_number, $4),
+            return_carrier            = COALESCE(return_carrier, $5),
+            return_label_purchased_at = COALESCE(return_label_purchased_at, $6),
+            updated_at                = now()
+      WHERE id = $1::uuid AND store_id = $2::uuid
+      RETURNING return_label_url, return_tracking_number, return_carrier,
+                return_label_purchased_at`,
+    [returnId, storeId, labelUrl, trackingNumber, carrier, purchasedAt.toISOString()]
+  );
+  const saved = updRows[0];
+  if (!saved) {
+    throw new ReturnLabelError("NOT_FOUND", "return not found");
+  }
+
+  await pool.query(
+    `INSERT INTO return_events (return_id, type, data)
+     VALUES ($1::uuid, 'return_label_purchased',
+             jsonb_build_object('carrier', $2::text, 'tracking_number', $3::text))`,
+    [returnId, saved.return_carrier ?? "", saved.return_tracking_number ?? ""]
+  );
+
+  return {
+    return_label_url: saved.return_label_url,
+    return_tracking_number: saved.return_tracking_number ?? "",
+    return_carrier: saved.return_carrier,
+    return_label_purchased_at: saved.return_label_purchased_at.toISOString(),
+    already_existed: false,
+  };
 }
 
 // ── Create return ─────────────────────────────────────────────────────────────
