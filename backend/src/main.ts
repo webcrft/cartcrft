@@ -16,6 +16,8 @@ import { runMigrations } from "./db/migrate.js";
 import { buildApp } from "./http/app.js";
 import { startEmbeddingWorkerJob } from "./agent/search/indexer.js";
 import { startRecoveryWorkerJob } from "./modules/recovery/worker.js";
+import { startMarketingWorkerJob } from "./modules/marketing/worker.js";
+import { buildSmsSenderFromConfig } from "./modules/marketing/service.js";
 import { startSubscriptionScheduler } from "./modules/subscriptions/scheduler.js";
 import { startIcalPullWorkerJob } from "./modules/bookings/ical-pull.js";
 import { startFxRefreshJob } from "./modules/exchange-rates/fx-refresh.js";
@@ -101,6 +103,14 @@ async function runWorker(): Promise<void> {
       : new ConsoleMailer();
   const stopRecovery = startRecoveryWorkerJob({ mailer });
   console.log("[worker] recovery job registered (5-min poll interval)");
+
+  // Wave 8 — Marketing flows / automation (event-triggered drip sequences).
+  // Reuses the recovery mailer; SMS sender is env-resolved from Twilio config
+  // (null when unconfigured — email-only flows still work). Distributed-locked
+  // inside the worker so multiple replicas don't double-send.
+  const marketingSms = buildSmsSenderFromConfig();
+  const stopMarketing = startMarketingWorkerJob({ mailer, sms: marketingSms });
+  console.log("[worker] marketing flows job registered (60s poll interval)");
 
   // H0.2 — Cloud billing worker (CARTCRFT_CLOUD only).
   // Dynamic import keeps the OSS build working with @cartcrft/cloud-billing absent.
@@ -190,6 +200,7 @@ async function runWorker(): Promise<void> {
       console.log("[worker] shutdown");
       stopEmbedding();
       stopRecovery();
+      stopMarketing();
       stopSubscriptionScheduler();
       stopIcalPull();
       stopFxRefresh();

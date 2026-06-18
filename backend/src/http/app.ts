@@ -65,6 +65,7 @@ import { digitalPlugin } from "../modules/digital/routes.js";
 import { engagementPlugin } from "../modules/engagement/routes.js";
 import { loyaltyPlugin } from "../modules/loyalty/routes.js";
 import { segmentsPlugin } from "../modules/segments/routes.js";
+import { marketingPlugin } from "../modules/marketing/routes.js";
 import { staticPlugin } from "./static.js";
 import { recoveryPlugin } from "../modules/recovery/routes.js";
 import { catalogCsvPlugin } from "../modules/catalog/csv-routes.js";
@@ -498,6 +499,9 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
 
   // ── Wave 6.2 — Customer segmentation (RFM-style merchant-defined segments) ──
   await app.register(segmentsPlugin);
+
+  // ── Wave 8 — Marketing flows / automation (event-triggered drip sequences) ──
+  await app.register(marketingPlugin);
 
   // ── Cloud billing webhook + read-API (CARTCRFT_CLOUD=1 only) ─────────────────
   // Dynamic import so the OSS build never eagerly imports @cartcrft/cloud-billing.
