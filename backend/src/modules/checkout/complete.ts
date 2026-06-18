@@ -46,6 +46,8 @@ import type { AgentHeaderCtx } from "../agents/types.js";
 import { dispatchStoreEvent } from "../notifications/service.js";
 import { earnPointsForOrder } from "../loyalty/service.js";
 import { computeDiscounts, type DiscountCartLine } from "../discounts/service.js";
+import { redeemGiftCardInTx, redeemStoreCreditInTx, TenderError } from "../wallet/service.js";
+import type { AppliedTender } from "./service.js";
 
 // ── Result type ───────────────────────────────────────────────────────────────
 
@@ -187,12 +189,13 @@ export async function completeCheckout(
       discount_total: string;
       total: string;
       currency: string;
+      applied_tenders: AppliedTender[] | null;
     }>(
       `SELECT cart_id::text, customer_id::text, company_id::text,
               shipping_address::text, billing_address::text,
               shipping_rate::text, tax_lines::text, discount_lines::text,
               subtotal::text, shipping_total::text, tax_total::text,
-              discount_total::text, total::text, currency
+              discount_total::text, total::text, currency, applied_tenders
        FROM checkouts
        WHERE id = $1::uuid AND store_id = $2::uuid AND status = 'pending'
        FOR UPDATE`,
@@ -649,6 +652,125 @@ export async function completeCheckout(
           [take, r.id]
         );
         remaining.set(r.variant_id, need - take);
+      }
+    }
+
+    // ── Step 7b: Redeem applied gift-card / store-credit TENDERS ─────────
+    // GUARDED BRANCH — only engages when the checkout has at least one applied
+    // tender. When applied_tenders is null/empty (the default), this block is a
+    // no-op and the completion behaves EXACTLY as before: the order stays
+    // financial_status='pending' with no payments row, to be charged by the
+    // provider flow as today.
+    //
+    // ATOMICITY: this runs inside the SAME withTx as the order/order_lines/
+    // inventory writes above. Each redeem*InTx locks the wallet row FOR UPDATE,
+    // re-validates the LIVE balance (which may have dropped since apply), and
+    // debits min(live_balance, remaining order total). The debit, the wallet
+    // ledger row, and the order 'payments' row all commit/roll back together, so
+    // a later failure (or the FOR UPDATE checkout guard losing a concurrent
+    // race) can never lose money or double-spend. A second concurrent
+    // completion of a shared gift card serialises on the FOR UPDATE lock and
+    // sees the reduced balance.
+    const appliedTenders = ch.applied_tenders ?? [];
+    if (appliedTenders.length > 0) {
+      // Distribute the order total across tenders in stored order, never
+      // debiting more in aggregate than the total (a tender is a tender, not a
+      // discount — the bill is unchanged; we only reduce what the provider must
+      // charge). `remainingToCover` is the still-unpaid portion of the bill.
+      let remainingToCover = total;
+      let tenderedTotal = 0;
+
+      for (const tender of appliedTenders) {
+        if (remainingToCover <= 0) break;
+        // Requested = min(this tender's stored cap, what's left to cover).
+        const requested = round2(Math.min(parseFloat(tender.amount), remainingToCover));
+        if (requested <= 0) continue;
+
+        let debited = 0;
+        try {
+          if (tender.kind === "gift_card" && tender.gift_card_id) {
+            const r = await redeemGiftCardInTx(
+              client,
+              storeId,
+              tender.gift_card_id,
+              requested,
+              orderId
+            );
+            debited = r.debited;
+          } else if (tender.kind === "store_credit" && tender.store_credit_id) {
+            const r = await redeemStoreCreditInTx(
+              client,
+              tender.store_credit_id,
+              storeId,
+              requested,
+              orderId
+            );
+            debited = r.debited;
+          } else {
+            // Malformed tender entry — ignore (defensive; apply path never writes these).
+            continue;
+          }
+        } catch (err: unknown) {
+          // A disabled/expired/missing wallet at completion time aborts the whole
+          // transaction (no order, no partial debit) with a clear code.
+          if (err instanceof TenderError) {
+            throw new CheckoutError(err.message, err.code);
+          }
+          throw err;
+        }
+
+        if (debited <= 0) continue;
+
+        // Record the redemption as a captured order payment (provider_id = NULL).
+        // This mirrors how SUM(captured) defines "amount paid": a captured
+        // gift-card/store-credit payment counts toward the order's paid total,
+        // so the provider only needs to charge (total − tendered).
+        await client.query(
+          `INSERT INTO payments
+             (order_id, provider_id, amount, currency, status, captured_at, metadata)
+           VALUES ($1::uuid, NULL, $2::numeric, $3, 'captured', now(), $4::jsonb)`,
+          [
+            orderId,
+            debited.toFixed(2),
+            currency,
+            JSON.stringify(
+              tender.kind === "gift_card"
+                ? { tender: "gift_card", gift_card_id: tender.gift_card_id }
+                : { tender: "store_credit", store_credit_id: tender.store_credit_id }
+            ),
+          ]
+        );
+
+        await client.query(
+          `INSERT INTO order_events (order_id, type, data)
+           VALUES ($1::uuid, 'payment_captured', $2::jsonb)`,
+          [
+            orderId,
+            JSON.stringify({ tender: tender.kind, amount: debited.toFixed(2) }),
+          ]
+        );
+
+        remainingToCover = round2(remainingToCover - debited);
+        tenderedTotal = round2(tenderedTotal + debited);
+      }
+
+      // If the tender(s) cover the whole bill, the order is fully paid by tender
+      // and no provider charge is required → financial_status = 'paid'. Otherwise
+      // the remaining balance is left for the provider flow exactly as today
+      // (financial_status stays 'pending'; the captured tender payment(s) are
+      // already counted by SUM(captured), so the provider only collects the rest).
+      if (tenderedTotal > 0 && remainingToCover <= 0.0) {
+        await client.query(
+          `UPDATE orders SET financial_status = 'paid', updated_at = now()
+           WHERE id = $1::uuid AND store_id = $2::uuid`,
+          [orderId, storeId]
+        );
+      } else if (tenderedTotal > 0) {
+        await client.query(
+          `UPDATE orders SET financial_status = 'partially_paid', updated_at = now()
+           WHERE id = $1::uuid AND store_id = $2::uuid AND financial_status = 'pending'`,
+          [orderId, storeId]
+        );
       }
     }
 

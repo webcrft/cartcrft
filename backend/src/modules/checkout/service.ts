@@ -16,6 +16,7 @@ import { calcTax, extractAddressCodes, type TaxLine } from "../../lib/tax.js";
 import { round2 } from "../../lib/money.js";
 import { computeDiscounts, type DiscountCartLine } from "../discounts/service.js";
 import { getLatestRates, rateFor, convertMoney } from "../../lib/fx-convert.js";
+import { lookupGiftCard } from "../wallet/service.js";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -593,4 +594,273 @@ export async function updateCheckout(
     tax_lines: taxResult.taxLines,
     discount_lines: discountResult.discountLines,
   };
+}
+
+// ── Gift-card / store-credit TENDER (not a discount) ────────────────────────────
+//
+// A tender PAYS part of the bill at completion; it never changes
+// subtotal/tax/discount/total. Applying records the INTENDED tender on the
+// checkout (checkouts.applied_tenders jsonb) and validates the code/balance —
+// it does NOT debit. The actual debit + order-payment row happen atomically
+// inside completeCheckout()'s transaction (which re-locks + re-validates the
+// live balance). Money fields are decimal strings, mirroring the wallet module.
+
+/** One applied tender as stored in checkouts.applied_tenders. */
+export interface AppliedTender {
+  kind: "gift_card" | "store_credit";
+  /** Present when kind === "gift_card". */
+  gift_card_id?: string;
+  /** Present when kind === "store_credit". */
+  store_credit_id?: string;
+  /** Decimal-string cap to redeem (already capped at the checkout total). */
+  amount: string;
+  /** Gift-card code (display/audit only) — present for gift_card. */
+  code?: string;
+  /** Wallet currency — present for store_credit. */
+  currency?: string;
+}
+
+/** Public view of the applied tenders + the resulting amount still owed. */
+export interface CheckoutTenderState {
+  applied_tenders: AppliedTender[];
+  /** Sum of tender amounts (capped at total). */
+  tender_total: string;
+  /** Checkout total. */
+  total: string;
+  /** total − tender_total, floored at 0 — the amount a provider must charge. */
+  amount_due: string;
+}
+
+interface CheckoutTenderRow {
+  store_id: string;
+  customer_id: string | null;
+  total: string;
+  currency: string;
+  applied_tenders: AppliedTender[] | null;
+  status: string;
+}
+
+/** A `.query()`-capable handle (getPool / getReadDb both satisfy this). */
+type QueryHandle = ReturnType<typeof getReadDb>;
+
+/** Load the checkout fields needed for tender apply/state (pending-only enforced by caller). */
+async function loadCheckoutForTender(
+  pool: QueryHandle,
+  storeId: string,
+  checkoutId: string
+): Promise<CheckoutTenderRow | null> {
+  const { rows } = await pool.query<CheckoutTenderRow>(
+    `SELECT store_id::text, customer_id::text, total::text, currency,
+            applied_tenders, status
+     FROM checkouts
+     WHERE id = $1::uuid AND store_id = $2::uuid`,
+    [checkoutId, storeId]
+  );
+  return rows[0] ?? null;
+}
+
+/** Sum the decimal-string amounts of a tender list. */
+function sumTenders(tenders: AppliedTender[]): number {
+  return tenders.reduce((acc, t) => acc + parseFloat(t.amount), 0);
+}
+
+/** Build the public tender-state view from a checkout total + applied tenders. */
+function buildTenderState(total: number, tenders: AppliedTender[]): CheckoutTenderState {
+  const tenderTotal = round2(Math.min(sumTenders(tenders), total));
+  const amountDue = round2(Math.max(0, total - tenderTotal));
+  return {
+    applied_tenders: tenders,
+    tender_total: tenderTotal.toFixed(2),
+    total: round2(total).toFixed(2),
+    amount_due: amountDue.toFixed(2),
+  };
+}
+
+/**
+ * Compute the remaining headroom (uncovered total) given already-applied
+ * tenders, so a newly applied tender is capped to not exceed the bill.
+ */
+function remainingHeadroom(total: number, existing: AppliedTender[]): number {
+  return round2(Math.max(0, total - sumTenders(existing)));
+}
+
+/**
+ * Apply a GIFT CARD to a checkout as a payment tender.
+ *
+ * Validates the code (active, not expired, has balance) and records the
+ * intended tender (gift_card_id + amount capped at the remaining checkout total)
+ * on checkouts.applied_tenders. Does NOT debit — the debit happens atomically at
+ * completion. Re-applying the same card replaces its prior entry (idempotent).
+ *
+ * Errors (code on the thrown Error):
+ *   NOT_FOUND          — checkout not found / not pending
+ *   GIFT_CARD_INVALID  — code not found / disabled / expired
+ *   CURRENCY_MISMATCH  — card currency ≠ checkout currency
+ *   ALREADY_COVERED    — checkout total already fully covered by other tenders
+ */
+export async function applyGiftCardTender(
+  storeId: string,
+  checkoutId: string,
+  code: string
+): Promise<CheckoutTenderState> {
+  const pool = getPool();
+
+  const checkout = await loadCheckoutForTender(pool, storeId, checkoutId);
+  if (!checkout || checkout.status !== "pending") {
+    const e = new Error("checkout not found or already completed");
+    (e as NodeJS.ErrnoException).code = "NOT_FOUND";
+    throw e;
+  }
+
+  const lookup = await lookupGiftCard(storeId, code);
+  if (!lookup || "error" in lookup) {
+    const e = new Error(
+      lookup && "error" in lookup
+        ? lookup.error === "GIFT_CARD_EXPIRED"
+          ? "gift card has expired"
+          : "gift card is disabled"
+        : "gift card not found"
+    );
+    (e as NodeJS.ErrnoException).code = "GIFT_CARD_INVALID";
+    throw e;
+  }
+  const card = lookup.card;
+
+  if (card.currency.toUpperCase() !== checkout.currency.toUpperCase()) {
+    const e = new Error("gift card currency does not match checkout currency");
+    (e as NodeJS.ErrnoException).code = "CURRENCY_MISMATCH";
+    throw e;
+  }
+
+  const total = parseFloat(checkout.total);
+  // Existing tenders, excluding any prior entry for THIS card (replace it).
+  const existing = (checkout.applied_tenders ?? []).filter(
+    (t) => !(t.kind === "gift_card" && t.gift_card_id === card.id)
+  );
+  const headroom = remainingHeadroom(total, existing);
+  if (headroom <= 0) {
+    const e = new Error("checkout total is already fully covered by applied tenders");
+    (e as NodeJS.ErrnoException).code = "ALREADY_COVERED";
+    throw e;
+  }
+
+  const balance = parseFloat(card.balance);
+  const amount = round2(Math.min(balance, headroom));
+  if (amount <= 0) {
+    const e = new Error("gift card has no remaining balance");
+    (e as NodeJS.ErrnoException).code = "GIFT_CARD_INVALID";
+    throw e;
+  }
+
+  const next: AppliedTender[] = [
+    ...existing,
+    { kind: "gift_card", gift_card_id: card.id, amount: amount.toFixed(2), code: card.code },
+  ];
+
+  await pool.query(
+    `UPDATE checkouts SET applied_tenders = $1::jsonb, updated_at = now()
+     WHERE id = $2::uuid AND store_id = $3::uuid AND status = 'pending'`,
+    [JSON.stringify(next), checkoutId, storeId]
+  );
+
+  return buildTenderState(total, next);
+}
+
+/**
+ * Apply STORE CREDIT to a checkout as a payment tender.
+ *
+ * Requires the checkout to have a customer_id (store credit is per-customer).
+ * Looks up the customer's wallet for the checkout currency, validates a positive
+ * balance, and records the intended tender (store_credit_id + amount capped at
+ * the remaining total). Does NOT debit — the debit happens atomically at
+ * completion. Re-applying replaces the prior store-credit entry for that wallet.
+ *
+ * Errors:
+ *   NOT_FOUND               — checkout not found / not pending
+ *   STORE_CREDIT_NO_CUSTOMER— checkout has no customer to draw credit from
+ *   STORE_CREDIT_INVALID    — no wallet / zero balance for this currency
+ *   ALREADY_COVERED         — total already fully covered
+ */
+export async function applyStoreCreditTender(
+  storeId: string,
+  checkoutId: string,
+  requestedAmount?: string
+): Promise<CheckoutTenderState> {
+  const pool = getPool();
+
+  const checkout = await loadCheckoutForTender(pool, storeId, checkoutId);
+  if (!checkout || checkout.status !== "pending") {
+    const e = new Error("checkout not found or already completed");
+    (e as NodeJS.ErrnoException).code = "NOT_FOUND";
+    throw e;
+  }
+
+  if (!checkout.customer_id) {
+    const e = new Error("checkout has no customer; store credit requires a customer");
+    (e as NodeJS.ErrnoException).code = "STORE_CREDIT_NO_CUSTOMER";
+    throw e;
+  }
+
+  const currency = checkout.currency.toUpperCase();
+  const { rows: walletRows } = await pool.query<{ id: string; balance: string }>(
+    `SELECT id::text, balance::text
+     FROM store_credits
+     WHERE store_id = $1::uuid AND customer_id = $2::uuid AND currency = $3`,
+    [storeId, checkout.customer_id, currency]
+  );
+  const wallet = walletRows[0];
+  if (!wallet || parseFloat(wallet.balance) <= 0) {
+    const e = new Error("no store credit available for this customer and currency");
+    (e as NodeJS.ErrnoException).code = "STORE_CREDIT_INVALID";
+    throw e;
+  }
+
+  const total = parseFloat(checkout.total);
+  const existing = (checkout.applied_tenders ?? []).filter(
+    (t) => !(t.kind === "store_credit" && t.store_credit_id === wallet.id)
+  );
+  const headroom = remainingHeadroom(total, existing);
+  if (headroom <= 0) {
+    const e = new Error("checkout total is already fully covered by applied tenders");
+    (e as NodeJS.ErrnoException).code = "ALREADY_COVERED";
+    throw e;
+  }
+
+  const balance = parseFloat(wallet.balance);
+  // Cap by: requested (if supplied & positive), wallet balance, and headroom.
+  let cap = Math.min(balance, headroom);
+  if (requestedAmount !== undefined) {
+    const req = parseFloat(requestedAmount);
+    if (Number.isFinite(req) && req > 0) cap = Math.min(cap, req);
+  }
+  const amount = round2(cap);
+  if (amount <= 0) {
+    const e = new Error("no store credit available to apply");
+    (e as NodeJS.ErrnoException).code = "STORE_CREDIT_INVALID";
+    throw e;
+  }
+
+  const next: AppliedTender[] = [
+    ...existing,
+    { kind: "store_credit", store_credit_id: wallet.id, amount: amount.toFixed(2), currency },
+  ];
+
+  await pool.query(
+    `UPDATE checkouts SET applied_tenders = $1::jsonb, updated_at = now()
+     WHERE id = $2::uuid AND store_id = $3::uuid AND status = 'pending'`,
+    [JSON.stringify(next), checkoutId, storeId]
+  );
+
+  return buildTenderState(total, next);
+}
+
+/** Read the current tender state of a checkout (for display). */
+export async function getCheckoutTenderState(
+  storeId: string,
+  checkoutId: string
+): Promise<CheckoutTenderState | null> {
+  const pool = getReadDb();
+  const checkout = await loadCheckoutForTender(pool, storeId, checkoutId);
+  if (!checkout) return null;
+  return buildTenderState(parseFloat(checkout.total), checkout.applied_tenders ?? []);
 }

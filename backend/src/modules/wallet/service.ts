@@ -18,7 +18,9 @@
  *  - LookupGiftCard: 422 GIFT_CARD_DISABLED / GIFT_CARD_EXPIRED when applicable
  */
 
+import type pg from "pg";
 import { getPool, getReadDb, withTx } from "../../db/pool.js";
+import { round2 } from "../../lib/money.js";
 import type {
   StoreCredit,
   StoreCreditTransaction,
@@ -492,4 +494,151 @@ export async function listGiftCardTransactions(
     [giftCardId, storeId, limit, offset]
   );
   return rows;
+}
+
+// ── Tender redemption (in-transaction primitives) ────────────────────────────
+//
+// These helpers DEBIT a wallet inside a CALLER-SUPPLIED transaction (the
+// checkout-completion withTx). They take a `pg.PoolClient` (NOT a pool) so the
+// debit + ledger write + the caller's order/payment writes all commit or roll
+// back together. Each one:
+//   1. SELECT ... FOR UPDATE — serialises concurrent redemptions of the same
+//      wallet row; a second concurrent completion sees the reduced balance.
+//   2. Re-validates the LIVE balance (it may have changed since the customer
+//      applied the tender at checkout time).
+//   3. Debits min(live_balance, requested) — never more than the balance, never
+//      more than requested — and appends the ledger row.
+//
+// The amount that was actually moved is returned so the caller can reduce the
+// remaining amount the payment provider must charge.
+
+/** A gift card that was disabled / expired / had zero balance at redeem time. */
+export class TenderError extends Error {
+  constructor(
+    message: string,
+    public readonly code: string
+  ) {
+    super(message);
+    this.name = "TenderError";
+  }
+}
+
+/**
+ * Debit a gift card inside an open transaction.
+ *
+ * Locks the gift_cards row FOR UPDATE, re-validates active/not-expired, then
+ * debits min(balance, requested). Returns the amount actually debited (>= 0)
+ * and the post-debit balance. Appends a gift_card_transactions ledger row with
+ * a NEGATIVE amount_delta.
+ *
+ * Throws TenderError when the card cannot be redeemed at all (not found in
+ * store, disabled, expired). A zero live balance is NOT an error — it simply
+ * debits 0 (the caller treats a 0 debit as "nothing tendered").
+ */
+export async function redeemGiftCardInTx(
+  client: pg.PoolClient,
+  storeId: string,
+  giftCardId: string,
+  requested: number,
+  orderId: string | null
+): Promise<{ debited: number; balanceAfter: number }> {
+  const { rows } = await client.query<{
+    balance: string;
+    is_active: boolean;
+    expires_at: string | null;
+    currency: string;
+  }>(
+    `SELECT balance::text, is_active, expires_at, currency
+     FROM gift_cards
+     WHERE id = $1::uuid AND store_id = $2::uuid
+     FOR UPDATE`,
+    [giftCardId, storeId]
+  );
+  const card = rows[0];
+  if (!card) {
+    throw new TenderError("gift card not found", "GIFT_CARD_NOT_FOUND");
+  }
+  if (!card.is_active) {
+    throw new TenderError("gift card is disabled", "GIFT_CARD_DISABLED");
+  }
+  if (card.expires_at !== null && new Date(card.expires_at) < new Date()) {
+    throw new TenderError("gift card has expired", "GIFT_CARD_EXPIRED");
+  }
+
+  const balance = parseFloat(card.balance);
+  const debited = round2(Math.max(0, Math.min(balance, requested)));
+  if (debited <= 0) {
+    return { debited: 0, balanceAfter: balance };
+  }
+
+  const balanceAfter = round2(balance - debited);
+
+  await client.query(
+    `UPDATE gift_cards SET balance = $1::numeric, updated_at = now()
+     WHERE id = $2::uuid`,
+    [balanceAfter.toFixed(2), giftCardId]
+  );
+
+  await client.query(
+    `INSERT INTO gift_card_transactions
+       (gift_card_id, order_id, amount_delta, balance_after)
+     VALUES ($1::uuid, $2::uuid, $3::numeric, $4::numeric)`,
+    [giftCardId, orderId, (-debited).toFixed(2), balanceAfter.toFixed(2)]
+  );
+
+  return { debited, balanceAfter };
+}
+
+/**
+ * Debit a store-credit wallet inside an open transaction.
+ *
+ * Locks the store_credits row FOR UPDATE, then debits min(balance, requested).
+ * Returns the amount actually debited (>= 0) and the post-debit balance.
+ * Appends a store_credit_transactions ledger row with a NEGATIVE amount_delta
+ * and type='redeem'.
+ *
+ * Throws TenderError("STORE_CREDIT_NOT_FOUND") when the wallet row is absent.
+ * A zero balance debits 0 (no error).
+ */
+export async function redeemStoreCreditInTx(
+  client: pg.PoolClient,
+  storeCreditId: string,
+  storeId: string,
+  requested: number,
+  orderId: string | null
+): Promise<{ debited: number; balanceAfter: number }> {
+  const { rows } = await client.query<{ balance: string }>(
+    `SELECT balance::text
+     FROM store_credits
+     WHERE id = $1::uuid AND store_id = $2::uuid
+     FOR UPDATE`,
+    [storeCreditId, storeId]
+  );
+  const wallet = rows[0];
+  if (!wallet) {
+    throw new TenderError("store credit wallet not found", "STORE_CREDIT_NOT_FOUND");
+  }
+
+  const balance = parseFloat(wallet.balance);
+  const debited = round2(Math.max(0, Math.min(balance, requested)));
+  if (debited <= 0) {
+    return { debited: 0, balanceAfter: balance };
+  }
+
+  const balanceAfter = round2(balance - debited);
+
+  await client.query(
+    `UPDATE store_credits SET balance = $1::numeric, updated_at = now()
+     WHERE id = $2::uuid`,
+    [balanceAfter.toFixed(2), storeCreditId]
+  );
+
+  await client.query(
+    `INSERT INTO store_credit_transactions
+       (store_credit_id, order_id, amount_delta, balance_after, type)
+     VALUES ($1::uuid, $2::uuid, $3::numeric, $4::numeric, 'redeem')`,
+    [storeCreditId, orderId, (-debited).toFixed(2), balanceAfter.toFixed(2)]
+  );
+
+  return { debited, balanceAfter };
 }

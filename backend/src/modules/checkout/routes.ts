@@ -18,7 +18,14 @@
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { storeAuthRead } from "../../lib/auth/middleware.js";
-import { createCheckout, getCheckout, updateCheckout } from "./service.js";
+import {
+  createCheckout,
+  getCheckout,
+  updateCheckout,
+  applyGiftCardTender,
+  applyStoreCreditTender,
+  getCheckoutTenderState,
+} from "./service.js";
 import { completeCheckout, CheckoutError } from "./complete.js";
 import { getPool } from "../../db/pool.js";
 import {
@@ -79,6 +86,16 @@ const UpdateCheckoutBody = z.object({
   billing_address: AddressSchema.optional(),
   shipping_rate: ShippingRateSchema.optional(),
   discount_code: z.string().optional(),
+}).partial();
+
+// Gift-card tender apply body: { code }.
+const ApplyGiftCardBody = z.object({
+  code: z.string().min(1, "code is required"),
+});
+
+// Store-credit tender apply body: optional explicit amount cap (decimal string).
+const ApplyStoreCreditBody = z.object({
+  amount: z.string().regex(/^\d+(\.\d{1,2})?$/, "amount must be a decimal").optional(),
 }).partial();
 
 // ── Plugin ────────────────────────────────────────────────────────────────────
@@ -179,6 +196,89 @@ export const checkoutPlugin: FastifyPluginAsync = async (app) => {
     }
   );
 
+  // ── POST /commerce/stores/:storeId/checkouts/:checkoutId/gift-card ───────
+  // Apply a gift card as a payment TENDER (records intended redemption; does
+  // NOT debit — the atomic debit happens at completion).
+  app.post(
+    "/commerce/stores/:storeId/checkouts/:checkoutId/gift-card",
+    {
+      preHandler: [storeAuthRead],
+      schema: { params: StoreCheckoutParams, body: ApplyGiftCardBody },
+    },
+    async (request, reply) => {
+      const storeId = request.auth!.storeId;
+      const { checkoutId } = request.params as z.infer<typeof StoreCheckoutParams>;
+      const { code } = request.body as z.infer<typeof ApplyGiftCardBody>;
+
+      try {
+        const state = await applyGiftCardTender(storeId, checkoutId, code);
+        return reply.send(state);
+      } catch (err: unknown) {
+        const c = (err as NodeJS.ErrnoException).code;
+        if (c === "NOT_FOUND") {
+          return reply.status(404).send({ error: { code: "NOT_FOUND", message: (err as Error).message } });
+        }
+        if (c === "GIFT_CARD_INVALID" || c === "CURRENCY_MISMATCH" || c === "ALREADY_COVERED") {
+          return reply.status(422).send({ error: { code: c, message: (err as Error).message } });
+        }
+        throw err;
+      }
+    }
+  );
+
+  // ── POST /commerce/stores/:storeId/checkouts/:checkoutId/store-credit ─────
+  // Apply store credit as a payment TENDER (records intended redemption; debit
+  // happens atomically at completion).
+  app.post(
+    "/commerce/stores/:storeId/checkouts/:checkoutId/store-credit",
+    {
+      preHandler: [storeAuthRead],
+      schema: { params: StoreCheckoutParams, body: ApplyStoreCreditBody },
+    },
+    async (request, reply) => {
+      const storeId = request.auth!.storeId;
+      const { checkoutId } = request.params as z.infer<typeof StoreCheckoutParams>;
+      const { amount } = request.body as z.infer<typeof ApplyStoreCreditBody>;
+
+      try {
+        const state = await applyStoreCreditTender(storeId, checkoutId, amount);
+        return reply.send(state);
+      } catch (err: unknown) {
+        const c = (err as NodeJS.ErrnoException).code;
+        if (c === "NOT_FOUND") {
+          return reply.status(404).send({ error: { code: "NOT_FOUND", message: (err as Error).message } });
+        }
+        if (
+          c === "STORE_CREDIT_NO_CUSTOMER" ||
+          c === "STORE_CREDIT_INVALID" ||
+          c === "ALREADY_COVERED"
+        ) {
+          return reply.status(422).send({ error: { code: c, message: (err as Error).message } });
+        }
+        throw err;
+      }
+    }
+  );
+
+  // ── GET /commerce/stores/:storeId/checkouts/:checkoutId/tenders ───────────
+  // Read the applied tenders + resulting amount_due (display).
+  app.get(
+    "/commerce/stores/:storeId/checkouts/:checkoutId/tenders",
+    {
+      preHandler: [storeAuthRead],
+      schema: { params: StoreCheckoutParams },
+    },
+    async (request, reply) => {
+      const storeId = request.auth!.storeId;
+      const { checkoutId } = request.params as z.infer<typeof StoreCheckoutParams>;
+      const state = await getCheckoutTenderState(storeId, checkoutId);
+      if (!state) {
+        return reply.status(404).send({ error: { code: "NOT_FOUND", message: "checkout not found" } });
+      }
+      return reply.send(state);
+    }
+  );
+
   // ── POST /commerce/stores/:storeId/checkouts/:checkoutId/complete ────────
   app.post(
     "/commerce/stores/:storeId/checkouts/:checkoutId/complete",
@@ -215,6 +315,11 @@ export const checkoutPlugin: FastifyPluginAsync = async (app) => {
               return reply.status(402).send({ error: { code: "MANDATE_REQUIRED", message: err.message } });
             case "CREDIT_LIMIT_EXCEEDED":
               return reply.status(422).send({ error: { code: "CREDIT_LIMIT_EXCEEDED", message: err.message } });
+            case "GIFT_CARD_NOT_FOUND":
+            case "GIFT_CARD_DISABLED":
+            case "GIFT_CARD_EXPIRED":
+            case "STORE_CREDIT_NOT_FOUND":
+              return reply.status(409).send({ error: { code: err.code, message: err.message } });
           }
         }
         throw err;
