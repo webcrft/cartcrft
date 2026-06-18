@@ -25,6 +25,7 @@ import { startChannelSyncWorkerJob } from "./modules/channels/worker.js";
 import { startThreePlStatusWorkerJob } from "./modules/threepl/worker.js";
 import { startInventoryLowStockWorkerJob } from "./modules/inventory/worker.js";
 import { startBackInStockWorkerJob } from "./modules/back-in-stock/worker.js";
+import { startAbandonedCheckoutWorkerJob } from "./modules/abandoned-checkout/worker.js";
 import { ConsoleMailer } from "./lib/mailer/console.js";
 import { SesMailer } from "./lib/mailer/ses.js";
 
@@ -247,6 +248,21 @@ async function runWorker(): Promise<void> {
   });
   console.log("[worker] back-in-stock notification job registered (5-min poll interval)");
 
+  // Wave 22 — Abandoned-CHECKOUT recovery. Distinct from abandoned-cart
+  // recovery: scans pending checkouts (started but not completed) that have
+  // been idle past a threshold and have a contact email, and sends one recovery
+  // email each linking back to resume checkout. Reuses the recovery mailer.
+  // Distributed-locked inside the worker so multiple replicas don't double-send;
+  // the per-row recovery_notified_at guard makes it send-once idempotent.
+  const stopAbandonedCheckout = startAbandonedCheckoutWorkerJob({
+    mailer,
+    intervalMs:
+      config.BILLING_SIM_ENABLED && config.BILLING_SIM_DAY_SECONDS > 0
+        ? Math.max(5_000, Math.min(120_000, config.BILLING_SIM_DAY_SECONDS * 1000))
+        : 5 * 60 * 1000,
+  });
+  console.log("[worker] abandoned-checkout recovery job registered (5-min poll interval)");
+
   // Keep alive.
   await new Promise<void>((resolve) => {
     const shutdown = () => {
@@ -261,6 +277,7 @@ async function runWorker(): Promise<void> {
       stopThreePlSync();
       stopInventoryLow();
       stopBackInStock();
+      stopAbandonedCheckout();
       if (subLockToken) {
         void releaseLock(SUB_LOCK_NAME, subLockToken).catch(() => { /* best-effort */ });
       }
