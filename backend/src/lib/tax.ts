@@ -221,3 +221,125 @@ export async function calcTaxAuto(
   }
   return calcTax(pool, storeId, taxableAmount, countryCode, provinceCode);
 }
+
+// ── Import duties / landed cost (DDP) ───────────────────────────────────────────
+//
+// Additive helper (T11.1). Independent of the calcTax / calcTaxAuto path above.
+// A store sells from its base country (stores.country_code) and configures duty
+// it collects when shipping cross-border into a destination country. Wiring this
+// into the actual order total at checkout/complete is a follow-up owned elsewhere.
+
+/** A single matched import-duty line. */
+export interface DutyLine {
+  name: string;
+  rate_pct: number;
+  amount: number;
+  country: string;
+}
+
+/** Result of a duty computation: total + per-rate breakdown. */
+export interface DutyResult {
+  dutyTotal: number;
+  dutyLines: DutyLine[];
+}
+
+/**
+ * Compute import duty for a cross-border order.
+ *
+ * @param pool               pg pool (or client inside a transaction)
+ * @param storeId            Store UUID
+ * @param declaredValue      Declared / order value duty is assessed on
+ * @param destinationCountry ISO 3166-1 alpha-2 ship-to country
+ * @param opts.originCountry ISO 3166-1 alpha-2 origin (store base country). When
+ *                           omitted, duty is treated as applicable (no same-country
+ *                           guard); when equal to destination, duty is zero.
+ * @param opts.categories    Product categories / HS chapters present in the order.
+ *                           A duty rate with a non-NULL category only applies when
+ *                           it matches one of these; NULL-category rates always apply.
+ *
+ * Behaviour:
+ *   - Applies only when destinationCountry is set AND (no originCountry OR
+ *     destinationCountry !== originCountry). Same-country → zero.
+ *   - For each active duty_rates row for (store, destination):
+ *       • category filter: NULL-category rates always apply; a set category only
+ *         applies when opts.categories includes it.
+ *       • de_minimis: if declaredValue <= de_minimis_value, that rate → amount 0.
+ *       • amount = declaredValue × rate_pct / 100, rounded to 2dp.
+ *   - dutyTotal is the rounded sum of line amounts.
+ *
+ * Never throws — degrades to a zero result on any error.
+ */
+export async function calcDuties(
+  pool: pg.Pool | pg.PoolClient,
+  storeId: string,
+  declaredValue: number,
+  destinationCountry: string,
+  opts?: { originCountry?: string | undefined; categories?: string[] | undefined }
+): Promise<DutyResult> {
+  const dest = (destinationCountry ?? "").toUpperCase();
+  if (!dest) return { dutyTotal: 0, dutyLines: [] };
+
+  const origin = (opts?.originCountry ?? "").toUpperCase();
+  // Cross-border only: same-country (origin known and equal) → zero.
+  if (origin && origin === dest) return { dutyTotal: 0, dutyLines: [] };
+
+  let rows: {
+    rows: Array<{
+      destination_country: string;
+      category: string | null;
+      rate_pct: string;
+      de_minimis_value: string | null;
+    }>;
+  };
+  try {
+    rows = await pool.query<{
+      destination_country: string;
+      category: string | null;
+      rate_pct: string;
+      de_minimis_value: string | null;
+    }>(
+      `SELECT destination_country, category, rate_pct, de_minimis_value
+       FROM duty_rates
+       WHERE store_id = $1::uuid
+         AND is_active = true
+         AND destination_country = $2
+       LIMIT 50`,
+      [storeId, dest]
+    );
+  } catch {
+    return { dutyTotal: 0, dutyLines: [] };
+  }
+
+  const categories = opts?.categories;
+  const dutyLines: DutyLine[] = [];
+  let dutyTotal = 0;
+
+  for (const row of rows.rows) {
+    // Category filter: NULL applies to all; a set category must be present in opts.categories.
+    if (row.category !== null) {
+      if (!categories || !categories.includes(row.category)) continue;
+    }
+
+    const ratePct = parseFloat(row.rate_pct);
+    if (!Number.isFinite(ratePct)) continue;
+
+    let amount = 0;
+    const deMinimis =
+      row.de_minimis_value !== null ? parseFloat(row.de_minimis_value) : null;
+    const waived =
+      deMinimis !== null && Number.isFinite(deMinimis) && declaredValue <= deMinimis;
+    if (!waived) {
+      amount = round2(declaredValue * ratePct / 100);
+    }
+
+    dutyLines.push({
+      name: row.category ? `Import duty (${row.category})` : "Import duty",
+      rate_pct: ratePct,
+      amount,
+      country: row.destination_country,
+    });
+    dutyTotal += amount;
+  }
+
+  return { dutyTotal: round2(dutyTotal), dutyLines };
+}

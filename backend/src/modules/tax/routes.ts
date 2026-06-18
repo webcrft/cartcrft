@@ -15,7 +15,7 @@
 
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { z } from "zod";
-import { storeAuthAdmin } from "../../lib/auth/middleware.js";
+import { storeAuthAdmin, storeAuthWrite, storeAuthRead } from "../../lib/auth/middleware.js";
 import {
   listTaxCategories,
   createTaxCategory,
@@ -28,6 +28,11 @@ import {
   createTaxRate,
   updateTaxRate,
   deleteTaxRate,
+  listDutyRates,
+  createDutyRate,
+  updateDutyRate,
+  deleteDutyRate,
+  previewLandedCost,
 } from "./service.js";
 
 // ── Schemas ───────────────────────────────────────────────────────────────────
@@ -71,6 +76,46 @@ const UpdateRateBody = z.object({
   is_inclusive: z.boolean().nullish(),
   is_active: z.boolean().nullish(),
   category_id: z.string().uuid().nullish(),
+});
+
+// ── Duty-rate schemas ───────────────────────────────────────────────────────────
+
+const DutyRateParams = z.object({ storeId: z.string().uuid(), rateId: z.string().uuid() });
+
+const ListDutyQuery = z.object({
+  destination_country: z.string().length(2).optional(),
+});
+
+const CreateDutyBody = z.object({
+  destination_country: z.string().length(2),
+  category: z.string().max(255).nullish(),
+  rate_pct: z.number().min(0).max(100),
+  de_minimis_value: z.number().min(0).nullish(),
+  is_active: z.boolean().optional(),
+});
+
+const UpdateDutyBody = z.object({
+  destination_country: z.string().length(2).nullish(),
+  category: z.string().max(255).nullish(),
+  rate_pct: z.number().min(0).max(100).nullish(),
+  de_minimis_value: z.number().min(0).nullish(),
+  is_active: z.boolean().nullish(),
+});
+
+const LandedCostBody = z.object({
+  subtotal: z.number().min(0),
+  destination_country: z.string().length(2),
+  origin_country: z.string().length(2).optional(),
+  province_code: z.string().max(10).optional(),
+  categories: z.array(z.string().max(255)).optional(),
+});
+
+const LandedCostQuery = z.object({
+  subtotal: z.coerce.number().min(0),
+  destination_country: z.string().length(2),
+  origin_country: z.string().length(2).optional(),
+  province_code: z.string().max(10).optional(),
+  categories: z.union([z.string(), z.array(z.string())]).optional(),
 });
 
 // ── Plugin ────────────────────────────────────────────────────────────────────
@@ -184,5 +229,84 @@ export const taxPlugin: FastifyPluginAsyncZod = async (app) => {
     const { storeId, zoneId, rateId } = request.params;
     await deleteTaxRate(storeId, zoneId, rateId);
     return reply.send({ ok: true });
+  });
+
+  // ── Duty rates (import duties / landed cost) ─────────────────────────────────
+
+  app.get(`${base}/tax/duty-rates`, {
+    schema: { params: StoreParams, querystring: ListDutyQuery },
+    preHandler: [storeAuthRead],
+  }, async (request, reply) => {
+    const { storeId } = request.params;
+    const { destination_country } = request.query;
+    return reply.send({ duty_rates: await listDutyRates(storeId, destination_country) });
+  });
+
+  app.post(`${base}/tax/duty-rates`, {
+    schema: { params: StoreParams, body: CreateDutyBody },
+    preHandler: [storeAuthWrite],
+  }, async (request, reply) => {
+    const { storeId } = request.params;
+    const id = await createDutyRate(storeId, request.body);
+    return reply.status(201).send({ id });
+  });
+
+  app.put(`${base}/tax/duty-rates/:rateId`, {
+    schema: { params: DutyRateParams, body: UpdateDutyBody },
+    preHandler: [storeAuthWrite],
+  }, async (request, reply) => {
+    const { storeId, rateId } = request.params;
+    const ok = await updateDutyRate(storeId, rateId, request.body);
+    if (!ok) return reply.status(404).send({ error: { code: "NOT_FOUND", message: "duty rate not found" } });
+    return reply.send({ ok: true });
+  });
+
+  app.delete(`${base}/tax/duty-rates/:rateId`, {
+    schema: { params: DutyRateParams },
+    preHandler: [storeAuthWrite],
+  }, async (request, reply) => {
+    const { storeId, rateId } = request.params;
+    const ok = await deleteDutyRate(storeId, rateId);
+    if (!ok) return reply.status(404).send({ error: { code: "NOT_FOUND", message: "duty rate not found" } });
+    return reply.send({ ok: true });
+  });
+
+  // ── Landed-cost preview (storefront estimate; read-only) ─────────────────────
+  // Duties are NOT yet wired into the actual order total at checkout/complete —
+  // that is a follow-up owned by the checkout module.
+
+  app.post(`${base}/tax/landed-cost`, {
+    schema: { params: StoreParams, body: LandedCostBody },
+    preHandler: [storeAuthRead],
+  }, async (request, reply) => {
+    const { storeId } = request.params;
+    const b = request.body;
+    const preview = await previewLandedCost(storeId, {
+      subtotal: b.subtotal,
+      destinationCountry: b.destination_country,
+      ...(b.origin_country ? { originCountry: b.origin_country } : {}),
+      ...(b.province_code ? { provinceCode: b.province_code } : {}),
+      ...(b.categories ? { categories: b.categories } : {}),
+    });
+    return reply.send(preview);
+  });
+
+  app.get(`${base}/tax/landed-cost`, {
+    schema: { params: StoreParams, querystring: LandedCostQuery },
+    preHandler: [storeAuthRead],
+  }, async (request, reply) => {
+    const { storeId } = request.params;
+    const q = request.query;
+    const categories = q.categories === undefined
+      ? undefined
+      : Array.isArray(q.categories) ? q.categories : [q.categories];
+    const preview = await previewLandedCost(storeId, {
+      subtotal: q.subtotal,
+      destinationCountry: q.destination_country,
+      ...(q.origin_country ? { originCountry: q.origin_country } : {}),
+      ...(q.province_code ? { provinceCode: q.province_code } : {}),
+      ...(categories ? { categories } : {}),
+    });
+    return reply.send(preview);
   });
 };
