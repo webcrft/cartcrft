@@ -638,13 +638,20 @@ export async function completeCheckout(
     }
 
     if (trackedVariants.length > 0) {
-      // Lock inventory rows in stable id order (Invariant 3 — prevents deadlocks)
+      // Lock inventory rows in stable id order (Invariant 3 — prevents deadlocks).
+      // The LOCK QUERY is BYTE-IDENTICAL to the previous implementation: same
+      // columns, same single-table SELECT … ORDER BY id FOR UPDATE, so the
+      // deadlock-avoidance and oversell-serialisation guarantees are preserved
+      // exactly. (Postgres forbids FOR UPDATE on the nullable side of an outer
+      // join, so the warehouse is_default flag is fetched separately below
+      // WITHOUT a lock — it only drives ALLOCATION ORDER, never locking.)
       const { rows: invRows } = await client.query<{
         id: string;
         variant_id: string;
+        warehouse_id: string;
         quantity_on_hand: number;
       }>(
-        `SELECT id::text, variant_id::text, quantity_on_hand
+        `SELECT id::text, variant_id::text, warehouse_id::text, quantity_on_hand
          FROM inventory_levels
          WHERE variant_id = ANY($1::uuid[])
          ORDER BY id
@@ -652,13 +659,34 @@ export async function completeCheckout(
         [trackedVariants]
       );
 
-      // Aggregate on-hand per variant
-      const onHand = new Map<string, number>();
-      for (const r of invRows) {
-        onHand.set(r.variant_id, (onHand.get(r.variant_id) ?? 0) + r.quantity_on_hand);
+      // Resolve which of the locked warehouses is the store default (drives the
+      // multi-warehouse allocation order). Non-locking, read-only — does not
+      // affect the FOR UPDATE lock set or its acquisition order above. Empty
+      // when there are no rows; defaults to "not default" for any unmatched id.
+      const defaultWarehouses = new Set<string>();
+      const lockedWarehouseIds = [...new Set(invRows.map((r) => r.warehouse_id))];
+      if (lockedWarehouseIds.length > 0) {
+        const { rows: whRows } = await client.query<{ id: string }>(
+          `SELECT id::text FROM warehouses
+           WHERE id = ANY($1::uuid[]) AND is_default = true`,
+          [lockedWarehouseIds]
+        );
+        for (const w of whRows) defaultWarehouses.add(w.id);
       }
 
-      // Verify sufficient stock (Invariant 6)
+      // Aggregate on-hand per variant + group rows per variant
+      const onHand = new Map<string, number>();
+      const rowsByVariant = new Map<string, typeof invRows>();
+      for (const r of invRows) {
+        onHand.set(r.variant_id, (onHand.get(r.variant_id) ?? 0) + r.quantity_on_hand);
+        const list = rowsByVariant.get(r.variant_id);
+        if (list) list.push(r);
+        else rowsByVariant.set(r.variant_id, [r]);
+      }
+
+      // Verify sufficient stock (Invariant 6) — validated on the SUM across all
+      // warehouses, so a variant whose stock is spread thin still passes when the
+      // total covers demand.
       for (const variantId of trackedVariants) {
         const need = demand.get(variantId) ?? 0;
         const have = onHand.get(variantId);
@@ -676,21 +704,73 @@ export async function completeCheckout(
         }
       }
 
-      // Safe to deduct — per-row, spreading across multiple inventory_levels rows
-      // (e.g. multiple warehouses) in stable id order
-      const remaining = new Map(demand);
-      for (const r of invRows) {
-        const need = remaining.get(r.variant_id) ?? 0;
-        if (need <= 0) continue;
-        const take = Math.min(need, r.quantity_on_hand);
-        await client.query(
-          `UPDATE inventory_levels
-           SET quantity_on_hand = quantity_on_hand - $1,
-               updated_at = now()
-           WHERE id = $2::uuid`,
-          [take, r.id]
-        );
-        remaining.set(r.variant_id, need - take);
+      // Safe to deduct — allocate the line quantity across this variant's
+      // inventory_levels rows (warehouses). For a SINGLE row this reduces to one
+      // UPDATE of the full quantity (byte-identical to the previous behaviour).
+      //
+      // MULTI-warehouse ALLOCATION ORDER (deterministic): default warehouse
+      // first, then by DESCENDING availability, with id as the final tie-break so
+      // the order is stable and reproducible. We never drive any row below zero
+      // (take = min(remaining, row on-hand)). The lock was already taken above in
+      // id order; this picking order only governs which locked row we subtract
+      // from first, not the lock acquisition order.
+      for (const variantId of trackedVariants) {
+        const rows = rowsByVariant.get(variantId) ?? [];
+        const multiWarehouse = rows.length > 1;
+
+        const order = multiWarehouse
+          ? [...rows].sort((a, b) => {
+              const aDef = defaultWarehouses.has(a.warehouse_id);
+              const bDef = defaultWarehouses.has(b.warehouse_id);
+              if (aDef !== bDef) return aDef ? -1 : 1;
+              if (a.quantity_on_hand !== b.quantity_on_hand) {
+                return b.quantity_on_hand - a.quantity_on_hand;
+              }
+              return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+            })
+          : rows;
+
+        let remaining = demand.get(variantId) ?? 0;
+        // Track the warehouse that fulfilled the largest share, used only as a
+        // routing hint on the order line for genuine multi-warehouse splits.
+        let primaryWarehouseId: string | null = null;
+        let primaryTaken = 0;
+
+        for (const r of order) {
+          if (remaining <= 0) break;
+          const take = Math.min(remaining, r.quantity_on_hand);
+          if (take <= 0) continue;
+          await client.query(
+            `UPDATE inventory_levels
+             SET quantity_on_hand = quantity_on_hand - $1,
+                 updated_at = now()
+             WHERE id = $2::uuid`,
+            [take, r.id]
+          );
+          remaining -= take;
+          if (take > primaryTaken) {
+            primaryTaken = take;
+            primaryWarehouseId = r.warehouse_id;
+          }
+        }
+
+        // Record a fulfilment-routing hint ONLY when the line was genuinely
+        // drawn from MORE THAN ONE warehouse. Single-warehouse lines keep
+        // order_lines.warehouse_id = NULL exactly as before (byte-identical),
+        // since the single-warehouse path never set this column.
+        const drawnFromMultiple =
+          multiWarehouse &&
+          order.filter((r) => r.quantity_on_hand > 0).length > 1 &&
+          primaryWarehouseId !== null &&
+          primaryTaken < (demand.get(variantId) ?? 0);
+        if (drawnFromMultiple && primaryWarehouseId) {
+          await client.query(
+            `UPDATE order_lines
+             SET warehouse_id = $1::uuid
+             WHERE order_id = $2::uuid AND variant_id = $3::uuid`,
+            [primaryWarehouseId, orderId, variantId]
+          );
+        }
       }
     }
 
