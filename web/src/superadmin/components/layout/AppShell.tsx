@@ -90,27 +90,27 @@ export default function AppShell() {
                   {admin.email.charAt(0).toUpperCase()}
                 </span>
               </div>
-              <p className="font-mono text-[11px] text-[var(--cc-text-muted)] truncate">{admin.email}</p>
+              <p className="font-mono text-[12px] text-[var(--cc-text-muted)] truncate">{admin.email}</p>
             </div>
           )}
         </div>
 
         {/* Operator marker banner — AMBER warning (the deliberate differentiator) */}
-        <div className="mx-3 mt-3 rounded-md bg-amber-500/[0.07] border border-amber-500/25 px-3 py-2.5">
+        <div className="mx-3 mt-3 rounded-lg bg-amber-500/[0.07] border border-amber-500/25 px-3 py-2.5">
           <div className="flex items-center gap-1.5">
-            <Terminal size={11} className="text-amber-400 flex-shrink-0" />
-            <p className="font-mono text-[10px] font-semibold text-amber-400 uppercase tracking-[0.12em]">
-              Operator Console
+            <Terminal size={13} className="text-amber-400 flex-shrink-0" />
+            <p className="text-[13px] font-semibold text-amber-300">
+              Operator console
             </p>
           </div>
-          <p className="text-[10px] text-amber-500/70 mt-1 leading-tight">
+          <p className="text-[12px] text-amber-500/75 mt-1 leading-snug">
             Actions here affect all tenants. All operations are audited.
           </p>
         </div>
 
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto py-4 px-3">
-          <p className="px-2 mb-1.5 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--cc-text-subtle)]">
+          <p className="px-2 mb-1.5 text-[11px] font-semibold text-[var(--cc-text-subtle)] tracking-[0.01em]">
             Platform
           </p>
           <div className="space-y-0.5">
@@ -120,9 +120,9 @@ export default function AppShell() {
                 to={entry.path}
                 end={entry.path === '/'}
                 className={({ isActive }) =>
-                  `group relative flex items-center gap-2.5 rounded-md px-2.5 py-2 text-xs font-medium transition
+                  `group relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium transition
                    ${isActive
-                     ? 'bg-[var(--cc-lime)]/12 text-[var(--cc-lime)]'
+                     ? 'bg-[var(--cc-lime)]/[0.12] text-[var(--cc-lime)]'
                      : 'text-[var(--cc-text-muted)] hover:text-[var(--cc-text)] hover:bg-white/[0.04]'
                    }`
                 }
@@ -130,7 +130,7 @@ export default function AppShell() {
                 {({ isActive }) => (
                   <>
                     <span
-                      className={`absolute left-0 top-1/2 -translate-y-1/2 h-4 w-0.5 rounded-full bg-[var(--cc-lime)] transition-opacity ${
+                      className={`absolute left-0 top-1/2 -translate-y-1/2 h-5 w-0.5 rounded-r-full bg-[var(--cc-lime)] transition-opacity ${
                         isActive ? 'opacity-100' : 'opacity-0'
                       }`}
                       aria-hidden="true"
@@ -152,9 +152,9 @@ export default function AppShell() {
         <div className="px-3 py-3 border-t border-white/[0.07]">
           <button
             onClick={() => { void logout() }}
-            className="w-full flex items-center gap-2 px-2.5 py-2 text-xs font-medium text-[var(--cc-text-muted)] hover:text-red-400 transition rounded-md hover:bg-white/[0.04]"
+            className="w-full flex items-center gap-2.5 px-2.5 py-2 text-[13px] font-medium text-[var(--cc-text-muted)] hover:text-red-400 transition rounded-lg hover:bg-white/[0.04]"
           >
-            <LogOut size={14} />
+            <LogOut size={15} />
             Sign out
           </button>
         </div>

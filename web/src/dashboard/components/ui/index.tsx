@@ -8,17 +8,17 @@ type BadgeColor = 'emerald' | 'amber' | 'red' | 'blue' | 'violet' | 'slate' | 'l
 
 export function Badge({ children, color = 'slate' }: { children: React.ReactNode; color?: BadgeColor }) {
   const colors: Record<BadgeColor, string> = {
-    emerald: 'bg-emerald-500/12 text-emerald-400 border-emerald-500/25 ring-emerald-500/10',
-    amber: 'bg-amber-500/12 text-amber-400 border-amber-500/25 ring-amber-500/10',
-    red: 'bg-red-500/12 text-red-400 border-red-500/25 ring-red-500/10',
+    emerald: 'bg-emerald-500/12 text-emerald-300 border-emerald-500/25',
+    amber: 'bg-amber-500/12 text-amber-300 border-amber-500/25',
+    red: 'bg-red-500/12 text-red-300 border-red-500/25',
     blue: 'bg-[var(--cc-cyan)]/12 text-[var(--cc-cyan)] border-[var(--cc-cyan)]/25',
     cyan: 'bg-[var(--cc-cyan)]/12 text-[var(--cc-cyan)] border-[var(--cc-cyan)]/25',
-    violet: 'bg-[var(--cc-lime)]/12 text-[var(--cc-lime)] border-[var(--cc-lime)]/25',
-    lime: 'bg-[var(--cc-lime)]/12 text-[var(--cc-lime)] border-[var(--cc-lime)]/25',
-    slate: 'bg-white/[0.04] text-[var(--cc-muted)] border-white/[0.08]',
+    violet: 'bg-[var(--cc-lime)]/14 text-[var(--cc-lime)] border-[var(--cc-lime)]/25',
+    lime: 'bg-[var(--cc-lime)]/14 text-[var(--cc-lime)] border-[var(--cc-lime)]/25',
+    slate: 'bg-white/[0.05] text-[var(--cc-body)] border-white/[0.09]',
   }
   return (
-    <span className={`inline-flex items-center gap-1 rounded border px-1.5 py-0.5 font-mono text-[10px] font-medium uppercase tracking-wider leading-none ${colors[color]}`}>
+    <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium leading-[1.4] ${colors[color]}`}>
       {children}
     </span>
   )
@@ -43,20 +43,20 @@ export function Btn({
   type?: 'button' | 'submit' | 'reset'
 }) {
   const sizes: Record<BtnSize, string> = {
-    sm: 'px-2.5 py-1.5 text-[11px] gap-1',
-    md: 'px-3.5 py-2 text-xs gap-1.5',
+    sm: 'px-3 py-1.5 text-[12px] gap-1.5',
+    md: 'px-4 py-2 text-[13px] gap-1.5',
     lg: 'px-5 py-2.5 text-sm gap-2',
   }
   const base = `inline-flex items-center justify-center rounded-lg font-semibold transition-all duration-150
-    active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cc-lime)]/60
+    active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cc-lime)]/50
     focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--cc-bg)]
     disabled:opacity-45 disabled:cursor-not-allowed disabled:active:scale-100`
   const variants: Record<BtnVariant, string> = {
-    primary: 'bg-[var(--cc-lime)] text-[var(--cc-ink)] shadow-sm ring-1 ring-inset ring-white/10 hover:bg-[var(--cc-lime-bright)] hover:shadow-[0_0_20px_-3px_var(--cc-lime)]',
-    green: 'bg-[var(--cc-lime)] text-[var(--cc-ink)] shadow-sm ring-1 ring-inset ring-white/10 hover:bg-[var(--cc-lime-bright)] hover:shadow-[0_0_20px_-3px_var(--cc-lime)]',
-    secondary: 'border border-white/[0.08] bg-[var(--cc-surface-2)] text-[var(--cc-body)] hover:bg-white/[0.06] hover:text-[var(--cc-text)] hover:border-white/[0.14]',
+    primary: 'bg-[var(--cc-lime)] text-[var(--cc-ink)] ring-1 ring-inset ring-black/10 hover:bg-[var(--cc-lime-bright)]',
+    green: 'bg-[var(--cc-lime)] text-[var(--cc-ink)] ring-1 ring-inset ring-black/10 hover:bg-[var(--cc-lime-bright)]',
+    secondary: 'border border-white/[0.1] bg-[var(--cc-surface-2)] text-[var(--cc-body)] hover:bg-[var(--cc-surface-3)] hover:text-[var(--cc-text)] hover:border-white/[0.16]',
     danger: 'border border-red-500/30 bg-red-600/10 text-red-300 hover:bg-red-600/18 hover:border-red-500/45',
-    ghost: 'text-[var(--cc-muted)] hover:text-[var(--cc-text)] hover:bg-white/[0.04]',
+    ghost: 'text-[var(--cc-muted)] hover:text-[var(--cc-text)] hover:bg-white/[0.05]',
   }
   return (
     <button
@@ -83,12 +83,12 @@ export function Card({
   description?: string
 }) {
   return (
-    <div className={`rounded-xl border border-white/[0.07] bg-[var(--cc-surface)] overflow-hidden ${className}`}>
+    <div className={`rounded-xl border border-white/[0.08] bg-[var(--cc-surface)] overflow-hidden ${className}`}>
       {title && (
-        <div className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-white/[0.07]">
+        <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-white/[0.07]">
           <div>
-            <h3 className="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--cc-muted)]">{title}</h3>
-            {description && <p className="text-[11px] text-[var(--cc-subtle)] mt-0.5">{description}</p>}
+            <h3 className="text-[14px] font-semibold text-[var(--cc-text)] tracking-[-0.01em]">{title}</h3>
+            {description && <p className="text-[13px] text-[var(--cc-muted)] mt-0.5">{description}</p>}
           </div>
           {actions && <div className="flex items-center gap-2 flex-shrink-0">{actions}</div>}
         </div>
@@ -117,7 +117,7 @@ export function FormInput({
   return (
     <div className={className}>
       {label && (
-        <label className="flex items-center gap-1 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--cc-muted)] mb-1.5">
+        <label className="flex items-center gap-1 text-[13px] font-medium text-[var(--cc-body)] mb-1.5">
           {label}
           {required && <span className="text-[var(--cc-lime)] leading-none">*</span>}
         </label>
@@ -159,7 +159,7 @@ export function FormSelect({
   return (
     <div className={className}>
       {label && (
-        <label className="block font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--cc-muted)] mb-1.5">
+        <label className="block text-[13px] font-medium text-[var(--cc-body)] mb-1.5">
           {label}
         </label>
       )}
@@ -193,7 +193,7 @@ export function PageHeader({
         {breadcrumb && <div className="mb-1.5">{breadcrumb}</div>}
         <div className="flex items-center gap-2.5 flex-wrap">
           <h2
-            className="text-xl font-bold tracking-tight text-[var(--cc-text)]"
+            className="text-[1.6rem] font-bold text-[var(--cc-text)]"
             style={{ fontFamily: 'var(--cc-font-display)', letterSpacing: '-0.025em' }}
           >
             {title}
@@ -201,7 +201,7 @@ export function PageHeader({
           {badge}
         </div>
         {description && (
-          <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--cc-subtle)] mt-1">{description}</p>
+          <p className="text-[13px] text-[var(--cc-muted)] mt-1">{description}</p>
         )}
       </div>
       {actions && <div className="flex items-center gap-2 flex-shrink-0">{actions}</div>}
@@ -221,20 +221,20 @@ export function EmptyState({
   icon?: React.ReactNode
 }) {
   return (
-    <div className="flex flex-col items-center rounded-xl border border-dashed border-white/[0.09] py-16 px-6 text-center">
+    <div className="flex flex-col items-center rounded-xl border border-dashed border-white/[0.1] py-16 px-6 text-center">
       {icon && (
         <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-[var(--cc-lime)]/20 bg-[var(--cc-lime)]/[0.07] text-[var(--cc-lime)]">
           {icon}
         </div>
       )}
-      <p className="text-sm font-semibold text-[var(--cc-body)] mb-1.5">{title}</p>
+      <p className="text-[15px] font-semibold text-[var(--cc-text)] mb-1.5">{title}</p>
       {description && (
-        <p className="text-xs text-[var(--cc-subtle)] max-w-xs mx-auto leading-relaxed">{description}</p>
+        <p className="text-[13px] text-[var(--cc-muted)] max-w-sm mx-auto leading-relaxed">{description}</p>
       )}
       {action && onAction && (
         <button
           onClick={onAction}
-          className="mt-5 inline-flex items-center gap-1.5 rounded-lg bg-[var(--cc-lime)] px-4 py-2 text-xs font-semibold text-[var(--cc-ink)] hover:bg-[var(--cc-lime-bright)] hover:shadow-[0_0_20px_-3px_var(--cc-lime)] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cc-lime)]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--cc-bg)] active:scale-[0.97]"
+          className="mt-5 inline-flex items-center gap-1.5 rounded-lg bg-[var(--cc-lime)] px-4 py-2 text-[13px] font-semibold text-[var(--cc-ink)] ring-1 ring-inset ring-black/10 hover:bg-[var(--cc-lime-bright)] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cc-lime)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--cc-bg)] active:scale-[0.98]"
         >
           + {action}
         </button>
@@ -364,7 +364,7 @@ export function Th({
   const stickyCls = sticky ? 'sticky top-0 z-10' : ''
   return (
     <th
-      className={`px-4 py-3 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--cc-muted)] ${alignCls} ${stickyCls} ${className}`}
+      className={`px-4 py-3 text-[12px] font-medium text-[var(--cc-muted)] ${alignCls} ${stickyCls} ${className}`}
       style={sticky ? { background: 'var(--cc-surface)' } : undefined}
     >
       {children}
@@ -384,7 +384,7 @@ export function Td({
   const alignCls = align === 'right' || numeric ? 'text-right' : align === 'center' ? 'text-center' : ''
   const mutedCls = muted ? 'text-[var(--cc-muted)]' : ''
   return (
-    <td className={`px-4 py-3 text-sm ${alignCls} ${mutedCls} ${className}`}>{children}</td>
+    <td className={`px-4 py-3.5 text-sm ${alignCls} ${mutedCls} ${className}`}>{children}</td>
   )
 }
 
@@ -495,7 +495,7 @@ export function SectionDivider({ label }: { label?: string }) {
   return (
     <div className="flex items-center gap-3 py-1">
       <div className="h-px flex-1" style={{ background: 'rgba(255,255,255,0.06)' }} />
-      {label && <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--cc-subtle)] flex-shrink-0">{label}</span>}
+      {label && <span className="text-[12px] font-medium text-[var(--cc-muted)] flex-shrink-0">{label}</span>}
       <div className="h-px flex-1" style={{ background: 'rgba(255,255,255,0.06)' }} />
     </div>
   )

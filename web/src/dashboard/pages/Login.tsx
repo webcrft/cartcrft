@@ -152,14 +152,14 @@ function TerminalBlock() {
         <span className="w-2.5 h-2.5 rounded-full bg-red-500/60" />
         <span className="w-2.5 h-2.5 rounded-full bg-amber-400/60" />
         <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/60" />
-        <span className="ml-2 font-mono text-[10px] text-[var(--cc-muted)]">cartcrft — admin sdk</span>
-        <span className="ml-auto flex items-center gap-1 font-mono text-[10px] text-[var(--cc-lime)]">
+        <span className="ml-2 font-mono text-[12px] text-[var(--cc-muted)]">cartcrft — admin sdk</span>
+        <span className="ml-auto flex items-center gap-1 font-mono text-[12px] text-[var(--cc-lime)]">
           <span className="w-1.5 h-1.5 rounded-full bg-[var(--cc-lime)] login-pulse-dot" />
           LIVE
         </span>
       </div>
       {/* Code */}
-      <pre className="px-4 py-3 font-mono text-[11px] leading-[1.9] overflow-x-auto">
+      <pre className="px-4 py-3 font-mono text-[12px] leading-[1.9] overflow-x-auto">
         <code>
           <span className="login-ln login-delay-1 block"><span style={{ color: 'rgba(133,134,122,0.7)' }}>{'//'} initialize store</span></span>
           <span className="login-ln login-delay-2 block"><span style={{ color: 'rgba(181,255,46,0.9)' }}>const</span> <span style={{ color: 'rgba(236,234,224,0.9)' }}>sdk</span> <span style={{ color: 'rgba(133,134,122,0.7)' }}>=</span> <span style={{ color: 'rgba(87,224,255,0.85)' }}>new</span> <span style={{ color: 'rgba(181,255,46,1)' }}>CartCrft</span><span style={{ color: 'rgba(236,234,224,0.6)' }}>{'({ baseUrl })'}</span></span>
@@ -324,10 +324,8 @@ export default function Login() {
                 >
                   cart<span className="text-[var(--cc-lime)]">crft</span>
                 </div>
-                <div className="font-mono text-[9px] uppercase tracking-[0.16em] text-[var(--cc-subtle)] leading-none mt-0.5">
-                  <span style={{ color: 'var(--cc-subtle)' }}>[</span>{' '}
-                  admin console{' '}
-                  <span style={{ color: 'var(--cc-subtle)' }}>]</span>
+                <div className="text-[12px] font-medium text-[var(--cc-muted)] leading-none mt-1">
+                  Admin console
                 </div>
               </div>
             </div>
@@ -371,7 +369,7 @@ export default function Login() {
               {mode === 'password' ? (
                 <form onSubmit={handlePassword} className="space-y-4">
                   <div>
-                    <label className="block font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--cc-muted)] mb-1.5">Email</label>
+                    <label className="block text-[13px] font-medium text-[var(--cc-body)] mb-1.5">Email</label>
                     <input
                       type="email"
                       autoComplete="username"
@@ -390,7 +388,7 @@ export default function Login() {
                   </div>
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
-                      <label className="block font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--cc-muted)]">Password</label>
+                      <label className="block text-[13px] font-medium text-[var(--cc-body)]">Password</label>
                     </div>
                     <input
                       type="password"
@@ -420,14 +418,14 @@ export default function Login() {
               ) : (
                 <form onSubmit={handleAdvanced} className="space-y-4">
                   <div className="rounded-lg px-3 py-2.5" style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.2)' }}>
-                    <p className="text-[11px] leading-relaxed text-amber-300/90">
+                    <p className="text-[12px] leading-relaxed text-amber-300/90">
                       <strong>Powerful credential.</strong> A cc_prv_ key carries full
                       commerce:admin access. Use it only for CI / automation. It is held
                       in memory and never written to localStorage.
                     </p>
                   </div>
                   <div>
-                    <label className="block font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--cc-muted)] mb-1.5">Private API Key</label>
+                    <label className="block text-[13px] font-medium text-[var(--cc-body)] mb-1.5">Private API key</label>
                     <input
                       type="password"
                       value={apiKey}
@@ -443,7 +441,7 @@ export default function Login() {
                       onBlur={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)' }}
                     />
                   </div>
-                  <label className="flex items-center gap-2 text-[11px] text-[var(--cc-muted)] select-none cursor-pointer">
+                  <label className="flex items-center gap-2 text-[12px] text-[var(--cc-muted)] select-none cursor-pointer">
                     <input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)} className="rounded" />
                     Remember on this tab only (sessionStorage, cleared on close)
                   </label>
@@ -460,7 +458,7 @@ export default function Login() {
             </div>
 
             {/* Footer note */}
-            <p className="mt-6 text-center text-[11px] text-[var(--cc-subtle)]">
+            <p className="mt-6 text-center text-[12px] text-[var(--cc-subtle)]">
               CartCrft Admin — headless commerce infrastructure
             </p>
           </div>
@@ -530,13 +528,9 @@ export default function Login() {
                 >
                   cart<span className="text-[var(--cc-lime)]">crft</span>
                 </div>
-                <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--cc-subtle)] mt-1">
-                  <span className="text-[var(--cc-subtle)]">[</span>
-                  <span className="text-[var(--cc-lime)]">
-                    <span className="login-blink-dot inline-block w-1.5 h-1.5 rounded-full bg-[var(--cc-lime)] align-middle mr-1" />
-                    agentic commerce
-                  </span>
-                  <span className="text-[var(--cc-subtle)]">]</span>
+                <div className="flex items-center gap-1.5 text-[12px] font-medium text-[var(--cc-muted)] mt-1.5">
+                  <span className="login-blink-dot inline-block w-1.5 h-1.5 rounded-full bg-[var(--cc-lime)]" />
+                  <span className="text-[var(--cc-body)]">Agentic commerce</span>
                 </div>
               </div>
             </div>
@@ -567,12 +561,12 @@ export default function Login() {
               style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
             >
               {[
-                { label: 'API Resources', value: '40+' },
+                { label: 'API resources', value: '40+' },
                 { label: 'SDKs', value: 'TS / Go' },
                 { label: 'Uptime SLA', value: '99.9%' },
               ].map(({ label, value }) => (
                 <div key={label}>
-                  <dt className="font-mono text-[9px] uppercase tracking-[0.14em] text-[var(--cc-subtle)]">{label}</dt>
+                  <dt className="text-[12px] font-medium text-[var(--cc-muted)]">{label}</dt>
                   <dd
                     className="text-base font-semibold text-[var(--cc-text)] mt-0.5"
                     style={{ fontFamily: 'var(--cc-font-display)', letterSpacing: '-0.02em' }}

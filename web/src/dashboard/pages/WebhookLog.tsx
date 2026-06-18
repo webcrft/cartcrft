@@ -34,56 +34,56 @@ function LogDetailModal({ entry, onClose }: { entry: WebhookLogEntry; onClose: (
   return (
     <Modal title={`Webhook — ${entry.event ?? entry.id.slice(0, 8)}`} onClose={onClose}>
       <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-3 text-xs">
+        <div className="grid grid-cols-2 gap-3">
           <div>
-            <p className="text-slate-500 mb-1">Provider ID</p>
-            <p className="text-white font-mono text-[11px]">{entry.provider_id ?? '—'}</p>
+            <p className="text-[12px] font-medium text-[var(--cc-muted)] mb-1">Provider ID</p>
+            <p className="text-[12px] text-[var(--cc-text)] font-mono break-all">{entry.provider_id ?? '—'}</p>
           </div>
           <div>
-            <p className="text-slate-500 mb-1">Event</p>
-            <p className="text-white">{entry.event ?? '—'}</p>
+            <p className="text-[12px] font-medium text-[var(--cc-muted)] mb-1">Event</p>
+            <p className="text-[13px] text-[var(--cc-text)]">{entry.event ? <span className="font-mono text-[12px]">{entry.event}</span> : '—'}</p>
           </div>
           <div>
-            <p className="text-slate-500 mb-1">Status Code</p>
+            <p className="text-[12px] font-medium text-[var(--cc-muted)] mb-1">Status code</p>
             <Badge color={statusColor(entry.status_code)}>
-              {entry.status_code != null ? String(entry.status_code) : 'pending'}
+              {entry.status_code != null ? String(entry.status_code) : 'Pending'}
             </Badge>
           </div>
           <div>
-            <p className="text-slate-500 mb-1">Attempt</p>
-            <p className="text-slate-300">{entry.attempt_number ?? 1}</p>
+            <p className="text-[12px] font-medium text-[var(--cc-muted)] mb-1">Attempt</p>
+            <p className="text-[13px] text-[var(--cc-body)] tabular-nums">{entry.attempt_number ?? 1}</p>
           </div>
           <div>
-            <p className="text-slate-500 mb-1">Duration</p>
-            <p className="text-slate-300">{entry.duration_ms != null ? `${entry.duration_ms} ms` : '—'}</p>
+            <p className="text-[12px] font-medium text-[var(--cc-muted)] mb-1">Duration</p>
+            <p className="text-[13px] text-[var(--cc-body)] tabular-nums">{entry.duration_ms != null ? `${entry.duration_ms} ms` : '—'}</p>
           </div>
           <div>
-            <p className="text-slate-500 mb-1">Delivered At</p>
-            <p className="text-slate-300">
+            <p className="text-[12px] font-medium text-[var(--cc-muted)] mb-1">Delivered at</p>
+            <p className="text-[13px] text-[var(--cc-body)]">
               {entry.delivered_at ? new Date(entry.delivered_at).toLocaleString() : '—'}
             </p>
           </div>
         </div>
         {entry.error_message && (
           <div>
-            <p className="text-xs font-medium text-red-400 mb-1.5">Error</p>
-            <pre className="text-xs text-red-300 bg-black/30 rounded-lg p-3 overflow-auto max-h-32 border border-red-500/20">
+            <p className="text-[12px] font-medium text-red-400 mb-1.5">Error</p>
+            <pre className="text-[12px] leading-relaxed text-red-300 bg-black/30 rounded-lg p-3 overflow-auto max-h-32 border border-red-500/20 font-mono whitespace-pre-wrap break-all">
               {entry.error_message}
             </pre>
           </div>
         )}
         {entry.payload != null && (
           <div>
-            <p className="text-xs font-medium text-slate-400 mb-1.5">Payload</p>
-            <pre className="text-xs text-slate-300 bg-black/30 rounded-lg p-3 overflow-auto max-h-48 border border-white/[0.06]">
+            <p className="text-[12px] font-medium text-[var(--cc-muted)] mb-1.5">Payload</p>
+            <pre className="text-[12px] leading-relaxed text-[var(--cc-body)] bg-black/30 rounded-lg p-3 overflow-auto max-h-48 border border-white/[0.06] font-mono">
               {JSON.stringify(entry.payload, null, 2)}
             </pre>
           </div>
         )}
         {entry.response_body != null && (
           <div>
-            <p className="text-xs font-medium text-slate-400 mb-1.5">Response</p>
-            <pre className="text-xs text-slate-300 bg-black/30 rounded-lg p-3 overflow-auto max-h-32 border border-white/[0.06]">
+            <p className="text-[12px] font-medium text-[var(--cc-muted)] mb-1.5">Response</p>
+            <pre className="text-[12px] leading-relaxed text-[var(--cc-body)] bg-black/30 rounded-lg p-3 overflow-auto max-h-32 border border-white/[0.06] font-mono">
               {JSON.stringify(entry.response_body, null, 2)}
             </pre>
           </div>
@@ -149,22 +149,26 @@ export default function WebhookLog() {
         <TableContainer>
           <table className="w-full text-sm">
             <TableHead>
-              <Th>Event</Th><Th>Status</Th><Th>Attempt</Th><Th>Delivered At</Th><Th></Th>
+              <Th>Event</Th><Th>Status</Th><Th>Attempt</Th><Th>Delivered at</Th><Th></Th>
             </TableHead>
             <tbody>
               {logs.map((log, i) => (
                 <tr key={String(log.id ?? i)} className="border-t border-white/[0.04] hover:bg-white/[0.02] transition">
-                  <Td className="text-slate-300 text-xs font-mono">{log.event ?? '—'}</Td>
+                  <Td>
+                    {log.event
+                      ? <span className="font-mono text-[12px] text-[var(--cc-body)]">{log.event}</span>
+                      : <span className="text-[var(--cc-subtle)]">—</span>}
+                  </Td>
                   <Td>
                     <Badge color={statusColor(log.status_code)}>
-                      {log.status_code != null ? String(log.status_code) : 'pending'}
+                      {log.status_code != null ? String(log.status_code) : 'Pending'}
                     </Badge>
                   </Td>
-                  <Td className="text-slate-500 text-xs">{log.attempt_number ?? 1}</Td>
-                  <Td className="text-slate-500 text-xs">
+                  <Td muted className="tabular-nums">{log.attempt_number ?? 1}</Td>
+                  <Td muted>
                     {log.delivered_at ? new Date(log.delivered_at).toLocaleString() : '—'}
                   </Td>
-                  <Td><Btn variant="secondary" onClick={() => setSelected(log)}>View</Btn></Td>
+                  <Td align="right"><Btn size="sm" variant="secondary" onClick={() => setSelected(log)}>View</Btn></Td>
                 </tr>
               ))}
             </tbody>

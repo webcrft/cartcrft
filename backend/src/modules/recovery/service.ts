@@ -59,6 +59,15 @@ export interface RecoveryCartLine {
 
 export const DEFAULT_ABANDONED_THRESHOLD_MS = 60 * 60 * 1000; // 1 hour
 
+// ── Resend caps (FIX 5) ────────────────────────────────────────────────────────
+//
+// Admin-triggered resends were unbounded (notification_count incremented with no
+// cap), so a compromised/abused admin call could mail a customer indefinitely.
+// Cap the total notifications per cart and require a minimum interval since the
+// last send.
+export const MAX_RECOVERY_NOTIFICATIONS = 3;
+export const MIN_RESEND_INTERVAL_MS = 60 * 60 * 1000; // 1 hour between sends
+
 // ── Singleton mailer (set by worker registration) ────────────────────────────
 
 let _mailer: Mailer | null = null;
@@ -295,6 +304,25 @@ export async function resendRecoveryEmail(
 
   if (!row.email) {
     return { ok: false, message: "no email address for this abandoned cart" };
+  }
+
+  // FIX 5: bound resends — cap total notifications and enforce a minimum
+  // interval since the last send so this admin endpoint cannot mail a customer
+  // unboundedly.
+  if (row.notification_count >= MAX_RECOVERY_NOTIFICATIONS) {
+    return {
+      ok: false,
+      message: `recovery email limit reached (${MAX_RECOVERY_NOTIFICATIONS} sends max)`,
+    };
+  }
+  if (
+    row.last_notified_at !== null &&
+    Date.now() - new Date(row.last_notified_at).getTime() < MIN_RESEND_INTERVAL_MS
+  ) {
+    return {
+      ok: false,
+      message: "a recovery email was sent too recently — please wait before resending",
+    };
   }
 
   const cart = await getCartByRecoveryToken(storeId, row.recovery_token);

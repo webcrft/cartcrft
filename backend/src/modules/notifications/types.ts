@@ -40,7 +40,8 @@ export interface NotificationProviderRow {
 
 export interface CreateNotificationProviderInput {
   name: string;
-  webhook_url: string;
+  // Optional: only webhook-type providers require it (enforced in the service).
+  webhook_url?: string | undefined;
   events: string[];
   webhook_secret?: string | undefined;
   config?: Record<string, unknown> | undefined;

@@ -40,7 +40,7 @@ function fmtMetricValue(value: number, metric: 'orders' | 'gmv' | 'signups'): st
 }
 
 function TimeseriesChart({ points, metric }: { points: TimeseriesPoint[]; metric: 'orders' | 'gmv' | 'signups' }) {
-  if (!points.length) return <p className="text-xs text-[var(--cc-text-muted)] py-4 text-center">No data</p>
+  if (!points.length) return <p className="text-[13px] text-[var(--cc-text-muted)] py-4 text-center">No data yet</p>
 
   // bucket is a timestamp string ("2026-05-16 00:00:00+02") — take YYYY-MM-DD.
   const fmtBucket = (b: string | undefined) => (b ?? '').slice(0, 10)
@@ -84,11 +84,11 @@ function TimeseriesChart({ points, metric }: { points: TimeseriesPoint[]; metric
             <span className="inline-block h-0.5 w-4 rounded-full bg-[var(--cc-lime)]" />
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--cc-lime)] -ml-2.5 ring-2 ring-[var(--cc-lime)]/25" />
           </span>
-          <span className="font-mono text-[11px] font-medium uppercase tracking-wider text-[var(--cc-text-body)]">{METRIC_LABELS[metric]}</span>
-          <span className="text-[11px] text-[var(--cc-text-muted)]">— daily, last 30 days</span>
+          <span className="text-[12px] font-medium text-[var(--cc-text-body)]">{METRIC_LABELS[metric]}</span>
+          <span className="text-[12px] text-[var(--cc-text-muted)]">— daily, last 30 days</span>
         </div>
-        <span className="font-mono text-[11px] text-[var(--cc-text-muted)] tabular-nums">
-          Peak <span className="text-[var(--cc-lime)] font-medium">{fmtMetricValue(max, metric)}</span>
+        <span className="text-[12px] text-[var(--cc-text-muted)]">
+          Peak <span className="font-mono text-[12px] text-[var(--cc-lime)] font-medium tabular-nums">{fmtMetricValue(max, metric)}</span>
         </span>
       </div>
       <svg
@@ -180,13 +180,13 @@ function HealthPanel({ health }: { health: HealthResult }) {
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2 mb-3">
-        <span className="font-mono text-[11px] font-medium uppercase tracking-wider text-[var(--cc-text-muted)]">System status</span>
-        <Badge color={overallColor}>{health.status}</Badge>
+        <span className="text-[12px] font-medium text-[var(--cc-text-muted)]">System status</span>
+        <Badge color={overallColor}><span className="capitalize">{health.status}</span></Badge>
       </div>
       {rows.map(row => (
         <div key={row.label} className="flex items-center justify-between py-2 border-b border-white/[0.04] last:border-0">
-          <span className="text-xs text-[var(--cc-text-body)]">{row.label}</span>
-          <Badge color={row.ok ? 'emerald' : 'red'}>{row.value}</Badge>
+          <span className="text-[13px] text-[var(--cc-text-body)]">{row.label}</span>
+          <Badge color={row.ok ? 'emerald' : 'red'}><span className="capitalize">{row.value}</span></Badge>
         </div>
       ))}
     </div>
@@ -245,7 +245,7 @@ export default function Analytics() {
         title="System Analytics"
         description="Platform-wide metrics across all tenants"
         actions={
-          <button onClick={() => void load()} className="inline-flex items-center gap-1.5 rounded-md border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-[var(--cc-text-body)] hover:bg-white/[0.08] hover:text-[var(--cc-text)] transition">
+          <button onClick={() => void load()} className="inline-flex items-center gap-1.5 rounded-md border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[13px] font-medium text-[var(--cc-text-body)] hover:bg-white/[0.08] hover:text-[var(--cc-text)] transition">
             <RefreshCw size={13} />
             Refresh
           </button>
@@ -299,7 +299,7 @@ export default function Analytics() {
                 <button
                   key={m}
                   onClick={() => setMetric(m)}
-                  className={`px-3 py-1.5 rounded-md font-mono text-[11px] font-medium uppercase tracking-wider transition ${
+                  className={`px-3 py-1.5 rounded-md text-[13px] font-medium transition ${
                     metric === m
                       ? 'bg-[var(--cc-lime)]/12 text-[var(--cc-lime)] border border-[var(--cc-lime)]/30'
                       : 'text-[var(--cc-text-muted)] hover:text-[var(--cc-text-body)] border border-transparent hover:bg-white/[0.04]'

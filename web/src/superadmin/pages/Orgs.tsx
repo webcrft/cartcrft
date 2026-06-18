@@ -68,32 +68,32 @@ function OrgDetailView({ orgId, token, onBack, handle401 }: { orgId: string; tok
   return (
     <div>
       <div className="mb-5">
-        <button onClick={onBack} className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-[var(--cc-text-muted)] hover:text-[var(--cc-lime)] transition mb-4">
-          <ArrowLeft size={13} /> Back to orgs
+        <button onClick={onBack} className="flex items-center gap-1.5 text-[12px] font-medium text-[var(--cc-text-muted)] hover:text-[var(--cc-text)] transition mb-4">
+          <ArrowLeft size={14} /> Back to orgs
         </button>
         <PageHeader
           title={org.name || org.id}
           description={`Org ID: ${org.id}`}
-          badge={<Badge color="slate">{org.billing_status || 'active'}</Badge>}
+          badge={<Badge color="slate"><span className="capitalize">{org.billing_status || 'active'}</span></Badge>}
         />
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         <div className="rounded-lg border border-white/[0.07] bg-[var(--cc-surface)] px-5 py-4">
-          <p className="font-mono text-[10px] text-[var(--cc-text-subtle)] uppercase tracking-[0.14em] mb-1.5">Stores</p>
-          <p className="font-display text-2xl font-bold text-[var(--cc-text)]">{org.store_count}</p>
+          <p className="text-[13px] font-medium text-[var(--cc-text-muted)] mb-1.5">Stores</p>
+          <p className="font-display text-2xl font-bold tabular-nums text-[var(--cc-text)]">{org.store_count}</p>
         </div>
         <div className="rounded-lg border border-white/[0.07] bg-[var(--cc-surface)] px-5 py-4">
-          <p className="font-mono text-[10px] text-[var(--cc-text-subtle)] uppercase tracking-[0.14em] mb-1.5">Customers</p>
-          <p className="font-display text-2xl font-bold text-[var(--cc-text)]">{org.customer_count}</p>
+          <p className="text-[13px] font-medium text-[var(--cc-text-muted)] mb-1.5">Customers</p>
+          <p className="font-display text-2xl font-bold tabular-nums text-[var(--cc-text)]">{org.customer_count}</p>
         </div>
         <div className="rounded-lg border border-white/[0.07] bg-[var(--cc-surface)] px-5 py-4">
-          <p className="font-mono text-[10px] text-[var(--cc-text-subtle)] uppercase tracking-[0.14em] mb-1.5">Orders</p>
-          <p className="font-display text-2xl font-bold text-[var(--cc-text)]">{org.order_count}</p>
+          <p className="text-[13px] font-medium text-[var(--cc-text-muted)] mb-1.5">Orders</p>
+          <p className="font-display text-2xl font-bold tabular-nums text-[var(--cc-text)]">{org.order_count}</p>
         </div>
         <div className="rounded-lg border border-white/[0.07] bg-[var(--cc-surface)] px-5 py-4">
-          <p className="font-mono text-[10px] text-[var(--cc-text-subtle)] uppercase tracking-[0.14em] mb-1.5">GMV</p>
-          <p className="font-display text-2xl font-bold text-[var(--cc-lime)]">{fmtUsd(org.gmv)}</p>
+          <p className="text-[13px] font-medium text-[var(--cc-text-muted)] mb-1.5">GMV</p>
+          <p className="font-display text-2xl font-bold tabular-nums text-[var(--cc-lime)]">{fmtUsd(org.gmv)}</p>
         </div>
       </div>
 
@@ -111,17 +111,17 @@ function OrgDetailView({ orgId, token, onBack, handle401 }: { orgId: string; tok
               {org.stores.map(s => (
                 <tr key={s.id} className="border-t border-white/[0.04] hover:bg-white/[0.02]">
                   <Td>
-                    <p className="text-xs font-medium text-[var(--cc-text-body)]">{s.name}</p>
-                    <p className="text-[11px] text-[var(--cc-text-subtle)] font-mono">{s.id}</p>
+                    <p className="text-[13px] font-medium text-[var(--cc-text-body)]">{s.name}</p>
+                    <p className="text-[12px] text-[var(--cc-text-muted)] font-mono">{s.id}</p>
                   </Td>
-                  <Td><span className="text-xs text-[var(--cc-text-muted)] font-mono">{s.currency}</span></Td>
+                  <Td><span className="text-[12px] text-[var(--cc-text-muted)] font-mono">{s.currency}</span></Td>
                   <Td>
                     <Badge color={s.status === 'active' ? 'emerald' : s.status === 'suspended' ? 'amber' : 'red'}>
-                      {s.status}
+                      <span className="capitalize">{s.status}</span>
                     </Badge>
                   </Td>
-                  <Td><span className="text-xs text-[var(--cc-text-muted)] tabular-nums">{s.order_count}</span></Td>
-                  <Td><span className="text-xs text-[var(--cc-lime)] tabular-nums">{fmtUsd(s.gmv)}</span></Td>
+                  <Td><span className="text-[13px] text-[var(--cc-text-body)] tabular-nums">{s.order_count}</span></Td>
+                  <Td><span className="text-[13px] text-[var(--cc-lime)] tabular-nums">{fmtUsd(s.gmv)}</span></Td>
                 </tr>
               ))}
             </tbody>
@@ -215,23 +215,23 @@ export default function Orgs() {
             {filtered.map(org => (
               <tr key={org.id} className="border-t border-white/[0.04] hover:bg-white/[0.02]">
                 <Td>
-                  <p className="text-xs font-medium text-[var(--cc-text-body)]">{org.name || '—'}</p>
-                  <p className="text-[11px] text-[var(--cc-text-subtle)] font-mono">{org.id}</p>
-                  {org.email && <p className="text-[11px] text-[var(--cc-text-muted)]">{org.email}</p>}
+                  <p className="text-[13px] font-medium text-[var(--cc-text-body)]">{org.name || '—'}</p>
+                  <p className="text-[12px] text-[var(--cc-text-muted)] font-mono">{org.id}</p>
+                  {org.email && <p className="text-[12px] text-[var(--cc-text-muted)]">{org.email}</p>}
                 </Td>
-                <Td><span className="text-xs text-[var(--cc-text-muted)] tabular-nums">{org.store_count}</span></Td>
-                <Td><span className="text-xs text-[var(--cc-text-muted)] tabular-nums">{org.order_count}</span></Td>
-                <Td><span className="text-xs text-[var(--cc-lime)] tabular-nums">{fmtUsd(org.gmv)}</span></Td>
+                <Td><span className="text-[13px] text-[var(--cc-text-body)] tabular-nums">{org.store_count}</span></Td>
+                <Td><span className="text-[13px] text-[var(--cc-text-body)] tabular-nums">{org.order_count}</span></Td>
+                <Td><span className="text-[13px] text-[var(--cc-lime)] tabular-nums">{fmtUsd(org.gmv)}</span></Td>
                 <Td>
                   <Badge color={org.billing_status === 'active' ? 'emerald' : 'slate'}>
-                    {org.billing_status || 'active'}
+                    <span className="capitalize">{org.billing_status || 'active'}</span>
                   </Badge>
                 </Td>
-                <Td><span className="text-xs text-[var(--cc-text-muted)] tabular-nums">{new Date(org.created_at).toLocaleDateString()}</span></Td>
+                <Td><span className="text-[13px] text-[var(--cc-text-muted)] font-mono tabular-nums">{new Date(org.created_at).toLocaleDateString()}</span></Td>
                 <Td>
                   <button
                     onClick={() => setSelectedId(org.id)}
-                    className="text-xs font-medium text-[var(--cc-lime)] hover:text-[var(--cc-lime-bright)] transition"
+                    className="text-[13px] font-medium text-[var(--cc-lime)] hover:text-[var(--cc-lime-bright)] transition"
                   >
                     View
                   </button>

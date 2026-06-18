@@ -49,13 +49,13 @@
 
   /* — Warm near-black canvas + off-white ink — remaps every slate-* utility — */
   --color-slate-50:  #f7f6ef;
-  --color-slate-100: #eceae0;   /* primary text */
-  --color-slate-200: #d6d4c7;
-  --color-slate-300: #b6b6aa;   /* body */
-  --color-slate-400: #85867a;   /* muted */
-  --color-slate-500: #5d5e53;   /* subtle / captions */
-  --color-slate-600: #43453a;
-  --color-slate-700: #353826;   /* hairline strong */
+  --color-slate-100: #f3f1e8;   /* primary text */
+  --color-slate-200: #dad9cc;
+  --color-slate-300: #cac9bd;   /* body */
+  --color-slate-400: #9c9d8f;   /* muted */
+  --color-slate-500: #797a6d;   /* subtle / captions */
+  --color-slate-600: #4a4c40;
+  --color-slate-700: #3b3e2a;   /* hairline strong */
   --color-slate-800: #25271b;   /* hairline */
   --color-slate-900: #16170f;   /* surface / cards */
   --color-slate-950: #0c0d0a;   /* canvas */

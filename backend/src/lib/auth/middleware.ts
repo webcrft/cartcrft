@@ -30,6 +30,7 @@
  *   RATE_LIMIT_EXCEEDED  — IP rate limit hit
  */
 
+import { createHash } from "node:crypto";
 import type {
   FastifyRequest,
   FastifyReply,
@@ -136,6 +137,31 @@ export const rateLimitHook: preHandlerHookHandler = async (
   }
 };
 
+/**
+ * Per-API-key request cap (fixed 60-second window), enforced in addition to the
+ * global per-IP limiter. The global IP limiter does not protect against a single
+ * key fanning out across many IPs; this caps each key independently. Public
+ * (cc_pub_) keys are browser-exposed and especially need a ceiling.
+ *
+ * 600 req/min/key is a sane default headroom for legitimate server-side use.
+ */
+const API_KEY_RATE_LIMIT_PER_MINUTE = 600;
+
+/**
+ * Throttle a single API key using the same KV fixed-window limiter as the
+ * global IP limiter (rl:<ip>), under a separate rl:key:<hash> bucket so the two
+ * limits are independent. The raw key is hashed before use as a bucket label so
+ * the secret never lands in the KV.
+ *
+ * Returns true when the request is OVER the limit (caller should 429).
+ */
+async function apiKeyOverRateLimit(rawKey: string): Promise<boolean> {
+  const bucket = createHash("sha256").update(rawKey).digest("hex");
+  const kv = getKvSync() ?? _fallbackKv;
+  const count = await kv.incrWithWindow(`rl:key:${bucket}`, 60_000);
+  return count > API_KEY_RATE_LIMIT_PER_MINUTE;
+}
+
 // ── Error helpers ─────────────────────────────────────────────────────────────
 
 async function sendUnauthorized(
@@ -211,6 +237,18 @@ async function resolveStoreAuth(
     const cached = await lookupApiKey(bearer);
     if (!cached) {
       return sendUnauthorized(reply, "invalid or expired API key");
+    }
+
+    // SEC: per-key rate limit. The global IP limiter does not stop one key from
+    // spreading load across many IPs; cap each key independently here.
+    if (await apiKeyOverRateLimit(bearer)) {
+      await reply.status(429).send({
+        error: {
+          code: "RATE_LIMIT_EXCEEDED",
+          message: `Rate limit exceeded: ${API_KEY_RATE_LIMIT_PER_MINUTE} requests per minute per API key`,
+        },
+      });
+      return;
     }
 
     // Verify the key's org matches the store.
@@ -295,6 +333,37 @@ async function resolveStoreAuth(
     ? (typeof claims.scope === "string" ? claims.scope.split(" ").filter(Boolean) : [])
     : undefined;
 
+  // ── Coarse, central OAuth tier enforcement (T-OAuth) ───────────────────────
+  // requireScope() is wired on only a handful of routes, so without a central
+  // gate ANY granted OAuth token would get full read/write/admin across the
+  // ~387 store routes. Enforce here, once, at the shared resolver: an OAuth
+  // principal must hold a scope of the right CLASS for the route's tier —
+  //   read  tier → any *:read   (write/admin imply read, so any scope works)
+  //   write tier → any *:write
+  //   admin tier → an admin-class scope (the fixed OAuth catalogue has NONE,
+  //                so OAuth tokens are denied admin-tier routes — fail closed)
+  // This is COARSE tier-level enforcement; per-resource scope granularity
+  // (e.g. orders:write vs catalog:write on the specific route) is a follow-up
+  // handled by the existing requireScope() preHandler where it is wired.
+  if (oauthApp) {
+    const granted = oauthScopes ?? [];
+    const satisfiesTier =
+      requiredTier === "read"
+        ? granted.some((s) => s.endsWith(":read") || s.endsWith(":write") || s.endsWith(":admin"))
+        : requiredTier === "write"
+          ? granted.some((s) => s.endsWith(":write") || s.endsWith(":admin"))
+          : // admin tier — no admin-class OAuth scope exists; always deny.
+            granted.some((s) => s.endsWith(":admin"));
+    if (!satisfiesTier) {
+      return reply.status(403).send({
+        error: {
+          code: "INSUFFICIENT_SCOPE",
+          message: `this OAuth token lacks a scope sufficient for ${requiredTier}-tier access to this endpoint`,
+        },
+      });
+    }
+  }
+
   request.auth = {
     storeId,
     orgId,
@@ -317,9 +386,12 @@ async function resolveStoreAuth(
  *
  * Attaches { orgId, userId, authType: "jwt" } to request.auth.
  *
- * NOTE: this also accepts OAuth access tokens (which carry oauth_app + scope
- * claims).  For /account/** management routes that must NOT be reachable by
- * OAuth tokens, use `requireDashboardJwt` instead.
+ * SEC: org-level routes are NOT store-scoped, so the central OAuth tier gate in
+ * resolveStoreAuth() never runs for them — an OAuth token would otherwise reach
+ * org-level management endpoints (list/create stores, api-keys) with no scope
+ * check. Reject oauth_app principals here, matching requireDashboardJwt's
+ * stance. If a future org-level route legitimately needs OAuth access, gate it
+ * with a dedicated scope check rather than relaxing this default-reject.
  */
 export const requireJwt: preHandlerHookHandler = async (request, reply) => {
   const authorization = request.headers["authorization"] ?? "";
@@ -334,6 +406,14 @@ export const requireJwt: preHandlerHookHandler = async (request, reply) => {
   const claims = await verifyJwt(bearer);
   if (!claims) {
     return sendUnauthorized(reply, "invalid or expired token");
+  }
+
+  // SEC: reject OAuth access tokens on org-level routes (see doc comment).
+  if (claims.oauth_app) {
+    return sendForbidden(
+      reply,
+      "OAuth access tokens cannot access org-level management endpoints; use a dashboard session token"
+    );
   }
 
   request.auth = {

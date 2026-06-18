@@ -26,16 +26,17 @@
   --cc-bg-sunken: #080906;
   --cc-surface: #16170f;      /* cards */
   --cc-surface-2: #1c1e13;
+  --cc-surface-3: #24261a;    /* hover / raised */
 
-  /* Off-white ink ramp */
-  --cc-text: #eceae0;
-  --cc-body: #b6b6aa;
-  --cc-muted: #85867a;
-  --cc-subtle: #5d5e53;
+  /* Off-white ink ramp — lifted for legibility on the warm-dark canvas */
+  --cc-text: #f3f1e8;         /* primary headings / key values */
+  --cc-body: #cac9bd;         /* body copy */
+  --cc-muted: #9c9d8f;        /* secondary labels */
+  --cc-subtle: #797a6d;       /* captions / hints */
 
   /* Warm dark hairlines */
-  --cc-line: rgba(255, 255, 255, 0.07);
-  --cc-line-strong: #353826;
+  --cc-line: rgba(255, 255, 255, 0.09);
+  --cc-line-strong: #3b3e2a;
 
   --cc-font-display: 'Bricolage Grotesque', ui-sans-serif, Georgia, serif;
   --cc-font-sans: 'Hanken Grotesk', ui-sans-serif, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;

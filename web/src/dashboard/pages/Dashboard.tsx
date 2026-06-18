@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useStore } from '../context/StoreContext'
 import { getSdk } from '../lib/sdk'
 import {
@@ -44,7 +45,7 @@ function MetricCard({
         style={{ background: 'radial-gradient(circle,rgba(181,255,46,0.1),transparent 70%)' }}
       />
       <div className="flex items-start justify-between gap-3">
-        <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--cc-muted)]">{label}</p>
+        <p className="text-[13px] font-medium text-[var(--cc-muted)]">{label}</p>
         <div
           className="flex h-8 w-8 items-center justify-center rounded-lg flex-shrink-0 text-[var(--cc-lime)]"
           style={{ background: 'rgba(181,255,46,0.1)', border: '1px solid rgba(181,255,46,0.18)' }}
@@ -52,21 +53,21 @@ function MetricCard({
           <Icon size={14} />
         </div>
       </div>
-      <div className="mt-3">
+      <div className="mt-3.5 flex items-baseline gap-1">
         {prefix && (
-          <span className="text-xs text-[var(--cc-muted)] mr-0.5">{prefix}</span>
+          <span className="text-sm text-[var(--cc-muted)]">{prefix}</span>
         )}
         <span
-          className="text-2xl font-bold tracking-tight tabular-nums text-[var(--cc-text)]"
+          className="text-[1.75rem] font-bold tabular-nums text-[var(--cc-text)] leading-none"
           style={{ fontFamily: 'var(--cc-font-display)', letterSpacing: '-0.03em' }}
         >
           {value}
         </span>
       </div>
       {trend && (
-        <div className="mt-2 flex items-center gap-1">
-          <ArrowUpRight size={11} className="text-[var(--cc-lime)]" />
-          <span className="text-[11px] text-[var(--cc-muted)]">{trend}</span>
+        <div className="mt-2.5 flex items-center gap-1">
+          <ArrowUpRight size={12} className="text-[var(--cc-lime)]" />
+          <span className="text-[12px] text-[var(--cc-muted)]">{trend}</span>
         </div>
       )}
     </div>
@@ -134,7 +135,7 @@ export default function Dashboard() {
       />
 
       {/* Metric cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {loading ? (
           Array.from({ length: 4 }).map((_, i) => <MetricSkeleton key={i} />)
         ) : (
@@ -166,7 +167,20 @@ export default function Dashboard() {
       </div>
 
       {/* Recent orders */}
-      <Card title="Recent Orders">
+      <Card
+        title="Recent orders"
+        actions={
+          orders.length > 0 ? (
+            <Link
+              to="/orders"
+              className="inline-flex items-center gap-1 text-[13px] font-medium text-[var(--cc-lime)] hover:text-[var(--cc-lime-bright)] transition"
+            >
+              View all
+              <ArrowUpRight size={13} />
+            </Link>
+          ) : undefined
+        }
+      >
         {loading ? (
           <div className="flex justify-center py-8">
             <Spinner />

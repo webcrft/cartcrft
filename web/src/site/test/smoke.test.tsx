@@ -42,7 +42,7 @@ describe('site zone — marketing renders', () => {
 
   it('pricing mounts with plan tiers', () => {
     const { container } = renderAt(<Pricing />, '/pricing')
-    expect(container.textContent).toMatch(/starter/i)
+    expect(container.textContent).toMatch(/solo|studio|growth|scale/i)
   })
 
   it('legal pages mount with draft banner', () => {

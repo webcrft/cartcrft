@@ -5,7 +5,20 @@ import { useDocumentMeta } from '../useDocumentMeta'
 import PricingCard, { type PricingCardProps } from './components/PricingCard'
 import ComparisonTable, { type ComparisonRow } from './components/ComparisonTable'
 import PricingCalculator from './components/PricingCalculator'
+import { PLANS } from './pricingData'
 import './Pricing.css'
+
+// Flat-tier billing copy, sourced from the shared catalog (./pricingData).
+const solo = PLANS.find((p) => p.id === 'solo')!
+const studio = PLANS.find((p) => p.id === 'studio')!
+const growth = PLANS.find((p) => p.id === 'growth')!
+const scale = PLANS.find((p) => p.id === 'scale')!
+const intFmt = new Intl.NumberFormat('en-US')
+
+/** "Up to 3 sites · 5,000 orders/mo · 3 seats" — these are upgrade boundaries, never metered. */
+const sitesLine = (p: typeof solo) => `Up to ${p.sites} site${p.sites === 1 ? '' : 's'}`
+const ordersLine = (p: typeof solo) => `${intFmt.format(p.orders)} orders/mo`
+const seatsLine = (p: typeof solo) => `${p.seats} team seat${p.seats === 1 ? '' : 's'}`
 
 /**
  * Pricing page — /pricing
@@ -37,73 +50,101 @@ const tiers: PricingCardProps[] = [
     badge: undefined,
   },
   {
-    name: 'Cloud Nano',
-    price: '$19',
+    name: 'Solo',
+    price: '$9',
     priceSub: '/mo',
     description:
-      'Managed cloud for early-stage stores under $4k/mo GMV. Zero percent rake — beats Shopify Basic at $1k GMV by $40/mo.',
+      'One store, flat. For a single shop getting off the ground. No transaction fees, no rake — your sales are yours.',
     features: [
       'Everything in Open Source',
       'Managed Postgres + pgvector (included)',
       'Automated daily backups',
-      'One-click deploy + zero-downtime upgrades',
       'Managed SSL + custom domain',
-      '1 store, 1 team seat',
-      '200 orders/mo included',
-      'Community support (GitHub)',
-      '0% GMV rake — flat fee only',
+      sitesLine(solo),
+      ordersLine(solo),
+      seatsLine(solo),
+      '0% GMV rake',
+      'No transaction fees',
       'BYO payment keys (Stripe / Paystack)',
+      'Community support (GitHub)',
     ],
     cta: {
       label: 'Join the waitlist',
-      href: 'mailto:hello@webcrft.io?subject=Cloud+Nano+waitlist',
+      href: 'mailto:hello@webcrft.io?subject=Solo+waitlist',
     },
     highlighted: false,
     badge: 'Preview pricing',
   },
   {
-    name: 'Cloud Starter',
-    price: '$79',
+    name: 'Studio',
+    price: '$29',
     priceSub: '/mo',
     description:
-      'Managed infra, one-click deploy, automatic backups and upgrades. Zero percent rake — you pay Stripe/Paystack directly at cost.',
+      'A few stores, one flat fee. Managed infra, backups and upgrades. Still zero percent of your revenue.',
     features: [
-      'Everything in Open Source',
-      'Managed Postgres + pgvector (included)',
-      'Automated daily backups',
+      'Everything in Solo',
       'One-click deploy + zero-downtime upgrades',
       'Agent-surface onboarding wizard',
-      'Managed SSL + custom domain',
-      '1 store, up to 3 team seats',
+      sitesLine(studio),
+      ordersLine(studio),
+      seatsLine(studio),
+      '0% GMV rake',
+      'No transaction fees',
+      'BYO payment keys (Stripe / Paystack)',
       'Email support (next business day)',
-      '0% GMV rake — flat fee only',
-      'Billed in USD via Paystack or Stripe',
     ],
     cta: {
       label: 'Join the waitlist',
-      href: 'mailto:hello@webcrft.io?subject=Cloud+Starter+waitlist',
+      href: 'mailto:hello@webcrft.io?subject=Studio+waitlist',
+    },
+    highlighted: false,
+    badge: 'Preview pricing',
+  },
+  {
+    name: 'Growth',
+    price: '$79',
+    priceSub: '/mo',
+    description:
+      'Multi-store scaling on a flat fee. The same $79 whether you do $10k or $1M in sales — Shopify would rake thousands.',
+    features: [
+      'Everything in Studio',
+      sitesLine(growth),
+      ordersLine(growth),
+      seatsLine(growth),
+      'Higher compute + storage allocation',
+      '0% GMV rake',
+      'No transaction fees',
+      'BYO payment keys (Stripe / Paystack)',
+      'Priority email support',
+      'SLA: 99.9% monthly uptime target',
+    ],
+    cta: {
+      label: 'Join the waitlist',
+      href: 'mailto:hello@webcrft.io?subject=Growth+waitlist',
     },
     highlighted: true,
     badge: 'Preview pricing',
   },
   {
-    name: 'Cloud Scale',
+    name: 'Scale',
     price: '$199',
     priceSub: '/mo',
-    description: 'More resources, more seats, multi-store support. Still flat — no percentage of your revenue.',
+    description: 'Serious multi-store volume, still flat. No percentage of your revenue — ever.',
     features: [
-      'Everything in Cloud Starter',
-      'Up to 5 stores',
-      'Up to 10 team seats',
-      'Higher compute + storage allocation',
-      'Priority email support',
+      'Everything in Growth',
+      sitesLine(scale),
+      ordersLine(scale),
+      seatsLine(scale),
+      'Highest compute + storage allocation',
+      '0% GMV rake',
+      'No transaction fees',
+      'BYO payment keys (Stripe / Paystack)',
+      'Priority support + dedicated onboarding',
       'SLA: 99.9% monthly uptime target',
-      'Dedicated onboarding session',
-      '0% GMV rake — flat fee only',
     ],
     cta: {
       label: 'Join the waitlist',
-      href: 'mailto:hello@webcrft.io?subject=Cloud+Scale+waitlist',
+      href: 'mailto:hello@webcrft.io?subject=Scale+waitlist',
     },
     highlighted: false,
     badge: 'Preview pricing',
@@ -113,15 +154,15 @@ const tiers: PricingCardProps[] = [
     price: 'Custom',
     priceSub: '',
     description:
-      'On-prem or cloud. Custom SLAs, SSO, dedicated support, and volume discounts negotiated directly.',
+      'On-prem or cloud. Custom SLAs, SSO, dedicated support, and volume terms negotiated directly. Still flat — never a rake.',
     features: [
-      'Everything in Cloud Scale',
+      'Everything in Scale',
       'On-prem or private cloud deployment',
       'Custom SLA + dedicated support',
       'SSO / SAML integration',
       'Custom integrations + professional services',
       'Audit log export + compliance reports',
-      'Volume pricing for extra stores',
+      'Custom flat plan for high store counts',
     ],
     cta: {
       label: 'Talk to us',
@@ -138,7 +179,7 @@ const compRows: ComparisonRow[] = [
     category: 'Pricing model',
     feature: 'Monthly platform fee',
     values: {
-      'CartCrft Cloud': '$19-$199 flat',
+      'CartCrft Cloud': '$9-$199 flat',
       'Shopify Basic': '$39/mo',
       'Medusa Cloud': '$99-$299/mo',
       'Self-host': '~$20-$60 infra',
@@ -288,7 +329,11 @@ const faqs: { q: string; a: string }[] = [
   },
   {
     q: 'What does "0% GMV rake" actually mean?',
-    a: 'It means CartCrft takes zero percentage of your revenue. When a customer pays $100, $100 lands in your Stripe or Paystack account (minus what Stripe/Paystack charges — typically 2.9% + $0.30 for Stripe, 2.9% + R1 for Paystack SA). CartCrft\'s flat monthly fee is the same whether you do $1,000 or $1,000,000 in sales that month.',
+    a: 'It means CartCrft takes zero percentage of your revenue and charges no per-transaction fee. When a customer pays $100, $100 lands in your Stripe or Paystack account (minus what Stripe/Paystack charges — typically 2.9% + $0.30 for Stripe, 2.9% + R1 for Paystack SA). CartCrft\'s flat monthly fee is the same whether you do $1,000 or $1,000,000 in sales that month.',
+  },
+  {
+    q: 'Are the plan limits (sites, orders, seats) charged per unit?',
+    a: 'No. The sites, orders/mo, and seats on each plan are upgrade boundaries — they decide which flat tier fits your usage, nothing more. There are no per-site, per-order, or per-seat overage charges. If you outgrow a tier you move up to the next flat price (Solo $9 → Studio $29 → Growth $79 → Scale $199), or talk to us about Enterprise. Your bill never moves with your sales.',
   },
   {
     q: "How does payment processing work if CartCrft doesn't touch payments?",
@@ -307,7 +352,7 @@ const faqs: { q: string; a: string }[] = [
     a: "CartCrft Cloud is in active development. The tier structure and prices shown here are illustrative and grounded in our cost model, but are not final. We're being upfront rather than publishing a price sheet and changing it later. Waitlist members will be notified of final pricing before billing starts.",
   },
   {
-    q: 'Can I switch from self-host to Cloud Starter later?',
+    q: 'Can I switch from self-host to a Cloud plan later?',
     a: 'Yes. The MIT backend and the cloud-hosted backend are the same codebase. You can self-host while you evaluate, then migrate your Postgres database to the managed cloud instance when ready. No data lock-in, no proprietary format.',
   },
   {
@@ -388,7 +433,7 @@ export default function Pricing() {
           <div className="money-inner">
             <h2>Where your money goes</h2>
             <p className="money-sub">
-              Cloud Starter at $79/mo. Merchant using Paystack SA doing $10k/mo GMV over ~200 orders.
+              Growth at $79/mo. Merchant using Paystack SA doing $10k/mo GMV over ~200 orders.
             </p>
 
             <div className="money-grid">
@@ -420,7 +465,7 @@ export default function Pricing() {
 
             <p className="money-note">
               <strong>The anti-Shopify comparison:</strong> Shopify Basic at $39/mo + 2.0% external-gateway fee on $10k GMV
-              = $39 + $200 = $239/mo before any paid apps. CartCrft Cloud Starter: $79 flat + $295 Paystack at cost = $374/mo
+              = $39 + $200 = $239/mo before any paid apps. CartCrft Growth: $79 flat + $295 Paystack at cost = $374/mo
               total — but Paystack's cut goes to Paystack, not us. At $50k/mo GMV, Shopify's rake alone is $1,000/mo
               extra on top of the $39 plan. CartCrft: still $79 flat.
             </p>
@@ -501,7 +546,7 @@ export default function Pricing() {
                   </tr>
                   <tr className="row-ours">
                     <td className="td-platform">
-                      <strong>CartCrft Cloud Starter</strong>
+                      <strong>CartCrft Growth</strong>
                       <span className="td-note">Preview · managed infra</span>
                     </td>
                     <td>$79 flat</td>
@@ -517,18 +562,18 @@ export default function Pricing() {
                   </tr>
                   <tr className="row-ours">
                     <td className="td-platform">
-                      <strong>CartCrft Cloud Nano</strong>
-                      <span className="td-note">Preview · sub-$4k GMV entry tier</span>
+                      <strong>CartCrft Solo / Studio</strong>
+                      <span className="td-note">Preview · single-store entry tiers</span>
                     </td>
-                    <td>$19 flat</td>
+                    <td>$9–$29 flat</td>
                     <td>
                       <span className="rake-good">$0</span>
                       <span className="rake-pct">(0% rake)</span>
                     </td>
                     <td>Paystack/Stripe at cost (~$290)</td>
                     <td className="td-total">
-                      <strong className="total-good">~$309</strong>
-                      <span className="td-note">vs Shopify Basic ~$539 at $10k GMV</span>
+                      <strong className="total-good">~$299–$319</strong>
+                      <span className="td-note">vs Shopify Basic $239 fee+rake at $10k GMV</span>
                     </td>
                   </tr>
                 </tbody>
@@ -562,14 +607,15 @@ export default function Pricing() {
                   {' '}and <code>billingmodel/costs.py</code> (paystack_pct=0.029, paystack_flat_zar=1.0).
                 </li>
                 <li>
-                  <strong>CartCrft Cloud Nano:</strong> $19/mo illustrative flat fee (preview, subject to change before GA).
-                  1 store, 200 orders/mo, community support only. 0% GMV rake. Positioned for sub-$4k-GMV merchants
-                  where Starter's $79 flat fee is not yet covered by the 0% rake advantage.
-                  At $1k GMV: Nano $49/mo total vs Shopify Basic $89/mo — Nano saves $40/mo.
+                  <strong>CartCrft Solo:</strong> $9/mo illustrative flat fee (preview, subject to change before GA).
+                  1 site, up to 1,000 orders/mo, 1 seat, community support. 0% GMV rake, no transaction fees. Entry tier for a
+                  single store. At $1k GMV: Solo $39/mo total (incl. ~$30 Paystack at cost) vs Shopify Basic $89/mo — Solo saves
+                  ~$50/mo. Limits are upgrade boundaries, never per-unit charges.
                 </li>
                 <li>
-                  <strong>CartCrft Cloud Starter:</strong> $79/mo illustrative flat fee (preview, subject to change before GA).
-                  0% GMV rake. Payment processing goes to Paystack/Stripe at cost.
+                  <strong>CartCrft Growth:</strong> $79/mo illustrative flat fee (preview, subject to change before GA).
+                  Up to 10 sites / 25,000 orders/mo / 10 seats. 0% GMV rake, no transaction fees. Payment processing goes to
+                  Paystack/Stripe at cost.
                 </li>
                 <li>
                   <strong>Honest caveat:</strong> Self-hosting is cheapest at scale if you have ops capacity.
@@ -624,8 +670,8 @@ export default function Pricing() {
                 additionally on top. Upgrade to Shopify Advanced to reduce rake to 0.6% at $299/mo.
               </p>
               <div className="nano-callout" role="note">
-                <strong>Under $4k/mo GMV?</strong> The Cloud Nano tier at $19/mo gives you the same 0% rake
-                at a lower entry point. Nano total at $1k GMV = $49/mo vs Shopify Basic $89/mo — you save $40/mo.
+                <strong>Just one store?</strong> The Solo tier at $9/mo gives you the same 0% rake and zero transaction fees
+                at the lowest entry point. Solo total at $1k GMV ≈ $39/mo vs Shopify Basic $89/mo — you save ~$50/mo.
               </div>
             </div>
           </div>

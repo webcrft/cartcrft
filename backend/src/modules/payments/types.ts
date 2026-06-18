@@ -86,7 +86,9 @@ export interface PaymentProvider {
   type: string;
   slug: string | null;
   webhook_url: string | null;
-  webhook_secret: string | null;
+  // SEC: the webhook_secret is never returned to clients. Expose only whether
+  // one is configured, mirroring the gateway path's has_* booleans.
+  has_webhook_secret: boolean;
   config: Record<string, unknown>;
   is_active: boolean;
   position: number;

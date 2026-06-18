@@ -22,11 +22,23 @@
 
 import { createHmac } from "node:crypto";
 import { getPool } from "../../db/pool.js";
+import { assertSafeOutboundUrl } from "../../lib/net/ssrf.js";
 import { config } from "../../config/config.js";
+
+/**
+ * Whether to relax the SSRF guard to permit loopback/private webhook targets.
+ * Computed once at module load. Only the multi-tenant cloud (APP_ENV=production)
+ * enforces full SSRF blocking; dev/test/self-host may legitimately point a
+ * webhook at localhost or an internal service. NOTE: inside deliverWebhook the
+ * name `config` is shadowed by the destructured provider.config, so this
+ * module-level constant must be used instead of `config.APP_ENV` there.
+ */
+const WEBHOOK_ALLOW_PRIVATE = config.APP_ENV !== "production";
 import { ConsoleMailer } from "../../lib/mailer/console.js";
 import { SesMailer } from "../../lib/mailer/ses.js";
 import type { Mailer } from "../../lib/mailer/index.js";
 import { renderEventEmail } from "../../lib/mailer/templates.js";
+import { newTwilioClient, TwilioClient, TwilioAPIError } from "../../providers/notifications/twilio.js";
 import type {
   NotificationProviderRow,
   CreateNotificationProviderInput,
@@ -66,6 +78,34 @@ export function setNotificationMailer(m: Mailer): void {
   _notifMailer = m;
 }
 
+// ── SMS/WhatsApp provider singleton (Twilio; injectable; env-resolved) ──────────
+
+/**
+ * Build a Twilio client from env config, mirroring buildMailerFromConfig().
+ * Returns null when Twilio is not configured (no account SID / auth token).
+ */
+function buildSmsProviderFromConfig(): TwilioClient | null {
+  if (config.TWILIO_ACCOUNT_SID && config.TWILIO_AUTH_TOKEN) {
+    return newTwilioClient({
+      accountSid: config.TWILIO_ACCOUNT_SID,
+      authToken: config.TWILIO_AUTH_TOKEN,
+      fromNumber: config.TWILIO_FROM_NUMBER,
+      messagingServiceSid: config.TWILIO_MESSAGING_SERVICE_SID,
+    });
+  }
+  return null;
+}
+
+let _smsProvider: TwilioClient | null = buildSmsProviderFromConfig();
+
+/**
+ * Override the Twilio client used for sms/whatsapp-type notification providers.
+ * Called by tests or by boot/wiring code. Mirrors setNotificationMailer().
+ */
+export function setNotificationSmsProvider(p: TwilioClient | null): void {
+  _smsProvider = p;
+}
+
 const MAX_RETRIES = 3;
 const RETRY_DELAYS_MS = [1_000, 5_000, 15_000]; // exponential-ish backoff
 
@@ -95,7 +135,29 @@ export async function createNotificationProvider(
 
   const name = input.name.trim();
   if (!name) throw Object.assign(new Error("name is required"), { code: "VALIDATION_ERROR" });
-  if (!input.webhook_url?.trim()) throw Object.assign(new Error("webhook_url is required"), { code: "VALIDATION_ERROR" });
+
+  const providerType = input.type ?? "webhook";
+
+  // webhook_url is required ONLY for webhook providers; email/sms/whatsapp omit it.
+  if (providerType === "webhook" && !input.webhook_url?.trim()) {
+    throw Object.assign(new Error("webhook_url is required"), { code: "VALIDATION_ERROR" });
+  }
+
+  // SSRF write-time guard (best-effort due to DNS TOCTOU; deliverWebhook re-checks
+  // at fetch time and is authoritative). Only webhook-type providers actually
+  // fetch webhook_url, so only they are SSRF-validated — email/sms/whatsapp may
+  // carry an unused/mailto value that must not be scheme-rejected here.
+  if (providerType === "webhook" && input.webhook_url?.trim()) {
+    try {
+      await assertSafeOutboundUrl(input.webhook_url.trim(), { allowPrivate: WEBHOOK_ALLOW_PRIVATE });
+    } catch (err) {
+      throw Object.assign(
+        new Error(`webhook_url rejected: ${err instanceof Error ? err.message : String(err)}`),
+        { code: "VALIDATION_ERROR" }
+      );
+    }
+  }
+
   if (!input.events || input.events.length === 0) {
     throw Object.assign(new Error("events must contain at least one event type"), { code: "VALIDATION_ERROR" });
   }
@@ -105,26 +167,18 @@ export async function createNotificationProvider(
     }
   }
 
-  // Reject unsupported provider types at create time (mirrors webcrft behaviour).
-  const providerType = input.type ?? "webhook";
-  if (providerType === "sms" || providerType === "whatsapp") {
-    throw Object.assign(
-      new Error(`provider type "${providerType}" is not supported — use "webhook" or "email"`),
-      { code: "VALIDATION_ERROR" }
-    );
-  }
-
   // Config can carry webhook_secret
   const cfg: Record<string, unknown> = { ...(input.config ?? {}) };
   if (input.webhook_secret) {
     cfg["webhook_secret"] = input.webhook_secret;
   }
+  const webhookUrl = input.webhook_url?.trim() ? input.webhook_url.trim() : null;
   const res = await pool.query<{ id: string }>(
     `INSERT INTO notification_providers
        (store_id, name, type, webhook_url, config, events, is_active)
      VALUES ($1::uuid, $2, $3, $4, $5::jsonb, $6, true)
      RETURNING id::text`,
-    [storeId, name, providerType, input.webhook_url.trim(), JSON.stringify(cfg), input.events]
+    [storeId, name, providerType, webhookUrl, JSON.stringify(cfg), input.events]
   );
   const id = res.rows[0]?.id;
   if (!id) throw new Error("createNotificationProvider: no id returned");
@@ -149,7 +203,25 @@ export async function updateNotificationProvider(
   };
 
   if (input.name !== undefined) add("name", input.name);
-  if (input.webhook_url !== undefined) add("webhook_url", input.webhook_url);
+  if (input.webhook_url !== undefined) {
+    // SSRF write-time guard (see createNotificationProvider). Best-effort only —
+    // the fetch-time guard in deliverWebhook is authoritative and only webhook
+    // providers ever fetch. The update input carries no `type`, so we validate
+    // only http(s) targets (real webhook sinks); a non-http value (e.g. a mailto
+    // on a non-webhook provider) is not a fetch sink and is left alone. Skip
+    // empty strings (clearing the URL).
+    if (input.webhook_url.trim() && /^https?:/i.test(input.webhook_url.trim())) {
+      try {
+        await assertSafeOutboundUrl(input.webhook_url.trim(), { allowPrivate: WEBHOOK_ALLOW_PRIVATE });
+      } catch (err) {
+        throw Object.assign(
+          new Error(`webhook_url rejected: ${err instanceof Error ? err.message : String(err)}`),
+          { code: "VALIDATION_ERROR" }
+        );
+      }
+    }
+    add("webhook_url", input.webhook_url);
+  }
   if (input.is_active !== undefined) add("is_active", input.is_active);
 
   if (input.events !== undefined) {
@@ -298,14 +370,8 @@ async function _dispatchStoreEvent(
       await deliverWebhook(pool, storeId, provider, eventType, body, out);
     } else if (provider.type === "email") {
       await deliverEmail(provider, eventType, out);
-    }
-    // sms/whatsapp: not implemented — no-op with warning (matches webcrft behaviour)
-    else if (provider.type === "sms" || provider.type === "whatsapp") {
-      console.warn("notification: sms/whatsapp provider type not supported — skipping", {
-        providerId: provider.id,
-        type: provider.type,
-        event: eventType,
-      });
+    } else if (provider.type === "sms" || provider.type === "whatsapp") {
+      await deliverSms(pool, storeId, provider, eventType, out);
     } else {
       console.info("notification: unhandled provider type", { type: provider.type, event: eventType });
     }
@@ -328,6 +394,28 @@ async function deliverWebhook(
   }
 
   const secret = typeof config["webhook_secret"] === "string" ? config["webhook_secret"] : "";
+
+  // SSRF fetch-time guard (authoritative). Validate the URL resolves only to
+  // public addresses before any network call. On block, record a failed delivery
+  // and return without ever fetching — never let dispatch reach internal targets.
+  try {
+    await assertSafeOutboundUrl(webhook_url, { allowPrivate: WEBHOOK_ALLOW_PRIVATE });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn("notification: webhook blocked by SSRF guard", { providerId, eventType, message });
+    await logDelivery(pool, {
+      providerId,
+      storeId,
+      event: eventType,
+      payload,
+      attempt: 1,
+      statusCode: null,
+      responseBody: null,
+      errorMessage: "blocked unsafe URL",
+      durationMs: 0,
+    });
+    return;
+  }
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     const start = Date.now();
@@ -352,6 +440,9 @@ async function deliverWebhook(
         method: "POST",
         headers,
         body,
+        // Do not follow redirects: a 3xx could bounce to an internal target that
+        // bypasses the pre-fetch SSRF check. Treat 3xx as a delivery outcome.
+        redirect: "manual",
         signal: AbortSignal.timeout(15_000),
       });
       statusCode = resp.status;
@@ -501,6 +592,150 @@ async function deliverEmail(
     console.info("notification: email delivered", { providerId: provider.id, eventType, to: toEmail });
   } catch (err) {
     console.error("notification: email delivery failed", { providerId: provider.id, eventType, err });
+  }
+}
+
+/**
+ * SMS / WhatsApp delivery via Twilio.
+ *
+ * Recipient resolution: provider.config.to_phone, else payload.phone, else skip.
+ * Client resolution: a per-provider Twilio client when provider.config carries
+ * account_sid + auth_token (+ optional from_number / messaging_service_sid),
+ * else the module-level _smsProvider (env-resolved). If neither is available we
+ * warn and skip.
+ *
+ * The provider.type ("sms" | "whatsapp") selects sendSms vs sendWhatsapp.
+ * Never throws out of dispatch — failures are logged to notification_delivery_log.
+ */
+async function deliverSms(
+  pool: ReturnType<typeof getPool>,
+  storeId: string,
+  provider: ProviderRecord,
+  eventType: string,
+  payload: Record<string, unknown>
+): Promise<void> {
+  const isWhatsapp = provider.type === "whatsapp";
+
+  const toPhone =
+    typeof provider.config["to_phone"] === "string" && provider.config["to_phone"]
+      ? provider.config["to_phone"]
+      : typeof payload["phone"] === "string"
+        ? payload["phone"]
+        : "";
+
+  if (!toPhone) {
+    console.warn("notification: sms/whatsapp provider has no recipient phone", {
+      providerId: provider.id,
+      eventType,
+    });
+    return;
+  }
+
+  // Resolve a Twilio client: per-provider config first, else module singleton.
+  let client: TwilioClient | null = null;
+  const cfgSid = provider.config["account_sid"];
+  const cfgToken = provider.config["auth_token"];
+  if (typeof cfgSid === "string" && cfgSid && typeof cfgToken === "string" && cfgToken) {
+    client = newTwilioClient({
+      accountSid: cfgSid,
+      authToken: cfgToken,
+      fromNumber:
+        typeof provider.config["from_number"] === "string"
+          ? provider.config["from_number"]
+          : undefined,
+      messagingServiceSid:
+        typeof provider.config["messaging_service_sid"] === "string"
+          ? provider.config["messaging_service_sid"]
+          : undefined,
+    });
+  } else {
+    client = _smsProvider;
+  }
+
+  if (!client) {
+    console.warn("notification: no Twilio client configured for sms/whatsapp", {
+      providerId: provider.id,
+      eventType,
+    });
+    return;
+  }
+
+  const messageBody = composeSmsBody(eventType, payload);
+
+  const start = Date.now();
+  try {
+    const result = isWhatsapp
+      ? await client.sendWhatsapp({ to: toPhone, body: messageBody })
+      : await client.sendSms({ to: toPhone, body: messageBody });
+
+    console.info("notification: sms/whatsapp delivered", {
+      providerId: provider.id,
+      eventType,
+      type: provider.type,
+      sid: result.sid,
+    });
+    await logDelivery(pool, {
+      providerId: provider.id,
+      storeId,
+      event: eventType,
+      payload,
+      attempt: 1,
+      statusCode: 200,
+      responseBody: result.sid,
+      errorMessage: null,
+      durationMs: Date.now() - start,
+    });
+  } catch (err) {
+    const errorMessage =
+      err instanceof TwilioAPIError
+        ? err.message
+        : err instanceof Error
+          ? err.message
+          : String(err);
+    console.error("notification: sms/whatsapp delivery failed", {
+      providerId: provider.id,
+      eventType,
+      type: provider.type,
+      err,
+    });
+    await logDelivery(pool, {
+      providerId: provider.id,
+      storeId,
+      event: eventType,
+      payload,
+      attempt: 1,
+      statusCode: null,
+      responseBody: null,
+      errorMessage,
+      durationMs: Date.now() - start,
+    });
+  }
+}
+
+/** Compose a concise SMS/WhatsApp message body for a known event type. */
+function composeSmsBody(eventType: string, payload: Record<string, unknown>): string {
+  const orderNumber =
+    typeof payload["order_number"] === "string" || typeof payload["order_number"] === "number"
+      ? String(payload["order_number"])
+      : "";
+  const tracking =
+    typeof payload["tracking_number"] === "string" && payload["tracking_number"]
+      ? payload["tracking_number"]
+      : typeof payload["tracking_reference"] === "string" && payload["tracking_reference"]
+        ? payload["tracking_reference"]
+        : "";
+
+  switch (eventType) {
+    case "order.created":
+      return orderNumber ? `Order #${orderNumber} confirmed` : "Order confirmed";
+    case "payment.captured":
+      return "Payment received";
+    case "shipment.created":
+      return tracking ? `Your order has shipped — tracking ${tracking}` : "Your order has shipped";
+    case "shipment.delivered":
+      return "Your order was delivered";
+    default:
+      return `${eventType} update`;
   }
 }
 

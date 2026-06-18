@@ -63,6 +63,19 @@ export {
   type ProrationResult,
 } from './math.js';
 
+// ── Canonical FLAT pricing model ──────────────────────────────────────────────
+export {
+  PLANS,
+  ANNUAL_MONTHS_BILLED,
+  getPlan,
+  computePlanPriceUsd,
+  planFits,
+  recommendPlan,
+  annualSavingsUsd,
+  type Plan,
+  type BillingPeriod,
+} from './pricing.js';
+
 // ── Billing engine ────────────────────────────────────────────────────────────
 export {
   BillingEngine,

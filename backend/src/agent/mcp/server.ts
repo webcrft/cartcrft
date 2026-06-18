@@ -28,6 +28,7 @@ import {
 } from "../../modules/checkout/service.js";
 import { completeCheckout } from "../../modules/checkout/complete.js";
 import { getOrder } from "../../modules/orders/service.js";
+import type { AgentHeaderCtx } from "../../modules/agents/types.js";
 
 // ── Tool result helpers ───────────────────────────────────────────────────────
 
@@ -69,8 +70,19 @@ function compact<T extends Record<string, unknown>>(obj: T): Partial<T> {
 /**
  * Build a per-store McpServer instance with all 9 tools registered.
  * The storeId is baked into every service call — no tool receives it as an argument.
+ *
+ * @param agentCtx Optional agent attribution resolved by the HTTP layer
+ *   (agent/mcp/http.ts) from the X-Cartcrft-Agent/Signature/Timestamp headers
+ *   via resolveAgentAttribution(). When present, complete_checkout threads it
+ *   into completeCheckout() so verifyAgentCheckout() enforces the agent's
+ *   spend window and mandate chain and the order is attributed (agent_id /
+ *   mandate_id stamped). When absent (plain merchant API key), the checkout
+ *   path is unchanged.
  */
-export function buildMcpServer(storeId: string): McpServer {
+export function buildMcpServer(
+  storeId: string,
+  agentCtx?: AgentHeaderCtx | undefined
+): McpServer {
   const server = new McpServer(
     {
       name: "cartcrft",
@@ -420,7 +432,11 @@ export function buildMcpServer(storeId: string): McpServer {
     },
     async (args) => {
       try {
-        const result = await completeCheckout(storeId, args.checkout_id);
+        // FIX 1: thread agentCtx (resolved from agent signature headers by the
+        // MCP HTTP layer) so spend-window + mandate enforcement and attribution
+        // run for agent-driven completes. agentCtx is undefined for plain
+        // merchant-key MCP sessions → checkout path unchanged.
+        const result = await completeCheckout(storeId, args.checkout_id, agentCtx);
         return ok({
           order_id: result.orderId,
           order_number: result.orderNumber,

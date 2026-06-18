@@ -60,8 +60,21 @@ const configSchema = z.object({
   AWS_SES_SECRET_ACCESS_KEY: z.string().optional(),
   EMAIL_FROM: z.string().optional(),
 
+  // Twilio (SMS + WhatsApp — BYO keys, all optional at boot)
+  TWILIO_ACCOUNT_SID: z.string().optional(),
+  TWILIO_AUTH_TOKEN: z.string().optional(),
+  TWILIO_FROM_NUMBER: z.string().optional(),
+  TWILIO_MESSAGING_SERVICE_SID: z.string().optional(),
+
   // Exchange rates
   EXCHANGE_RATE_API_KEY: z.string().optional(),
+
+  // Tax automation (TaxJar — BYO key, optional at boot)
+  TAXJAR_API_KEY: z.string().optional(),
+  TAXJAR_SANDBOX: z
+    .string()
+    .optional()
+    .transform((v) => v === "true" || v === "1"),
 
   // Billing sim
   BILLING_SIM_ENABLED: z

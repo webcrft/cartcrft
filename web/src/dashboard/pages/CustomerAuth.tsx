@@ -53,9 +53,9 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
     <button
       type="button"
       onClick={() => onChange(!checked)}
-      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${checked ? 'bg-violet-600' : 'bg-slate-700'}`}
+      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cc-lime)]/40 ${checked ? 'bg-[var(--cc-lime)]' : 'bg-white/[0.12]'}`}
     >
-      <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${checked ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
+      <span className={`inline-block h-3.5 w-3.5 transform rounded-full transition-transform ${checked ? 'translate-x-[18px] bg-[var(--cc-ink)]' : 'translate-x-0.5 bg-white'}`} />
     </button>
   )
 }
@@ -109,7 +109,7 @@ function AuthConfigTab({ storeId }: { storeId: string }) {
 
   const boolField = (key: keyof AuthConfig, label: string) => (
     <div key={key} className="flex items-center justify-between rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2.5">
-      <span className="text-sm text-slate-300">{label}</span>
+      <span className="text-[13px] text-[var(--cc-body)]">{label}</span>
       <Toggle checked={Boolean(config[key])} onChange={v => set(key)(v)} />
     </div>
   )
@@ -119,17 +119,17 @@ function AuthConfigTab({ storeId }: { storeId: string }) {
       {/* Master toggle */}
       <div className="flex items-center justify-between rounded-xl border border-white/[0.08] bg-white/[0.02] p-4">
         <div>
-          <p className="text-sm font-semibold text-white">Customer auth enabled</p>
-          <p className="text-xs text-slate-500">Allow customers to register and sign in to your store.</p>
+          <p className="text-sm font-semibold text-[var(--cc-text)]">Customer auth enabled</p>
+          <p className="text-[13px] text-[var(--cc-muted)]">Allow customers to register and sign in to your store.</p>
         </div>
         <Toggle checked={Boolean(config.auth_enabled)} onChange={v => set('auth_enabled')(v)} />
       </div>
 
       {/* Sign-in methods */}
       <div className="space-y-2">
-        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Sign-in Methods</p>
-        {boolField('auth_email_password_enabled', 'Email + Password')}
-        {boolField('auth_magic_link_enabled', 'Magic Link')}
+        <p className="text-[12px] font-medium text-[var(--cc-muted)]">Sign-in methods</p>
+        {boolField('auth_email_password_enabled', 'Email + password')}
+        {boolField('auth_magic_link_enabled', 'Magic link')}
         {boolField('auth_google_enabled', 'Google OAuth')}
         {boolField('auth_microsoft_enabled', 'Microsoft OAuth')}
         {boolField('auth_discord_enabled', 'Discord OAuth')}
@@ -137,24 +137,24 @@ function AuthConfigTab({ storeId }: { storeId: string }) {
 
       {/* OAuth credentials */}
       {config.auth_google_enabled && (
-        <Card title="Google OAuth App">
+        <Card title="Google OAuth app">
           <FormInput label="Client ID" value={config.auth_google_client_id ?? ''} onChange={v => set('auth_google_client_id')(v)} placeholder="123456.apps.googleusercontent.com" />
         </Card>
       )}
       {config.auth_microsoft_enabled && (
-        <Card title="Microsoft Entra App">
+        <Card title="Microsoft Entra app">
           <FormInput label="Application (client) ID" value={config.auth_ms_client_id ?? ''} onChange={v => set('auth_ms_client_id')(v)} placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" />
         </Card>
       )}
       {config.auth_discord_enabled && (
-        <Card title="Discord App">
+        <Card title="Discord app">
           <FormInput label="Client ID" value={config.auth_discord_client_id ?? ''} onChange={v => set('auth_discord_client_id')(v)} placeholder="123456789012345678" />
         </Card>
       )}
 
       {/* Registration */}
       <div className="space-y-2">
-        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Registration</p>
+        <p className="text-[12px] font-medium text-[var(--cc-muted)]">Registration</p>
         {boolField('auth_require_email_verification', 'Require email verification')}
         {boolField('auth_allow_self_registration', 'Allow self-registration')}
       </div>
@@ -167,31 +167,31 @@ function AuthConfigTab({ storeId }: { storeId: string }) {
 
       {/* Branding */}
       <div className="space-y-2">
-        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Branding</p>
+        <p className="text-[12px] font-medium text-[var(--cc-muted)]">Branding</p>
         <div className="grid grid-cols-2 gap-3">
           <FormInput label="Redirect URL" value={config.auth_redirect_url ?? ''} onChange={v => set('auth_redirect_url')(v)} placeholder="https://store.example.com/account" />
           <FormInput label="Logo URL" value={config.auth_logo_url ?? ''} onChange={v => set('auth_logo_url')(v)} placeholder="https://..." />
-          <FormInput label="Brand Color" value={config.auth_brand_color ?? ''} onChange={v => set('auth_brand_color')(v)} placeholder="#b5ff2e" />
+          <FormInput label="Brand color" value={config.auth_brand_color ?? ''} onChange={v => set('auth_brand_color')(v)} placeholder="#b5ff2e" />
         </div>
       </div>
 
       {/* Allowed origins */}
       <div className="space-y-2">
-        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Allowed Origins</p>
+        <p className="text-[12px] font-medium text-[var(--cc-muted)]">Allowed origins</p>
         <div className="flex gap-2">
           <FormInput label="" value={originDraft} onChange={setOriginDraft} placeholder="https://store.example.com" className="flex-1" />
           <Btn variant="secondary" onClick={addOrigin}>Add</Btn>
         </div>
         {(config.auth_allowed_origins ?? []).map((o, i) => (
           <div key={i} className="flex items-center justify-between rounded-lg border border-white/[0.06] px-3 py-2">
-            <span className="text-sm text-slate-300 font-mono">{o}</span>
+            <span className="text-[13px] text-[var(--cc-body)] font-mono">{o}</span>
             <Btn variant="danger" onClick={() => removeOrigin(i)}>Remove</Btn>
           </div>
         ))}
       </div>
 
       <div className="pt-2 border-t border-white/[0.06]">
-        <Btn onClick={save} loading={saving} variant="green">Save Auth Config</Btn>
+        <Btn onClick={save} loading={saving} variant="green">Save auth config</Btn>
       </div>
     </div>
   )
@@ -238,11 +238,11 @@ function SessionsTab({ storeId }: { storeId: string }) {
         <tbody>
           {sessions.map(s => (
             <tr key={s.id} className="border-t border-white/[0.04]">
-              <Td className="font-mono text-xs text-slate-400">{String(s.customer_id ?? '—').slice(0, 8)}</Td>
-              <Td className="text-slate-300 text-xs">{s.device ?? '—'}</Td>
-              <Td className="font-mono text-xs text-slate-400">{s.ip_address ?? '—'}</Td>
-              <Td className="text-slate-500 text-xs">{new Date(s.created_at).toLocaleDateString()}</Td>
-              <Td className="text-slate-500 text-xs">{s.expires_at ? new Date(s.expires_at).toLocaleDateString() : '—'}</Td>
+              <Td className="font-mono text-[12px] text-[var(--cc-muted)]">{String(s.customer_id ?? '—').slice(0, 8)}</Td>
+              <Td className="text-[var(--cc-body)] text-[13px]">{s.device ?? '—'}</Td>
+              <Td className="font-mono text-[12px] text-[var(--cc-muted)]">{s.ip_address ?? '—'}</Td>
+              <Td className="text-[var(--cc-muted)] text-[13px]">{new Date(s.created_at).toLocaleDateString()}</Td>
+              <Td className="text-[var(--cc-muted)] text-[13px]">{s.expires_at ? new Date(s.expires_at).toLocaleDateString() : '—'}</Td>
               <Td><Btn variant="danger" loading={revoking === s.id} onClick={() => void revoke(s.id)}>Revoke</Btn></Td>
             </tr>
           ))}
@@ -289,10 +289,10 @@ function EmailTab({ storeId }: { storeId: string }) {
 
   return (
     <div className="space-y-4">
-      <Card title="Test Email">
+      <Card title="Test email">
         <div className="flex gap-2">
           <FormInput label="" value={testEmail} onChange={setTestEmail} placeholder="customer@example.com" className="flex-1" />
-          <Btn onClick={sendTest} loading={sending} variant="primary">Send Test</Btn>
+          <Btn onClick={sendTest} loading={sending} variant="primary">Send test</Btn>
         </div>
       </Card>
 
@@ -305,10 +305,10 @@ function EmailTab({ storeId }: { storeId: string }) {
             <tbody>
               {logs.map((log, i) => (
                 <tr key={String(log.id ?? i)} className="border-t border-white/[0.04]">
-                  <Td className="text-slate-300">{log.to ?? '—'}</Td>
-                  <Td><Badge color="blue">{log.template ?? log.subject ?? '—'}</Badge></Td>
-                  <Td><Badge color={log.status === 'sent' ? 'emerald' : 'red'}>{log.status ?? 'unknown'}</Badge></Td>
-                  <Td className="text-slate-500 text-xs">{new Date(log.created_at).toLocaleDateString()}</Td>
+                  <Td className="text-[var(--cc-body)]">{log.to ?? '—'}</Td>
+                  <Td><Badge color="blue"><span className="capitalize">{log.template ?? log.subject ?? '—'}</span></Badge></Td>
+                  <Td><Badge color={log.status === 'sent' ? 'emerald' : 'red'}><span className="capitalize">{log.status ?? 'unknown'}</span></Badge></Td>
+                  <Td className="text-[var(--cc-muted)] text-[13px]">{new Date(log.created_at).toLocaleDateString()}</Td>
                 </tr>
               ))}
             </tbody>
@@ -354,10 +354,10 @@ function AuditTab({ storeId }: { storeId: string }) {
         <tbody>
           {entries.map((e, i) => (
             <tr key={String(e.id ?? i)} className="border-t border-white/[0.04]">
-              <Td><Badge color="slate">{e.action}</Badge></Td>
-              <Td className="font-mono text-xs text-slate-400">{String(e.customer_id ?? '—').slice(0, 8)}</Td>
-              <Td className="font-mono text-xs text-slate-400">{e.ip_address ?? '—'}</Td>
-              <Td className="text-slate-500 text-xs">{new Date(e.created_at).toLocaleString()}</Td>
+              <Td><Badge color="slate"><span className="capitalize">{e.action}</span></Badge></Td>
+              <Td className="font-mono text-[12px] text-[var(--cc-muted)]">{String(e.customer_id ?? '—').slice(0, 8)}</Td>
+              <Td className="font-mono text-[12px] text-[var(--cc-muted)]">{e.ip_address ?? '—'}</Td>
+              <Td className="text-[var(--cc-muted)] text-[13px]">{new Date(e.created_at).toLocaleString()}</Td>
             </tr>
           ))}
         </tbody>
@@ -371,22 +371,22 @@ export default function CustomerAuth() {
   const [tab, setTab] = useState<Tab>('config')
 
   const TABS = [
-    { key: 'config' as Tab, label: 'Auth Config' },
+    { key: 'config' as Tab, label: 'Auth config' },
     { key: 'sessions' as Tab, label: 'Sessions' },
     { key: 'email' as Tab, label: 'Email' },
-    { key: 'audit' as Tab, label: 'Audit Log' },
+    { key: 'audit' as Tab, label: 'Audit log' },
   ]
 
   if (!activeStore) return <div className="flex justify-center py-16"><Spinner /></div>
 
   return (
     <div className="space-y-4">
-      <PageHeader title="Customer Auth" description="Auth methods, sessions, email logs, and audit trail" />
+      <PageHeader title="Customer auth" description="Auth methods, sessions, email logs, and audit trail" />
 
       <div className="flex border-b border-white/[0.06]">
         {TABS.map(t => (
           <button key={t.key} onClick={() => setTab(t.key)}
-            className={`px-4 py-2.5 text-xs font-medium border-b-2 transition -mb-px ${tab === t.key ? 'border-violet-500 text-violet-400' : 'border-transparent text-slate-500 hover:text-white'}`}>
+            className={`px-4 py-2.5 text-[13px] font-medium border-b-2 transition -mb-px ${tab === t.key ? 'border-[var(--cc-lime)] text-[var(--cc-text)]' : 'border-transparent text-[var(--cc-muted)] hover:text-[var(--cc-text)]'}`}>
             {t.label}
           </button>
         ))}

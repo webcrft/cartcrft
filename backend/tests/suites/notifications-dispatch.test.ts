@@ -505,8 +505,10 @@ describe("H2.1 — email provider dispatches via ConsoleMailer", () => {
   });
 });
 
-describe("H2.1 — sms/whatsapp provider type rejected at create", () => {
-  it("POST /notification-providers with type=sms returns 400", async () => {
+describe("H2.1 — sms/whatsapp provider type accepted at create", () => {
+  // Twilio SMS/WhatsApp delivery is now implemented, so these provider types are
+  // accepted (previously rejected with 400). webhook_url is optional for them.
+  it("POST /notification-providers with type=sms returns 201", async () => {
     const { store, auth } = await setupStore();
     const res = await post(
       ctx,
@@ -514,15 +516,15 @@ describe("H2.1 — sms/whatsapp provider type rejected at create", () => {
       {
         name: "SMS Provider",
         type: "sms",
-        webhook_url: "https://example.com/sms",
         events: ["order.created"],
+        config: { to_phone: "+15555550123" },
       },
       auth
     );
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(201);
   });
 
-  it("POST /notification-providers with type=whatsapp returns 400", async () => {
+  it("POST /notification-providers with type=whatsapp returns 201", async () => {
     const { store, auth } = await setupStore();
     const res = await post(
       ctx,
@@ -530,12 +532,12 @@ describe("H2.1 — sms/whatsapp provider type rejected at create", () => {
       {
         name: "WhatsApp Provider",
         type: "whatsapp",
-        webhook_url: "https://example.com/wa",
         events: ["order.created"],
+        config: { to_phone: "+15555550123" },
       },
       auth
     );
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(201);
   });
 });
 

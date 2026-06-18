@@ -34,7 +34,9 @@ const ProviderIdParams = z.object({
 
 const CreateProviderBody = z.object({
   name: z.string().min(1),
-  webhook_url: z.string().url(),
+  // Optional at the schema level: only webhook-type providers need it (enforced
+  // in the service). email/sms/whatsapp providers omit it.
+  webhook_url: z.string().optional(),
   events: z.array(z.string()).min(1),
   webhook_secret: z.string().optional(),
   config: z.record(z.string(), z.unknown()).optional(),

@@ -468,7 +468,9 @@ export class BillingEngine {
 
       await this.createInvoice(
         pool, orgId, subscriptionId, chargeResult.transactionId!,
-        fxResult.zarCents, 'Subscription renewal', fxResult.snapshot,
+        fxResult.zarCents,
+        'Subscription renewal',
+        fxResult.snapshot,
       );
 
       // Schedule next renewal task

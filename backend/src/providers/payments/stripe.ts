@@ -5,6 +5,18 @@
  * Uses application/x-www-form-urlencoded POST as required by the Stripe v1 API.
  */
 
+/**
+ * Explicit Stripe payment method types we know how to surface. Wallets
+ * (Apple Pay / Google Pay) are NOT separate method types — they ride on top of
+ * `card` and are shown automatically by Stripe when the buyer is eligible, so
+ * they only need `card` to be enabled (or `automatic_payment_methods`).
+ */
+export type StripePaymentMethodType =
+  | "card"
+  | "klarna"
+  | "afterpay_clearpay"
+  | "affirm";
+
 export interface PaymentIntentRequest {
   /** Amount in smallest currency unit (cents for USD). Integer. */
   amountCents: number;
@@ -14,6 +26,15 @@ export interface PaymentIntentRequest {
   checkoutId: string;
   /** Optional receipt email for the customer. */
   email?: string | undefined;
+  /**
+   * Explicit `payment_method_types[]` to send. When provided (non-empty), the
+   * PaymentIntent pins these methods and `automatic_payment_methods` is NOT
+   * sent (the two are mutually exclusive in the Stripe API). When omitted or
+   * empty, the client falls back to `automatic_payment_methods[enabled]=true`,
+   * which lets Stripe surface every eligible method for the store — including
+   * card + wallets (Apple Pay / Google Pay). This is the default behaviour.
+   */
+  paymentMethodTypes?: StripePaymentMethodType[] | undefined;
 }
 
 export interface PaymentIntentResponse {
@@ -57,7 +78,29 @@ export class StripeClient {
     const params = new URLSearchParams();
     params.set("amount", String(Math.round(req.amountCents)));
     params.set("currency", req.currency.toLowerCase());
-    params.set("automatic_payment_methods[enabled]", "true");
+
+    // De-duplicate while preserving order. `card` is always kept first so the
+    // primary card flow (and its wallets) is never dropped when BNPL is added.
+    const explicitTypes =
+      req.paymentMethodTypes && req.paymentMethodTypes.length > 0
+        ? Array.from(new Set(req.paymentMethodTypes))
+        : [];
+
+    if (explicitTypes.length > 0) {
+      // Pinning explicit method types: `automatic_payment_methods` must NOT be
+      // sent alongside `payment_method_types` (Stripe rejects the combination).
+      // BNPL methods (klarna/afterpay_clearpay/affirm) have currency/amount/
+      // region constraints; if one is unsupported for this session Stripe
+      // returns a clear error rather than us silently dropping it.
+      for (const t of explicitTypes) {
+        params.append("payment_method_types[]", t);
+      }
+    } else {
+      // Default (unchanged): let Stripe surface every eligible method,
+      // including card + wallets (Apple Pay / Google Pay).
+      params.set("automatic_payment_methods[enabled]", "true");
+    }
+
     params.set("metadata[checkout_id]", req.checkoutId);
     if (req.email) {
       params.set("receipt_email", req.email);

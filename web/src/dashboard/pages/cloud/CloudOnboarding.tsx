@@ -255,7 +255,7 @@ export default function CloudOnboardingPage() {
           description="Connect your store to AI shopping surfaces."
         />
         <Card>
-          <p className="text-sm text-slate-400">
+          <p className="text-[13px] text-[var(--cc-muted)]">
             Select a store to manage its agent surfaces.
           </p>
         </Card>
@@ -288,35 +288,35 @@ export default function CloudOnboardingPage() {
             return (
               <Card key={surface} title={meta.name}>
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-2">
                     {statusBadge(conn?.status ?? 'disconnected')}
                     {conn?.external_account_id && (
-                      <span className="text-[11px] text-slate-500 font-mono">
+                      <span className="font-mono text-[12px] text-[var(--cc-muted)] truncate">
                         {conn.external_account_id}
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-slate-400 leading-relaxed">
+                  <p className="text-[13px] text-[var(--cc-muted)] leading-relaxed">
                     {meta.blurb}
                   </p>
 
                   {conn && (
-                    <div className="rounded-lg bg-white/[0.02] border border-white/[0.06] px-3 py-2 text-[11px] text-slate-400 space-y-1">
-                      <div className="flex justify-between">
+                    <div className="rounded-lg bg-white/[0.02] border border-white/[0.06] px-3 py-2.5 text-[12px] text-[var(--cc-muted)] space-y-1.5">
+                      <div className="flex justify-between gap-3">
                         <span>Last feed sync</span>
-                        <span className="text-slate-300">
+                        <span className="font-mono text-[var(--cc-body)]">
                           {fmtTime(conn.last_sync_at)}
                         </span>
                       </div>
                       {typeof lastCount === 'number' && (
-                        <div className="flex justify-between">
+                        <div className="flex justify-between gap-3">
                           <span>Products in last feed</span>
-                          <span className="text-slate-300">{lastCount}</span>
+                          <span className="font-mono text-[var(--cc-body)]">{lastCount}</span>
                         </div>
                       )}
                       {conn.status === 'error' &&
                         typeof conn.config?.['last_error'] === 'string' && (
-                          <div className="text-red-400 break-words">
+                          <div className="text-red-300 break-words">
                             {String(conn.config['last_error'])}
                           </div>
                         )}
@@ -374,14 +374,14 @@ export default function CloudOnboardingPage() {
           onClose={() => setConnectModal(null)}
         >
           <div className="space-y-4">
-            <ol className="space-y-1.5 text-xs text-slate-400 list-decimal list-inside">
+            <ol className="space-y-1.5 text-[13px] text-[var(--cc-muted)] list-decimal list-inside leading-relaxed">
               {connectModal.info.instructions.map((s, i) => (
                 <li key={i}>{s}</li>
               ))}
             </ol>
 
             {connectModal.info.authorize_url ? (
-              <p className="text-xs text-slate-400">
+              <p className="text-[13px] text-[var(--cc-muted)]">
                 You’ll be redirected to authorize CartCrft, then returned here.
               </p>
             ) : (
@@ -409,10 +409,10 @@ export default function CloudOnboardingPage() {
             )}
 
             <div className="rounded-lg border border-amber-500/20 bg-amber-500/[0.04] px-3 py-2.5">
-              <p className="text-[11px] font-semibold text-amber-300 mb-1">
+              <p className="text-[13px] font-medium text-amber-300 mb-1.5">
                 Required to go live
               </p>
-              <ul className="text-[11px] text-slate-400 space-y-0.5 list-disc list-inside">
+              <ul className="text-[12px] text-[var(--cc-muted)] space-y-1 list-disc list-inside leading-relaxed">
                 {connectModal.info.required_to_go_live.map((r, i) => (
                   <li key={i}>{r}</li>
                 ))}

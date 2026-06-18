@@ -34,6 +34,7 @@ import { paymentsPlugin } from "../modules/payments/routes.js";
 import { cartsPlugin } from "../modules/carts/routes.js";
 import { checkoutPlugin } from "../modules/checkout/routes.js";
 import { checkoutLinksPlugin } from "../modules/checkout-links/routes.js";
+import { exchangeRatesPlugin } from "../modules/exchange-rates/routes.js";
 import { discountsPlugin } from "../modules/discounts/routes.js";
 import { walletPlugin } from "../modules/wallet/routes.js";
 import { catalogPlugin } from "../modules/catalog/routes.js";
@@ -62,6 +63,7 @@ import { subscriptionsPlugin } from "../modules/subscriptions/routes.js";
 import { returnsPlugin } from "../modules/returns/routes.js";
 import { digitalPlugin } from "../modules/digital/routes.js";
 import { engagementPlugin } from "../modules/engagement/routes.js";
+import { loyaltyPlugin } from "../modules/loyalty/routes.js";
 import { staticPlugin } from "./static.js";
 import { recoveryPlugin } from "../modules/recovery/routes.js";
 import { catalogCsvPlugin } from "../modules/catalog/csv-routes.js";
@@ -185,21 +187,91 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
 
   // ── Security: Helmet (security response headers) ────────────────────────
   //
-  // CSP is intentionally disabled (contentSecurityPolicy: false).
-  //
-  // Rationale:
-  //  - This is a headless API server, not a browser document server. The only
-  //    HTML-adjacent assets served are /storefront.js (an IIFE bundle) and the
-  //    MCP/SSE stream. Neither needs a document-level CSP — that's the
-  //    storefront's responsibility.
-  //  - A strict CSP on a JSON API would block nothing meaningful (browsers
-  //    don't apply CSP to XHR/fetch response bodies) but could break tooling.
-  //  - Strict-Transport-Security, X-Content-Type-Options, X-Frame-Options,
-  //    Referrer-Policy, and Permissions-Policy are all still active — these
-  //    headers are valuable even on API responses.
+  // Helmet's own global CSP is disabled (contentSecurityPolicy: false) because
+  // this app serves BOTH a JSON API and HTML documents (the SPA + the hosted
+  // /pay checkout). A single static CSP can't express the framing distinction
+  // those documents need, and a CSP on JSON API responses is pointless (browsers
+  // don't apply CSP to XHR/fetch bodies). Instead we attach a *route-scoped* CSP
+  // to HTML responses only, via the onSend hook below. Helmet's other headers
+  // (HSTS, X-Content-Type-Options, X-Frame-Options, Referrer-Policy,
+  // Permissions-Policy) stay active on every response.
   await app.register(fastifyHelmet, {
     contentSecurityPolicy: false,
   });
+
+  // ── Security: Content-Security-Policy on HTML responses (clickjacking + XSS) ─
+  //
+  // The same Fastify app now serves the built SPA (WEB_DIST) and the hosted
+  // /pay checkout — both are the *same* index.html document (Root.tsx routes by
+  // pathname), so the content directives (script/style/img/connect/font) are
+  // identical for every HTML page. Only the FRAMING policy differs:
+  //
+  //  - Admin SPA / dashboard / superadmin / marketing / docs:
+  //      frame-ancestors 'none'  (+ keep helmet's X-Frame-Options: SAMEORIGIN)
+  //      → must NOT be embeddable anywhere (anti-clickjacking).
+  //
+  //  - Hosted checkout at /pay*:
+  //      INTENTIONALLY iframe-embeddable (CheckoutApp supports ?embed=1, see
+  //      web/src/checkout/CheckoutApp.tsx). We omit frame-ancestors (default =
+  //      allow any embedder) and strip helmet's X-Frame-Options so the SAMEORIGIN
+  //      default doesn't block merchant embedding. Set CSP_PAY_FRAME_ANCESTORS to
+  //      a space-separated allow-list (e.g. "https://shop-a.com https://shop-b.com")
+  //      to restrict which merchant origins may embed /pay; unset = allow all.
+  //
+  // Content directives (shared) — kept tight but matched to what the build loads:
+  //  - script-src 'self' 'unsafe-inline': bundled /assets/*.js + two inline
+  //    <script> blocks in index.html (JSON-LD + the no-js→js class swap).
+  //  - style-src 'self' 'unsafe-inline' + Google Fonts stylesheet host: bundled
+  //    CSS + React inline style={{…}} attributes used across pages.
+  //  - font-src adds fonts.gstatic.com (Google Fonts).
+  //  - img-src 'self' data: covers bundled images + data: URIs.
+  //  - connect-src 'self' (same-origin API) + open.er-api.com (marketing FX
+  //    widget, useFxRates.ts). For split SPA/API origins, add the API origin via
+  //    CSP_EXTRA_CONNECT (space-separated).
+  {
+    const extraConnect = (process.env["CSP_EXTRA_CONNECT"] ?? "").trim();
+    const payFrameAncestors = (process.env["CSP_PAY_FRAME_ANCESTORS"] ?? "").trim();
+
+    const baseDirectives = [
+      "default-src 'self'",
+      "base-uri 'self'",
+      "object-src 'none'",
+      "script-src 'self' 'unsafe-inline'",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "font-src 'self' https://fonts.gstatic.com",
+      "img-src 'self' data:",
+      `connect-src 'self' https://open.er-api.com${extraConnect ? " " + extraConnect : ""}`,
+      "form-action 'self'",
+    ];
+
+    // Admin/marketing/docs document policy: deny all framing.
+    const spaCsp = [...baseDirectives, "frame-ancestors 'none'"].join("; ");
+    // /pay document policy: allow framing (optionally restricted to an allow-list).
+    const payCsp = payFrameAncestors
+      ? [...baseDirectives, `frame-ancestors ${payFrameAncestors}`].join("; ")
+      : baseDirectives.join("; ");
+
+    app.addHook("onSend", async (request, reply) => {
+      // Only HTML documents get a document-level CSP; JSON/API responses don't.
+      const contentType = String(reply.getHeader("content-type") ?? "");
+      if (!contentType.includes("text/html")) return;
+
+      const isPay =
+        request.url === "/pay" || request.url.startsWith("/pay/") || request.url.startsWith("/pay?");
+      if (isPay) {
+        // Hosted checkout is intentionally embeddable: drop the SAMEORIGIN frame
+        // lock helmet set, and apply a CSP that permits (or allow-lists) framing.
+        // NB: @fastify/helmet writes its headers straight onto the raw Node
+        // response (reply.raw), so we must remove X-Frame-Options there — a
+        // Fastify-level reply.removeHeader() would not clear it.
+        reply.raw.removeHeader("x-frame-options");
+        reply.removeHeader("x-frame-options");
+        void reply.header("content-security-policy", payCsp);
+      } else {
+        void reply.header("content-security-policy", spaCsp);
+      }
+    });
+  }
 
   // ── OpenAPI 3.1 (opt-in via CARTCRFT_OPENAPI=1 or buildApp({ openapi: true })) ─
   if (enableOpenApi) {
@@ -364,6 +436,8 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
   await app.register(cartsPlugin);
   await app.register(checkoutPlugin);
   await app.register(checkoutLinksPlugin);
+  // Public storefront FX rates (presentment/display-only conversion).
+  await app.register(exchangeRatesPlugin);
   await app.register(discountsPlugin);
   await app.register(walletPlugin);
   await app.register(catalogPlugin);
@@ -419,6 +493,7 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
   await app.register(returnsPlugin);
   await app.register(digitalPlugin);
   await app.register(engagementPlugin);
+  await app.register(loyaltyPlugin);
 
   // ── Cloud billing webhook + read-API (CARTCRFT_CLOUD=1 only) ─────────────────
   // Dynamic import so the OSS build never eagerly imports @cartcrft/cloud-billing.

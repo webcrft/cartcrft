@@ -164,7 +164,7 @@ export default function AppShell() {
           {NAV_SECTIONS.map(section => (
             <div key={section.label ?? 'main'}>
               {section.label && (
-                <p className="px-2.5 mb-1 font-mono text-[9px] font-semibold uppercase tracking-[0.18em] text-[var(--cc-subtle)]">
+                <p className="px-2.5 mb-1.5 text-[11px] font-semibold text-[var(--cc-subtle)] tracking-[0.01em]">
                   {section.label}
                 </p>
               )}
@@ -176,10 +176,10 @@ export default function AppShell() {
                     end={item.path === '/'}
                     onClick={() => setSidebarOpen(false)}
                     className={({ isActive }) =>
-                      `group relative flex items-center gap-2.5 rounded-lg px-2.5 py-[7px] text-xs font-medium transition-colors ${
+                      `group relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium transition-colors ${
                         isActive
-                          ? 'bg-[var(--cc-lime)]/[0.1] text-[var(--cc-lime)]'
-                          : 'text-[var(--cc-muted)] hover:text-[var(--cc-body)] hover:bg-white/[0.035]'
+                          ? 'bg-[var(--cc-lime)]/[0.12] text-[var(--cc-lime)]'
+                          : 'text-[var(--cc-muted)] hover:text-[var(--cc-text)] hover:bg-white/[0.04]'
                       }`
                     }
                   >
@@ -187,11 +187,11 @@ export default function AppShell() {
                       <>
                         {/* Active indicator bar */}
                         <span
-                          className={`absolute left-0 top-1/2 -translate-y-1/2 h-4 w-0.5 rounded-r-full bg-[var(--cc-lime)] transition-opacity ${isActive ? 'opacity-100' : 'opacity-0'}`}
+                          className={`absolute left-0 top-1/2 -translate-y-1/2 h-5 w-0.5 rounded-r-full bg-[var(--cc-lime)] transition-opacity ${isActive ? 'opacity-100' : 'opacity-0'}`}
                         />
                         {item.icon && (
-                          <span className={`flex-shrink-0 ${isActive ? 'text-[var(--cc-lime)]' : 'text-[var(--cc-subtle)] group-hover:text-[var(--cc-muted)]'}`}>
-                            <item.icon size={13} />
+                          <span className={`flex-shrink-0 ${isActive ? 'text-[var(--cc-lime)]' : 'text-[var(--cc-subtle)] group-hover:text-[var(--cc-body)]'}`}>
+                            <item.icon size={15} />
                           </span>
                         )}
                         <span className="truncate">{item.label}</span>
@@ -208,9 +208,9 @@ export default function AppShell() {
         <div className="flex-shrink-0 px-3 py-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
           <button
             onClick={onSignOutClick}
-            className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs text-[var(--cc-subtle)] hover:text-red-400 hover:bg-white/[0.04] transition font-medium"
+            className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] text-[var(--cc-muted)] hover:text-red-400 hover:bg-white/[0.04] transition font-medium"
           >
-            <LogOut size={13} className="flex-shrink-0" />
+            <LogOut size={15} className="flex-shrink-0" />
             Sign out
           </button>
         </div>
@@ -240,7 +240,7 @@ export default function AppShell() {
           {pageLabel && (
             <div className="flex items-center gap-2 min-w-0">
               <span
-                className="text-sm font-semibold text-[var(--cc-text)] truncate"
+                className="text-[15px] font-semibold text-[var(--cc-text)] truncate"
                 style={{ fontFamily: 'var(--cc-font-display)', letterSpacing: '-0.02em' }}
               >
                 {pageLabel}

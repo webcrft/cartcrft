@@ -44,6 +44,8 @@ import { withTx } from "../../db/pool.js";
 import { round2 } from "../../lib/money.js";
 import type { AgentHeaderCtx } from "../agents/types.js";
 import { dispatchStoreEvent } from "../notifications/service.js";
+import { earnPointsForOrder } from "../loyalty/service.js";
+import { computeDiscounts, type DiscountCartLine } from "../discounts/service.js";
 
 // ── Result type ───────────────────────────────────────────────────────────────
 
@@ -69,95 +71,67 @@ export class CheckoutError extends Error {
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
 
+/** A single discount to burn (already resolved to a row) inside the tx. */
+interface BurnTarget {
+  discountId: string;
+  /** "code" → discount_codes, "auto" → automatic_discounts. */
+  table: "code" | "auto";
+  oncePerCustomer: boolean;
+  amount: number;
+}
+
 /**
- * Burn the discount counter atomically inside the checkout transaction.
+ * Burn a resolved set of discounts atomically inside the checkout transaction.
  *
- * Mirrors Go burnCheckoutDiscount():
- *  - Reads discount_lines from checkout
- *  - Resolves code → discount_id + once_per_customer flag
+ * For EACH target (explicit code and/or automatic discounts that were applied):
  *  - Atomically increments uses_count WHERE max_uses IS NULL OR uses_count < max_uses
- *  - Inserts discount_usages ON CONFLICT DO NOTHING for once_per_customer codes
- *  - Returns DISCOUNT_EXHAUSTED or DISCOUNT_ALREADY_USED on failure
+ *  - Inserts discount_usages ON CONFLICT DO NOTHING for once_per_customer rows
+ *  - Throws DISCOUNT_EXHAUSTED or DISCOUNT_ALREADY_USED on failure
+ *
+ * Note: discount_usages.discount_id FKs discount_codes(id); automatic-discount
+ * once_per_customer enforcement therefore relies on the uses_count cap (we do
+ * not write a usages row for automatic discounts, since the FK target differs).
+ * The percentage/fixed code path retains the full ON-CONFLICT burn (M6).
  */
-async function burnCheckoutDiscount(
+async function burnDiscounts(
   client: pg.PoolClient,
-  storeId: string,
-  checkoutId: string
+  targets: BurnTarget[],
+  customerId: string | null
 ): Promise<void> {
-  const { rows: chRows } = await client.query<{
-    discount_lines: string | null;
-    customer_id: string | null;
-  }>(
-    `SELECT discount_lines::text, customer_id::text
-     FROM checkouts WHERE id = $1::uuid AND store_id = $2::uuid`,
-    [checkoutId, storeId]
-  );
-  if (chRows.length === 0) {
-    throw new CheckoutError("checkout not found", "NOT_FOUND");
-  }
+  for (const t of targets) {
+    const table = t.table === "code" ? "discount_codes" : "automatic_discounts";
 
-  const raw = chRows[0]!.discount_lines;
-  const customerId = chRows[0]!.customer_id;
-
-  if (!raw || raw === "" || raw === "null") return;
-
-  let lines: Array<Record<string, unknown>>;
-  try {
-    lines = JSON.parse(raw) as Array<Record<string, unknown>>;
-  } catch {
-    return;
-  }
-  if (!lines || lines.length === 0) return;
-
-  const code = typeof lines[0]?.["code"] === "string" ? lines[0]["code"] : "";
-  if (!code) return;
-
-  // Resolve discount_id and once_per_customer flag
-  const { rows: discRows } = await client.query<{
-    id: string;
-    once_per_customer: boolean;
-  }>(
-    `SELECT id::text, once_per_customer FROM discount_codes
-     WHERE store_id = $1::uuid AND code = $2`,
-    [storeId, code]
-  );
-  if (discRows.length === 0) {
-    // Code disappeared between checkout and completion — treat as exhausted
-    throw new CheckoutError("discount code exhausted", "DISCOUNT_EXHAUSTED");
-  }
-
-  const discountId = discRows[0]!.id;
-  const oncePerCustomer = discRows[0]!.once_per_customer;
-
-  // Atomic increment with cap check — mirrors Go's UPDATE … RETURNING uses_count
-  const { rows: incRows } = await client.query<{ uses_count: number }>(
-    `UPDATE discount_codes
-     SET uses_count = uses_count + 1
-     WHERE id = $1::uuid AND (max_uses IS NULL OR uses_count < max_uses)
-     RETURNING uses_count`,
-    [discountId]
-  );
-  if (incRows.length === 0) {
-    throw new CheckoutError("discount code exhausted", "DISCOUNT_EXHAUSTED");
-  }
-
-  // Per-customer usage record — M6 invariant: INSERT ON CONFLICT DO NOTHING
-  const amount = typeof lines[0]?.["amount"] === "number" ? (lines[0]["amount"] as number) : 0;
-  if (oncePerCustomer && customerId) {
-    const { rows: usageRows } = await client.query<{ one: number }>(
-      `INSERT INTO discount_usages (discount_id, customer_id, amount_saved)
-       VALUES ($1::uuid, $2::uuid, $3)
-       ON CONFLICT (discount_id, customer_id) WHERE customer_id IS NOT NULL
-       DO NOTHING
-       RETURNING 1 AS one`,
-      [discountId, customerId, amount]
+    // Atomic increment with cap check — mirrors Go's UPDATE … RETURNING uses_count
+    const { rows: incRows } = await client.query<{ uses_count: number }>(
+      `UPDATE ${table}
+       SET uses_count = uses_count + 1
+       WHERE id = $1::uuid AND (max_uses IS NULL OR uses_count < max_uses)
+       RETURNING uses_count`,
+      [t.discountId]
     );
-    if (usageRows.length === 0) {
-      // Race lost — another concurrent completion for same (discount, customer)
-      throw new CheckoutError(
-        "discount code already used by this customer",
-        "DISCOUNT_ALREADY_USED"
+    if (incRows.length === 0) {
+      throw new CheckoutError("discount code exhausted", "DISCOUNT_EXHAUSTED");
+    }
+
+    // Per-customer usage record — M6 invariant: INSERT ON CONFLICT DO NOTHING.
+    // discount_usages.discount_id FKs discount_codes, so only burn usages for
+    // explicit codes; automatic once_per_customer is gated pre-flight + cap.
+    if (t.table === "code" && t.oncePerCustomer && customerId) {
+      const { rows: usageRows } = await client.query<{ one: number }>(
+        `INSERT INTO discount_usages (discount_id, customer_id, amount_saved)
+         VALUES ($1::uuid, $2::uuid, $3)
+         ON CONFLICT (discount_id, customer_id) WHERE customer_id IS NOT NULL
+         DO NOTHING
+         RETURNING 1 AS one`,
+        [t.discountId, customerId, t.amount]
       );
+      if (usageRows.length === 0) {
+        // Race lost — another concurrent completion for same (discount, customer)
+        throw new CheckoutError(
+          "discount code already used by this customer",
+          "DISCOUNT_ALREADY_USED"
+        );
+      }
     }
   }
 }
@@ -190,10 +164,9 @@ export async function completeCheckout(
   agentCtx?: AgentHeaderCtx | undefined
 ): Promise<CompleteResult> {
   const result = await withTx(async (client) => {
-    // ── Step 1: Burn discount atomically (before conversion) ─────────────
-    await burnCheckoutDiscount(client, storeId, checkoutId);
-
     // ── Step 2: Fetch checkout (must be pending) ──────────────────────────
+    // (The discount burn moved to Step 4c, AFTER the authoritative discount
+    //  recompute, so we only burn the discounts that actually applied.)
     // Invariant 9: status = 'pending' filter — errors on already-completed
     // FOR UPDATE: serialize concurrent completes on the same checkout row.
     // Without this, two concurrent transactions can both read 'pending' and
@@ -237,6 +210,10 @@ export async function completeCheckout(
     // Placed inside the transaction after the row lock so the spend-window
     // sum is serialised: no concurrent agent checkout can slip through between
     // the sum query and the eventual order INSERT.
+    // Mandate id resolved by verifyAgentCheckout (when a payment mandate is
+    // attached to this checkout). Stamped onto order.metadata.mandate_id below
+    // so there is an auditable order → mandate → intent chain.
+    let verifiedMandateId: string | null = null;
     if (agentCtx) {
       const checkoutTotal = parseFloat(chRows[0]!.total);
 
@@ -251,7 +228,7 @@ export async function completeCheckout(
       // (avoids circular-import risk; also reads naturally as "optional feature").
       const { verifyAgentCheckout } = await import("../agents/service.js");
       try {
-        await verifyAgentCheckout(
+        verifiedMandateId = await verifyAgentCheckout(
           agentCtx.agentId,
           storeId,
           checkoutId,
@@ -269,12 +246,31 @@ export async function completeCheckout(
 
     const ch = chRows[0]!;
     const cartId = ch.cart_id;
+    const customerId = ch.customer_id;
     let subtotal = parseFloat(ch.subtotal);
-    const shippingTotal = parseFloat(ch.shipping_total);
+    const baseShipping = parseFloat(ch.shipping_total);
+    let shippingTotal = baseShipping;
     const taxTotal = parseFloat(ch.tax_total);
-    const discountTotal = parseFloat(ch.discount_total);
+    let discountTotal = parseFloat(ch.discount_total);
     let total = parseFloat(ch.total);
     const currency = ch.currency;
+
+    // Resolve the explicit discount code (if any) from the stored discount_lines.
+    // Automatic discounts carry an empty code; we re-derive them server-side.
+    let storedCode = "";
+    if (ch.discount_lines && ch.discount_lines !== "null") {
+      try {
+        const dls = JSON.parse(ch.discount_lines) as Array<Record<string, unknown>>;
+        for (const dl of dls) {
+          if (typeof dl["code"] === "string" && dl["code"]) {
+            storedCode = dl["code"];
+            break;
+          }
+        }
+      } catch {
+        /* malformed discount_lines → treat as no code */
+      }
+    }
 
     // ── Step 3: next_order_number (Invariant 4) ───────────────────────────
     const { rows: numRows } = await client.query<{ next_order_number: string }>(
@@ -284,15 +280,18 @@ export async function completeCheckout(
     const orderNumber = numRows[0]!.next_order_number;
 
     // ── Step 4: Re-fetch variant prices (Invariant 2) ─────────────────────
-    // Guard against price drift between checkout creation and completion
+    // Guard against price drift between checkout creation and completion.
+    // Also loads product_id so the discount engine can evaluate product/
+    // collection-scoped rules (Step 4a).
     const { rows: priceRows } = await client.query<{
       variant_id: string;
+      product_id: string;
       quantity: number;
       cart_price: string;
       current_price: string;
     }>(
-      `SELECT cl.variant_id::text, cl.quantity, cl.price::text AS cart_price,
-              pv.price::text AS current_price
+      `SELECT cl.variant_id::text, pv.product_id::text, cl.quantity,
+              cl.price::text AS cart_price, pv.price::text AS current_price
        FROM cart_lines cl
        JOIN product_variants pv ON pv.id = cl.variant_id
        WHERE cl.cart_id = $1::uuid`,
@@ -301,6 +300,7 @@ export async function completeCheckout(
 
     let recomputedSubtotal = 0;
     let priceChanged = false;
+    const engineLines: DiscountCartLine[] = [];
 
     for (const pr of priceRows) {
       const cartPrice = parseFloat(pr.cart_price);
@@ -314,17 +314,129 @@ export async function completeCheckout(
         );
       }
       recomputedSubtotal += currentPrice * pr.quantity;
+      engineLines.push({
+        variant_id: pr.variant_id,
+        product_id: pr.product_id,
+        qty: pr.quantity,
+        price: currentPrice,
+      });
     }
 
-    if (priceChanged) {
-      subtotal = round2(recomputedSubtotal);
-      total = round2(subtotal + shippingTotal + taxTotal - discountTotal);
+    subtotal = round2(recomputedSubtotal);
+
+    // ── Step 4a: Authoritative discount recompute (server-side, in-tx) ────
+    // Re-evaluate the explicit code + all eligible automatic discounts against
+    // the CURRENT prices. This is the source of truth for discount_total and
+    // free-shipping; the checkout-time values are a non-authoritative preview.
+    // Domain carts never receive discounts.
+    const cartHasDomain = await (async (): Promise<boolean> => {
+      const { rows } = await client.query<{ found: boolean }>(
+        `SELECT EXISTS(
+           SELECT 1 FROM cart_lines cl
+           JOIN product_variants pv ON pv.id = cl.variant_id
+           JOIN products p ON p.id = pv.product_id
+           WHERE cl.cart_id = $1::uuid AND p.type = 'domain'
+         ) AS found`,
+        [cartId]
+      );
+      return rows[0]?.found === true;
+    })();
+
+    const burnTargets: BurnTarget[] = [];
+    if (!cartHasDomain) {
+      const disc = await computeDiscounts(client, {
+        storeId,
+        lines: engineLines,
+        subtotal,
+        shippingTotal: baseShipping,
+        customerId,
+        code: storedCode || null,
+      });
+      // A code that validated at checkout time but is now invalid (expired,
+      // exhausted, once-per-customer race) surfaces as an error here.
+      if (disc.error) {
+        throw new CheckoutError("discount code exhausted", "DISCOUNT_EXHAUSTED");
+      }
+      discountTotal = disc.discountTotal;
+      shippingTotal = disc.shippingTotal;
+
+      // Resolve burn targets for every applied discount that carries a cap or
+      // once-per-customer rule.  Resolve ids by code (codes) / title+type+amount
+      // is not unique, so re-query automatic rows by their defining attributes.
+      for (const line of disc.lines) {
+        if (line.code) {
+          const { rows } = await client.query<{ id: string; once_per_customer: boolean }>(
+            `SELECT id::text, once_per_customer FROM discount_codes
+             WHERE store_id = $1::uuid AND code = $2`,
+            [storeId, line.code]
+          );
+          if (rows.length === 0) {
+            throw new CheckoutError("discount code exhausted", "DISCOUNT_EXHAUSTED");
+          }
+          burnTargets.push({
+            discountId: rows[0]!.id,
+            table: "code",
+            oncePerCustomer: rows[0]!.once_per_customer,
+            amount: line.amount,
+          });
+        }
+        // Automatic discounts: resolved + burned in Step 4c via a dedicated
+        // re-evaluation (id is needed; computeDiscounts intentionally returns a
+        // display-shaped line). We re-resolve below.
+      }
+
+      // Re-resolve automatic discount ids for burning (cap enforcement). We
+      // mirror loadAutomaticRules' eligibility window so only currently-active
+      // automatic rows that produced an applied line are burned.
+      const autoLinesApplied = disc.lines.filter((l) => l.automatic);
+      if (autoLinesApplied.length > 0) {
+        const titles = autoLinesApplied.map((l) => l.title);
+        const { rows: autoRows } = await client.query<{
+          id: string;
+          title: string;
+          once_per_customer: boolean;
+        }>(
+          `SELECT id::text, title, once_per_customer
+           FROM automatic_discounts
+           WHERE store_id = $1::uuid
+             AND title = ANY($2::text[])
+             AND is_active = true
+             AND (starts_at IS NULL OR starts_at <= now())
+             AND (ends_at   IS NULL OR ends_at   >  now())`,
+          [storeId, titles]
+        );
+        // Match each applied automatic line to its row by title (first match).
+        const usedIds = new Set<string>();
+        for (const line of autoLinesApplied) {
+          const match = autoRows.find((r) => r.title === line.title && !usedIds.has(r.id));
+          if (match) {
+            usedIds.add(match.id);
+            burnTargets.push({
+              discountId: match.id,
+              table: "auto",
+              oncePerCustomer: match.once_per_customer,
+              amount: line.amount,
+            });
+          }
+        }
+      }
+    }
+
+    // Persist recomputed totals (subtotal/discount/shipping/total) so the order
+    // copy below reads correct values regardless of price/discount drift.
+    total = round2(subtotal + shippingTotal + taxTotal - discountTotal);
+    if (priceChanged || discountTotal !== parseFloat(ch.discount_total) || shippingTotal !== baseShipping) {
       await client.query(
-        `UPDATE checkouts SET subtotal = $1, total = $2, updated_at = now()
-         WHERE id = $3::uuid`,
-        [subtotal, total, checkoutId]
+        `UPDATE checkouts
+         SET subtotal = $1, shipping_total = $2, discount_total = $3, total = $4,
+             updated_at = now()
+         WHERE id = $5::uuid`,
+        [subtotal, shippingTotal, discountTotal, total, checkoutId]
       );
     }
+
+    // ── Step 4c: Burn redemptions atomically (caps + once-per-customer) ───
+    await burnDiscounts(client, burnTargets, customerId);
 
     // ── Step 4b: B2B credit check + consume (H2.5) ───────────────────────
     // When the checkout carries a company_id, look up the company's
@@ -363,9 +475,14 @@ export async function completeCheckout(
     // ── Step 5: Create order row (Invariant 5) ────────────────────────────
     // Stamp metadata.agent_id when request is agent-attributed so the
     // spend-window aggregation query in verifyAgentCheckout can count this order.
+    // FIX 2: also stamp metadata.mandate_id when a payment mandate was verified
+    // for this checkout, giving an auditable order → mandate → intent chain.
     const orderMetadata: Record<string, unknown> = {};
     if (agentCtx) {
       orderMetadata["agent_id"] = agentCtx.agentId;
+      if (verifiedMandateId) {
+        orderMetadata["mandate_id"] = verifiedMandateId;
+      }
     }
 
     const { rows: orderRows } = await client.query<{ id: string }>(
@@ -559,6 +676,7 @@ export async function completeCheckout(
       currency,
       total,
       itemCount,
+      customerId,
     };
   });
 
@@ -571,6 +689,18 @@ export async function completeCheckout(
     currency: result.currency,
     total: String(result.total),
   });
+
+  // Award loyalty points for a registered customer. Awaited (request context is
+  // still active so RLS resolves) but errors are swallowed — loyalty must never
+  // roll back a committed order. earnPointsForOrder is idempotent per order_id,
+  // is a no-op when the program is inactive, and skips guest checkouts.
+  if (result.customerId) {
+    try {
+      await earnPointsForOrder(storeId, result.customerId, result.orderId, String(result.total));
+    } catch (err) {
+      console.warn("loyalty: earn failed (order already committed)", { orderId: result.orderId, err });
+    }
+  }
 
   return result;
 }

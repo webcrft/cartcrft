@@ -7,6 +7,7 @@
 
 import type pg from "pg";
 import type { ReadDb } from "../../db/pool.js";
+import { dispatchStoreEvent } from "../notifications/service.js";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -230,6 +231,14 @@ export async function createCustomer(
   );
   const id = rows[0]?.id;
   if (!id) throw new Error("createCustomer: no id returned");
+
+  // Fire-and-forget outbound notification (H2.1) — emit after the DB write
+  // succeeds. PII-conscious: id + email only (goes to merchant endpoints).
+  dispatchStoreEvent(storeId, "customer.created", {
+    customer_id: id,
+    email: body.email.toLowerCase().trim(),
+  });
+
   return id;
 }
 

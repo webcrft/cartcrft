@@ -54,6 +54,44 @@ const defaultForm: ProductForm = {
   track_inventory: false,
 }
 
+/** Best-effort thumbnail URL from a product's media/images (list payloads may omit these). */
+function productThumbUrl(p: Product): string | null {
+  const media = (p as { media?: Array<{ url?: string; cdn_url?: string | null }> }).media
+  if (Array.isArray(media) && media.length > 0) {
+    const m = media[0]
+    return m?.cdn_url ?? m?.url ?? null
+  }
+  const images = (p as { images?: unknown }).images
+  if (Array.isArray(images) && typeof images[0] === 'string') return images[0]
+  return null
+}
+
+function ProductThumb({ product }: { product: Product }) {
+  const url = productThumbUrl(product)
+  const [errored, setErrored] = useState(false)
+  if (url && !errored) {
+    return (
+      <img
+        src={url}
+        alt=""
+        loading="lazy"
+        onError={() => setErrored(true)}
+        className="h-10 w-10 flex-shrink-0 rounded-lg object-cover"
+        style={{ border: '1px solid rgba(255,255,255,0.08)', background: 'var(--cc-bg-sunken)' }}
+      />
+    )
+  }
+  return (
+    <div
+      className="h-10 w-10 flex-shrink-0 rounded-lg flex items-center justify-center text-[var(--cc-subtle)]"
+      style={{ border: '1px solid rgba(255,255,255,0.08)', background: 'var(--cc-bg-sunken)' }}
+      aria-hidden="true"
+    >
+      <Package size={15} />
+    </div>
+  )
+}
+
 function ProductEditor({ storeId, product, onClose, onSaved }: {
   storeId: string
   product: Product | null
@@ -149,7 +187,7 @@ function ProductEditor({ storeId, product, onClose, onSaved }: {
       <div className="space-y-4">
         <FormInput label="Title" required value={form.title} onChange={set('title')} placeholder="Product name" />
         <div>
-          <label className="block font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--cc-muted)] mb-1.5">Description</label>
+          <label className="block text-[13px] font-medium text-[var(--cc-body)] mb-1.5">Description</label>
           <textarea
             value={form.description}
             onChange={e => set('description')(e.target.value)}
@@ -329,16 +367,19 @@ export default function Products() {
                       onMouseLeave={e => { (e.currentTarget as HTMLTableRowElement).style.background = '' }}
                     >
                       <Td>
-                        <div className="flex flex-col gap-0.5">
-                          <span className="font-medium text-[var(--cc-text)]">{product.title}</span>
-                          {product.variants_count != null && product.variants_count > 0 && (
-                            <span className="text-[11px] text-[var(--cc-subtle)]">
-                              {product.variants_count} variant{product.variants_count !== 1 ? 's' : ''}
-                            </span>
-                          )}
+                        <div className="flex items-center gap-3 min-w-0">
+                          <ProductThumb product={product} />
+                          <div className="flex flex-col gap-0.5 min-w-0">
+                            <span className="font-medium text-[var(--cc-text)] truncate">{product.title}</span>
+                            {product.variants_count != null && product.variants_count > 0 && (
+                              <span className="text-[12px] text-[var(--cc-subtle)]">
+                                {product.variants_count} variant{product.variants_count !== 1 ? 's' : ''}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </Td>
-                      <Td><Badge color="slate">{product.product_type}</Badge></Td>
+                      <Td><Badge color="slate"><span className="capitalize">{product.product_type}</span></Badge></Td>
                       <Td><Badge color={st.color}>{st.label}</Badge></Td>
                       <Td align="right" className="font-mono text-[var(--cc-body)]">
                         {product.price_min ? product.price_min : <span className="text-[var(--cc-subtle)]">—</span>}

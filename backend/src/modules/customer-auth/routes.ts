@@ -186,8 +186,11 @@ const OAuthUrlQuery = z.object({
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function getIp(request: Parameters<preHandlerHookHandler>[0]): string {
-  const xff = request.headers["x-forwarded-for"];
-  if (typeof xff === "string") return xff.split(",")[0]?.trim() ?? request.ip;
+  // FIX 2 (IP spoofing): use Fastify's request.ip, which already honours the
+  // app's configured trustProxy (TRUST_PROXY). Reading X-Forwarded-For directly
+  // would let an untrusted caller forge the IP persisted into session/audit/
+  // password-reset rows and bypass per-IP throttles. Matches the hardened
+  // approach in lib/auth/middleware.ts getClientIp().
   return request.ip;
 }
 
@@ -415,7 +418,7 @@ export const customerAuthPlugin: FastifyPluginAsyncZod = async (app) => {
     );
     const customer = rows[0];
     if (customer && !customer.email_verified) {
-      await sendEmailVerification(pool, storeId, customer.id, request.body.email, cfg);
+      await sendEmailVerification(pool, storeId, customer.id, request.body.email, cfg, getIp(request));
     }
     return reply.send({ ok: true });
   });

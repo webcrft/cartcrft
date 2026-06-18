@@ -217,7 +217,17 @@ export const acpV2026_04Plugin: FastifyPluginAsync = async (app) => {
       const idempotencyKeyValue = request.headers["idempotency-key"] as string | undefined;
 
       try {
-        const result = await completeSession(storeId, sessionId, body, idempotencyKeyValue);
+        // Thread agent attribution (set by the global agentAttributionHook) so
+        // completeSession → completeCheckout enforces spend/mandate limits when
+        // the request carries agent signature headers. Plain merchant-key
+        // requests have agentCtx === undefined → unchanged behaviour.
+        const result = await completeSession(
+          storeId,
+          sessionId,
+          body,
+          idempotencyKeyValue,
+          request.agentCtx
+        );
         return reply.send({
           session: result.session,
           order_id: result.orderId,

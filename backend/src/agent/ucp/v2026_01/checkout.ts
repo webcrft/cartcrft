@@ -22,6 +22,7 @@ import {
   chargeDelegatedToken,
   DelegatedPaymentError,
 } from "../../../modules/payments/delegated.js";
+import type { AgentHeaderCtx } from "../../../modules/agents/types.js";
 import type {
   UcpCheckoutEntity,
   UcpLineItem,
@@ -30,35 +31,40 @@ import type {
   UcpFulfillmentOption,
 } from "./types.js";
 
-// ── Idempotency store ─────────────────────────────────────────────────────────
-// In-memory with TTL — matches ACP pattern. Production systems should use the
-// DB idempotency_keys table, but UCP checkouts are short-lived agent interactions.
+// ── Idempotency store (durable, shared KV) ────────────────────────────────────
+// FIX 4: idempotency was previously an in-process Map — lost on restart and not
+// shared across instances, so duplicate submits could slip through under a
+// multi-instance deploy. It is now backed by the shared KV (lib/cache/kv.ts):
+// Redis when REDIS_URL is set (cross-instance durable), MemoryKv otherwise
+// (same single-instance behaviour as before, now with a real TTL).
 
 interface IdempotencyRecord {
   checkoutId: string;
-  result: unknown;
-  createdAt: number;
+  result: { orderId: string; orderNumber: string } | null;
 }
 
 const IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000; // 24h
 
-const idempotencyStore = new Map<string, IdempotencyRecord>();
-
-// Prune stale entries every hour
-setInterval(
-  () => {
-    const now = Date.now();
-    for (const [key, rec] of idempotencyStore) {
-      if (now - rec.createdAt > IDEMPOTENCY_TTL_MS) {
-        idempotencyStore.delete(key);
-      }
-    }
-  },
-  60 * 60_000
-).unref();
-
 function makeIdempotencyKey(storeId: string, key: string): string {
-  return `ucp:${storeId}:${key}`;
+  return `ucp:idem:${storeId}:${key}`;
+}
+
+async function readIdempotency(kvKey: string): Promise<IdempotencyRecord | null> {
+  const { buildKv } = await import("../../../lib/cache/kv.js");
+  const kv = await buildKv();
+  const raw = await kv.get(kvKey);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as IdempotencyRecord;
+  } catch {
+    return null;
+  }
+}
+
+async function writeIdempotency(kvKey: string, rec: IdempotencyRecord): Promise<void> {
+  const { buildKv } = await import("../../../lib/cache/kv.js");
+  const kv = await buildKv();
+  await kv.set(kvKey, JSON.stringify(rec), IDEMPOTENCY_TTL_MS);
 }
 
 // ── UCP-specific errors ───────────────────────────────────────────────────────
@@ -319,7 +325,7 @@ export async function createUcpCheckout(
   // Check idempotency cache
   if (idempotencyKeyValue) {
     const iKey = makeIdempotencyKey(storeId, idempotencyKeyValue);
-    const cached = idempotencyStore.get(iKey);
+    const cached = await readIdempotency(iKey);
     if (cached) {
       const entity = await buildCheckoutEntity(storeId, cached.checkoutId);
       if (entity) return entity;
@@ -375,7 +381,7 @@ export async function createUcpCheckout(
   // Cache idempotency
   if (idempotencyKeyValue) {
     const iKey = makeIdempotencyKey(storeId, idempotencyKeyValue);
-    idempotencyStore.set(iKey, { checkoutId, result: null, createdAt: Date.now() });
+    await writeIdempotency(iKey, { checkoutId, result: null });
   }
 
   const entity = await buildCheckoutEntity(storeId, checkoutId);
@@ -470,19 +476,17 @@ export async function submitUcpCheckout(
   storeId: string,
   checkoutId: string,
   input: SubmitCheckoutInput,
-  idempotencyKeyValue?: string
+  idempotencyKeyValue?: string,
+  agentCtx?: AgentHeaderCtx | undefined
 ): Promise<{ checkout: UcpCheckoutEntity; orderId: string; orderNumber: string }> {
   // Check idempotency (applies to both test and live paths)
   if (idempotencyKeyValue) {
     const iKey = makeIdempotencyKey(storeId, `submit:${idempotencyKeyValue}`);
-    const cached = idempotencyStore.get(iKey);
-    if (cached) {
+    const cached = await readIdempotency(iKey);
+    if (cached?.result) {
       const entity = await buildCheckoutEntity(storeId, checkoutId);
       if (entity) {
-        const cachedResult = cached.result as { orderId: string; orderNumber: string } | null;
-        if (cachedResult) {
-          return { checkout: entity, orderId: cachedResult.orderId, orderNumber: cachedResult.orderNumber };
-        }
+        return { checkout: entity, orderId: cached.result.orderId, orderNumber: cached.result.orderNumber };
       }
     }
   }
@@ -525,8 +529,12 @@ export async function submitUcpCheckout(
     }
   } else {
     // ── Test-mode path: create a real order without charging ─────────────────
+    // FIX 1: thread agentCtx so completeCheckout runs verifyAgentCheckout
+    // (spend-window + mandate-chain enforcement) and stamps agent_id/mandate_id
+    // on the order. When the request carries no agent identity, agentCtx is
+    // undefined and the non-agent path is byte-for-byte unchanged.
     try {
-      completeResult = await completeCheckout(storeId, checkoutId);
+      completeResult = await completeCheckout(storeId, checkoutId, agentCtx);
     } catch (err) {
       if (err instanceof CheckoutError) throw mapCheckoutError(err);
       throw err;
@@ -536,10 +544,9 @@ export async function submitUcpCheckout(
   // Cache idempotency result
   if (idempotencyKeyValue) {
     const iKey = makeIdempotencyKey(storeId, `submit:${idempotencyKeyValue}`);
-    idempotencyStore.set(iKey, {
+    await writeIdempotency(iKey, {
       checkoutId,
       result: { orderId: completeResult.orderId, orderNumber: completeResult.orderNumber },
-      createdAt: Date.now(),
     });
   }
 

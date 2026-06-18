@@ -7,6 +7,7 @@ import {
   EmptyState, Spinner, Modal, LoadError,
   TableContainer, TableHead, Th, Td,
 } from '../components/ui/index'
+import { ChevronDown, ChevronRight, FileDown, Plus } from 'lucide-react'
 import type { Product } from '@cartcrft/sdk'
 
 interface DigitalFile {
@@ -57,23 +58,33 @@ function DigitalFileRow({
     : null
 
   return (
-    <tr className="border-t border-white/[0.04] hover:bg-white/[0.02] transition">
-      <Td className="font-medium text-white">{file.name}</Td>
-      <Td className="text-slate-500 text-xs">{sizeLabel ?? '—'}</Td>
+    <tr
+      className="transition-colors"
+      style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}
+      onMouseEnter={e => { (e.currentTarget as HTMLTableRowElement).style.background = 'rgba(255,255,255,0.02)' }}
+      onMouseLeave={e => { (e.currentTarget as HTMLTableRowElement).style.background = '' }}
+    >
+      <Td className="font-medium text-[var(--cc-text)]">{file.name}</Td>
+      <Td>
+        {sizeLabel
+          ? <span className="font-mono text-[12px] text-[var(--cc-muted)]">{sizeLabel}</span>
+          : <span className="text-[var(--cc-subtle)]">—</span>}
+      </Td>
       <Td>
         {link ? (
           <div className="flex items-center gap-2">
-            <code className="text-[11px] font-mono text-violet-300 truncate max-w-[200px]">{link.url}</code>
-            <button
+            <code className="font-mono text-[12px] text-[var(--cc-body)] truncate max-w-[220px]">{link.url}</code>
+            <Btn
+              size="sm"
+              variant="secondary"
               onClick={() => { void navigator.clipboard.writeText(link.url); toast('Copied!', 'success') }}
-              className="flex-shrink-0 text-[11px] text-slate-400 hover:text-white border border-white/10 rounded px-2 py-0.5 transition"
             >
               Copy
-            </button>
+            </Btn>
           </div>
         ) : (
           <Btn variant="secondary" loading={generating} onClick={handleGenerate}>
-            Generate Link
+            Generate link
           </Btn>
         )}
       </Td>
@@ -166,8 +177,8 @@ export default function DigitalProducts() {
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Digital Products"
-        description="Files attached to products of type 'digital'. Generate download links to share with customers."
+        title="Digital products"
+        description="Files attached to products of type “digital”. Generate download links to share with customers."
       />
 
       {loadError && <LoadError message={loadError} onRetry={() => void load()} />}
@@ -176,51 +187,54 @@ export default function DigitalProducts() {
         <div className="flex justify-center py-16"><Spinner /></div>
       ) : productFiles.length === 0 && !loadError ? (
         <EmptyState
-          title="No digital products found"
-          description="Create a product with type 'digital' in the Products page, then attach files here."
+          icon={<FileDown size={22} />}
+          title="No digital products yet"
+          description="Create a product with type “digital” on the Products page, then attach files here."
         />
       ) : (
         <div className="space-y-4">
           {productFiles.map(({ product, files, open }) => (
             <Card key={product.id}>
               {/* Product header row */}
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <div className="flex items-center gap-2.5 min-w-0">
                   <button
                     onClick={() => toggleOpen(product.id)}
-                    className="text-xs text-slate-500 hover:text-white transition"
+                    className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md text-[var(--cc-muted)] hover:text-[var(--cc-text)] hover:bg-white/[0.05] transition"
                     aria-label={open ? 'Collapse' : 'Expand'}
                   >
-                    {open ? '▾' : '▸'}
+                    {open ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
                   </button>
-                  <span className="font-medium text-white text-sm">{product.title}</span>
-                  <Badge color="violet">digital</Badge>
+                  <span className="font-medium text-[15px] text-[var(--cc-text)] truncate">{product.title}</span>
+                  <Badge color="lime">Digital</Badge>
                   <Badge color={product.status === 'active' ? 'emerald' : 'slate'}>
-                    {product.status}
+                    <span className="capitalize">{product.status}</span>
                   </Badge>
                 </div>
                 <Btn
+                  size="sm"
                   variant="secondary"
                   onClick={() => {
                     setAddingFile(product.id)
                     setFileForm({ name: '', url: '', size_bytes: '' })
                   }}
                 >
-                  + Attach File
+                  <Plus size={13} />
+                  Attach file
                 </Btn>
               </div>
 
               {open && (
                 <>
                   {files.length === 0 ? (
-                    <p className="text-xs text-slate-500 py-2">No files attached. Click "+ Attach File" to add a download file.</p>
+                    <p className="text-[13px] text-[var(--cc-muted)] py-2">No files attached yet. Use “Attach file” to add a download.</p>
                   ) : (
                     <TableContainer>
                       <table className="w-full text-sm">
                         <TableHead>
-                          <Th>File Name</Th>
+                          <Th>File name</Th>
                           <Th>Size</Th>
-                          <Th>Download Link</Th>
+                          <Th>Download link</Th>
                         </TableHead>
                         <tbody>
                           {files.map(file => (
@@ -243,32 +257,35 @@ export default function DigitalProducts() {
 
       {/* Attach File Modal */}
       {addingFile && (
-        <Modal title="Attach Digital File" onClose={() => setAddingFile(null)}>
+        <Modal title="Attach digital file" onClose={() => setAddingFile(null)}>
           <div className="space-y-4">
             <FormInput
-              label="File Name *"
+              label="File name"
+              required
               value={fileForm.name}
               onChange={v => setFileForm(f => ({ ...f, name: v }))}
               placeholder="e.g. course-materials.zip"
             />
             <FormInput
-              label="File URL *"
+              label="File URL"
+              required
               value={fileForm.url}
               onChange={v => setFileForm(f => ({ ...f, url: v }))}
               placeholder="https://your-storage.example.com/file.zip"
             />
             <FormInput
-              label="File Size (bytes, optional)"
+              label="File size"
               value={fileForm.size_bytes}
               onChange={v => setFileForm(f => ({ ...f, size_bytes: v }))}
               placeholder="10485760"
               type="number"
+              hint="In bytes, optional"
             />
-            <p className="text-xs text-slate-500">
-              The URL should be a direct link to your file (e.g., S3, Cloudflare R2, or any public/pre-signed URL). CartCrft wraps it with a time-limited download token.
+            <p className="text-[13px] text-[var(--cc-muted)] leading-relaxed">
+              The URL should be a direct link to your file (e.g. S3, Cloudflare R2, or any public or pre-signed URL). CartCrft wraps it with a time-limited download token.
             </p>
-            <div className="flex gap-2 pt-2 border-t border-white/[0.06]">
-              <Btn onClick={() => handleAddFile(addingFile)} loading={savingFile}>Attach File</Btn>
+            <div className="flex gap-2 pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+              <Btn onClick={() => handleAddFile(addingFile)} loading={savingFile}>Attach file</Btn>
               <Btn variant="secondary" onClick={() => setAddingFile(null)}>Cancel</Btn>
             </div>
           </div>

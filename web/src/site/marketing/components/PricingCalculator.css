@@ -24,6 +24,22 @@
 .calc-title .lime { color: var(--brand); }
 .calc-sub { color: var(--ink-muted); font-size: 0.92rem; line-height: 1.6; max-width: 52ch; }
 
+/* — Flat-price badge (makes "no usage fees" obvious) — */
+.calc-flat-badge {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  margin-top: 1rem;
+  font-family: var(--font-mono); font-size: 0.64rem; letter-spacing: 0.06em;
+  text-transform: uppercase; font-weight: 600;
+  padding: 0.3rem 0.7rem; border-radius: 999px;
+  color: var(--brand);
+  background: color-mix(in srgb, var(--brand) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--brand) 40%, transparent);
+}
+.calc-flat-badge::before {
+  content: ''; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--brand); box-shadow: 0 0 8px var(--brand);
+}
+
 /* — Slider — */
 .calc-control { margin-bottom: 2rem; }
 .calc-gmv { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 0.7rem; }
@@ -52,6 +68,87 @@
 .calc-ticks { display: flex; justify-content: space-between; margin-top: 0.55rem; }
 .calc-ticks span { font-family: var(--font-mono); font-size: 0.66rem; color: var(--ink-subtle); }
 
+.calc-dot--idle { background: var(--ink-subtle); box-shadow: none; animation: none; }
+
+/* — Sites stepper — */
+.calc-stepper { display: flex; align-items: center; gap: 0.75rem; }
+.calc-step-btn {
+  flex: 0 0 auto;
+  width: 38px; height: 38px; border-radius: var(--r-sm);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 1.5rem; line-height: 1; font-weight: 600;
+  background: var(--bg-sunken); color: var(--ink);
+  border: 1px solid var(--line-strong); cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+.calc-step-btn:hover:not(:disabled) { border-color: var(--brand); color: var(--brand); }
+.calc-step-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.calc-slider--sites { flex: 1 1 auto; }
+
+/* — Period toggle + currency — */
+.calc-options {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 0.9rem; margin-bottom: 1.8rem;
+}
+.calc-toggle {
+  display: inline-flex; padding: 4px; gap: 4px;
+  background: var(--bg-sunken); border: 1px solid var(--line-strong);
+  border-radius: 999px;
+}
+.calc-toggle-btn {
+  display: inline-flex; align-items: center; gap: 0.45rem;
+  padding: 0.45rem 0.9rem; border: none; background: transparent; cursor: pointer;
+  font-size: 0.82rem; font-weight: 600; color: var(--ink-muted);
+  border-radius: 999px; transition: background 0.15s ease, color 0.15s ease;
+}
+.calc-toggle-btn:hover { color: var(--ink); }
+.calc-toggle-btn.is-active { background: var(--brand); color: var(--bg); }
+.calc-toggle-save {
+  font-family: var(--font-mono); font-size: 0.58rem; letter-spacing: 0.04em;
+  text-transform: uppercase; padding: 0.12rem 0.34rem; border-radius: 999px;
+  background: color-mix(in srgb, var(--brand) 18%, transparent); color: var(--brand);
+}
+.calc-toggle-btn.is-active .calc-toggle-save {
+  background: color-mix(in srgb, var(--bg) 28%, transparent); color: var(--bg);
+}
+
+.calc-currency { display: inline-flex; align-items: center; gap: 0.55rem; }
+.calc-currency-lab {
+  font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--ink-subtle);
+}
+.calc-currency-select {
+  appearance: none; -webkit-appearance: none;
+  padding: 0.45rem 1.9rem 0.45rem 0.75rem;
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 600;
+  color: var(--ink); background-color: var(--bg-sunken);
+  border: 1px solid var(--line-strong); border-radius: var(--r-sm); cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2378786e' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 0.6rem center;
+  transition: border-color 0.15s ease;
+}
+.calc-currency-select:hover, .calc-currency-select:focus { border-color: var(--brand); outline: none; }
+
+/* — Plan winner badge — */
+.calc-badge {
+  margin-left: 0.55rem; font-family: var(--font-mono); font-size: 0.58rem;
+  letter-spacing: 0.06em; text-transform: uppercase; vertical-align: middle;
+  padding: 0.14rem 0.4rem; border-radius: 999px;
+  background: color-mix(in srgb, var(--brand) 18%, transparent); color: var(--brand);
+}
+
+/* — Shopify GMV assumption — */
+.calc-assume {
+  margin-bottom: 1.4rem; padding: 1rem 1.1rem;
+  background: var(--bg-sunken); border: 1px solid var(--line); border-radius: var(--r-sm);
+}
+.calc-assume-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.6rem; margin-bottom: 0.7rem; }
+.calc-assume-lab { font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-subtle); }
+.calc-assume-val { font-family: var(--font-display); font-size: 1rem; font-weight: 700; color: var(--ink); }
+.calc-slider--gmv { height: 5px; }
+.calc-assume-note { font-family: var(--font-mono); font-size: 0.66rem; line-height: 1.6; color: var(--ink-subtle); margin-top: 0.7rem; }
+.calc-assume-note strong { color: var(--ink); }
+
 /* — Bars — */
 .calc-bars { display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.8rem; }
 .calc-row-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 0.4rem; }
@@ -78,6 +175,24 @@
 .calc-row--us .calc-cost { color: var(--brand); }
 .calc-per { font-family: var(--font-mono); font-size: 0.6rem; color: var(--ink-subtle); margin-left: 2px; }
 
+/* — Tier that doesn't cover the chosen usage (dimmed, still flat-priced) — */
+.calc-row--unfit { opacity: 0.5; }
+.calc-row--unfit .calc-row-plan { text-decoration: line-through; text-decoration-color: var(--line-strong); }
+
+/* — Enterprise recommendation row — */
+.calc-row--ent { position: relative; }
+.calc-track--ent {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--brand) 16%, transparent), color-mix(in srgb, var(--brand) 6%, transparent));
+  border-color: var(--brand);
+}
+.calc-row--ent .calc-cost { margin-left: 0.85rem; margin-right: auto; padding-right: 0; color: var(--brand); }
+.calc-ent-cta {
+  display: inline-block; margin-top: 0.5rem;
+  font-family: var(--font-mono); font-size: 0.72rem; font-weight: 600;
+  color: var(--brand); text-decoration: none;
+}
+.calc-ent-cta:hover { text-decoration: underline; }
+
 /* — Result — */
 .calc-result {
   border-top: 1px solid var(--line);
@@ -97,4 +212,7 @@
 @media (max-width: 520px) {
   .calc-result { flex-direction: column; align-items: flex-start; }
   .calc-year { text-align: left; }
+  .calc-options { flex-direction: column; align-items: stretch; }
+  .calc-toggle { justify-content: center; }
+  .calc-currency { justify-content: space-between; }
 }

@@ -377,7 +377,7 @@ describe('Login screen', () => {
     const advancedTab = screen.getByText(/Advanced/)
     advancedTab.click()
     await waitFor(() =>
-      expect(screen.getByText('Private API Key')).toBeInTheDocument(),
+      expect(screen.getByText('Private API key')).toBeInTheDocument(),
     )
     // Warns that the cc_prv_ key is powerful.
     expect(screen.getByText(/Powerful credential/)).toBeInTheDocument()

@@ -17,12 +17,50 @@
  *   - Graceful degradation when pgvector extension is missing.
  */
 
-import type { FastifyPluginAsync } from "fastify";
+import type { FastifyPluginAsync, preHandlerHookHandler } from "fastify";
 import { z } from "zod";
 import { storeAuthRead } from "../../lib/auth/middleware.js";
 import { getPool } from "../../db/pool.js";
+import { buildKv } from "../../lib/cache/kv.js";
 import { buildEmbedder } from "./embedder.js";
 import { searchProducts } from "./service.js";
+
+// ── Dedicated /search rate limit (FIX 4) ──────────────────────────────────────
+//
+// /search can trigger uncached paid embeddings, so it gets a tighter, dedicated
+// limit ON TOP of the global IP limiter. Keyed by (storeId + auth principal) so
+// one store/key cannot exhaust embeddings budget. Runs AFTER storeAuthRead, so
+// request.auth is populated; the principal falls back to IP if absent.
+const SEARCH_RL_WINDOW_MS = 60_000;
+const SEARCH_RL_MAX_PER_WINDOW = 60; // per (store, principal) per minute
+
+const searchRateLimit: preHandlerHookHandler = async (request, reply) => {
+  const params = request.params as Record<string, string>;
+  const storeId = params["storeId"] ?? "";
+  // Prefer the authenticated principal (api-key org / jwt user) so the limit is
+  // not shared across all callers behind one NAT; fall back to IP.
+  const auth = request.auth;
+  const principal =
+    auth?.userId ??
+    (auth ? `${auth.authType}:${auth.orgId}` : request.ip);
+  try {
+    const kv = await buildKv();
+    const count = await kv.incrWithWindow(
+      `searchrl:${storeId}:${principal}`,
+      SEARCH_RL_WINDOW_MS
+    );
+    if (count > SEARCH_RL_MAX_PER_WINDOW) {
+      return reply.status(429).send({
+        error: {
+          code: "RATE_LIMIT_EXCEEDED",
+          message: `Search rate limit exceeded: ${SEARCH_RL_MAX_PER_WINDOW} requests per minute`,
+        },
+      });
+    }
+  } catch {
+    // KV unavailable — fail open (the global IP limiter still applies).
+  }
+};
 
 // ── Schemas ────────────────────────────────────────────────────────────────────
 
@@ -53,7 +91,9 @@ export const searchPlugin: FastifyPluginAsync = async (app) => {
   app.post(
     "/commerce/stores/:storeId/search",
     {
-      preHandler: storeAuthRead,
+      // storeAuthRead authenticates first (populates request.auth), then the
+      // dedicated per-(store,principal) search limiter applies (FIX 4).
+      preHandler: [storeAuthRead, searchRateLimit],
       schema: {
         params: SearchParams,
         body: SearchBody,

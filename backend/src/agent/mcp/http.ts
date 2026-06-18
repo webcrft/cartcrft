@@ -124,7 +124,12 @@ export const mcpHttpPlugin: FastifyPluginAsync = async (app) => {
     // single-request MCP exchanges and horizontally-scaled deployments.
     const transport = new StreamableHTTPServerTransport({});
 
-    const mcpServer = buildMcpServer(storeId);
+    // Pass agent attribution (populated by the global agentAttributionHook in
+    // app.ts when the request carries X-Cartcrft-Agent/Signature/Timestamp) so
+    // complete_checkout enforces the agent's spend window + mandate chain and
+    // attributes the order. Plain merchant-key MCP requests have no agentCtx →
+    // checkout behaviour unchanged.
+    const mcpServer = buildMcpServer(storeId, request.agentCtx);
 
     // Run the entire MCP exchange inside a request context so withTx (in the
     // tool service calls) switches to the cartcrft_app role and sets the

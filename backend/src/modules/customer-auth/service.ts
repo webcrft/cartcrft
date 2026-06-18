@@ -23,6 +23,7 @@ import { decodeSecretValue, encodeSecretValue } from "../../lib/secrets.js";
 import { ConsoleMailer } from "../../lib/mailer/console.js";
 import type { Mailer } from "../../lib/mailer/index.js";
 import { renderAuthEmail } from "../../lib/mailer/templates.js";
+import { buildKv } from "../../lib/cache/kv.js";
 
 // ── Module-level mailer (injectable for tests) ────────────────────────────────
 
@@ -135,6 +136,95 @@ export function hashToken(raw: string): string {
 export function generateToken(): { raw: string; hash: string } {
   const raw = randomBytes(32).toString("hex");
   return { raw, hash: hashToken(raw) };
+}
+
+// ── Abuse throttles (FIX 1 / FIX 3) ───────────────────────────────────────────
+//
+// Unauthenticated email endpoints (register, password-reset, magic-link,
+// verify-email/resend) send a real email — each send costs money and can be
+// weaponised as an email-bomb. We gate every send behind a KV-backed cooldown:
+//
+//   - per (store,email): one send per EMAIL_COOLDOWN_MS, plus an hourly cap
+//   - per IP:            an hourly cap across all email sends from that IP
+//
+// All throttling is "fail-open generic-success": when a limit is hit we SKIP
+// the send and return normally, so the caller still emits its generic
+// { ok: true } response and enumeration resistance is preserved.
+
+const EMAIL_COOLDOWN_MS = 60_000;          // min 60s between sends to same (store,email)
+const EMAIL_HOURLY_WINDOW_MS = 60 * 60_000; // 1 hour window for the caps
+const EMAIL_MAX_PER_EMAIL_PER_HOUR = 5;     // per (store,email)
+const EMAIL_MAX_PER_IP_PER_HOUR = 30;       // per IP across all email sends
+
+function normalizeEmailKey(email: string): string {
+  return email.toLowerCase().trim();
+}
+
+/**
+ * Return true when an email send to (storeId,email) from `ip` is allowed, and
+ * record the send. Returns false (and records nothing extra) when any cooldown
+ * or hourly cap is exceeded. Never throws — KV failures fail-open (allow).
+ */
+export async function checkEmailSendAllowed(
+  storeId: string,
+  email: string,
+  ip: string
+): Promise<boolean> {
+  try {
+    const kv = await buildKv();
+    const key = normalizeEmailKey(email);
+    const cooldownKey = `caemail:cd:${storeId}:${key}`;
+
+    // 60s cooldown: a recent marker means we must skip.
+    const recent = await kv.get(cooldownKey);
+    if (recent) return false;
+
+    // Hourly cap per (store,email).
+    const perEmail = await kv.incrWithWindow(
+      `caemail:eh:${storeId}:${key}`,
+      EMAIL_HOURLY_WINDOW_MS
+    );
+    if (perEmail > EMAIL_MAX_PER_EMAIL_PER_HOUR) return false;
+
+    // Hourly cap per IP (skip when IP unknown).
+    if (ip) {
+      const perIp = await kv.incrWithWindow(
+        `caemail:ih:${ip}`,
+        EMAIL_HOURLY_WINDOW_MS
+      );
+      if (perIp > EMAIL_MAX_PER_IP_PER_HOUR) return false;
+    }
+
+    // Mark the cooldown only once we've decided to allow the send.
+    await kv.set(cooldownKey, "1", EMAIL_COOLDOWN_MS);
+    return true;
+  } catch {
+    // KV unavailable — never block a legitimate auth email.
+    return true;
+  }
+}
+
+// Per-IP login throttle (FIX 3): progressive backoff so an attacker cannot lock
+// a victim's account by guessing from one IP, and brute-force from a single IP
+// is rate-limited independently of the per-account lockout. The threshold is
+// well above the per-account lockout (MAX_LOGIN_ATTEMPTS) so legitimate account
+// lockout semantics are unaffected.
+const LOGIN_IP_WINDOW_MS = 15 * 60_000; // 15-minute window
+const LOGIN_IP_MAX_ATTEMPTS = 50;       // attempts per IP per window before 429
+
+/**
+ * Record a login attempt from `ip` and return whether the IP is now throttled.
+ * Returns false (not throttled) on KV failure (fail-open).
+ */
+export async function registerLoginAttemptThrottled(ip: string): Promise<boolean> {
+  if (!ip) return false;
+  try {
+    const kv = await buildKv();
+    const count = await kv.incrWithWindow(`calogin:ip:${ip}`, LOGIN_IP_WINDOW_MS);
+    return count > LOGIN_IP_MAX_ATTEMPTS;
+  } catch {
+    return false;
+  }
 }
 
 // ── Password hashing (argon2id primary; PBKDF2-SHA512 legacy) ────────────────
@@ -886,7 +976,7 @@ export async function registerCustomer(
   await caAudit(pool, storeId, customerId, "customer.register", ip, userAgent);
 
   if (cfg.requireEmailVerification) {
-    await sendEmailVerification(pool, storeId, customerId, email, cfg);
+    await sendEmailVerification(pool, storeId, customerId, email, cfg, ip);
   }
 
   return { customerId, requiresVerification: cfg.requireEmailVerification };
@@ -899,8 +989,13 @@ export async function sendEmailVerification(
   storeId: string,
   customerId: string,
   email: string,
-  cfg: Pick<StoreAuthConfig, "storeName" | "logoUrl" | "brandColor" | "redirectUrl">
+  cfg: Pick<StoreAuthConfig, "storeName" | "logoUrl" | "brandColor" | "redirectUrl">,
+  ip = ""
 ): Promise<void> {
+  // FIX 1: cooldown the verification email (email-bomb / cost-DoS). On throttle
+  // skip silently — both register and verify-email/resend return generic success.
+  if (!(await checkEmailSendAllowed(storeId, email, ip))) return;
+
   const { raw, hash } = generateToken();
   const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
@@ -968,6 +1063,16 @@ export async function loginWithPassword(
     throw Object.assign(new Error("email/password auth is disabled"), { statusCode: 400 });
   }
 
+  // FIX 3: per-IP login throttle (progressive backoff). Counts every attempt
+  // from this IP across all accounts so a single IP cannot brute-force or lock
+  // arbitrary victims; threshold sits well above the per-account lockout.
+  if (await registerLoginAttemptThrottled(ip)) {
+    throw Object.assign(
+      new Error("too many login attempts from this network — try again later"),
+      { statusCode: 429 }
+    );
+  }
+
   const { rows } = await pool.query<{
     id: string;
     password_hash: string | null;
@@ -1030,6 +1135,17 @@ export async function loginWithPassword(
     throw Object.assign(new Error("email not verified — check your inbox"), { statusCode: 403 });
   }
 
+  // FIX 3 (Low): reset the per-account failed-attempt counter AND clear any
+  // residual lockout on a successful login (the dashboard path does this; the
+  // storefront path previously cleared only failed_login_attempts via
+  // issueSession and left locked_until stale).
+  await pool.query(
+    `UPDATE customers
+        SET failed_login_attempts = 0, locked_until = NULL, updated_at = now()
+      WHERE id = $1::uuid`,
+    [customer.id]
+  );
+
   await caAudit(pool, storeId, customer.id, "customer.login", ip, userAgent);
   return issueSession(pool, customer.id, storeId, cfg, ip, userAgent);
 }
@@ -1049,6 +1165,10 @@ export async function requestPasswordReset(
     [storeId, email.toLowerCase().trim()]
   );
   if (!rows[0]) return; // silent
+
+  // FIX 1: per-(store,email) + per-IP cooldown before sending (email-bomb / cost-DoS).
+  // On throttle we silently skip — caller still returns generic success.
+  if (!(await checkEmailSendAllowed(storeId, email, ip))) return;
 
   const { raw, hash } = generateToken();
   const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
@@ -1113,6 +1233,11 @@ export async function sendMagicLink(
   if (!cfg.magicLinkEnabled) {
     throw Object.assign(new Error("magic link auth is disabled"), { statusCode: 400 });
   }
+
+  // FIX 1: enforce the cooldown BEFORE any DB write so a throttled request never
+  // auto-creates a customer row (avoids row-creation abuse) and never sends an
+  // email. Silently skip — caller returns generic success (enumeration-safe).
+  if (!(await checkEmailSendAllowed(storeId, email, ip))) return;
 
   let customerId: string;
   const { rows: existing } = await pool.query<{ id: string }>(

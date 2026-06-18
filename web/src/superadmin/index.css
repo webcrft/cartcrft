@@ -18,23 +18,26 @@
   --cc-lime-bright: #ccff63;
   --cc-lime-ink: #0c0d0a; /* ink text on a lime fill */
 
-  /* — Canvas — warm near-black, with a cooler steel for operator chrome — */
+  /* — Canvas — warm near-black, matching the merchant dashboard for one
+   *    consistent product theme. (The operator console stays identifiable via
+   *    the amber "Operator Console" banner, not a separate cool palette.) — */
   --cc-ink: #0c0d0a; /* warm near-black canvas */
-  --cc-steel: #0a0c10; /* cooler graphite — sidebar / operator chrome */
-  --cc-steel-2: #0d0f14; /* slightly lifted steel */
-  --cc-surface: #15160f; /* cards (warm) */
-  --cc-surface-steel: #11131a; /* steel-tinted card variant */
+  --cc-steel: #101109; /* sidebar / chrome — warm, matches dashboard bg-subtle */
+  --cc-steel-2: #16170f; /* slightly lifted chrome */
+  --cc-surface: #16170f; /* cards (warm) */
+  --cc-surface-steel: #16170f; /* card variant — kept warm for consistency */
   --cc-surface-2: #1c1e13;
+  --cc-surface-3: #24261a; /* hover / raised */
 
-  /* — Ink (off-white on dark) — */
-  --cc-text: #eceae0; /* headings / primary */
-  --cc-text-body: #b6b6aa; /* body copy */
-  --cc-text-muted: #85867a; /* secondary */
-  --cc-text-subtle: #5d5e53; /* labels / captions */
+  /* — Ink (off-white on dark) — lifted for legibility, matches dashboard — */
+  --cc-text: #f3f1e8; /* headings / primary */
+  --cc-text-body: #cac9bd; /* body copy */
+  --cc-text-muted: #9c9d8f; /* secondary */
+  --cc-text-subtle: #797a6d; /* labels / captions */
 
   /* — Hairlines — */
-  --cc-line: rgba(255, 255, 255, 0.07);
-  --cc-line-strong: rgba(255, 255, 255, 0.12);
+  --cc-line: rgba(255, 255, 255, 0.09);
+  --cc-line-strong: rgba(255, 255, 255, 0.14);
 
   /* — Reserved semantic colours — */
   --cc-amber: #f5b842; /* warnings only (LOCKED / IP_BLOCKED / operator banner) */

@@ -23,17 +23,17 @@ export function Badge({
   color?: BadgeColor
 }) {
   const colors: Record<BadgeColor, string> = {
-    lime: 'bg-[var(--cc-lime)]/12 text-[var(--cc-lime)] border-[var(--cc-lime)]/30',
+    lime: 'bg-[var(--cc-lime)]/14 text-[var(--cc-lime)] border-[var(--cc-lime)]/30',
     emerald: 'bg-emerald-500/12 text-emerald-300 border-emerald-500/25',
     amber: 'bg-amber-500/12 text-amber-300 border-amber-500/25',
     red: 'bg-red-500/12 text-red-300 border-red-500/25',
     blue: 'bg-sky-500/12 text-sky-300 border-sky-500/25',
     orange: 'bg-orange-500/12 text-orange-300 border-orange-500/25',
-    slate: 'bg-white/[0.05] text-[var(--cc-text-muted)] border-white/10',
+    slate: 'bg-white/[0.05] text-[var(--cc-text-body)] border-white/[0.09]',
   }
   return (
     <span
-      className={`inline-flex items-center rounded-[5px] border px-1.5 py-0.5 font-mono text-[10px] font-medium uppercase tracking-wider leading-none ${colors[color]}`}
+      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium leading-[1.4] ${colors[color]}`}
     >
       {children}
     </span>
@@ -43,11 +43,13 @@ export function Badge({
 // ── Btn ───────────────────────────────────────────────────────────────────────
 
 type BtnVariant = 'primary' | 'secondary' | 'danger' | 'warning'
+type BtnSize = 'sm' | 'md' | 'lg'
 
 export function Btn({
   children,
   onClick,
   variant = 'primary',
+  size = 'md',
   disabled,
   loading,
   className = '',
@@ -56,25 +58,31 @@ export function Btn({
   children: React.ReactNode
   onClick?: () => void
   variant?: BtnVariant
+  size?: BtnSize
   disabled?: boolean
   loading?: boolean
   className?: string
   type?: 'button' | 'submit' | 'reset'
 }) {
+  const sizes: Record<BtnSize, string> = {
+    sm: 'px-3 py-1.5 text-[12px] gap-1.5',
+    md: 'px-4 py-2 text-[13px] gap-1.5',
+    lg: 'px-5 py-2.5 text-sm gap-2',
+  }
   const base =
-    'inline-flex items-center justify-center gap-1.5 rounded-md px-4 py-2 text-xs font-semibold transition active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cc-lime)]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--cc-ink)] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100'
+    'inline-flex items-center justify-center rounded-lg font-semibold transition-all duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cc-lime)]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--cc-ink)] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100'
   const variants: Record<BtnVariant, string> = {
-    primary: 'bg-[var(--cc-lime)] text-[var(--cc-lime-ink)] hover:bg-[var(--cc-lime-bright)] shadow-[0_0_0_1px_rgba(181,255,46,0.2),0_8px_24px_-12px_rgba(181,255,46,0.5)]',
-    warning: 'bg-amber-500 text-[var(--cc-ink)] hover:bg-amber-400',
-    secondary: 'border border-white/10 bg-white/[0.04] text-[var(--cc-text-body)] hover:bg-white/[0.08] hover:text-[var(--cc-text)]',
-    danger: 'border border-red-500/30 bg-red-600/10 text-red-300 hover:bg-red-600/20',
+    primary: 'bg-[var(--cc-lime)] text-[var(--cc-lime-ink)] ring-1 ring-inset ring-black/10 hover:bg-[var(--cc-lime-bright)]',
+    warning: 'bg-amber-500 text-[var(--cc-ink)] ring-1 ring-inset ring-black/10 hover:bg-amber-400',
+    secondary: 'border border-white/[0.1] bg-[var(--cc-surface-2)] text-[var(--cc-text-body)] hover:bg-[var(--cc-surface-3)] hover:text-[var(--cc-text)] hover:border-white/[0.16]',
+    danger: 'border border-red-500/30 bg-red-600/10 text-red-300 hover:bg-red-600/18 hover:border-red-500/45',
   }
   return (
     <button
       type={type}
       onClick={onClick}
       disabled={disabled ?? loading}
-      className={`${base} ${variants[variant]} ${className}`}
+      className={`${base} ${sizes[size]} ${variants[variant]} ${className}`}
     >
       {loading && (
         <span className="h-3.5 w-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
@@ -97,11 +105,11 @@ export function Card({
 }) {
   return (
     <div
-      className={`rounded-lg border border-white/[0.07] bg-[var(--cc-surface)] shadow-sm shadow-black/30 overflow-hidden ${className}`}
+      className={`rounded-xl border border-white/[0.08] bg-[var(--cc-surface)] overflow-hidden ${className}`}
     >
       {title && (
-        <div className="px-5 py-3.5 border-b border-white/[0.07] bg-white/[0.015]">
-          <h3 className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--cc-text-muted)]">{title}</h3>
+        <div className="px-5 py-4 border-b border-white/[0.07]">
+          <h3 className="text-[14px] font-semibold text-[var(--cc-text)] tracking-[-0.01em]">{title}</h3>
         </div>
       )}
       <div className="p-5">{children}</div>
@@ -129,14 +137,14 @@ export function FormInput({
   return (
     <div className={className}>
       {label && (
-        <label className="block font-mono text-[10px] font-medium uppercase tracking-wider text-[var(--cc-text-muted)] mb-1.5">{label}</label>
+        <label className="block text-[13px] font-medium text-[var(--cc-text-body)] mb-1.5">{label}</label>
       )}
       <input
         type={type}
         value={value ?? ''}
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-md border border-white/[0.08] bg-white/[0.02] px-3 py-2.5 text-sm text-[var(--cc-text)] placeholder:text-[var(--cc-text-subtle)] focus:border-[var(--cc-lime)]/50 focus:outline-none focus:ring-1 focus:ring-[var(--cc-lime)]/40 transition"
+        className="w-full rounded-lg border border-white/[0.08] bg-[var(--cc-ink)] px-3 py-2.5 text-sm text-[var(--cc-text)] placeholder:text-[var(--cc-text-subtle)] focus:border-[var(--cc-lime)]/45 focus:outline-none focus:ring-2 focus:ring-[var(--cc-lime)]/20 transition"
       />
     </div>
   )
@@ -158,11 +166,11 @@ export function PageHeader({
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
       <div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <h2 className="text-xl font-bold text-[var(--cc-text)] tracking-tight">{title}</h2>
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <h2 className="text-[1.6rem] font-bold text-[var(--cc-text)]" style={{ letterSpacing: '-0.025em' }}>{title}</h2>
           {badge}
         </div>
-        {description && <p className="text-xs text-[var(--cc-text-muted)] mt-1">{description}</p>}
+        {description && <p className="text-[13px] text-[var(--cc-text-muted)] mt-1">{description}</p>}
       </div>
       {actions && <div className="flex items-center gap-2">{actions}</div>}
     </div>
@@ -179,10 +187,10 @@ export function EmptyState({
   description?: string
 }) {
   return (
-    <div className="rounded-lg border border-dashed border-white/10 bg-white/[0.01] p-16 text-center">
-      <p className="text-sm font-medium text-[var(--cc-text-body)] mb-1">{title}</p>
+    <div className="rounded-xl border border-dashed border-white/[0.1] bg-white/[0.01] p-16 text-center">
+      <p className="text-[15px] font-semibold text-[var(--cc-text)] mb-1.5">{title}</p>
       {description && (
-        <p className="text-xs text-[var(--cc-text-muted)] max-w-sm mx-auto">{description}</p>
+        <p className="text-[13px] text-[var(--cc-text-muted)] max-w-sm mx-auto leading-relaxed">{description}</p>
       )}
     </div>
   )
@@ -212,9 +220,9 @@ export function Modal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-xl border border-white/[0.1] bg-[var(--cc-surface-steel)] shadow-2xl shadow-black/60">
+      <div className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-xl border border-white/[0.1] bg-[var(--cc-surface)] shadow-2xl shadow-black/60">
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.07]">
-          <h2 className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-[var(--cc-text)]">{title}</h2>
+          <h2 className="text-base font-semibold text-[var(--cc-text)]" style={{ letterSpacing: '-0.02em' }}>{title}</h2>
           <button
             onClick={onClose}
             className="rounded-md p-1.5 text-[var(--cc-text-muted)] hover:text-[var(--cc-text)] hover:bg-white/[0.06] transition"
@@ -232,7 +240,7 @@ export function Modal({
 
 export function TableContainer({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-lg border border-white/[0.07] bg-[var(--cc-surface)] shadow-sm shadow-black/30 overflow-hidden">
+    <div className="rounded-xl border border-white/[0.08] bg-[var(--cc-surface)] overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full">{children}</table>
       </div>
@@ -256,7 +264,7 @@ export function Th({
   className?: string
 }) {
   return (
-    <th className={`px-5 py-2.5 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--cc-text-subtle)] ${className}`}>
+    <th className={`px-5 py-3 text-[12px] font-medium text-[var(--cc-text-muted)] ${className}`}>
       {children}
     </th>
   )
@@ -282,10 +290,10 @@ export function LoadError({
   onRetry?: () => void
 }) {
   return (
-    <div className="rounded-lg border border-red-500/20 bg-red-500/[0.06] px-5 py-4 flex items-center justify-between gap-4">
+    <div className="rounded-xl border border-red-500/20 bg-red-500/[0.06] px-5 py-4 flex items-center justify-between gap-4">
       <div className="flex items-center gap-2.5">
         <span className="text-red-400 text-base leading-none">&#9888;</span>
-        <p className="text-xs text-red-300">
+        <p className="text-[13px] text-red-300">
           {message ?? 'Failed to load — check API connection.'}
         </p>
       </div>
@@ -321,10 +329,10 @@ export function StatCard({
     red: 'text-red-400',
   }
   return (
-    <div className="group relative rounded-lg border border-white/[0.07] bg-[var(--cc-surface)] shadow-sm shadow-black/30 px-5 py-4 transition hover:border-white/[0.14]">
-      <p className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-[var(--cc-text-subtle)] mb-1.5">{label}</p>
-      <p className={`font-display text-[1.7rem] font-bold tabular-nums leading-none tracking-tight ${valueColors[color]}`}>{value}</p>
-      {sub && <p className="text-xs text-[var(--cc-text-muted)] mt-1.5">{sub}</p>}
+    <div className="group relative rounded-xl border border-white/[0.08] bg-[var(--cc-surface)] px-5 py-4 transition hover:border-white/[0.14]">
+      <p className="text-[13px] font-medium text-[var(--cc-text-muted)] mb-2">{label}</p>
+      <p className={`font-display text-[1.75rem] font-bold tabular-nums leading-none tracking-tight ${valueColors[color]}`}>{value}</p>
+      {sub && <p className="text-[12px] text-[var(--cc-text-muted)] mt-1.5">{sub}</p>}
     </div>
   )
 }

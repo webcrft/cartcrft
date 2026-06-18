@@ -236,7 +236,17 @@ export const ucpV2026_01Plugin: FastifyPluginAsync = async (app) => {
       const idempotencyKeyValue = request.headers["idempotency-key"] as string | undefined;
 
       try {
-        const result = await submitUcpCheckout(storeId, checkoutId, body, idempotencyKeyValue);
+        // Thread agent attribution (set by the global agentAttributionHook) so
+        // submitUcpCheckout → completeCheckout enforces spend/mandate limits when
+        // the request carries agent signature headers. Plain merchant-key
+        // requests have agentCtx === undefined → unchanged behaviour.
+        const result = await submitUcpCheckout(
+          storeId,
+          checkoutId,
+          body,
+          idempotencyKeyValue,
+          request.agentCtx
+        );
         return reply.send({
           checkout: result.checkout,
           order_reference: {

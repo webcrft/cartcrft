@@ -1061,6 +1061,11 @@ export async function listAuditLog(
  * @throws Error with code MANDATE_SPEND_LIMIT_EXCEEDED if limit exceeded
  * @throws Error with code AGENT_INACTIVE if agent is disabled
  * @throws Error with code MANDATE_REQUIRED if mandate required but missing/invalid
+ *
+ * @returns The id of the verified payment mandate for this checkout, or null
+ *   when no payment mandate was attached (spend-limit-only mode). The caller
+ *   (completeCheckout) stamps this onto order.metadata.mandate_id so there is an
+ *   auditable order → mandate → intent chain.
  */
 export async function verifyAgentCheckout(
   agentId: string,
@@ -1068,7 +1073,7 @@ export async function verifyAgentCheckout(
   checkoutId: string,
   checkoutTotal: number,
   storeRequiresMandate = false
-): Promise<void> {
+): Promise<string | null> {
   const pool = getPool();
 
   // 1. Load agent
@@ -1124,7 +1129,8 @@ export async function verifyAgentCheckout(
 
   if (mandateRows.length > 0) {
     // Mandate exists — verify the full chain regardless of store flag.
-    const result = await verifyMandate(storeId, mandateRows[0]!.id);
+    const mandateId = mandateRows[0]!.id;
+    const result = await verifyMandate(storeId, mandateId);
     if (!result.valid) {
       const err = new Error(
         `payment mandate invalid: ${result.errors.join("; ")}`
@@ -1132,6 +1138,8 @@ export async function verifyAgentCheckout(
       err.code = "MANDATE_REQUIRED";
       throw err;
     }
+    // Return the verified payment mandate id for auditable order attribution.
+    return mandateId;
   } else if (storeRequiresMandate) {
     // Store requires a mandate but none was found for this checkout.
     const err = new Error(
@@ -1140,4 +1148,7 @@ export async function verifyAgentCheckout(
     err.code = "MANDATE_REQUIRED";
     throw err;
   }
+
+  // Spend-limit-only mode: no payment mandate attached.
+  return null;
 }

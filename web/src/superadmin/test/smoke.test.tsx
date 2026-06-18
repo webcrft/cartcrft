@@ -249,7 +249,7 @@ describe('Super-admin AppShell', () => {
     })
 
     await waitFor(() => {
-      expect(screen.getByText('Operator Console')).toBeInTheDocument()
+      expect(screen.getByText('Operator console')).toBeInTheDocument()
     })
     expect(screen.getByText('admin@example.com')).toBeInTheDocument()
     expect(screen.getByText('System Analytics')).toBeInTheDocument()

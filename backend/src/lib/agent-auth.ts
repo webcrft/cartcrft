@@ -29,8 +29,18 @@
  * Error codes:
  *   AGENT_SIGNATURE_EXPIRED   — timestamp outside 5-minute window
  *   AGENT_SIGNATURE_INVALID   — signature does not verify
+ *   AGENT_SIGNATURE_REPLAYED  — signature already seen within the replay window
  *   AGENT_NOT_FOUND           — unknown agent ID
  *   AGENT_INACTIVE            — agent is not active
+ *
+ * Replay protection (FIX 3):
+ *   The ±5-minute timestamp window alone leaves a captured signed request
+ *   replayable for up to 10 minutes. After the signature verifies we record a
+ *   single-use marker — keyed by agentId + the signature digest — in the shared
+ *   KV (lib/cache/kv.js) with a TTL covering the full window, and reject any
+ *   request whose marker already exists. The signature is a deterministic
+ *   ed25519 digest over METHOD/path/sha256(body)/timestamp, so it uniquely
+ *   identifies the exact request and serves as the nonce/jti.
  */
 
 import { createHash, verify as cryptoVerify } from "node:crypto";
@@ -47,6 +57,14 @@ import type { AgentHeaderCtx } from "../modules/agents/types.js";
 
 /** Maximum age of a request timestamp in seconds (5 minutes). */
 const SIGNATURE_WINDOW_SECONDS = 5 * 60;
+
+/**
+ * Replay-marker TTL. A signature is accepted while its timestamp is within
+ * ±SIGNATURE_WINDOW_SECONDS of server time, so the same signature can be valid
+ * across a 2× window span of wall-clock time. The replay marker must therefore
+ * live at least that long. Stored in ms for the KV TTL.
+ */
+const REPLAY_TTL_MS = 2 * SIGNATURE_WINDOW_SECONDS * 1000;
 
 // ── Request decoration ────────────────────────────────────────────────────────
 
@@ -203,6 +221,24 @@ export async function resolveAgentAttribution(
     throw err;
   }
 
+  // Replay guard (FIX 3): the signature is a deterministic ed25519 digest over
+  // METHOD/path/sha256(body)/timestamp — it uniquely identifies this exact
+  // request and serves as a nonce/jti. Record it once in the shared KV with a
+  // TTL covering the timestamp window; reject if it has already been seen.
+  // Performed only AFTER the signature verifies so we never burn markers for
+  // forged signatures, and only for valid agents so the agentId namespaces the
+  // key. The marker digest is hashed to bound the key length.
+  const replayKey = `agent:nonce:${agentId}:${sha256Hex(signature)}`;
+  const { buildKv } = await import("../lib/cache/kv.js");
+  const kv = await buildKv();
+  const seen = await kv.get(replayKey);
+  if (seen) {
+    const err = new Error("agent request signature has already been used (replay detected)") as NodeJS.ErrnoException;
+    err.code = "AGENT_SIGNATURE_REPLAYED";
+    throw err;
+  }
+  await kv.set(replayKey, "1", REPLAY_TTL_MS);
+
   return {
     agentId,
     storeId: agent.store_id,
@@ -259,6 +295,7 @@ export const agentAttributionHook: preHandlerHookHandler = async (
 
     const statusCode =
       code === "AGENT_SIGNATURE_EXPIRED" ? 401 :
+      code === "AGENT_SIGNATURE_REPLAYED" ? 401 :
       code === "AGENT_NOT_FOUND" ? 401 :
       code === "AGENT_INACTIVE" ? 403 :
       401;

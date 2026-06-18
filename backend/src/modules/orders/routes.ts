@@ -7,14 +7,13 @@
  *   GET    /commerce/stores/:storeId/orders/:orderId                — storeAuthWrite
  *   PUT    /commerce/stores/:storeId/orders/:orderId                — storeAuthWrite
  *   POST   /commerce/stores/:storeId/orders/:orderId/cancel         — storeAuthWrite
- *   POST   /commerce/stores/:storeId/orders/:orderId/notes          — requireJwt
+ *   POST   /commerce/stores/:storeId/orders/:orderId/notes          — storeAuthWrite
  *   GET    /commerce/stores/:storeId/orders/:orderId/events         — storeAuthWrite
  */
 
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import {
-  requireJwt,
   storeAuthWrite,
 } from "../../lib/auth/middleware.js";
 import {
@@ -25,6 +24,8 @@ import {
   cancelOrder,
   addOrderNote,
   listOrderEvents,
+  fulfillOrderLines,
+  editOrderLines,
 } from "./service.js";
 
 // ── Schemas ────────────────────────────────────────────────────────────────────
@@ -85,6 +86,43 @@ const CancelOrderBody = z.object({
 
 const AddNoteBody = z.object({
   note: z.string().min(1, "note is required").max(16384),
+});
+
+// Line-level (incremental, partial-capable) fulfillment.
+// Replaces the prior absence of any fulfill schema — the order's
+// fulfillment_status was previously only settable via the z.never()-blocked
+// PUT path, so there was no safe way to fulfill at all.
+const FulfillOrderBody = z.object({
+  lines: z
+    .array(
+      z.object({
+        order_line_id: z.string().uuid("order_line_id must be a UUID"),
+        quantity: z.number().int().min(1, "quantity must be >= 1"),
+      })
+    )
+    .min(1, "lines must be a non-empty array"),
+});
+
+// Safe order line edits on unfulfilled orders. Each op is discriminated by `op`.
+const EditLineOpSchema = z.discriminatedUnion("op", [
+  z.object({
+    op: z.literal("update_quantity"),
+    order_line_id: z.string().uuid("order_line_id must be a UUID"),
+    quantity: z.number().int().min(1, "quantity must be >= 1"),
+  }),
+  z.object({
+    op: z.literal("add"),
+    variant_id: z.string().uuid("variant_id must be a UUID"),
+    quantity: z.number().int().min(1, "quantity must be >= 1"),
+  }),
+  z.object({
+    op: z.literal("remove"),
+    order_line_id: z.string().uuid("order_line_id must be a UUID"),
+  }),
+]);
+
+const EditOrderLinesBody = z.object({
+  ops: z.array(EditLineOpSchema).min(1, "ops must be a non-empty array"),
 });
 
 // ── Plugin ────────────────────────────────────────────────────────────────────
@@ -221,11 +259,14 @@ export const ordersPlugin: FastifyPluginAsync = async (app) => {
   );
 
   // ── POST /commerce/stores/:storeId/orders/:orderId/notes ────────────────────
-  // Requires JWT auth (not API key)
+  // SEC: was bare requireJwt, which set orgId but did NOT validate that
+  // :storeId belongs to the caller's org (cross-tenant write IDOR). Use the
+  // same storeAuthWrite guard the other order write routes use so the store is
+  // org-scoped before the note is written.
   app.post(
     "/commerce/stores/:storeId/orders/:orderId/notes",
     {
-      preHandler: [requireJwt],
+      preHandler: [storeAuthWrite],
       schema: { params: StoreOrderIdParams, body: AddNoteBody },
     },
     async (request, reply) => {
@@ -269,4 +310,82 @@ export const ordersPlugin: FastifyPluginAsync = async (app) => {
       return reply.send({ events });
     }
   );
+
+  // ── POST /commerce/stores/:storeId/orders/:orderId/fulfillments ──────────────
+  // Incremental, partial-capable line-level fulfillment.
+  app.post(
+    "/commerce/stores/:storeId/orders/:orderId/fulfillments",
+    {
+      preHandler: [storeAuthWrite],
+      schema: { params: StoreOrderIdParams, body: FulfillOrderBody },
+    },
+    async (request, reply) => {
+      const { storeId, orderId } = request.params as z.infer<typeof StoreOrderIdParams>;
+      const { lines } = request.body as z.infer<typeof FulfillOrderBody>;
+      const userId = request.auth?.userId;
+
+      try {
+        const result = await fulfillOrderLines(storeId, orderId, lines, userId);
+        if (!result) {
+          return reply
+            .status(404)
+            .send({ error: { code: "NOT_FOUND", message: "order not found" } });
+        }
+        return reply.status(201).send(result);
+      } catch (err: unknown) {
+        return mapServiceError(reply, err);
+      }
+    }
+  );
+
+  // ── POST /commerce/stores/:storeId/orders/:orderId/edit-lines ────────────────
+  // Safe line edits (update qty / add / remove) on UNFULFILLED orders with
+  // server-side re-pricing and inventory adjustment.
+  app.post(
+    "/commerce/stores/:storeId/orders/:orderId/edit-lines",
+    {
+      preHandler: [storeAuthWrite],
+      schema: { params: StoreOrderIdParams, body: EditOrderLinesBody },
+    },
+    async (request, reply) => {
+      const { storeId, orderId } = request.params as z.infer<typeof StoreOrderIdParams>;
+      const { ops } = request.body as z.infer<typeof EditOrderLinesBody>;
+      const userId = request.auth?.userId;
+
+      try {
+        const result = await editOrderLines(storeId, orderId, ops, userId);
+        if (!result) {
+          return reply
+            .status(404)
+            .send({ error: { code: "NOT_FOUND", message: "order not found" } });
+        }
+        return reply.send(result);
+      } catch (err: unknown) {
+        return mapServiceError(reply, err);
+      }
+    }
+  );
 };
+
+// ── Service-error → HTTP mapping ────────────────────────────────────────────────
+// Mirrors the inline mapping the other handlers use, centralised for the two
+// new endpoints (VALIDATION_ERROR → 400, CONFLICT → 409, NOT_FOUND → 404,
+// INSUFFICIENT_INVENTORY → 409).
+function mapServiceError(
+  reply: import("fastify").FastifyReply,
+  err: unknown
+): unknown {
+  if (err instanceof Error) {
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code === "VALIDATION_ERROR") {
+      return reply.status(400).send({ error: { code, message: err.message } });
+    }
+    if (code === "NOT_FOUND") {
+      return reply.status(404).send({ error: { code, message: err.message } });
+    }
+    if (code === "CONFLICT" || code === "INSUFFICIENT_INVENTORY") {
+      return reply.status(409).send({ error: { code, message: err.message } });
+    }
+  }
+  throw err;
+}

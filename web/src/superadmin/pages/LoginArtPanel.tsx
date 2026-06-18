@@ -114,7 +114,7 @@ export default function LoginArtPanel() {
 
         {/* === Audit log ticker === */}
         <div className="lp-ticker-wrap">
-          <div className="lp-ticker-label">AUDIT STREAM</div>
+          <div className="lp-ticker-label">Audit stream</div>
           <div className="lp-ticker">
             <div className="lp-ticker-inner">
               <span className="lp-tick lp-tick--ok">    ✓ AUTH&nbsp;&nbsp;operator login from 10.0.0.1</span>
@@ -135,7 +135,7 @@ export default function LoginArtPanel() {
             <circle cx="5" cy="5" r="4.25" stroke="currentColor" strokeWidth="0.75" opacity="0.5" />
             <circle cx="5" cy="5" r="1.5" fill="currentColor" opacity="0.7" />
           </svg>
-          OPERATOR CONSOLE&nbsp;&nbsp;·&nbsp;&nbsp;ACCESS LOGGED
+          Operator console&nbsp;&nbsp;·&nbsp;&nbsp;Access logged
         </div>
       </div>
     </div>

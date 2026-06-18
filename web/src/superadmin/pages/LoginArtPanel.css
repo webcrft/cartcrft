@@ -86,7 +86,7 @@
   font-size: 1.75rem;
   font-weight: 800;
   letter-spacing: -0.045em;
-  color: var(--cc-text, #eceae0);
+  color: var(--cc-text, #f3f1e8);
   line-height: 1;
 }
 
@@ -143,11 +143,11 @@
 }
 
 .lp-ticker-label {
-  font-family: var(--cc-font-mono, 'JetBrains Mono', monospace);
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 0.18em;
-  color: var(--cc-text-subtle, #5d5e53);
+  font-family: var(--cc-font-sans, 'Hanken Grotesk', sans-serif);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--cc-text-muted, #9c9d8f);
   margin-bottom: 0.5rem;
   padding-left: 0.125rem;
 }
@@ -212,12 +212,11 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-family: var(--cc-font-mono, 'JetBrains Mono', monospace);
-  font-size: 9.5px;
+  font-family: var(--cc-font-sans, 'Hanken Grotesk', sans-serif);
+  font-size: 12px;
   font-weight: 500;
-  letter-spacing: 0.14em;
-  color: var(--cc-text-subtle, #5d5e53);
-  text-transform: uppercase;
+  letter-spacing: 0;
+  color: var(--cc-text-muted, #9c9d8f);
 }
 
 .lp-badge-icon {

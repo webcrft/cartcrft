@@ -22,6 +22,7 @@
 
 import { getPool, getReadDb, withTx } from "../../db/pool.js";
 import { newBobGoClient } from "../../providers/shipping/bobgo.js";
+import { newShippoClient } from "../../providers/shipping/shippo.js";
 import { dispatchStoreEvent } from "../notifications/service.js";
 
 // ── Shipping zones ────────────────────────────────────────────────────────────
@@ -276,6 +277,15 @@ export async function getAvailableShippingRates(
       postalCode: opts.postal_code ?? "",
     });
     rates.push(...bobgoRates);
+
+    const shippoRates = await fetchShippoRates(storeId, {
+      countryCode,
+      weightG,
+      city: opts.city ?? "",
+      postalCode: opts.postal_code ?? "",
+      ...(provinceCode ? { provinceCode } : {}),
+    });
+    rates.push(...shippoRates);
   }
 
   return rates;
@@ -353,6 +363,95 @@ async function fetchBobGoRates(
     }));
   } catch {
     // Non-fatal — BobGo API failure degrades gracefully
+    return [];
+  }
+}
+
+async function fetchShippoRates(
+  storeId: string,
+  opts: {
+    countryCode: string;
+    weightG: number;
+    city: string;
+    postalCode: string;
+    provinceCode?: string | undefined;
+  }
+) {
+  const pool = getReadDb();
+
+  // Find active shippo provider
+  const { rows: provRows } = await pool.query<{ id: string; config: Record<string, unknown> }>(
+    `SELECT id::text, COALESCE(config, '{}') AS config
+     FROM shipping_providers
+     WHERE store_id = $1::uuid
+       AND (config->>'provider' = 'shippo' OR name ILIKE '%shippo%')
+       AND is_active = true
+     LIMIT 1`,
+    [storeId]
+  );
+  const prov = provRows[0];
+  if (!prov) return [];
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- config is jsonb
+  const cfg = prov.config as Record<string, any>;
+  const apiKey = typeof cfg["api_key"] === "string" ? cfg["api_key"] : "";
+  if (!apiKey) return [];
+
+  // Get default warehouse address as ship-from
+  const { rows: whRows } = await pool.query<{ address: Record<string, unknown> | null }>(
+    `SELECT COALESCE(address, '{}') AS address
+     FROM warehouses WHERE store_id = $1::uuid AND is_default = true LIMIT 1`,
+    [storeId]
+  );
+  const warehouseAddr: Record<string, unknown> = whRows[0]?.address ?? {};
+
+  const weightKg = opts.weightG > 0 ? opts.weightG / 1000 : 0.5;
+
+  try {
+    const client = newShippoClient(apiKey);
+    const liveRates = await client.getRates({
+      address_from: {
+        name: String(warehouseAddr["name"] ?? ""),
+        street1: String(warehouseAddr["street_address"] ?? ""),
+        city: String(warehouseAddr["city"] ?? ""),
+        state: String(warehouseAddr["province_code"] ?? warehouseAddr["zone"] ?? ""),
+        zip: String(warehouseAddr["postal_code"] ?? ""),
+        country: String(warehouseAddr["country_code"] ?? "US").toUpperCase(),
+      },
+      address_to: {
+        name: "",
+        street1: "",
+        city: opts.city,
+        state: opts.provinceCode ?? "",
+        zip: opts.postalCode,
+        country: opts.countryCode,
+      },
+      parcels: [
+        {
+          length: 20,
+          width: 15,
+          height: 10,
+          distance_unit: "cm",
+          weight: weightKg,
+          mass_unit: "kg",
+        },
+      ],
+    });
+
+    return liveRates.map((r) => ({
+      id: `shippo:${r.object_id}`,
+      provider_id: prov.id,
+      provider: "shippo",
+      name: `${r.servicelevel?.name} (${r.provider})`,
+      price: Number(r.amount),
+      currency: r.currency,
+      estimated_days_min: r.estimated_days ?? null,
+      estimated_days_max: r.estimated_days ?? null,
+      service_level_code: r.servicelevel?.token,
+      courier_code: r.provider,
+    }));
+  } catch {
+    // Non-fatal — Shippo API failure degrades gracefully
     return [];
   }
 }

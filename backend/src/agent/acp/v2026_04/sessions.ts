@@ -31,6 +31,7 @@ import {
   chargeDelegatedToken,
   DelegatedPaymentError,
 } from "../../../modules/payments/delegated.js";
+import type { AgentHeaderCtx } from "../../../modules/agents/types.js";
 import type {
   AcpCheckoutSession,
   AcpLineItem,
@@ -39,35 +40,41 @@ import type {
   AcpPaymentReadiness,
 } from "./types.js";
 
-// ── Idempotency store (in-memory for session creation/completion) ─────────────
-// Production-grade: would use the DB idempotency_keys table (T2.3 established this).
-// For ACP we use in-memory with TTL since sessions are short-lived agent interactions.
+// ── Idempotency store (durable, shared KV) ────────────────────────────────────
+// FIX 4: idempotency was previously an in-process Map — lost on restart and not
+// shared across instances, so duplicate completes could slip through under a
+// multi-instance deploy. It is now backed by the shared KV (lib/cache/kv.ts),
+// which is Redis when REDIS_URL is set (cross-instance durable) and an
+// in-process MemoryKv otherwise (same single-instance behaviour as before, but
+// now with a real TTL). Records are JSON-encoded under a namespaced key.
 
 interface IdempotencyRecord {
   sessionId: string;
-  result: unknown;
-  createdAt: number;
+  result: { orderId: string; orderNumber: string } | null;
 }
 
 const IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000; // 24h
 
-const idempotencyStore = new Map<string, IdempotencyRecord>();
-
-// Prune stale entries every hour
-setInterval(
-  () => {
-    const now = Date.now();
-    for (const [key, rec] of idempotencyStore) {
-      if (now - rec.createdAt > IDEMPOTENCY_TTL_MS) {
-        idempotencyStore.delete(key);
-      }
-    }
-  },
-  60 * 60_000
-).unref();
-
 function idempotencyKey(storeId: string, key: string): string {
-  return `${storeId}:${key}`;
+  return `acp:idem:${storeId}:${key}`;
+}
+
+async function readIdempotency(kvKey: string): Promise<IdempotencyRecord | null> {
+  const { buildKv } = await import("../../../lib/cache/kv.js");
+  const kv = await buildKv();
+  const raw = await kv.get(kvKey);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as IdempotencyRecord;
+  } catch {
+    return null;
+  }
+}
+
+async function writeIdempotency(kvKey: string, rec: IdempotencyRecord): Promise<void> {
+  const { buildKv } = await import("../../../lib/cache/kv.js");
+  const kv = await buildKv();
+  await kv.set(kvKey, JSON.stringify(rec), IDEMPOTENCY_TTL_MS);
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -298,7 +305,7 @@ export async function createSession(
   // Check idempotency cache
   if (idempotencyKeyValue) {
     const iKey = idempotencyKey(storeId, idempotencyKeyValue);
-    const cached = idempotencyStore.get(iKey);
+    const cached = await readIdempotency(iKey);
     if (cached) {
       const session = await buildSession(storeId, cached.sessionId);
       if (session) return session;
@@ -356,11 +363,7 @@ export async function createSession(
   // Cache idempotency
   if (idempotencyKeyValue) {
     const iKey = idempotencyKey(storeId, idempotencyKeyValue);
-    idempotencyStore.set(iKey, {
-      sessionId: checkoutId,
-      result: null,
-      createdAt: Date.now(),
-    });
+    await writeIdempotency(iKey, { sessionId: checkoutId, result: null });
   }
 
   const session = await buildSession(storeId, checkoutId);
@@ -461,23 +464,21 @@ export async function completeSession(
   storeId: string,
   sessionId: string,
   input: CompleteSessionInput,
-  idempotencyKeyValue?: string
+  idempotencyKeyValue?: string,
+  agentCtx?: AgentHeaderCtx | undefined
 ): Promise<{ session: AcpCheckoutSession; orderId: string; orderNumber: string }> {
   // Check idempotency (applies to both test and live paths)
   if (idempotencyKeyValue) {
     const iKey = idempotencyKey(storeId, `complete:${idempotencyKeyValue}`);
-    const cached = idempotencyStore.get(iKey);
-    if (cached) {
+    const cached = await readIdempotency(iKey);
+    if (cached?.result) {
       const session = await buildSession(storeId, sessionId);
       if (session) {
-        const cachedResult = cached.result as { orderId: string; orderNumber: string } | null;
-        if (cachedResult) {
-          return {
-            session,
-            orderId: cachedResult.orderId,
-            orderNumber: cachedResult.orderNumber,
-          };
-        }
+        return {
+          session,
+          orderId: cached.result.orderId,
+          orderNumber: cached.result.orderNumber,
+        };
       }
     }
   }
@@ -522,8 +523,12 @@ export async function completeSession(
     }
   } else {
     // ── Test-mode path: create a real order without charging ─────────────────
+    // FIX 1: thread agentCtx so completeCheckout runs verifyAgentCheckout
+    // (spend-window + mandate-chain enforcement) and stamps agent_id/mandate_id
+    // on the order. When the request carries no agent identity, agentCtx is
+    // undefined and the non-agent path is byte-for-byte unchanged.
     try {
-      completeResult = await completeCheckout(storeId, sessionId);
+      completeResult = await completeCheckout(storeId, sessionId, agentCtx);
     } catch (err) {
       if (err instanceof CheckoutError) throw mapCheckoutError(err);
       throw err;
@@ -533,10 +538,9 @@ export async function completeSession(
   // Cache idempotency result
   if (idempotencyKeyValue) {
     const iKey = idempotencyKey(storeId, `complete:${idempotencyKeyValue}`);
-    idempotencyStore.set(iKey, {
+    await writeIdempotency(iKey, {
       sessionId,
       result: { orderId: completeResult.orderId, orderNumber: completeResult.orderNumber },
-      createdAt: Date.now(),
     });
   }
 

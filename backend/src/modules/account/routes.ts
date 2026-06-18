@@ -62,8 +62,10 @@ const InviteBody = z.object({
 // ── Cookie helpers (no @fastify/cookie dependency) ───────────────────────────
 
 function getClientIp(request: FastifyRequest): string {
-  const xff = request.headers["x-forwarded-for"];
-  if (typeof xff === "string") return xff.split(",")[0]?.trim() ?? request.ip;
+  // FIX 2 (IP spoofing): use Fastify's request.ip, which already honours the
+  // app's configured trustProxy (TRUST_PROXY). Reading X-Forwarded-For directly
+  // would let an untrusted caller forge the IP persisted into session/audit rows
+  // and bypass per-IP throttles. Matches lib/auth/middleware.ts getClientIp().
   return request.ip;
 }
 
@@ -164,7 +166,11 @@ export const accountPlugin: FastifyPluginAsync = async (app) => {
       userAgent: getUserAgent(request),
     });
     if (!result.ok) {
-      const status = result.code === "LOCKED" ? 423 : result.code === "INACTIVE" ? 403 : 401;
+      const status =
+        result.code === "THROTTLED" ? 429
+        : result.code === "LOCKED" ? 423
+        : result.code === "INACTIVE" ? 403
+        : 401;
       return reply.status(status).send({ error: { code: result.code, message: result.message } });
     }
     return sendSession(reply, 200, result.session, result.user);

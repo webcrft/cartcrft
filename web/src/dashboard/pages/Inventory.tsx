@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react'
 import { useStore } from '../context/StoreContext'
 import { getSdk } from '../lib/sdk'
 import { useToast } from '../context/ToastContext'
-import { Btn, Card, FormInput, FormSelect, LoadError, PageHeader, EmptyState, Spinner, Modal, TableContainer, TableHead, Th, Td } from '../components/ui/index'
+import { Badge, Btn, FormInput, FormSelect, LoadError, PageHeader, EmptyState, Spinner, Modal, TableContainer, TableHead, Th, Td } from '../components/ui/index'
 import type { Warehouse, InventoryLevel } from '@cartcrft/sdk'
 
 interface AdjustForm {
@@ -193,13 +193,15 @@ export default function Inventory() {
       {loadError && <LoadError message={loadError} onRetry={() => { void (async () => { setLoading(true); const whs = await loadWarehouses() as Warehouse[] | undefined; const defId = whs?.find(w => w.is_default)?.id ?? whs?.[0]?.id; if (defId) await loadLevels(defId); setLoading(false) })() }} />}
 
       {/* Tabs */}
-      <div className="flex border-b border-white/[0.06]">
+      <div className="flex border-b border-white/[0.07]">
         {TABS.map(t => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`px-4 py-2.5 text-xs font-medium border-b-2 transition -mb-px ${
-              tab === t.key ? 'border-violet-500 text-violet-400' : 'border-transparent text-slate-500 hover:text-white'
+            className={`px-4 py-2.5 text-[13px] font-medium border-b-2 transition -mb-px ${
+              tab === t.key
+                ? 'border-[var(--cc-lime)] text-[var(--cc-text)]'
+                : 'border-transparent text-[var(--cc-muted)] hover:text-[var(--cc-text)]'
             }`}
           >
             {t.label}
@@ -226,23 +228,29 @@ export default function Inventory() {
               <table className="w-full text-sm">
                 <TableHead>
                   <Th>Variant ID</Th>
-                  <Th className="text-right">On Hand</Th>
-                  <Th className="text-right">Committed</Th>
-                  <Th className="text-right">Available</Th>
+                  <Th align="right">On hand</Th>
+                  <Th align="right">Committed</Th>
+                  <Th align="right">Available</Th>
                   <Th></Th>
                 </TableHead>
                 <tbody>
                   {levels.map(level => (
-                    <tr key={`${level.variant_id}-${level.warehouse_id}`} className="border-t border-white/[0.04] hover:bg-white/[0.02] transition">
-                      <Td><span className="font-mono text-xs text-slate-400">{level.variant_id}</span></Td>
-                      <Td className="text-right font-mono text-white">{level.on_hand}</Td>
-                      <Td className="text-right font-mono text-slate-400">{level.committed}</Td>
-                      <Td className={`text-right font-mono ${level.available <= 0 ? 'text-red-400' : level.available < 5 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                    <tr
+                      key={`${level.variant_id}-${level.warehouse_id}`}
+                      className="transition-colors"
+                      style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLTableRowElement).style.background = 'rgba(255,255,255,0.02)' }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLTableRowElement).style.background = '' }}
+                    >
+                      <Td><span className="font-mono text-[12px] text-[var(--cc-muted)]">{level.variant_id}</span></Td>
+                      <Td align="right" className="font-mono text-[var(--cc-text)]">{level.on_hand}</Td>
+                      <Td align="right" className="font-mono text-[var(--cc-muted)]">{level.committed}</Td>
+                      <Td align="right" className={`font-mono font-medium ${level.available <= 0 ? 'text-red-300' : level.available < 5 ? 'text-amber-300' : 'text-emerald-300'}`}>
                         {level.available}
                       </Td>
                       <Td>
                         <div className="flex justify-end">
-                          <Btn variant="secondary" onClick={() => setAdjustLevel(level)}>Adjust</Btn>
+                          <Btn size="sm" variant="secondary" onClick={() => setAdjustLevel(level)}>Adjust</Btn>
                         </div>
                       </Td>
                     </tr>
@@ -261,18 +269,18 @@ export default function Inventory() {
           <TableContainer>
             <table className="w-full text-sm">
               <TableHead>
-                <Th>Lot Number</Th>
+                <Th>Lot number</Th>
                 <Th>Variant ID</Th>
-                <Th>Expiry Date</Th>
-                <Th className="text-right">Quantity</Th>
+                <Th>Expiry date</Th>
+                <Th align="right">Quantity</Th>
               </TableHead>
               <tbody>
                 {lots.map((lot, i) => (
-                  <tr key={String(lot.id ?? i)} className="border-t border-white/[0.04]">
-                    <Td className="font-mono text-slate-300">{lot.lot_number ?? '—'}</Td>
-                    <Td className="font-mono text-xs text-slate-500">{lot.variant_id ?? '—'}</Td>
-                    <Td className="text-slate-400">{lot.expiry_date ? new Date(String(lot.expiry_date)).toLocaleDateString() : '—'}</Td>
-                    <Td className="text-right font-mono text-white">{lot.quantity ?? 0}</Td>
+                  <tr key={String(lot.id ?? i)} style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+                    <Td className="font-mono text-[var(--cc-body)]">{lot.lot_number ?? '—'}</Td>
+                    <Td className="font-mono text-[12px] text-[var(--cc-muted)]">{lot.variant_id ?? '—'}</Td>
+                    <Td muted>{lot.expiry_date ? new Date(String(lot.expiry_date)).toLocaleDateString() : '—'}</Td>
+                    <Td align="right" className="font-mono text-[var(--cc-text)]">{lot.quantity ?? 0}</Td>
                   </tr>
                 ))}
               </tbody>
@@ -288,21 +296,19 @@ export default function Inventory() {
           <TableContainer>
             <table className="w-full text-sm">
               <TableHead>
-                <Th>Serial Number</Th>
+                <Th>Serial number</Th>
                 <Th>Variant ID</Th>
                 <Th>Status</Th>
               </TableHead>
               <tbody>
                 {serials.map((serial, i) => (
-                  <tr key={String(serial.id ?? i)} className="border-t border-white/[0.04]">
-                    <Td className="font-mono text-slate-300">{serial.serial_number ?? '—'}</Td>
-                    <Td className="font-mono text-xs text-slate-500">{serial.variant_id ?? '—'}</Td>
+                  <tr key={String(serial.id ?? i)} style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+                    <Td className="font-mono text-[var(--cc-body)]">{serial.serial_number ?? '—'}</Td>
+                    <Td className="font-mono text-[12px] text-[var(--cc-muted)]">{serial.variant_id ?? '—'}</Td>
                     <Td>
-                      <span className={`inline-flex items-center rounded-md border px-1.5 py-0.5 text-[11px] font-medium leading-none ${
-                        serial.status === 'available' ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20' :
-                        serial.status === 'sold' ? 'bg-slate-500/15 text-slate-400 border-slate-500/20' :
-                        'bg-amber-500/15 text-amber-400 border-amber-500/20'
-                      }`}>{serial.status ?? 'unknown'}</span>
+                      <Badge color={serial.status === 'available' ? 'emerald' : serial.status === 'sold' ? 'slate' : 'amber'}>
+                        <span className="capitalize">{serial.status ?? 'unknown'}</span>
+                      </Badge>
                     </Td>
                   </tr>
                 ))}

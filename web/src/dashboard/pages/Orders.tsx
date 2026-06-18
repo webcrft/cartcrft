@@ -163,9 +163,9 @@ function OrderDetail({ storeId, orderId, onBack }: {
       <div className="grid grid-cols-3 gap-4">
         {/* Left: line items + payments + shipments + notes */}
         <div className="col-span-2 space-y-4">
-          <Card title="Line Items">
+          <Card title="Line items">
             {lines.length === 0 ? (
-              <p className="text-xs text-[var(--cc-subtle)]">No line items</p>
+              <p className="text-[13px] text-[var(--cc-muted)]">No line items</p>
             ) : (
               <div className="space-y-0">
                 {lines.map((line, i) => {
@@ -178,7 +178,7 @@ function OrderDetail({ storeId, orderId, onBack }: {
                     >
                       <div>
                         <span className="text-sm text-[var(--cc-text)]">{String(l['title'] ?? l['variant_id'] ?? 'Item')}</span>
-                        <span className="ml-2 text-xs text-[var(--cc-subtle)]">× {String(l['quantity'] ?? 1)}</span>
+                        <span className="ml-2 text-[12px] font-mono text-[var(--cc-muted)]">× {String(l['quantity'] ?? 1)}</span>
                       </div>
                       <span className="text-sm font-mono text-[var(--cc-body)]">
                         {order.currency} {String(l['total'] ?? l['price'] ?? '0')}
@@ -211,7 +211,7 @@ function OrderDetail({ storeId, orderId, onBack }: {
           {/* Payments */}
           <Card title="Payments">
             {payments.length === 0 ? (
-              <p className="text-xs text-[var(--cc-subtle)]">No payments recorded</p>
+              <p className="text-[13px] text-[var(--cc-muted)]">No payments recorded</p>
             ) : (
               <div className="space-y-0">
                 {payments.map(p => (
@@ -223,9 +223,9 @@ function OrderDetail({ storeId, orderId, onBack }: {
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-sm font-medium text-[var(--cc-text)]">{p.provider}</span>
                       <Badge color={p.status === 'captured' ? 'emerald' : p.status === 'pending' ? 'amber' : 'slate'}>
-                        {p.status}
+                        <span className="capitalize">{p.status}</span>
                       </Badge>
-                      <span className="text-[11px] text-[var(--cc-subtle)]">
+                      <span className="text-[12px] text-[var(--cc-muted)]">
                         {new Date(p.created_at).toLocaleString()}
                       </span>
                     </div>
@@ -248,11 +248,11 @@ function OrderDetail({ storeId, orderId, onBack }: {
           <Card
             title="Shipments"
             actions={!showShipForm ? (
-              <Btn size="sm" variant="secondary" onClick={() => setShowShipForm(true)}>+ Add Shipment</Btn>
+              <Btn size="sm" variant="secondary" onClick={() => setShowShipForm(true)}>+ Add shipment</Btn>
             ) : undefined}
           >
             {shipments.length === 0 && !showShipForm && (
-              <p className="text-xs text-[var(--cc-subtle)]">No shipments yet</p>
+              <p className="text-[13px] text-[var(--cc-muted)]">No shipments yet</p>
             )}
             {shipments.length > 0 && (
               <div className="space-y-2 mb-3">
@@ -264,15 +264,15 @@ function OrderDetail({ storeId, orderId, onBack }: {
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium text-[var(--cc-text)]">{s.carrier ?? 'Carrier'}</span>
-                      <Badge color="blue">{s.status ?? 'shipped'}</Badge>
+                      <Badge color="blue"><span className="capitalize">{s.status ?? 'shipped'}</span></Badge>
                     </div>
-                    <p className="text-xs font-mono text-[var(--cc-muted)]">{s.tracking_number}</p>
+                    <p className="text-[12px] font-mono text-[var(--cc-muted)]">{s.tracking_number}</p>
                     {s.tracking_url && (
                       <a
                         href={s.tracking_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-xs text-[var(--cc-lime)] hover:underline"
+                        className="text-[12px] text-[var(--cc-lime)] hover:underline"
                       >
                         Track shipment ↗
                       </a>
@@ -298,18 +298,18 @@ function OrderDetail({ storeId, orderId, onBack }: {
           </Card>
 
           {/* Notes & Timeline */}
-          <Card title="Notes & Timeline">
+          <Card title="Notes & timeline">
             {events.length > 0 && (
               <div className="space-y-0 mb-4">
                 {events.slice(0, 10).map((ev, i) => (
                   <div
                     key={String(ev.id ?? i)}
-                    className="py-2 text-xs"
+                    className="py-2 text-[13px]"
                     style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
                   >
                     <span className="text-[var(--cc-body)]">{String(ev.message ?? ev.type ?? 'Event')}</span>
                     {ev.created_at && (
-                      <span className="ml-2 text-[var(--cc-subtle)]">{new Date(String(ev.created_at)).toLocaleString()}</span>
+                      <span className="ml-2 text-[12px] text-[var(--cc-subtle)]">{new Date(String(ev.created_at)).toLocaleString()}</span>
                     )}
                   </div>
                 ))}
@@ -320,7 +320,7 @@ function OrderDetail({ storeId, orderId, onBack }: {
                 value={note}
                 onChange={e => setNote(e.target.value)}
                 placeholder="Add a note…"
-                className="flex-1 rounded-lg px-3 py-2 text-xs text-[var(--cc-text)] placeholder:text-[var(--cc-subtle)] focus:outline-none focus:ring-1 focus:ring-[var(--cc-lime)]/20 transition"
+                className="flex-1 rounded-lg px-3 py-2 text-[13px] text-[var(--cc-text)] placeholder:text-[var(--cc-subtle)] focus:outline-none focus:ring-1 focus:ring-[var(--cc-lime)]/20 transition"
                 style={{ background: 'var(--cc-bg-sunken)', border: '1px solid rgba(255,255,255,0.08)' }}
               />
               <Btn size="sm" onClick={handleAddNote} loading={addingNote} variant="secondary">Add Note</Btn>
@@ -334,14 +334,14 @@ function OrderDetail({ storeId, orderId, onBack }: {
             <div className="space-y-1.5">
               <p className="text-sm text-[var(--cc-text)]">{(order.email as string | undefined) ?? 'Guest'}</p>
               {!!order.customer_id && (
-                <p className="text-[11px] font-mono text-[var(--cc-subtle)]">ID: {String(order.customer_id)}</p>
+                <p className="text-[12px] font-mono text-[var(--cc-muted)]">ID: {String(order.customer_id)}</p>
               )}
             </div>
           </Card>
 
           {shippingAddress && (
-            <Card title="Shipping Address">
-              <div className="space-y-0.5 text-xs text-[var(--cc-muted)]">
+            <Card title="Shipping address">
+              <div className="space-y-0.5 text-[13px] text-[var(--cc-muted)]">
                 {shippingAddress['name'] && <p className="text-[var(--cc-body)] font-medium mb-1">{shippingAddress['name']}</p>}
                 {shippingAddress['address1'] && <p>{shippingAddress['address1']}</p>}
                 {shippingAddress['address2'] && <p>{shippingAddress['address2']}</p>}
@@ -352,12 +352,12 @@ function OrderDetail({ storeId, orderId, onBack }: {
             </Card>
           )}
 
-          <Card title="Order Info">
+          <Card title="Order info">
             <div className="space-y-1">
               <InfoRow label="Created">{new Date(order.created_at).toLocaleString()}</InfoRow>
               <InfoRow label="Updated">{new Date(order.updated_at).toLocaleString()}</InfoRow>
               {order.test && (
-                <div className="mt-2"><Badge color="amber">Test Order</Badge></div>
+                <div className="mt-2"><Badge color="amber">Test order</Badge></div>
               )}
             </div>
           </Card>

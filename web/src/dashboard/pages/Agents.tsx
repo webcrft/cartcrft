@@ -48,13 +48,13 @@ function PrivateKeyModal({ agentName, privateKey, onClose }: {
     <Modal title="Private Key — Save Now" onClose={onClose}>
       <div className="space-y-4">
         <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3">
-          <p className="text-sm font-semibold text-amber-300">This is the only time this key will be shown.</p>
-          <p className="text-xs text-amber-400/70 mt-1">Copy and store it securely. You cannot retrieve it again.</p>
+          <p className="text-[13px] font-semibold text-amber-300">This is the only time this key will be shown.</p>
+          <p className="text-[12px] text-amber-400/80 mt-1">Copy and store it securely. You cannot retrieve it again.</p>
         </div>
         <div>
-          <p className="text-xs font-medium text-slate-400 mb-1.5">Agent: <span className="text-white">{agentName}</span></p>
+          <p className="text-[12px] font-medium text-[var(--cc-muted)] mb-1.5">Agent: <span className="text-[var(--cc-text)] font-semibold">{agentName}</span></p>
           <div className="flex items-start gap-2">
-            <pre className="flex-1 rounded-lg bg-black/40 border border-white/[0.06] p-3 text-xs text-emerald-300 font-mono break-all whitespace-pre-wrap overflow-auto max-h-40">
+            <pre className="flex-1 rounded-lg bg-black/40 border border-white/[0.06] p-3 text-[12px] leading-relaxed text-emerald-300 font-mono break-all whitespace-pre-wrap overflow-auto max-h-40">
               {privateKey}
             </pre>
             <Btn variant="secondary" onClick={copy}>{copied ? 'Copied!' : 'Copy'}</Btn>
@@ -108,17 +108,17 @@ function CreateAgentModal({ storeId, onClose, onCreated }: {
             options={[{ value: 'hour', label: 'Per Hour' }, { value: 'day', label: 'Per Day' }, { value: 'week', label: 'Per Week' }, { value: 'month', label: 'Per Month' }]} />
         </div>
         <div>
-          <label className="block text-xs font-medium text-slate-400 mb-2">Scopes</label>
+          <label className="block text-[13px] font-medium text-[var(--cc-body)] mb-2">Scopes</label>
           <div className="grid grid-cols-2 gap-1.5 max-h-48 overflow-y-auto">
             {AGENT_SCOPES.map(scope => (
-              <label key={scope} className="flex items-center gap-2 cursor-pointer">
+              <label key={scope} className="flex items-center gap-2 cursor-pointer select-none">
                 <input
                   type="checkbox"
                   checked={selectedScopes.includes(scope)}
                   onChange={() => toggleScope(scope)}
-                  className="rounded border-white/20 bg-white/5 text-violet-500"
+                  className="rounded border-white/20 bg-white/5 text-[var(--cc-lime)]"
                 />
-                <span className="text-xs text-slate-300 font-mono">{scope}</span>
+                <span className="text-[12px] text-[var(--cc-body)] font-mono">{scope}</span>
               </label>
             ))}
           </div>
@@ -159,15 +159,15 @@ function MandateChainModal({ storeId, agentId, mandate, onClose }: {
             const st = MANDATE_STATUS[String(m.status ?? 'active')] ?? { color: 'slate' as const, label: String(m.status ?? '') }
             return (
               <div key={String(m.id ?? i)} className="rounded-lg border border-white/[0.08] bg-white/[0.02] px-4 py-3 space-y-1.5">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-mono text-slate-400">{i + 1}.</span>
-                    <Badge color="violet">{String(m.intent ?? 'intent')}</Badge>
+                    <span className="text-[12px] font-mono text-[var(--cc-muted)] tabular-nums">{i + 1}.</span>
+                    <Badge color="violet"><span className="capitalize">{String(m.intent ?? 'intent')}</span></Badge>
                     <Badge color={st.color}>{st.label}</Badge>
                   </div>
-                  <span className="text-xs text-slate-500 font-mono">{String(m.id ?? '').slice(0, 8)}</span>
+                  <span className="text-[12px] text-[var(--cc-muted)] font-mono">{String(m.id ?? '').slice(0, 8)}</span>
                 </div>
-                <div className="grid grid-cols-2 gap-x-4 text-xs text-slate-500">
+                <div className="grid grid-cols-2 gap-x-4 text-[12px] text-[var(--cc-muted)]">
                   {(m as Record<string, unknown>).valid_until ? (
                     <span>Expires: {new Date(String((m as Record<string, unknown>).valid_until)).toLocaleDateString()}</span>
                   ) : null}
@@ -268,12 +268,12 @@ export default function Agents() {
       <PageHeader
         title="Agents"
         description="Agent registry, signed mandates, spend limits, and audit trail"
-        actions={tab === 'registry' ? <Btn onClick={() => setShowCreate(true)}>+ New Agent</Btn> : undefined}
-        badge={<Badge color="violet">Agent-Native</Badge>}
+        actions={tab === 'registry' ? <Btn onClick={() => setShowCreate(true)}>+ New agent</Btn> : undefined}
+        badge={<Badge color="lime">Agent-native</Badge>}
       />
 
-      <div className="rounded-lg border border-violet-500/20 bg-violet-500/[0.05] px-4 py-3 text-xs text-slate-400 leading-relaxed">
-        <span className="font-semibold text-slate-200">Agent-native trust layer.</span>{' '}
+      <div className="rounded-lg border border-[var(--cc-lime)]/20 bg-[var(--cc-lime)]/[0.05] px-4 py-3 text-[13px] text-[var(--cc-body)] leading-relaxed">
+        <span className="font-semibold text-[var(--cc-text)]">Agent-native trust layer.</span>{' '}
         Agents hold ed25519 keypairs and sign mandates proving consent for each action. The chain
         intent → cart → payment is cryptographically verifiable. Spend limits enforce budget caps per window.
       </div>
@@ -281,7 +281,7 @@ export default function Agents() {
       <div className="flex border-b border-white/[0.06]">
         {TABS.map(t => (
           <button key={t.key} onClick={() => setTab(t.key)}
-            className={`px-4 py-2.5 text-xs font-medium border-b-2 transition -mb-px ${tab === t.key ? 'border-violet-500 text-violet-400' : 'border-transparent text-slate-500 hover:text-white'}`}>
+            className={`px-4 py-2.5 text-[13px] font-medium border-b-2 transition -mb-px ${tab === t.key ? 'border-[var(--cc-lime)] text-[var(--cc-text)]' : 'border-transparent text-[var(--cc-muted)] hover:text-[var(--cc-text)]'}`}>
             {t.label}
           </button>
         ))}
@@ -298,30 +298,30 @@ export default function Agents() {
         ) : (
           <div className="space-y-3">
             {agents.map(agent => (
-              <div key={agent.id} className="rounded-xl border border-white/[0.08] bg-white/[0.02] px-5 py-4 space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <p className="text-sm font-semibold text-white">{agent.name}</p>
-                    <Badge color="violet">{agent.type}</Badge>
+              <div key={agent.id} className="rounded-xl border border-white/[0.08] bg-white/[0.02] px-5 py-4 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <p className="text-[14px] font-semibold text-[var(--cc-text)]">{agent.name}</p>
+                    <Badge color="lime"><span className="capitalize">{agent.type}</span></Badge>
                     {(agent as Record<string, unknown>).is_active === false && <Badge color="red">Revoked</Badge>}
                     {(agent as Record<string, unknown>).is_active !== false && <Badge color="emerald">Active</Badge>}
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-shrink-0">
                     {(agent as Record<string, unknown>).is_active !== false && (
-                      <Btn variant="danger" loading={revoking === agent.id} onClick={() => void revokeAgent(agent.id)}>
+                      <Btn size="sm" variant="danger" loading={revoking === agent.id} onClick={() => void revokeAgent(agent.id)}>
                         Revoke
                       </Btn>
                     )}
                   </div>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <div>
-                    <p className="text-slate-500 mb-0.5">Agent ID</p>
-                    <p className="text-slate-300 font-mono">{agent.id.slice(0, 12)}</p>
+                    <p className="text-[12px] font-medium text-[var(--cc-muted)] mb-0.5">Agent ID</p>
+                    <p className="text-[12px] text-[var(--cc-body)] font-mono">{agent.id.slice(0, 12)}</p>
                   </div>
                   <div>
-                    <p className="text-slate-500 mb-0.5">Scopes</p>
-                    <p className="text-slate-300">
+                    <p className="text-[12px] font-medium text-[var(--cc-muted)] mb-0.5">Scopes</p>
+                    <p className="text-[13px] text-[var(--cc-body)]">
                       {Array.isArray((agent as Record<string, unknown>).scopes)
                         ? ((agent as Record<string, unknown>).scopes as string[]).length
                         : '—'} scopes
@@ -329,18 +329,18 @@ export default function Agents() {
                   </div>
                   {(agent as Record<string, unknown>).spend_limit ? (
                     <div>
-                      <p className="text-slate-500 mb-0.5">Spend Limit</p>
-                      <p className="text-slate-300 font-mono">{String((agent as Record<string, unknown>).spend_limit)}</p>
+                      <p className="text-[12px] font-medium text-[var(--cc-muted)] mb-0.5">Spend limit</p>
+                      <p className="text-[13px] text-[var(--cc-body)] font-mono tabular-nums">{String((agent as Record<string, unknown>).spend_limit)}</p>
                     </div>
                   ) : null}
                   <div>
-                    <p className="text-slate-500 mb-0.5">Created</p>
-                    <p className="text-slate-300">{new Date(agent.created_at).toLocaleDateString()}</p>
+                    <p className="text-[12px] font-medium text-[var(--cc-muted)] mb-0.5">Created</p>
+                    <p className="text-[13px] text-[var(--cc-body)]">{new Date(agent.created_at).toLocaleDateString()}</p>
                   </div>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-500 mb-1">Public Key</p>
-                  <pre className="text-[10px] text-slate-500 font-mono bg-black/20 rounded px-2 py-1 overflow-hidden overflow-ellipsis whitespace-nowrap max-w-full">
+                  <p className="text-[12px] font-medium text-[var(--cc-muted)] mb-1">Public key</p>
+                  <pre className="text-[12px] text-[var(--cc-muted)] font-mono bg-black/20 rounded px-2 py-1.5 overflow-hidden text-ellipsis whitespace-nowrap max-w-full">
                     {String(agent.public_key ?? '').slice(0, 80)}...
                   </pre>
                 </div>
@@ -373,17 +373,17 @@ export default function Agents() {
                     const st = MANDATE_STATUS[String(m.status ?? 'active')] ?? { color: 'slate' as const, label: String(m.status ?? '') }
                     return (
                       <tr key={String(m.id)} className="border-t border-white/[0.04] hover:bg-white/[0.02] transition">
-                        <Td className="font-mono text-xs text-slate-400">{String(m.id).slice(0, 8)}</Td>
-                        <Td><Badge color="violet">{m.intent}</Badge></Td>
+                        <Td className="font-mono text-[12px] text-[var(--cc-body)]">{String(m.id).slice(0, 8)}</Td>
+                        <Td><Badge color="violet"><span className="capitalize">{m.intent}</span></Badge></Td>
                         <Td><Badge color={st.color}>{st.label}</Badge></Td>
-                        <Td className="text-slate-500 text-xs">
+                        <Td muted>
                           {(m as Record<string, unknown>).valid_until
                             ? new Date(String((m as Record<string, unknown>).valid_until)).toLocaleDateString()
                             : '—'}
                         </Td>
-                        <Td>
-                          <Btn variant="secondary" onClick={() => setSelectedMandate({ agentId: selectedAgentId, mandate: m })}>
-                            View Chain
+                        <Td align="right">
+                          <Btn size="sm" variant="secondary" onClick={() => setSelectedMandate({ agentId: selectedAgentId, mandate: m })}>
+                            View chain
                           </Btn>
                         </Td>
                       </tr>
@@ -406,13 +406,13 @@ export default function Agents() {
               <tbody>
                 {auditLog.map((entry, i) => (
                   <tr key={String(entry.id ?? i)} className="border-t border-white/[0.04]">
-                    <Td><Badge color="slate">{String(entry.action ?? '—')}</Badge></Td>
-                    <Td className="font-mono text-xs text-slate-400">{String(entry.agent_id ?? '—').slice(0, 8)}</Td>
-                    <Td className="text-slate-400 text-xs">
+                    <Td><Badge color="slate"><span className="capitalize">{String(entry.action ?? '—')}</span></Badge></Td>
+                    <Td className="font-mono text-[12px] text-[var(--cc-body)]">{String(entry.agent_id ?? '—').slice(0, 8)}</Td>
+                    <Td muted className="font-mono text-[12px]">
                       {String(entry.resource_type ?? '')} {String(entry.resource_id ?? '').slice(0, 8)}
                     </Td>
-                    <Td className="font-mono text-xs text-slate-500">{String(entry.correlation_id ?? '—').slice(0, 10)}</Td>
-                    <Td className="text-slate-500 text-xs">
+                    <Td className="font-mono text-[12px] text-[var(--cc-muted)]">{String(entry.correlation_id ?? '—').slice(0, 10)}</Td>
+                    <Td muted>
                       {entry.created_at ? new Date(String(entry.created_at)).toLocaleString() : '—'}
                     </Td>
                   </tr>

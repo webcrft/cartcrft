@@ -100,7 +100,7 @@ export default function AuditLog() {
           placeholder="Filter by action (e.g. takedown, login)..."
           className="flex-1 rounded-md border border-white/[0.08] bg-white/[0.02] px-3 py-2.5 text-sm text-[var(--cc-text)] placeholder:text-[var(--cc-text-subtle)] focus:border-[var(--cc-lime)]/50 focus:outline-none focus:ring-1 focus:ring-[var(--cc-lime)]/40 transition"
         />
-        <div className="font-mono text-[11px] text-[var(--cc-text-muted)] self-center whitespace-nowrap tabular-nums">
+        <div className="text-[13px] text-[var(--cc-text-muted)] self-center whitespace-nowrap tabular-nums">
           {total.toLocaleString()} entries
         </div>
       </div>
@@ -128,37 +128,37 @@ export default function AuditLog() {
                   <tr className="border-t border-white/[0.04] hover:bg-white/[0.02]">
                     <Td>
                       <span
-                        className="font-mono text-[11px] text-[var(--cc-text-muted)] whitespace-nowrap"
+                        className="font-mono text-[12px] text-[var(--cc-text-muted)] whitespace-nowrap"
                         title={new Date(entry.created_at).toLocaleString()}
                       >
                         {fmtTimestamp(entry.created_at)}
                       </span>
                     </Td>
                     <Td>
-                      <p className="text-xs text-[var(--cc-text-body)]">{entry.admin_email}</p>
-                      <p className="text-[11px] text-[var(--cc-text-subtle)] font-mono">{entry.admin_id?.slice(0, 8)}</p>
+                      <p className="text-[13px] text-[var(--cc-text-body)]">{entry.admin_email}</p>
+                      <p className="text-[12px] text-[var(--cc-text-muted)] font-mono">{entry.admin_id?.slice(0, 8)}</p>
                     </Td>
                     <Td>
-                      <Badge color={actionColor(entry.action)}>{entry.action}</Badge>
+                      <Badge color={actionColor(entry.action)}><span className="capitalize">{entry.action}</span></Badge>
                     </Td>
                     <Td>
                       {entry.target_type && (
-                        <p className="text-xs text-[var(--cc-text-muted)]">{entry.target_type}</p>
+                        <p className="text-[13px] text-[var(--cc-text-body)]">{entry.target_type}</p>
                       )}
                       {entry.target_id && (
-                        <p className="text-[11px] text-[var(--cc-text-subtle)] font-mono">{entry.target_id?.slice(0, 16)}</p>
+                        <p className="text-[12px] text-[var(--cc-text-muted)] font-mono">{entry.target_id?.slice(0, 16)}</p>
                       )}
                     </Td>
                     <Td>
-                      <span className="text-[11px] text-[var(--cc-text-subtle)] font-mono">{entry.ip || '—'}</span>
+                      <span className="text-[12px] text-[var(--cc-text-muted)] font-mono">{entry.ip || '—'}</span>
                     </Td>
                     <Td>
                       {entry.metadata && Object.keys(entry.metadata).length > 0 && (
                         <button
                           onClick={() => setExpandedId(expandedId === entry.id ? null : entry.id)}
-                          className="font-mono text-[11px] text-[var(--cc-text-muted)] hover:text-[var(--cc-lime)] transition"
+                          className="text-[13px] font-medium text-[var(--cc-text-muted)] hover:text-[var(--cc-lime)] transition"
                         >
-                          {expandedId === entry.id ? 'hide' : 'details'}
+                          {expandedId === entry.id ? 'Hide' : 'Details'}
                         </button>
                       )}
                     </Td>
@@ -166,7 +166,7 @@ export default function AuditLog() {
                   {expandedId === entry.id && entry.metadata && (
                     <tr className="border-t border-white/[0.04] bg-black/20">
                       <td colSpan={6} className="px-5 py-3">
-                        <pre className="text-[11px] text-[var(--cc-text-body)] bg-[var(--cc-steel)]/80 border border-white/[0.05] rounded-md p-3 max-h-96 overflow-auto font-mono leading-relaxed">
+                        <pre className="text-[12px] text-[var(--cc-text-body)] bg-[var(--cc-surface-2)] border border-white/[0.05] rounded-md p-3 max-h-96 overflow-auto font-mono leading-relaxed">
                           {JSON.stringify(entry.metadata, null, 2)}
                         </pre>
                       </td>
@@ -187,7 +187,7 @@ export default function AuditLog() {
               >
                 Previous
               </Btn>
-              <span className="font-mono text-[11px] text-[var(--cc-text-muted)] tabular-nums">
+              <span className="text-[13px] text-[var(--cc-text-muted)] tabular-nums">
                 Page {page} of {totalPages}
               </span>
               <Btn

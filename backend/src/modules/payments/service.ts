@@ -12,7 +12,10 @@ import { getPool, getReadDb, withTx } from "../../db/pool.js";
 import { config } from "../../config/config.js";
 import { encodeSecretValue } from "../../lib/secrets.js";
 import { dispatchStoreEvent } from "../notifications/service.js";
-import { StripeClient } from "../../providers/payments/stripe.js";
+import {
+  StripeClient,
+  type StripePaymentMethodType,
+} from "../../providers/payments/stripe.js";
 import { PaystackClient } from "../../providers/payments/paystack.js";
 import { RazorpayClient } from "../../providers/payments/razorpay.js";
 import { XenditClient } from "../../providers/payments/xendit.js";
@@ -863,11 +866,18 @@ export async function listProviders(
 ): Promise<PaymentProvider[]> {
   // RLS-enforced read path (P4/item-2).
   const pool = getReadDb();
+  // SEC: never return webhook_secret to clients. Mirror the gateway path
+  // (getGatewayStatus / listGateways), which exposes only has_* booleans —
+  // surface has_webhook_secret instead of the secret itself.
   const { rows } = await pool.query<
-    PaymentProvider & { config: string | Record<string, unknown> }
+    Omit<PaymentProvider, "config"> & {
+      config: string | Record<string, unknown>;
+    }
   >(
     `SELECT id::text, store_id::text, name, type, slug,
-            webhook_url, webhook_secret, config, is_active, position,
+            webhook_url,
+            (webhook_secret IS NOT NULL AND webhook_secret <> '') AS has_webhook_secret,
+            config, is_active, position,
             created_at, updated_at
      FROM payment_providers
      WHERE store_id = $1::uuid
@@ -1083,6 +1093,73 @@ async function getProviderConfig(
   return {};
 }
 
+/** BNPL methods we support gating on for Stripe, in display order. */
+const STRIPE_BNPL_METHODS: StripePaymentMethodType[] = [
+  "klarna",
+  "afterpay_clearpay",
+  "affirm",
+];
+
+const STRIPE_ALL_METHODS: readonly StripePaymentMethodType[] = [
+  "card",
+  ...STRIPE_BNPL_METHODS,
+];
+
+/**
+ * Resolve the explicit Stripe `payment_method_types[]` to request from a store's
+ * stripe provider config. Returns `undefined` to mean "use Stripe automatic
+ * payment methods" (the default — card + wallets like Apple/Google Pay shown
+ * automatically). Returns a non-empty array to pin an explicit method set.
+ *
+ * Config (all optional, defaults preserve existing card+wallets behaviour):
+ *  - `payment_methods`: string[] — explicit allowlist, e.g.
+ *      ["card","klarna","afterpay_clearpay","affirm"]. Unknown entries are
+ *      ignored. If it contains any BNPL method, `card` is always included so
+ *      the card/wallet flow is never lost.
+ *  - `enable_bnpl`: boolean — shorthand to add klarna + afterpay_clearpay +
+ *      affirm on top of card. Ignored if `payment_methods` is set.
+ *  - `enable_wallets`: boolean (default true) — wallets (Apple/Google Pay) ride
+ *      on `card` and are surfaced automatically; setting this false has no
+ *      effect on its own but is read so a future explicit-method config can
+ *      reason about it. It never disables card.
+ *
+ * Backward-compatible default: with none of these set we return `undefined`,
+ * so the PaymentIntent keeps using `automatic_payment_methods[enabled]=true`.
+ */
+export function resolveStripePaymentMethodTypes(
+  cfg: Record<string, unknown>
+): StripePaymentMethodType[] | undefined {
+  const known = new Set<string>(STRIPE_ALL_METHODS);
+
+  // 1. Explicit allowlist wins.
+  const raw = cfg["payment_methods"];
+  if (Array.isArray(raw)) {
+    const picked = raw
+      .filter((v): v is string => typeof v === "string")
+      .map((v) => v.trim().toLowerCase())
+      .filter((v) => known.has(v)) as StripePaymentMethodType[];
+    if (picked.length === 0) {
+      // Configured but nothing valid → fall back to automatic methods.
+      return undefined;
+    }
+    const set = new Set<StripePaymentMethodType>(picked);
+    // Never drop card (wallets depend on it) when BNPL is requested.
+    if (picked.some((m) => STRIPE_BNPL_METHODS.includes(m))) {
+      set.add("card");
+    }
+    // Preserve canonical order (card first, then BNPL).
+    return STRIPE_ALL_METHODS.filter((m) => set.has(m));
+  }
+
+  // 2. enable_bnpl shorthand → card + all BNPL methods.
+  if (cfg["enable_bnpl"] === true) {
+    return [...STRIPE_ALL_METHODS];
+  }
+
+  // 3. Default: automatic payment methods (card + wallets surfaced by Stripe).
+  return undefined;
+}
+
 export async function createStripeSession(
   storeId: string,
   checkoutId: string,
@@ -1098,12 +1175,15 @@ export async function createStripeSession(
     throw e;
   }
 
+  const paymentMethodTypes = resolveStripePaymentMethodTypes(cfg);
+
   const client = new StripeClient(secretKey);
   const result = await client.createPaymentIntent({
     amountCents,
     currency,
     checkoutId,
     email,
+    ...(paymentMethodTypes ? { paymentMethodTypes } : {}),
   });
 
   return {

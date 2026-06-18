@@ -32,6 +32,7 @@ import { hashSync as argon2HashSync, verifySync as argon2VerifySync } from "@nod
 import { getPool, getReadDb } from "../../db/pool.js";
 import { config } from "../../config/config.js";
 import { JWT_ISSUER, JWT_AUDIENCE } from "../../lib/auth/jwt.js";
+import { buildKv } from "../../lib/cache/kv.js";
 
 // ── Policy constants ─────────────────────────────────────────────────────────
 
@@ -47,6 +48,31 @@ export const REFRESH_COOKIE_NAME = "cc_refresh";
 /** Lockout policy. */
 const MAX_FAILED_ATTEMPTS = 5;
 const LOCKOUT_MINUTES = 15;
+
+/**
+ * FIX 3: per-IP login throttle. Counts login attempts from one IP across ALL
+ * accounts so an attacker cannot weaponise the per-account lockout to lock
+ * arbitrary victims, and a single IP brute-forcing is rate-limited independently
+ * of the per-account lockout. Threshold sits well above MAX_FAILED_ATTEMPTS so
+ * normal single-account lockout semantics are unaffected.
+ */
+const LOGIN_IP_WINDOW_MS = 15 * 60_000; // 15-minute window
+const LOGIN_IP_MAX_ATTEMPTS = 50;       // attempts per IP per window before throttle
+
+/**
+ * Record a login attempt from `ip`; return whether the IP is now throttled.
+ * Fail-open (returns false) on KV failure or unknown IP.
+ */
+async function loginIpThrottled(ip: string): Promise<boolean> {
+  if (!ip) return false;
+  try {
+    const kv = await buildKv();
+    const count = await kv.incrWithWindow(`acctlogin:ip:${ip}`, LOGIN_IP_WINDOW_MS);
+    return count > LOGIN_IP_MAX_ATTEMPTS;
+  } catch {
+    return false;
+  }
+}
 
 // argon2id — Algorithm enum: 2 = Argon2id (same posture as customer/super-admin auth).
 const ARGON2_OPTS = { algorithm: 2 } as const;
@@ -230,7 +256,7 @@ export async function register(opts: {
 
 export type LoginResult =
   | { ok: true; user: PublicPlatformUser; session: IssuedSession }
-  | { ok: false; code: "INVALID_CREDENTIALS" | "LOCKED" | "INACTIVE"; message: string };
+  | { ok: false; code: "INVALID_CREDENTIALS" | "LOCKED" | "INACTIVE" | "THROTTLED"; message: string };
 
 /**
  * Authenticate by email + password. Anti-enumeration dummy verify on missing
@@ -249,6 +275,11 @@ export async function login(opts: {
   userAgent: string;
 }): Promise<LoginResult> {
   const pool = getPool();
+
+  // FIX 3: per-IP throttle before touching the DB / per-account lockout.
+  if (await loginIpThrottled(opts.ip)) {
+    return { ok: false, code: "THROTTLED", message: "too many login attempts from this network — try again later" };
+  }
 
   const { rows } = await pool.query<PlatformUserRow>(
     `SELECT id::text, org_id::text, email, password_hash, role, is_active,

@@ -131,8 +131,8 @@ export default function Tenants() {
       <div className="mb-6 rounded-xl border border-red-500/20 bg-red-500/5 px-5 py-4 flex gap-3 items-start">
         <AlertTriangle size={16} className="text-red-400 flex-shrink-0 mt-0.5" />
         <div>
-          <p className="text-sm font-semibold text-red-300 mb-1">Destructive operations</p>
-          <p className="text-xs text-red-400/70 leading-relaxed">
+          <p className="text-[14px] font-semibold text-red-300 mb-1">Destructive operations</p>
+          <p className="text-[13px] text-red-400/80 leading-relaxed">
             Takedown and suspend actions immediately affect live tenant stores and their customers.
             Every action is permanently recorded in the audit log with your identity, IP address,
             and the provided reason. There is no undo — use restore to re-enable a store.
@@ -143,7 +143,7 @@ export default function Tenants() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Step 1: Select store */}
         <div className="rounded-lg border border-white/[0.07] bg-[var(--cc-surface)] p-5">
-          <h3 className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--cc-text-muted)] mb-4">1. Select store</h3>
+          <h3 className="text-[12px] font-medium text-[var(--cc-text-muted)] mb-4">1. Select store</h3>
           <FormInput
             value={storeSearch}
             onChange={setStoreSearch}
@@ -166,17 +166,17 @@ export default function Tenants() {
                 >
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs font-medium text-[var(--cc-text-body)]">{s.name}</p>
-                      <p className="text-[11px] text-[var(--cc-text-subtle)] font-mono">{s.id}</p>
+                      <p className="text-[13px] font-medium text-[var(--cc-text-body)]">{s.name}</p>
+                      <p className="text-[12px] text-[var(--cc-text-muted)] font-mono">{s.id}</p>
                     </div>
                     <Badge color={s.status === 'active' ? 'emerald' : s.status === 'suspended' ? 'amber' : 'red'}>
-                      {s.status}
+                      <span className="capitalize">{s.status}</span>
                     </Badge>
                   </div>
                 </button>
               ))}
               {filteredStores.length === 0 && (
-                <p className="text-xs text-[var(--cc-text-muted)] text-center py-4">No stores found</p>
+                <p className="text-[13px] text-[var(--cc-text-muted)] text-center py-4">No stores found</p>
               )}
             </div>
           )}
@@ -184,15 +184,15 @@ export default function Tenants() {
 
         {/* Step 2: Choose action + reason */}
         <div className="rounded-lg border border-white/[0.07] bg-[var(--cc-surface)] p-5">
-          <h3 className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--cc-text-muted)] mb-4">2. Choose action</h3>
+          <h3 className="text-[12px] font-medium text-[var(--cc-text-muted)] mb-4">2. Choose action</h3>
 
           {!selectedStore ? (
-            <p className="text-xs text-[var(--cc-text-muted)] py-4 text-center">Select a store first</p>
+            <p className="text-[13px] text-[var(--cc-text-muted)] py-4 text-center">Select a store first</p>
           ) : (
             <div className="space-y-4">
               <div className="rounded-md bg-white/[0.03] border border-white/[0.06] px-3 py-2.5">
-                <p className="text-xs font-medium text-[var(--cc-text-body)]">{selectedStore.name}</p>
-                <p className="text-[11px] text-[var(--cc-text-muted)] font-mono">{selectedStore.id}</p>
+                <p className="text-[13px] font-medium text-[var(--cc-text-body)]">{selectedStore.name}</p>
+                <p className="text-[12px] text-[var(--cc-text-muted)] font-mono">{selectedStore.id}</p>
               </div>
 
               {/* Action selector */}
@@ -209,11 +209,11 @@ export default function Tenants() {
                           : 'border-transparent hover:border-white/10 hover:bg-white/[0.02]'
                       }`}
                     >
-                      <div className="flex items-center gap-2 mb-0.5">
+                      <div className="flex items-center gap-2 mb-1">
                         {meta.icon}
-                        <span className={`text-xs font-semibold ${meta.color}`}>{meta.label}</span>
+                        <span className={`text-[13px] font-semibold ${meta.color}`}>{meta.label}</span>
                       </div>
-                      <p className="text-[11px] text-[var(--cc-text-muted)]">{meta.description}</p>
+                      <p className="text-[12px] text-[var(--cc-text-muted)] leading-relaxed">{meta.description}</p>
                     </button>
                   )
                 })}
@@ -228,12 +228,12 @@ export default function Tenants() {
                     placeholder="Explain why this action is being taken..."
                   />
                   {!reason.trim() ? (
-                    <p className="text-[11px] text-red-400 mt-1 flex items-center gap-1">
-                      <AlertTriangle size={11} className="flex-shrink-0" />
+                    <p className="text-[12px] text-red-400 mt-1.5 flex items-center gap-1">
+                      <AlertTriangle size={12} className="flex-shrink-0" />
                       A reason is required before you can continue.
                     </p>
                   ) : (
-                    <p className="text-[11px] text-[var(--cc-text-muted)] mt-1">
+                    <p className="text-[12px] text-[var(--cc-text-muted)] mt-1.5">
                       This reason is permanently recorded in the audit log.
                     </p>
                   )}
@@ -263,21 +263,21 @@ export default function Tenants() {
         >
           <div className="space-y-4">
             <div className="rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3">
-              <p className="text-sm font-semibold text-red-300 mb-1">
+              <p className="text-[14px] font-semibold text-red-300 mb-1">
                 {ACTION_META[selectedAction].label}: {selectedStore.name}
               </p>
-              <p className="text-xs text-red-400/70">{ACTION_META[selectedAction].description}</p>
+              <p className="text-[13px] text-red-400/80 leading-relaxed">{ACTION_META[selectedAction].description}</p>
             </div>
 
-            <div className="text-xs text-[var(--cc-text-body)] space-y-1">
+            <div className="text-[13px] text-[var(--cc-text-body)] space-y-1">
               <p><span className="text-[var(--cc-text-muted)]">Store:</span> {selectedStore.name}</p>
-              <p className="font-mono"><span className="text-[var(--cc-text-muted)]">ID:</span> {selectedStore.id}</p>
+              <p><span className="text-[var(--cc-text-muted)]">ID:</span> <span className="font-mono">{selectedStore.id}</span></p>
               <p><span className="text-[var(--cc-text-muted)]">Reason:</span> {reason}</p>
             </div>
 
             <div>
-              <label className="block font-mono text-[10px] font-medium uppercase tracking-wider text-[var(--cc-text-muted)] mb-1.5">
-                To confirm, type the exact phrase below:
+              <label className="block text-[13px] font-medium text-[var(--cc-text-body)] mb-1.5">
+                To confirm, type the exact phrase below
               </label>
               <div className="mb-2 rounded-lg border border-red-500/20 bg-red-500/[0.06] px-3 py-2 select-all">
                 <code className="text-sm font-mono font-semibold text-red-300 tracking-wide">
@@ -297,7 +297,7 @@ export default function Tenants() {
                 }`}
               />
               {!confirmOk && (
-                <p className="text-[11px] text-red-400 mt-1.5">
+                <p className="text-[12px] text-red-400 mt-1.5">
                   The phrase must match exactly to enable the {ACTION_META[selectedAction].label.toLowerCase()} button.
                 </p>
               )}

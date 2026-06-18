@@ -120,14 +120,11 @@ export default function Login() {
                 cart<span style={{ color: 'var(--cc-lime)' }}>crft</span>
               </span>
             </div>
-            <h1 className="text-2xl font-bold text-[var(--cc-text)] tracking-tight">Operator Console</h1>
-            <p
-              className="mt-1.5 text-[11px] uppercase tracking-[0.12em] text-[var(--cc-text-muted)]"
-              style={{ fontFamily: 'var(--cc-font-mono)' }}
-            >
-              Super-Admin
+            <h1 className="text-2xl font-bold text-[var(--cc-text)] tracking-tight">Operator console</h1>
+            <p className="mt-1.5 text-[12px] font-medium text-[var(--cc-text-muted)]">
+              Super-admin
               <span className="mx-1.5 text-[var(--cc-text-subtle)]">&middot;</span>
-              <span style={{ color: 'var(--cc-amber)', opacity: 0.9 }}>restricted access</span>
+              <span style={{ color: 'var(--cc-amber)' }}>Restricted access</span>
             </p>
           </div>
 
@@ -141,8 +138,8 @@ export default function Login() {
           >
             <AlertTriangle size={14} className="flex-shrink-0 mt-0.5" style={{ color: 'var(--cc-amber)' }} />
             <p
-              className="text-[11px] leading-relaxed"
-              style={{ color: 'rgba(245,184,66,0.82)' }}
+              className="text-[12px] leading-relaxed"
+              style={{ color: 'rgba(245,184,66,0.88)' }}
             >
               This console has operator-level access to all tenant data. All actions are permanently
               audited. Unauthorized access is prohibited.
@@ -163,10 +160,7 @@ export default function Login() {
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Email */}
               <div>
-                <label
-                  className="block text-[10px] font-medium uppercase tracking-wider text-[var(--cc-text-muted)] mb-1.5"
-                  style={{ fontFamily: 'var(--cc-font-mono)' }}
-                >
+                <label className="block text-[13px] font-medium text-[var(--cc-text-body)] mb-1.5">
                   Email address
                 </label>
                 <input
@@ -177,28 +171,20 @@ export default function Login() {
                   autoComplete="username"
                   required
                   disabled={mfaRequired}
-                  className="w-full rounded-md px-3 py-2.5 text-sm text-[var(--cc-text)] placeholder:text-[var(--cc-text-subtle)] transition disabled:opacity-50 focus:outline-none"
+                  className="w-full rounded-md px-3 py-2.5 text-sm text-[var(--cc-text)] placeholder:text-[var(--cc-text-subtle)] transition disabled:opacity-50 focus:outline-none focus:ring-2"
                   style={{
                     border: '1px solid rgba(255,255,255,0.08)',
                     background: 'rgba(255,255,255,0.025)',
-                  }}
-                  onFocus={e => {
-                    e.currentTarget.style.borderColor = 'rgba(181,255,46,0.45)'
-                    e.currentTarget.style.boxShadow = '0 0 0 2px rgba(181,255,46,0.15)'
-                  }}
-                  onBlur={e => {
-                    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'
-                    e.currentTarget.style.boxShadow = 'none'
-                  }}
+                    '--tw-ring-color': 'rgba(181,255,46,0.2)',
+                  } as React.CSSProperties}
+                  onFocus={e => { e.currentTarget.style.borderColor = 'rgba(181,255,46,0.45)' }}
+                  onBlur={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)' }}
                 />
               </div>
 
               {/* Password */}
               <div>
-                <label
-                  className="block text-[10px] font-medium uppercase tracking-wider text-[var(--cc-text-muted)] mb-1.5"
-                  style={{ fontFamily: 'var(--cc-font-mono)' }}
-                >
+                <label className="block text-[13px] font-medium text-[var(--cc-text-body)] mb-1.5">
                   Password
                 </label>
                 <input
@@ -209,19 +195,14 @@ export default function Login() {
                   autoComplete="current-password"
                   required
                   disabled={mfaRequired}
-                  className="w-full rounded-md px-3 py-2.5 text-sm text-[var(--cc-text)] placeholder:text-[var(--cc-text-subtle)] transition disabled:opacity-50 focus:outline-none"
+                  className="w-full rounded-md px-3 py-2.5 text-sm text-[var(--cc-text)] placeholder:text-[var(--cc-text-subtle)] transition disabled:opacity-50 focus:outline-none focus:ring-2"
                   style={{
                     border: '1px solid rgba(255,255,255,0.08)',
                     background: 'rgba(255,255,255,0.025)',
-                  }}
-                  onFocus={e => {
-                    e.currentTarget.style.borderColor = 'rgba(181,255,46,0.45)'
-                    e.currentTarget.style.boxShadow = '0 0 0 2px rgba(181,255,46,0.15)'
-                  }}
-                  onBlur={e => {
-                    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'
-                    e.currentTarget.style.boxShadow = 'none'
-                  }}
+                    '--tw-ring-color': 'rgba(181,255,46,0.2)',
+                  } as React.CSSProperties}
+                  onFocus={e => { e.currentTarget.style.borderColor = 'rgba(181,255,46,0.45)' }}
+                  onBlur={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)' }}
                 />
               </div>
 
@@ -229,12 +210,12 @@ export default function Login() {
               {mfaRequired && (
                 <div>
                   <label
-                    className="block text-[10px] font-medium uppercase tracking-wider mb-1.5"
-                    style={{ fontFamily: 'var(--cc-font-mono)', color: 'var(--cc-amber)' }}
+                    className="block text-[13px] font-medium mb-1.5"
+                    style={{ color: 'var(--cc-amber)' }}
                   >
                     Authenticator code
                   </label>
-                  <p className="text-[11px] text-[var(--cc-text-muted)] mb-2">
+                  <p className="text-[12px] text-[var(--cc-text-muted)] mb-2">
                     Enter the 6-digit code from your authenticator app.
                   </p>
                   <input
@@ -290,11 +271,10 @@ export default function Login() {
               <button
                 type="submit"
                 disabled={loading || error?.type === 'locked' || error?.type === 'blocked'}
-                className="w-full flex items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-semibold transition active:scale-[0.99] focus-visible:outline-none disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
+                className="w-full flex items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-semibold transition active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cc-lime)]/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--cc-ink)] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
                 style={{
                   background: 'var(--cc-lime)',
                   color: 'var(--cc-lime-ink)',
-                  boxShadow: '0 0 0 1px rgba(181,255,46,0.2), 0 10px 28px -12px rgba(181,255,46,0.5)',
                 }}
                 onMouseEnter={e => {
                   if (!e.currentTarget.disabled)
@@ -325,12 +305,9 @@ export default function Login() {
           </div>
 
           {/* Footer badge */}
-          <p
-            className="flex items-center justify-center gap-1.5 text-center text-[10px] uppercase tracking-[0.1em] text-[var(--cc-text-subtle)] mt-4"
-            style={{ fontFamily: 'var(--cc-font-mono)' }}
-          >
-            <Lock size={10} />
-            CartCrft Operator Console &middot; Access is logged
+          <p className="flex items-center justify-center gap-1.5 text-center text-[12px] text-[var(--cc-text-muted)] mt-4">
+            <Lock size={11} />
+            CartCrft operator console &middot; Access is logged
           </p>
         </div>
       </div>

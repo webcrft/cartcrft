@@ -232,6 +232,16 @@ describe("abandoned cart recovery", () => {
     const abandonedCartId = acRows[0]?.id;
     expect(abandonedCartId).toBeTruthy();
 
+    // FIX 5: resends are now bounded by a minimum interval since last_notified_at.
+    // The worker already sent one email seconds ago, so backdate last_notified_at
+    // to simulate a legitimate later admin resend (still under the count cap).
+    await ctx.pool.query(
+      `UPDATE abandoned_carts
+         SET last_notified_at = now() - interval '2 hours'
+       WHERE id = $1::uuid`,
+      [abandonedCartId]
+    );
+
     // Inject the mailer into the service module (shared singleton)
     const { setMailer } = await import("../../src/modules/recovery/service.js");
     setMailer(mailer);

@@ -114,7 +114,7 @@ export default function Settings() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Store Settings"
+        title="Store settings"
         description="Manage your store details and configuration"
         badge={
           <div className="flex items-center gap-1.5">
@@ -123,10 +123,10 @@ export default function Settings() {
         }
       />
 
-      <Card title="Store Details" description="Basic information about your store">
+      <Card title="Store details" description="Basic information about your store">
         <div className="space-y-4 max-w-xl">
           <FormInput
-            label="Store Name"
+            label="Store name"
             value={form.name}
             onChange={set('name')}
             placeholder="My Store"
@@ -164,29 +164,29 @@ export default function Settings() {
 
           {/* Currency — read-only */}
           <div>
-            <label className="block font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--cc-muted)] mb-1.5">
+            <label className="block text-[13px] font-medium text-[var(--cc-body)] mb-1.5">
               Currency
             </label>
             <div
               className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm"
               style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}
             >
-              <span className="font-mono font-semibold text-[var(--cc-body)]">{activeStore?.currency ?? '—'}</span>
-              <span className="text-[11px] text-[var(--cc-subtle)]">Cannot be changed after store creation</span>
+              <span className="font-mono text-[13px] font-semibold text-[var(--cc-body)]">{activeStore?.currency ?? '—'}</span>
+              <span className="text-[12px] text-[var(--cc-subtle)]">Cannot be changed after store creation</span>
             </div>
           </div>
 
           <div className="pt-1">
-            <Btn onClick={handleSave} loading={saving}>Save Settings</Btn>
+            <Btn onClick={handleSave} loading={saving}>Save settings</Btn>
           </div>
         </div>
       </Card>
 
       {/* Danger zone */}
-      <Card title="Danger Zone">
+      <Card title="Danger zone">
         <div className="space-y-4 max-w-xl">
           <div
-            className="flex items-start gap-2.5 rounded-lg px-4 py-3 text-xs text-[var(--cc-muted)]"
+            className="flex items-start gap-2.5 rounded-lg px-4 py-3 text-[13px] text-[var(--cc-muted)]"
             style={{ background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.15)' }}
           >
             <AlertTriangle size={14} className="text-red-400 flex-shrink-0 mt-0.5" />
@@ -198,7 +198,7 @@ export default function Settings() {
 
           {!confirmDelete ? (
             <Btn variant="danger" onClick={() => setConfirmDelete(true)}>
-              Delete Store
+              Delete store
             </Btn>
           ) : (
             <div
@@ -208,7 +208,7 @@ export default function Settings() {
               <p className="text-sm font-semibold text-red-300">
                 Are you sure you want to delete <span className="text-red-200 font-bold">{activeStore?.name}</span>?
               </p>
-              <p className="text-xs text-red-400/75">This action cannot be undone. All data will be permanently lost.</p>
+              <p className="text-[13px] text-red-400/75">This action cannot be undone. All data will be permanently lost.</p>
               <div className="flex gap-2">
                 <button
                   onClick={handleDelete}

@@ -601,10 +601,13 @@ describe("Agent Registry + Mandate Chain (T3.3)", () => {
       const okAgentId = okAgent["id"] as string;
       const fakeCheckoutId = "22222222-0000-0000-0000-000000000001";
 
-      // Should not throw — 50 < 1000
+      // Should not throw — 50 < 1000. Returns null because no payment mandate
+      // is attached to this checkout (spend-limit-only mode). verifyAgentCheckout
+      // now resolves to the verified payment mandate id (for order→mandate
+      // attribution) or null when none is present.
       await expect(
         verifyAgentCheckout(okAgentId, storeId, fakeCheckoutId, 50)
-      ).resolves.toBeUndefined();
+      ).resolves.toBeNull();
     });
 
     it("verifyAgentCheckout: no limit = always passes", async () => {
@@ -615,9 +618,10 @@ describe("Agent Registry + Mandate Chain (T3.3)", () => {
       const unlimitedId = unlimitedAgent["id"] as string;
       const fakeCheckoutId = "33333333-0000-0000-0000-000000000001";
 
+      // Returns null — no spend limit and no payment mandate attached.
       await expect(
         verifyAgentCheckout(unlimitedId, storeId, fakeCheckoutId, 99999)
-      ).resolves.toBeUndefined();
+      ).resolves.toBeNull();
     });
   });
 

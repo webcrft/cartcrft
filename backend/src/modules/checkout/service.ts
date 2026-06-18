@@ -14,6 +14,8 @@
 import { getPool, getReadDb } from "../../db/pool.js";
 import { calcTax, extractAddressCodes, type TaxLine } from "../../lib/tax.js";
 import { round2 } from "../../lib/money.js";
+import { computeDiscounts, type DiscountCartLine } from "../discounts/service.js";
+import { getLatestRates, rateFor, convertMoney } from "../../lib/fx-convert.js";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -41,6 +43,32 @@ export interface CheckoutPublic {
   completed_at: Date | null;
   created_at: Date;
   updated_at: Date;
+  /**
+   * Optional DISPLAY-ONLY converted amounts. Present only when the caller asks
+   * for ?presentment_currency=XYZ AND a rate is available. NEVER replaces the
+   * base-currency amounts above — settlement/charge stays in `currency`.
+   */
+  presentment?: PresentmentBlock;
+}
+
+/**
+ * Presentment (display-only) money block.
+ *
+ * PRESENTMENT ONLY: these are converted *display* values for a storefront to
+ * render local prices. The order is still created and charged in the base
+ * currency. The base amounts on the parent object are authoritative; this block
+ * is purely informational and must never be used for settlement.
+ */
+export interface PresentmentBlock {
+  /** ISO 4217 presentment (display) currency. */
+  currency: string;
+  /** base→presentment conversion rate used for all amounts below. */
+  rate: number;
+  subtotal: string;
+  shipping_total: string;
+  discount_total: string;
+  tax_total: string;
+  total: string;
 }
 
 export interface DiscountLine {
@@ -49,10 +77,60 @@ export interface DiscountLine {
   amount: number;
 }
 
+/** The base-currency money fields presentment converts (decimal strings). */
+export interface BaseMoney {
+  subtotal: string | number;
+  shipping_total: string | number;
+  discount_total: string | number;
+  tax_total: string | number;
+  total: string | number;
+}
+
+/**
+ * Build a DISPLAY-ONLY presentment block converting base-currency money into a
+ * target currency, WITHOUT mutating the base amounts.
+ *
+ * PRESENTMENT ONLY: the returned values are for storefront display. The order is
+ * still created and charged in `baseCurrency`. Callers attach this alongside the
+ * real amounts and never substitute it for them.
+ *
+ * Defensive: returns null (caller falls back to base, no conversion) when
+ *   - target equals base (nothing to convert), or
+ *   - no FX rate is available for base→target.
+ *
+ * `db` is any `.query()`-capable handle (getReadDb / getPool); the latest USD-
+ * base snapshot is read once and the base→target cross-rate derived from it.
+ */
+export async function buildPresentment(
+  db: Parameters<typeof getLatestRates>[0],
+  baseCurrency: string,
+  presentmentCurrency: string,
+  base: BaseMoney
+): Promise<PresentmentBlock | null> {
+  const target = presentmentCurrency.toUpperCase();
+  const from = baseCurrency.toUpperCase();
+  if (!target || target === from) return null;
+
+  const latest = await getLatestRates(db);
+  const rate = rateFor(latest.rates, from, target, latest.base);
+  if (rate === null) return null;
+
+  return {
+    currency: target,
+    rate,
+    subtotal: convertMoney(base.subtotal, rate),
+    shipping_total: convertMoney(base.shipping_total, rate),
+    discount_total: convertMoney(base.discount_total, rate),
+    tax_total: convertMoney(base.tax_total, rate),
+    total: convertMoney(base.total, rate),
+  };
+}
+
 // ── Internal helpers ──────────────────────────────────────────────────────────
 
 interface CartLine {
   variant_id: string;
+  product_id: string;
   qty: number;
   price: number;
   title: string;
@@ -66,13 +144,14 @@ async function loadCartLines(
 ): Promise<CartLine[]> {
   const { rows } = await pool.query<{
     variant_id: string;
+    product_id: string;
     quantity: number;
     price: string;
     title: string;
     sku: string;
     type: string;
   }>(
-    `SELECT cl.variant_id::text, cl.quantity, cl.price::text,
+    `SELECT cl.variant_id::text, pv.product_id::text, cl.quantity, cl.price::text,
             COALESCE(pv.title, p.title, 'Item') AS title,
             COALESCE(pv.sku, '') AS sku,
             p.type
@@ -84,11 +163,22 @@ async function loadCartLines(
   );
   return rows.map((r) => ({
     variant_id: r.variant_id,
+    product_id: r.product_id,
     qty: r.quantity,
     price: parseFloat(r.price),
     title: r.title,
     sku: r.sku,
     product_type: r.type,
+  }));
+}
+
+/** Map checkout cart lines to the discount engine's line shape. */
+function toDiscountLines(lines: CartLine[]): DiscountCartLine[] {
+  return lines.map((l) => ({
+    variant_id: l.variant_id,
+    product_id: l.product_id,
+    qty: l.qty,
+    price: l.price,
   }));
 }
 
@@ -120,103 +210,61 @@ async function lookupShippingRatePrice(
 }
 
 /**
- * Apply a discount code read-only (validation only; no burn).
- * Mirrors Go checkoutApplyDiscount().
- * Returns { discountTotal, discountLines, error }.
+ * Compute discounts for a checkout (read-only preview — no burn).
+ *
+ * Delegates to the discounts module's execution engine, which evaluates:
+ *   - the explicit discount CODE (if any), and
+ *   - all eligible AUTOMATIC discounts for the store (codeless),
+ * across every discount type (percentage, fixed_amount, free_shipping,
+ * bogo, buy_x_get_y) with stacking/priority semantics.
+ *
+ * Returns the subtotal discount, the post-discount shipping (free_shipping
+ * zeroes it), the discount_lines to persist, and an `error` for a bad code.
+ * Automatic discounts never error — they simply don't apply when ineligible.
+ *
+ * NOTE: this is the PREVIEW path. The authoritative recompute + redemption
+ * burn happens inside completeCheckout()'s transaction.
  */
 export async function applyDiscount(
+  pool: ReturnType<typeof getPool>,
   storeId: string,
-  code: string,
+  lines: DiscountCartLine[],
   subtotal: number,
-  customerId: string | null
+  baseShipping: number,
+  customerId: string | null,
+  code: string
 ): Promise<{
   discountTotal: number;
+  shippingTotal: number;
   discountLines: DiscountLine[];
   error: string | null;
 }> {
-  if (!code) return { discountTotal: 0, discountLines: [], error: null };
+  const result = await computeDiscounts(pool, {
+    storeId,
+    lines,
+    subtotal,
+    shippingTotal: baseShipping,
+    customerId,
+    code: code || null,
+  });
 
-  const pool = getReadDb();
-  const { rows } = await pool.query<{
-    id: string;
-    type: string;
-    value: string | null;
-    min_order_total: string | null;
-    max_discount: string | null;
-    max_uses: number | null;
-    uses_count: number;
-    once_per_customer: boolean;
-  }>(
-    `SELECT id::text, type, value::text, min_order_total::text, max_discount::text,
-            max_uses, uses_count, once_per_customer
-     FROM discount_codes
-     WHERE store_id = $1::uuid AND code = $2
-       AND is_active = true
-       AND (starts_at IS NULL OR starts_at <= now())
-       AND (ends_at IS NULL OR ends_at >= now())`,
-    [storeId, code.toUpperCase()]
-  );
-
-  if (rows.length === 0) {
-    return { discountTotal: 0, discountLines: [], error: "invalid or expired discount code" };
+  if (result.error) {
+    return { discountTotal: 0, shippingTotal: baseShipping, discountLines: [], error: result.error };
   }
 
-  const dc = rows[0]!;
-
-  // Min subtotal check
-  if (dc.min_order_total !== null) {
-    const minTotal = parseFloat(dc.min_order_total);
-    if (subtotal < minTotal) {
-      return { discountTotal: 0, discountLines: [], error: "invalid or expired discount code" };
-    }
-  }
-
-  // Pre-flight cap check (non-authoritative — authoritative burn at complete time)
-  if (dc.max_uses !== null && dc.uses_count >= dc.max_uses) {
-    return { discountTotal: 0, discountLines: [], error: "invalid or expired discount code" };
-  }
-
-  // once_per_customer pre-flight (also re-checked atomically at completion)
-  if (dc.once_per_customer) {
-    if (!customerId) {
-      return { discountTotal: 0, discountLines: [], error: "invalid or expired discount code" };
-    }
-    const { rows: usageRows } = await pool.query<{ count: string }>(
-      `SELECT COUNT(*)::text AS count FROM discount_usages
-       WHERE discount_id = $1::uuid AND customer_id = $2::uuid`,
-      [dc.id, customerId]
-    );
-    if (parseInt(usageRows[0]?.count ?? "0", 10) > 0) {
-      return { discountTotal: 0, discountLines: [], error: "invalid or expired discount code" };
-    }
-  }
-
-  let amount = 0;
-  switch (dc.type) {
-    case "percentage": {
-      if (dc.value !== null) {
-        amount = subtotal * parseFloat(dc.value) / 100;
-        if (dc.max_discount !== null) {
-          amount = Math.min(amount, parseFloat(dc.max_discount));
-        }
-      }
-      break;
-    }
-    case "fixed_amount": {
-      if (dc.value !== null) {
-        amount = Math.min(parseFloat(dc.value), subtotal);
-      }
-      break;
-    }
-    // free_shipping, bogo, buy_x_get_y handled at complete time (T2.7)
-    default:
-      amount = 0;
-  }
-  amount = round2(amount);
+  // Persist a compact discount_lines payload (code + type + amount). The
+  // free_shipping flag is implied by type; complete-time recompute re-derives
+  // it from the rule, so we only need a faithful display/audit record here.
+  const discountLines: DiscountLine[] = result.lines.map((l) => ({
+    code: l.code,
+    type: l.type,
+    amount: l.amount,
+  }));
 
   return {
-    discountTotal: amount,
-    discountLines: [{ code, type: dc.type, amount }],
+    discountTotal: result.discountTotal,
+    shippingTotal: result.shippingTotal,
+    discountLines,
     error: null,
   };
 }
@@ -297,31 +345,38 @@ export async function createCheckout(
 
   const subtotal = round2(cartSubtotal(lines));
 
-  // Discount
+  // Shipping (H8: server-side price only) — resolved BEFORE discounts so a
+  // free_shipping discount can zero it.
+  let baseShipping = 0;
+  let shippingRateJson: string | null = null;
+  if (body.shipping_rate && typeof body.shipping_rate["id"] === "string" && body.shipping_rate["id"]) {
+    baseShipping = await lookupShippingRatePrice(pool, storeId, body.shipping_rate["id"] as string);
+    shippingRateJson = JSON.stringify(body.shipping_rate);
+  }
+
+  // Discount (code + automatic discounts; free_shipping/BOGO supported).
   const discountCode = (body.discount_code ?? "").toUpperCase().trim();
-  if (discountCode && cartHasDomainLines(lines)) {
+  const hasDomain = cartHasDomainLines(lines);
+  if (discountCode && hasDomain) {
     const e = new Error("discount codes cannot be applied to domain products");
     (e as NodeJS.ErrnoException).code = "VALIDATION_ERROR";
     throw e;
   }
-  const discountResult = await applyDiscount(storeId, discountCode, subtotal, customerId);
+  // Domain carts never receive discounts (codeless ones included).
+  const discountResult = hasDomain
+    ? { discountTotal: 0, shippingTotal: baseShipping, discountLines: [] as DiscountLine[], error: null as string | null }
+    : await applyDiscount(pool, storeId, toDiscountLines(lines), subtotal, baseShipping, customerId, discountCode);
   if (discountResult.error) {
     const e = new Error(discountResult.error);
     (e as NodeJS.ErrnoException).code = "VALIDATION_ERROR";
     throw e;
   }
 
-  // Tax
+  const shippingTotal = discountResult.shippingTotal;
+
+  // Tax — computed on the discounted subtotal.
   const { countryCode, provinceCode } = extractAddressCodes(body.shipping_address ?? null);
   const taxResult = await calcTax(pool, storeId, subtotal - discountResult.discountTotal, countryCode, provinceCode);
-
-  // Shipping (H8: server-side price only)
-  let shippingTotal = 0;
-  let shippingRateJson: string | null = null;
-  if (body.shipping_rate && typeof body.shipping_rate["id"] === "string" && body.shipping_rate["id"]) {
-    shippingTotal = await lookupShippingRatePrice(pool, storeId, body.shipping_rate["id"] as string);
-    shippingRateJson = JSON.stringify(body.shipping_rate);
-  }
 
   const total = round2(subtotal - discountResult.discountTotal + taxResult.taxTotal + shippingTotal);
 
@@ -370,10 +425,17 @@ export async function createCheckout(
 
 /**
  * Get a checkout by id. IDOR-safe: always filters by store_id.
+ *
+ * When `presentmentCurrency` is supplied (storefront ?presentment_currency=XYZ),
+ * a DISPLAY-ONLY `presentment` block is attached with the converted amounts. The
+ * base-currency amounts (subtotal/total/etc and `currency`) are LEFT UNCHANGED —
+ * settlement/charge always happens in the base currency. The presentment block
+ * is omitted when no FX rate is available or the target equals the base.
  */
 export async function getCheckout(
   storeId: string,
-  checkoutId: string
+  checkoutId: string,
+  presentmentCurrency?: string
 ): Promise<CheckoutPublic | null> {
   const pool = getReadDb();
   const { rows } = await pool.query<CheckoutPublic>(
@@ -388,7 +450,21 @@ export async function getCheckout(
      WHERE id = $1::uuid AND store_id = $2::uuid`,
     [checkoutId, storeId]
   );
-  return rows[0] ?? null;
+  const checkout = rows[0];
+  if (!checkout) return null;
+
+  if (presentmentCurrency) {
+    const presentment = await buildPresentment(
+      pool,
+      checkout.currency,
+      presentmentCurrency,
+      checkout
+    );
+    // Attach DISPLAY-ONLY converted amounts; base amounts stay authoritative.
+    if (presentment) checkout.presentment = presentment;
+  }
+
+  return checkout;
 }
 
 /**
@@ -442,31 +518,36 @@ export async function updateCheckout(
   const lines = await loadCartLines(pool, cartId);
   const subtotal = round2(cartSubtotal(lines));
 
-  // Discount
+  // Shipping (H8) — resolved BEFORE discounts so free_shipping can zero it.
+  let baseShipping = 0;
+  let shippingRateJson: string | null = null;
+  if (body.shipping_rate && typeof body.shipping_rate["id"] === "string" && body.shipping_rate["id"]) {
+    baseShipping = await lookupShippingRatePrice(pool, storeId, body.shipping_rate["id"] as string);
+    shippingRateJson = JSON.stringify(body.shipping_rate);
+  }
+
+  // Discount (code + automatic discounts).
   const discountCode = (body.discount_code ?? "").toUpperCase().trim();
-  if (discountCode && cartHasDomainLines(lines)) {
+  const hasDomain = cartHasDomainLines(lines);
+  if (discountCode && hasDomain) {
     const e = new Error("discount codes cannot be applied to domain products");
     (e as NodeJS.ErrnoException).code = "VALIDATION_ERROR";
     throw e;
   }
-  const discountResult = await applyDiscount(storeId, discountCode, subtotal, customerId);
+  const discountResult = hasDomain
+    ? { discountTotal: 0, shippingTotal: baseShipping, discountLines: [] as DiscountLine[], error: null as string | null }
+    : await applyDiscount(pool, storeId, toDiscountLines(lines), subtotal, baseShipping, customerId, discountCode);
   if (discountResult.error) {
     const e = new Error(discountResult.error);
     (e as NodeJS.ErrnoException).code = "VALIDATION_ERROR";
     throw e;
   }
 
-  // Tax
+  const shippingTotal = discountResult.shippingTotal;
+
+  // Tax — on the discounted subtotal.
   const { countryCode, provinceCode } = extractAddressCodes(body.shipping_address ?? null);
   const taxResult = await calcTax(pool, storeId, subtotal - discountResult.discountTotal, countryCode, provinceCode);
-
-  // Shipping (H8)
-  let shippingTotal = 0;
-  let shippingRateJson: string | null = null;
-  if (body.shipping_rate && typeof body.shipping_rate["id"] === "string" && body.shipping_rate["id"]) {
-    shippingTotal = await lookupShippingRatePrice(pool, storeId, body.shipping_rate["id"] as string);
-    shippingRateJson = JSON.stringify(body.shipping_rate);
-  }
 
   const total = round2(subtotal - discountResult.discountTotal + taxResult.taxTotal + shippingTotal);
 

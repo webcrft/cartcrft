@@ -16,6 +16,8 @@ import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { z } from "zod";
 import { storeAuthWrite } from "../../lib/auth/middleware.js";
 import { generateDownloadLinks, listDownloadLinks, validateAndRedeemToken } from "./service.js";
+import { assertSafeOutboundUrl } from "../../lib/net/ssrf.js";
+import { config } from "../../config/config.js";
 
 const UUID = z.string().uuid();
 
@@ -86,6 +88,18 @@ export const digitalPlugin: FastifyPluginAsyncZod = async (app) => {
           request.params.token,
           request.params.storeId
         );
+        // Open-redirect / SSRF guard: this is a public, unauthenticated endpoint,
+        // so the platform domain must not be usable as a redirector to internal
+        // or abusive targets. Validate the (admin-controlled) file_url resolves
+        // only to public addresses before issuing the 302. External CDNs still
+        // pass; private/loopback/metadata targets are rejected with a 502.
+        try {
+          await assertSafeOutboundUrl(info.file_url, { allowPrivate: config.APP_ENV !== "production" });
+        } catch {
+          return reply.status(502).send({
+            error: { code: "BAD_GATEWAY", message: "download target is not a valid public URL" },
+          });
+        }
         // 302 redirect to the file URL
         return reply.redirect(info.file_url, 302);
       } catch (err) {

@@ -7,6 +7,9 @@
 
 import { getPool, getReadDb, withTx } from "../../db/pool.js";
 import { dispatchStoreEvent } from "../notifications/service.js";
+import { calcTaxAuto, extractAddressCodes } from "../../lib/tax.js";
+import { round2 } from "../../lib/money.js";
+import type pg from "pg";
 import type {
   Order,
   OrderLine,
@@ -15,6 +18,16 @@ import type {
   CreateOrderResult,
   UpdateOrderInput,
 } from "./types.js";
+
+// ── Domain errors ───────────────────────────────────────────────────────────────
+// Service functions throw plain Error with a `.code` so routes can map to HTTP
+// status codes (matching the existing VALIDATION_ERROR / NOT_FOUND convention).
+
+function svcError(message: string, code: string): NodeJS.ErrnoException {
+  const e = new Error(message) as NodeJS.ErrnoException;
+  e.code = code;
+  return e;
+}
 
 // ── Column helpers ─────────────────────────────────────────────────────────────
 
@@ -387,6 +400,11 @@ export async function updateOrder(
         [orderId, userId ?? null]
       )
       .catch(() => undefined);
+
+    // Fire-and-forget outbound notification (H2.1)
+    dispatchStoreEvent(storeId, "order.updated", {
+      order_id: orderId,
+    });
   }
 
   return (rowCount ?? 0) > 0;
@@ -470,31 +488,35 @@ export async function addOrderNote(
   note: string,
   userId: string
 ): Promise<string> {
-  const pool = getPool();
+  // SEC: run the existence-check + INSERT inside withTx() so RLS (which is
+  // applied on the request-scoped connection) backstops the org-scoping of the
+  // store/order — the owner-role getPool() path bypasses RLS, so a bare query
+  // here would not catch a cross-tenant :storeId.
+  return withTx(async (client) => {
+    // Verify order belongs to store
+    const { rows: orderRows } = await client.query<{ id: string }>(
+      `SELECT id::text FROM orders WHERE id = $1::uuid AND store_id = $2::uuid`,
+      [orderId, storeId]
+    );
+    if (!orderRows[0]) {
+      const e = new Error("order not found");
+      (e as NodeJS.ErrnoException).code = "NOT_FOUND";
+      throw e;
+    }
 
-  // Verify order belongs to store
-  const { rows: orderRows } = await pool.query<{ id: string }>(
-    `SELECT id::text FROM orders WHERE id = $1::uuid AND store_id = $2::uuid`,
-    [orderId, storeId]
-  );
-  if (!orderRows[0]) {
-    const e = new Error("order not found");
-    (e as NodeJS.ErrnoException).code = "NOT_FOUND";
-    throw e;
-  }
+    const { rows } = await client.query<{ id: string }>(
+      `INSERT INTO order_events (order_id, type, data, created_by)
+       VALUES ($1::uuid, 'note_added',
+               jsonb_build_object('note', $2::text),
+               $3::uuid)
+       RETURNING id::text`,
+      [orderId, note, userId]
+    );
 
-  const { rows } = await pool.query<{ id: string }>(
-    `INSERT INTO order_events (order_id, type, data, created_by)
-     VALUES ($1::uuid, 'note_added',
-             jsonb_build_object('note', $2::text),
-             $3::uuid)
-     RETURNING id::text`,
-    [orderId, note, userId]
-  );
-
-  const id = rows[0]?.id;
-  if (!id) throw new Error("addOrderNote: no id returned");
-  return id;
+    const id = rows[0]?.id;
+    if (!id) throw new Error("addOrderNote: no id returned");
+    return id;
+  });
 }
 
 // ── List events ────────────────────────────────────────────────────────────────
@@ -522,4 +544,542 @@ export async function listOrderEvents(
   );
 
   return rows;
+}
+
+// ── Shared internals: fulfillment-status + re-pricing + inventory ───────────────
+
+interface OrderLineRow {
+  id: string;
+  variant_id: string | null;
+  quantity: number;
+  quantity_fulfilled: number;
+  price: string;
+  total: string;
+}
+
+/**
+ * Recompute the order's fulfillment_status from its line quantities and persist
+ * it (both on each line and on the order). Returns the rolled-up status.
+ *
+ *   - every line fully fulfilled              → 'fulfilled'
+ *   - at least one unit fulfilled, not all    → 'partial'
+ *   - nothing fulfilled                       → 'unfulfilled'
+ *
+ * Line-level fulfillment_status is recomputed from quantity_fulfilled vs
+ * quantity so the two stay consistent.
+ */
+async function recomputeFulfillmentStatus(
+  client: pg.PoolClient,
+  orderId: string
+): Promise<"unfulfilled" | "partial" | "fulfilled"> {
+  const { rows } = await client.query<{ quantity: number; quantity_fulfilled: number }>(
+    `SELECT quantity, quantity_fulfilled FROM order_lines WHERE order_id = $1::uuid`,
+    [orderId]
+  );
+
+  let totalQty = 0;
+  let totalFulfilled = 0;
+  for (const r of rows) {
+    totalQty += r.quantity;
+    totalFulfilled += r.quantity_fulfilled;
+  }
+
+  let status: "unfulfilled" | "partial" | "fulfilled";
+  if (totalFulfilled <= 0) status = "unfulfilled";
+  else if (totalFulfilled >= totalQty) status = "fulfilled";
+  else status = "partial";
+
+  // Keep per-line status consistent with its own quantities.
+  await client.query(
+    `UPDATE order_lines SET fulfillment_status =
+       CASE
+         WHEN quantity_fulfilled <= 0 THEN 'unfulfilled'
+         WHEN quantity_fulfilled >= quantity THEN 'fulfilled'
+         ELSE 'partial'
+       END
+     WHERE order_id = $1::uuid`,
+    [orderId]
+  );
+
+  await client.query(
+    `UPDATE orders SET fulfillment_status = $2, updated_at = now() WHERE id = $1::uuid`,
+    [orderId, status]
+  );
+
+  return status;
+}
+
+/**
+ * Adjust held inventory for a variant by `delta` units inside the current
+ * transaction, mirroring the checkout deduction model (checkout/complete.ts):
+ * orders HOLD stock by decrementing inventory_levels.quantity_on_hand at order
+ * time (there is no separate reservation/committed step in this codebase).
+ *
+ *   delta < 0  → reserve more stock (line qty increased): verify availability
+ *                across the variant's inventory_levels rows (locked in id order
+ *                to avoid deadlocks) and decrement, spreading across rows.
+ *   delta > 0  → release stock (line qty decreased/removed): increment back onto
+ *                the variant's first inventory_levels row (or create one if none
+ *                exists, matching adjustInventory()'s upsert behaviour).
+ *
+ * Only acts on variants whose product has track_inventory = true; untracked
+ * variants are a no-op (matching checkout). Writes an inventory_adjustments
+ * audit row referencing the order.
+ *
+ * Throws code INSUFFICIENT_INVENTORY when a reservation cannot be satisfied.
+ */
+async function adjustHeldInventory(
+  client: pg.PoolClient,
+  orderId: string,
+  variantId: string,
+  delta: number
+): Promise<void> {
+  if (delta === 0) return;
+
+  const { rows: trackRows } = await client.query<{ track_inventory: boolean }>(
+    `SELECT track_inventory FROM product_variants WHERE id = $1::uuid`,
+    [variantId]
+  );
+  if (!trackRows[0] || !trackRows[0].track_inventory) return; // untracked → no-op
+
+  // Lock all inventory_levels rows for this variant in stable id order.
+  const { rows: invRows } = await client.query<{
+    id: string;
+    warehouse_id: string;
+    quantity_on_hand: number;
+  }>(
+    `SELECT id::text, warehouse_id::text, quantity_on_hand
+     FROM inventory_levels
+     WHERE variant_id = $1::uuid
+     ORDER BY id
+     FOR UPDATE`,
+    [variantId]
+  );
+
+  if (delta < 0) {
+    // Reserve |delta| more units.
+    const need = -delta;
+    const available = invRows.reduce((sum, r) => sum + r.quantity_on_hand, 0);
+    if (available < need) {
+      throw svcError(
+        `insufficient inventory for variant ${variantId}`,
+        "INSUFFICIENT_INVENTORY"
+      );
+    }
+    let remaining = need;
+    for (const r of invRows) {
+      if (remaining <= 0) break;
+      const take = Math.min(remaining, r.quantity_on_hand);
+      if (take <= 0) continue;
+      await client.query(
+        `UPDATE inventory_levels SET quantity_on_hand = quantity_on_hand - $1, updated_at = now()
+         WHERE id = $2::uuid`,
+        [take, r.id]
+      );
+      await client.query(
+        `INSERT INTO inventory_adjustments
+           (variant_id, warehouse_id, quantity_delta, reason, reference_type, reference_id)
+         VALUES ($1::uuid, $2::uuid, $3, 'sold', 'order', $4::uuid)`,
+        [variantId, r.warehouse_id, -take, orderId]
+      );
+      remaining -= take;
+    }
+  } else {
+    // Release `delta` units back to stock.
+    const target = invRows[0];
+    if (target) {
+      await client.query(
+        `UPDATE inventory_levels SET quantity_on_hand = quantity_on_hand + $1, updated_at = now()
+         WHERE id = $2::uuid`,
+        [delta, target.id]
+      );
+      await client.query(
+        `INSERT INTO inventory_adjustments
+           (variant_id, warehouse_id, quantity_delta, reason, reference_type, reference_id)
+         VALUES ($1::uuid, $2::uuid, $3, 'returned', 'order', $4::uuid)`,
+        [variantId, target.warehouse_id, delta, orderId]
+      );
+    }
+    // If the variant has no inventory_levels row we simply skip — there is no
+    // warehouse context to credit on a manual order, matching checkout which
+    // only ever decrements existing rows.
+  }
+}
+
+/**
+ * Re-price an order the same way createOrder() priced it: subtotal is the sum of
+ * line totals; shipping/discount are the scalars already stored on the order;
+ * tax is RECOMPUTED from the shipping address via calcTaxAuto() against the new
+ * taxable base (subtotal − discount) so a quantity change flows through to tax.
+ * total = subtotal + shipping + tax − discount (floored at 0). Persists the new
+ * subtotal/tax_total/total and returns them.
+ *
+ * NOTE on tax fidelity: when no shipping address country is present (common for
+ * manual draft orders) calcTaxAuto returns zero and we preserve no tax — this
+ * matches createOrder(), which never computed tax server-side for manual orders
+ * and only stored a client-supplied scalar. We re-derive tax from rates rather
+ * than blindly trusting the old scalar so the money math stays internally
+ * consistent after an edit.
+ */
+async function repriceOrder(
+  client: pg.PoolClient,
+  storeId: string,
+  orderId: string
+): Promise<{ subtotal: number; tax_total: number; discount_total: number; shipping_total: number; total: number }> {
+  const { rows: ordRows } = await client.query<{
+    shipping_total: string;
+    discount_total: string;
+    tax_total: string;
+    shipping_address: Record<string, unknown> | null;
+  }>(
+    `SELECT shipping_total::text, discount_total::text, tax_total::text, shipping_address
+     FROM orders WHERE id = $1::uuid`,
+    [orderId]
+  );
+  const ord = ordRows[0];
+  if (!ord) throw svcError("order not found", "NOT_FOUND");
+
+  const { rows: lineRows } = await client.query<{ total: string }>(
+    `SELECT total::text FROM order_lines WHERE order_id = $1::uuid`,
+    [orderId]
+  );
+  const subtotal = round2(lineRows.reduce((s, l) => s + parseFloat(l.total), 0));
+
+  const shippingTotal = parseFloat(ord.shipping_total) || 0;
+  const discountTotal = parseFloat(ord.discount_total) || 0;
+
+  // Recompute tax from the shipping address against the new taxable base.
+  const { countryCode, provinceCode } = extractAddressCodes(ord.shipping_address);
+  const taxableBase = Math.max(subtotal - discountTotal, 0);
+  let taxTotal = parseFloat(ord.tax_total) || 0;
+  if (countryCode) {
+    const taxRes = await calcTaxAuto(client, storeId, taxableBase, countryCode, provinceCode);
+    taxTotal = taxRes.taxTotal;
+  }
+
+  let total = round2(subtotal + shippingTotal + taxTotal - discountTotal);
+  if (total < 0) total = 0;
+
+  await client.query(
+    `UPDATE orders SET subtotal = $2, tax_total = $3, total = $4, updated_at = now()
+     WHERE id = $1::uuid`,
+    [orderId, subtotal, taxTotal, total]
+  );
+
+  return { subtotal, tax_total: taxTotal, discount_total: discountTotal, shipping_total: shippingTotal, total };
+}
+
+// ── Line-level fulfillment ──────────────────────────────────────────────────────
+
+export interface FulfillLineInput {
+  order_line_id: string;
+  quantity: number;
+}
+
+export interface FulfillResult {
+  fulfillment_order_id: string;
+  fulfillment_status: "unfulfilled" | "partial" | "fulfilled";
+}
+
+/**
+ * Incrementally fulfill specific order lines by (order_line_id, quantity),
+ * supporting PARTIAL fulfillment. Atomic in a transaction:
+ *
+ *  1. Verify the order belongs to the store and is not cancelled/closed.
+ *  2. For each requested line: lock it, validate it belongs to the order, and
+ *     reject over-fulfillment (quantity_fulfilled + qty > quantity).
+ *  3. Bump order_lines.quantity_fulfilled.
+ *  4. Record the fulfilled units in the existing fulfillment_orders /
+ *     fulfillment_order_lines model (one fulfillment_order per call).
+ *  5. Recompute + persist the order's fulfillment_status from line quantities.
+ *  6. Emit `order.updated` and write an order_event.
+ *
+ * Returns null when the order is not found.
+ */
+export async function fulfillOrderLines(
+  storeId: string,
+  orderId: string,
+  lines: FulfillLineInput[],
+  userId?: string | undefined
+): Promise<FulfillResult | null> {
+  return withTx(async (client) => {
+    const { rows: ordRows } = await client.query<{ status: string }>(
+      `SELECT status FROM orders WHERE id = $1::uuid AND store_id = $2::uuid FOR UPDATE`,
+      [orderId, storeId]
+    );
+    const ord = ordRows[0];
+    if (!ord) return null;
+    if (ord.status !== "open") {
+      throw svcError(
+        `cannot fulfill an order with status '${ord.status}'`,
+        "CONFLICT"
+      );
+    }
+
+    if (!lines || lines.length === 0) {
+      throw svcError("lines is required and must be a non-empty array", "VALIDATION_ERROR");
+    }
+
+    // Create the fulfillment order shell for this fulfillment event.
+    const { rows: foRows } = await client.query<{ id: string }>(
+      `INSERT INTO fulfillment_orders (store_id, order_id, status, fulfilled_at)
+       VALUES ($1::uuid, $2::uuid, 'fulfilled', now())
+       RETURNING id::text`,
+      [storeId, orderId]
+    );
+    const foId = foRows[0]!.id;
+
+    for (const req of lines) {
+      const qty = req.quantity;
+      if (!Number.isInteger(qty) || qty <= 0) {
+        throw svcError("fulfillment quantity must be a positive integer", "VALIDATION_ERROR");
+      }
+
+      const { rows: lineRows } = await client.query<OrderLineRow>(
+        `SELECT id::text, variant_id::text, quantity, quantity_fulfilled,
+                price::text, total::text
+         FROM order_lines
+         WHERE id = $1::uuid AND order_id = $2::uuid
+         FOR UPDATE`,
+        [req.order_line_id, orderId]
+      );
+      const line = lineRows[0];
+      if (!line) {
+        throw svcError(`order line ${req.order_line_id} not found on this order`, "VALIDATION_ERROR");
+      }
+
+      if (line.quantity_fulfilled + qty > line.quantity) {
+        throw svcError(
+          `cannot fulfill ${qty} of line ${line.id}: only ${line.quantity - line.quantity_fulfilled} unfulfilled (qty ${line.quantity}, already fulfilled ${line.quantity_fulfilled})`,
+          "VALIDATION_ERROR"
+        );
+      }
+
+      await client.query(
+        `UPDATE order_lines SET quantity_fulfilled = quantity_fulfilled + $2 WHERE id = $1::uuid`,
+        [line.id, qty]
+      );
+
+      await client.query(
+        `INSERT INTO fulfillment_order_lines (fulfillment_order_id, order_line_id, quantity, quantity_fulfilled)
+         VALUES ($1::uuid, $2::uuid, $3, $3)`,
+        [foId, line.id, qty]
+      );
+    }
+
+    const fulfillmentStatus = await recomputeFulfillmentStatus(client, orderId);
+
+    await client
+      .query(
+        `INSERT INTO order_events (order_id, type, data, created_by)
+         VALUES ($1::uuid, 'fulfillment_created',
+                 jsonb_build_object('fulfillment_order_id', $2::text, 'fulfillment_status', $3::text),
+                 $4)`,
+        [orderId, foId, fulfillmentStatus, userId ?? null]
+      )
+      .catch(() => undefined);
+
+    // Fire-and-forget outbound notification — reuse the existing order.updated event.
+    dispatchStoreEvent(storeId, "order.updated", {
+      order_id: orderId,
+      fulfillment_status: fulfillmentStatus,
+    });
+
+    return { fulfillment_order_id: foId, fulfillment_status: fulfillmentStatus };
+  });
+}
+
+// ── Safe order line edits (UNFULFILLED orders only) ─────────────────────────────
+
+export interface EditLineOp {
+  op: "update_quantity" | "add" | "remove";
+  order_line_id?: string | undefined; // required for update_quantity / remove
+  variant_id?: string | undefined; // required for add
+  quantity?: number | undefined; // required for update_quantity / add
+}
+
+export interface EditLinesResult {
+  subtotal: string;
+  tax_total: string;
+  discount_total: string;
+  shipping_total: string;
+  total: string;
+}
+
+/**
+ * Apply a batch of safe line edits to an UNFULFILLED, open order. Atomic in a
+ * transaction. Supported ops: update_quantity, add (variant_id + quantity),
+ * remove. Server-side re-pricing (repriceOrder) and inventory adjustment
+ * (adjustHeldInventory) are performed; client totals are never trusted.
+ *
+ * Guard: refuses the edit if the order is not 'open', or if ANY line has been
+ * (partially or fully) fulfilled — fulfillment makes the line composition a
+ * shipped commitment, so we lock edits at that point.
+ *
+ * PAYMENT DELTA (charging/refunding the difference between the old and new
+ * total) is OUT OF SCOPE — see follow-up note below. We persist the new totals
+ * and write an order_event recording the old/new total and the balance
+ * owed/owing so ops can reconcile manually.
+ *
+ * Returns null when the order is not found.
+ */
+export async function editOrderLines(
+  storeId: string,
+  orderId: string,
+  ops: EditLineOp[],
+  userId?: string | undefined
+): Promise<EditLinesResult | null> {
+  return withTx(async (client) => {
+    const { rows: ordRows } = await client.query<{
+      status: string;
+      total: string;
+      currency: string;
+    }>(
+      `SELECT status, total::text, currency
+       FROM orders WHERE id = $1::uuid AND store_id = $2::uuid FOR UPDATE`,
+      [orderId, storeId]
+    );
+    const ord = ordRows[0];
+    if (!ord) return null;
+
+    if (ord.status !== "open") {
+      throw svcError(`cannot edit an order with status '${ord.status}'`, "CONFLICT");
+    }
+
+    // Refuse if any line has been fulfilled (partial or full).
+    const { rows: fulfRows } = await client.query<{ any_fulfilled: boolean }>(
+      `SELECT bool_or(quantity_fulfilled > 0) AS any_fulfilled
+       FROM order_lines WHERE order_id = $1::uuid`,
+      [orderId]
+    );
+    if (fulfRows[0]?.any_fulfilled) {
+      throw svcError("cannot edit lines once any line has been fulfilled", "CONFLICT");
+    }
+
+    if (!ops || ops.length === 0) {
+      throw svcError("ops is required and must be a non-empty array", "VALIDATION_ERROR");
+    }
+
+    const oldTotal = parseFloat(ord.total) || 0;
+
+    for (const op of ops) {
+      if (op.op === "remove") {
+        if (!op.order_line_id) throw svcError("order_line_id is required for remove", "VALIDATION_ERROR");
+        const { rows: lr } = await client.query<OrderLineRow>(
+          `SELECT id::text, variant_id::text, quantity, quantity_fulfilled, price::text, total::text
+           FROM order_lines WHERE id = $1::uuid AND order_id = $2::uuid FOR UPDATE`,
+          [op.order_line_id, orderId]
+        );
+        const line = lr[0];
+        if (!line) throw svcError(`order line ${op.order_line_id} not found on this order`, "VALIDATION_ERROR");
+        // Release all held inventory for this line, then delete it.
+        if (line.variant_id) {
+          await adjustHeldInventory(client, orderId, line.variant_id, line.quantity);
+        }
+        await client.query(`DELETE FROM order_lines WHERE id = $1::uuid`, [line.id]);
+      } else if (op.op === "update_quantity") {
+        if (!op.order_line_id) throw svcError("order_line_id is required for update_quantity", "VALIDATION_ERROR");
+        const newQty = op.quantity;
+        if (!Number.isInteger(newQty) || (newQty as number) <= 0) {
+          throw svcError("quantity must be a positive integer for update_quantity", "VALIDATION_ERROR");
+        }
+        const { rows: lr } = await client.query<OrderLineRow>(
+          `SELECT id::text, variant_id::text, quantity, quantity_fulfilled, price::text, total::text
+           FROM order_lines WHERE id = $1::uuid AND order_id = $2::uuid FOR UPDATE`,
+          [op.order_line_id, orderId]
+        );
+        const line = lr[0];
+        if (!line) throw svcError(`order line ${op.order_line_id} not found on this order`, "VALIDATION_ERROR");
+
+        const delta = (newQty as number) - line.quantity;
+        if (delta !== 0) {
+          // Inventory: increasing qty reserves more (delta<0 to inventory),
+          // decreasing releases (delta>0 to inventory).
+          if (line.variant_id) {
+            await adjustHeldInventory(client, orderId, line.variant_id, -delta);
+          }
+          const price = parseFloat(line.price);
+          const newLineTotal = round2(price * (newQty as number));
+          await client.query(
+            `UPDATE order_lines SET quantity = $2, total = $3 WHERE id = $1::uuid`,
+            [line.id, newQty, newLineTotal]
+          );
+        }
+      } else if (op.op === "add") {
+        if (!op.variant_id) throw svcError("variant_id is required for add", "VALIDATION_ERROR");
+        const qty = op.quantity ?? 1;
+        if (!Number.isInteger(qty) || qty <= 0) {
+          throw svcError("quantity must be a positive integer for add", "VALIDATION_ERROR");
+        }
+        // Server-side price + title lookup (mirrors createOrder).
+        const { rows: pv } = await client.query<{ price: string; title: string; sku: string | null }>(
+          `SELECT pv.price::text, pv.title, pv.sku
+           FROM product_variants pv
+           JOIN products p ON p.id = pv.product_id
+           WHERE pv.id = $1::uuid AND p.store_id = $2::uuid`,
+          [op.variant_id, storeId]
+        );
+        if (!pv[0]) throw svcError(`invalid variant_id: ${op.variant_id}`, "VALIDATION_ERROR");
+        const price = parseFloat(pv[0].price);
+        const lineTotal = round2(price * qty);
+
+        // Reserve inventory for the new units (delta<0 to inventory).
+        await adjustHeldInventory(client, orderId, op.variant_id, -qty);
+
+        await client.query(
+          `INSERT INTO order_lines (order_id, variant_id, title, sku, quantity, price, total)
+           VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6, $7)`,
+          [orderId, op.variant_id, pv[0].title || "Item", pv[0].sku ?? null, qty, price, lineTotal]
+        );
+      } else {
+        throw svcError(`unknown edit op: ${(op as { op: string }).op}`, "VALIDATION_ERROR");
+      }
+    }
+
+    // Re-price the whole order from the new line set.
+    const priced = await repriceOrder(client, storeId, orderId);
+
+    // PAYMENT DELTA — OUT OF SCOPE (follow-up): we do not charge/refund the
+    // difference here. Record the balance change on an order_event so the new
+    // total is reconciled against any captured payment downstream.
+    const balanceDelta = round2(priced.total - oldTotal);
+    await client
+      .query(
+        `INSERT INTO order_events (order_id, type, data, created_by)
+         VALUES ($1::uuid, 'order_lines_edited',
+                 jsonb_build_object(
+                   'old_total', $2::text,
+                   'new_total', $3::text,
+                   'balance_delta', $4::text,
+                   'balance_note', $5::text
+                 ),
+                 $6)`,
+        [
+          orderId,
+          oldTotal.toFixed(2),
+          priced.total.toFixed(2),
+          balanceDelta.toFixed(2),
+          balanceDelta > 0
+            ? "additional balance owed by customer"
+            : balanceDelta < 0
+              ? "balance owing to customer (refund)"
+              : "no balance change",
+          userId ?? null,
+        ]
+      )
+      .catch(() => undefined);
+
+    dispatchStoreEvent(storeId, "order.updated", {
+      order_id: orderId,
+      total: priced.total.toFixed(2),
+    });
+
+    return {
+      subtotal: priced.subtotal.toFixed(2),
+      tax_total: priced.tax_total.toFixed(2),
+      discount_total: priced.discount_total.toFixed(2),
+      shipping_total: priced.shipping_total.toFixed(2),
+      total: priced.total.toFixed(2),
+    };
+  });
 }

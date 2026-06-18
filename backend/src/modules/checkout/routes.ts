@@ -39,6 +39,13 @@ const StoreCheckoutParams = z.object({
   checkoutId: z.string().uuid(),
 });
 
+// Optional storefront DISPLAY-ONLY currency for the read response. Attaching a
+// presentment_currency converts displayed amounts WITHOUT changing the
+// settlement/charge currency (which stays the store/checkout base currency).
+const PresentmentQuery = z.object({
+  presentment_currency: z.string().length(3).optional(),
+});
+
 const AddressSchema = z.object({
   name: z.string().optional(),
   phone: z.string().optional(),
@@ -119,13 +126,18 @@ export const checkoutPlugin: FastifyPluginAsync = async (app) => {
     "/commerce/stores/:storeId/checkouts/:checkoutId",
     {
       preHandler: [storeAuthRead],
-      schema: { params: StoreCheckoutParams },
+      schema: { params: StoreCheckoutParams, querystring: PresentmentQuery },
     },
     async (request, reply) => {
       const storeId = request.auth!.storeId;
       const { checkoutId } = request.params as z.infer<typeof StoreCheckoutParams>;
+      const { presentment_currency } = request.query as z.infer<typeof PresentmentQuery>;
 
-      const checkout = await getCheckout(storeId, checkoutId);
+      const checkout = await getCheckout(
+        storeId,
+        checkoutId,
+        presentment_currency
+      );
       if (!checkout) {
         return reply.status(404).send({ error: { code: "NOT_FOUND", message: "checkout not found" } });
       }

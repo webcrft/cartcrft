@@ -27,8 +27,10 @@
  *   - in_stock               → has inventory_quantity > 0 or tracks_inventory = false
  */
 
+import { createHash } from "node:crypto";
 import type pg from "pg";
 import { getPool } from "../../db/pool.js";
+import { buildKv } from "../../lib/cache/kv.js";
 import type { Embedder } from "./embedder.js";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -84,6 +86,60 @@ const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
 const CANDIDATE_MULTIPLIER = 3; // fetch 3× limit candidates per list before merging
 const RRF_K = 60; // standard constant for RRF
+
+// FIX 4: cache the (paid) query embedding so repeated/identical /search queries
+// don't re-bill the embeddings provider. Keyed by (storeId, model, normalized
+// query); short TTL keeps results fresh while absorbing bursts of duplicate
+// queries (autocomplete, retries, bots).
+const EMBED_CACHE_TTL_MS = 5 * 60_000; // 5 minutes
+
+function normalizeQuery(query: string): string {
+  return query.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+/**
+ * Embed a single query string with a KV cache in front of the paid provider.
+ * Cache misses call embedder.embed([query]) and store the resulting vector.
+ * KV failures fall through to a direct embed (cache is best-effort).
+ */
+async function embedQueryCached(
+  storeId: string,
+  query: string,
+  embedder: Embedder
+): Promise<number[]> {
+  const norm = normalizeQuery(query);
+  const qHash = createHash("sha256").update(norm).digest("hex");
+  const cacheKey = `searchemb:${storeId}:${embedder.model}:${qHash}`;
+
+  // 1. Try the cache (best-effort — any KV error is swallowed so we still embed).
+  let kv: Awaited<ReturnType<typeof buildKv>> | null = null;
+  try {
+    kv = await buildKv();
+    const cached = await kv.get(cacheKey);
+    if (cached) {
+      const vec = JSON.parse(cached) as number[];
+      if (Array.isArray(vec) && vec.length > 0) return vec;
+    }
+  } catch {
+    kv = null; // cache unavailable — proceed to embed without caching
+  }
+
+  // 2. Cache miss → embed via the (paid) provider. Errors propagate so the
+  //    caller (hybridSearch) can degrade to full-text.
+  const vecs = await embedder.embed([query]);
+  const vec = vecs[0]!;
+
+  // 3. Best-effort cache write.
+  if (kv) {
+    try {
+      await kv.set(cacheKey, JSON.stringify(vec), EMBED_CACHE_TTL_MS);
+    } catch {
+      // ignore cache write failures
+    }
+  }
+
+  return vec;
+}
 
 // ── Public service ────────────────────────────────────────────────────────────
 
@@ -308,11 +364,10 @@ async function hybridSearch(
   const pool = getPool();
   const where = whereClauses.join(" AND ");
 
-  // 1. Compute query embedding.
+  // 1. Compute query embedding (cached — FIX 4).
   let queryVec: number[];
   try {
-    const vecs = await embedder.embed([query]);
-    queryVec = vecs[0]!;
+    queryVec = await embedQueryCached(storeId, query, embedder);
   } catch (err) {
     console.warn(
       "[search] embed query failed, falling back to full-text:",

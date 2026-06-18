@@ -57,5 +57,7 @@ export const MANDATE_STATUS_MAP: StatusMap = {
 }
 
 export function statusBadgeProps(status: string, map: StatusMap): { color: BadgeColor; label: string } {
-  return map[status] ?? { color: 'slate', label: status.replace(/_/g, ' ') }
+  if (map[status]) return map[status]
+  const spaced = (status ?? '').replace(/_/g, ' ')
+  return { color: 'slate', label: spaced ? spaced.charAt(0).toUpperCase() + spaced.slice(1) : '—' }
 }

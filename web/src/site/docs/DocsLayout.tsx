@@ -92,6 +92,7 @@ const SIDEBAR: SidebarGroup[] = [
       { slug: 'api-overview' },
       { slug: 'parity-endpoints' },
       { slug: 'byo-keys' },
+      { slug: 'provider-api-keys' },
     ],
   },
   {

@@ -18,6 +18,8 @@
 
 import type pg from "pg";
 import { round2 } from "./money.js";
+import { config } from "../config/config.js";
+import { newTaxJarClient, type TaxJarCalcParams } from "../providers/tax/taxjar.js";
 
 export interface TaxLine {
   name: string;
@@ -126,4 +128,96 @@ export function extractAddressCodes(
       ? addrJson["province_code"]
       : "",
   };
+}
+
+// ── Tax-automation provider (env-resolved singleton) ────────────────────────────
+//
+// Mirrors the notifications mailer pattern (modules/notifications/service.ts):
+// a module-level singleton resolved from env at module load, overridable via
+// setTaxProvider() for tests / explicit wiring. When TAXJAR_API_KEY is set the
+// singleton is a TaxJar-backed provider; otherwise it is null and calcTaxAuto
+// falls back to the DB-rate calcTax() path.
+
+/** Parameters passed to a TaxProvider.calc() call. */
+export interface TaxProviderParams {
+  taxableAmount: number;
+  countryCode: string;
+  provinceCode: string;
+  zip?: string | undefined;
+  city?: string | undefined;
+}
+
+/** Minimal swappable tax-automation provider interface. */
+export interface TaxProvider {
+  calc(params: TaxProviderParams): Promise<TaxResult>;
+}
+
+/**
+ * Build a TaxProvider from config when TAXJAR_API_KEY is set, else null.
+ * Mirrors buildMailerFromConfig() in notifications/service.ts.
+ */
+function buildTaxProviderFromConfig(): TaxProvider | null {
+  if (!config.TAXJAR_API_KEY) return null;
+  const client = newTaxJarClient(config.TAXJAR_API_KEY, config.TAXJAR_SANDBOX);
+  return {
+    async calc(params: TaxProviderParams): Promise<TaxResult> {
+      const body: TaxJarCalcParams = {
+        to_country: params.countryCode.toUpperCase(),
+        amount: params.taxableAmount,
+        shipping: 0,
+        ...(params.provinceCode ? { to_state: params.provinceCode } : {}),
+        ...(params.zip ? { to_zip: params.zip } : {}),
+        ...(params.city ? { to_city: params.city } : {}),
+      };
+      const tax = await client.calcTax(body);
+      const amount = round2(tax.amount_to_collect);
+      const line: TaxLine = {
+        name: "Sales tax",
+        rate_pct: round2(tax.rate * 100),
+        amount,
+        is_inclusive: false,
+      };
+      return { taxTotal: amount, taxLines: [line] };
+    },
+  };
+}
+
+let _taxProvider: TaxProvider | null = buildTaxProviderFromConfig();
+
+/**
+ * Override the tax-automation provider (tests / explicit wiring).
+ * Pass null to force the DB-rate fallback path.
+ */
+export function setTaxProvider(p: TaxProvider | null): void {
+  _taxProvider = p;
+}
+
+/**
+ * Compute tax via the configured automation provider, falling back to the
+ * DB-rate calcTax() path on any provider error or when no provider is set.
+ *
+ * Never throws — degrades gracefully to the DB path.
+ */
+export async function calcTaxAuto(
+  pool: pg.Pool | pg.PoolClient,
+  storeId: string,
+  taxableAmount: number,
+  countryCode: string,
+  provinceCode: string,
+  opts?: { zip?: string | undefined; city?: string | undefined }
+): Promise<TaxResult> {
+  if (_taxProvider && countryCode) {
+    try {
+      return await _taxProvider.calc({
+        taxableAmount,
+        countryCode,
+        provinceCode,
+        ...(opts?.zip !== undefined ? { zip: opts.zip } : {}),
+        ...(opts?.city !== undefined ? { city: opts.city } : {}),
+      });
+    } catch (err) {
+      console.warn("tax: automation provider failed, falling back to DB rates", err);
+    }
+  }
+  return calcTax(pool, storeId, taxableAmount, countryCode, provinceCode);
 }
