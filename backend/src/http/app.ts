@@ -67,6 +67,7 @@ import { loyaltyPlugin } from "../modules/loyalty/routes.js";
 import { segmentsPlugin } from "../modules/segments/routes.js";
 import { marketingPlugin } from "../modules/marketing/routes.js";
 import { channelsPlugin } from "../modules/channels/routes.js";
+import { threeplPlugin } from "../modules/threepl/routes.js";
 import { staticPlugin } from "./static.js";
 import { recoveryPlugin } from "../modules/recovery/routes.js";
 import { catalogCsvPlugin } from "../modules/catalog/csv-routes.js";
@@ -506,6 +507,9 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
 
   // ── Wave 9 — Outbound channel sync (push products/inventory to external channels) ──
   await app.register(channelsPlugin);
+
+  // ── Wave 10 — 3PL / fulfillment-network adapter (submit orders + pull status) ──
+  await app.register(threeplPlugin);
 
   // ── Cloud billing webhook + read-API (CARTCRFT_CLOUD=1 only) ─────────────────
   // Dynamic import so the OSS build never eagerly imports @cartcrft/cloud-billing.

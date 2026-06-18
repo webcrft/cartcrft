@@ -22,6 +22,7 @@ import { startSubscriptionScheduler } from "./modules/subscriptions/scheduler.js
 import { startIcalPullWorkerJob } from "./modules/bookings/ical-pull.js";
 import { startFxRefreshJob } from "./modules/exchange-rates/fx-refresh.js";
 import { startChannelSyncWorkerJob } from "./modules/channels/worker.js";
+import { startThreePlStatusWorkerJob } from "./modules/threepl/worker.js";
 import { ConsoleMailer } from "./lib/mailer/console.js";
 import { SesMailer } from "./lib/mailer/ses.js";
 
@@ -206,6 +207,18 @@ async function runWorker(): Promise<void> {
   });
   console.log("[worker] channel-sync job registered (10-min poll interval)");
 
+  // Wave 10 — 3PL / fulfillment-network status pull. Pulls fulfillment status
+  // from external 3PLs (ShipBob) for previously-submitted orders and advances
+  // threepl_fulfillments. Distributed-locked inside the worker so multiple
+  // replicas don't double-pull; syncThreePlStatuses is graceful.
+  const stopThreePlSync = startThreePlStatusWorkerJob({
+    intervalMs:
+      config.BILLING_SIM_ENABLED && config.BILLING_SIM_DAY_SECONDS > 0
+        ? Math.max(5_000, Math.min(120_000, config.BILLING_SIM_DAY_SECONDS * 1000))
+        : 10 * 60 * 1000,
+  });
+  console.log("[worker] 3PL status-pull job registered (10-min poll interval)");
+
   // Keep alive.
   await new Promise<void>((resolve) => {
     const shutdown = () => {
@@ -217,6 +230,7 @@ async function runWorker(): Promise<void> {
       stopIcalPull();
       stopFxRefresh();
       stopChannelSync();
+      stopThreePlSync();
       if (subLockToken) {
         void releaseLock(SUB_LOCK_NAME, subLockToken).catch(() => { /* best-effort */ });
       }
