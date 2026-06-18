@@ -15,9 +15,20 @@ import { z } from "zod";
 import {
   storeAuthAdmin,
   storeAuthWrite,
+  storeAuthRead,
 } from "../../lib/auth/middleware.js";
 import { getPool, getReadDb } from "../../db/pool.js";
 import { config } from "../../config/config.js";
+import {
+  listAddresses,
+  getAddress,
+  createAddress,
+  updateAddress,
+  deleteAddress,
+  setDefault,
+  listAddressesForCustomer,
+  type AddressInput,
+} from "./addresses.js";
 import {
   loadStoreConfig,
   getAuthConfig,
@@ -137,6 +148,39 @@ const UpdateMeBody = z.object({
 const ChangePasswordBody = z.object({
   current_password: z.string().min(1),
   new_password: z.string().min(8).max(128),
+});
+
+// ── Address book schemas ──────────────────────────────────────────────────────
+
+const AddressIdParams = z.object({
+  storeId: z.string().uuid(),
+  addressId: z.string().uuid(),
+});
+
+const CustomerIdParams = z.object({
+  storeId: z.string().uuid(),
+  customerId: z.string().uuid(),
+});
+
+const AddressBody = z.object({
+  label: z.string().max(100).optional(),
+  name: z.string().max(200).optional(),
+  first_name: z.string().max(100).optional(),
+  last_name: z.string().max(100).optional(),
+  company: z.string().max(200).optional(),
+  address1: z.string().max(300).optional(),
+  address2: z.string().max(300).optional(),
+  city: z.string().max(100).optional(),
+  province_code: z.string().max(100).optional(),
+  postal_code: z.string().max(20).optional(),
+  country_code: z.string().length(2).optional(),
+  phone: z.string().max(32).optional(),
+  is_default_shipping: z.boolean().optional(),
+  is_default_billing: z.boolean().optional(),
+});
+
+const SetDefaultBody = z.object({
+  kind: z.enum(["shipping", "billing"]),
 });
 
 const AuthConfigBody = z.object({
@@ -806,6 +850,86 @@ export const customerAuthPlugin: FastifyPluginAsyncZod = async (app) => {
       return reply.status(404).send({ error: { code: "NOT_FOUND", message: "session not found" } });
     }
     return reply.send({ ok: true });
+  });
+
+  // ── Address book (storefront bearer; customer manages THEIR OWN only) ──────
+  // customer_id is always derived from request.customer.sub — never a path param —
+  // so a customer can only ever read/modify their own addresses.
+
+  app.get(`${base}/me/addresses`, {
+    schema: { params: StoreIdParams },
+    preHandler: [caBearerAuth],
+  }, async (request, reply) => {
+    const { storeId } = request.params;
+    const customerId = request.customer!.sub;
+    const addresses = await listAddresses(getReadDb(), storeId, customerId);
+    return reply.send({ addresses });
+  });
+
+  app.post(`${base}/me/addresses`, {
+    schema: { params: StoreIdParams, body: AddressBody },
+    preHandler: [caBearerAuth],
+  }, async (request, reply) => {
+    const { storeId } = request.params;
+    const customerId = request.customer!.sub;
+    try {
+      const address = await createAddress(getPool(), storeId, customerId, request.body as AddressInput);
+      return reply.status(201).send({ address });
+    } catch (err) {
+      if (err instanceof Error && err.message === "customer not found") {
+        return reply.status(404).send({ error: { code: "NOT_FOUND", message: "customer not found" } });
+      }
+      throw err;
+    }
+  });
+
+  app.put(`${base}/me/addresses/:addressId`, {
+    schema: { params: AddressIdParams, body: AddressBody },
+    preHandler: [caBearerAuth],
+  }, async (request, reply) => {
+    const { storeId, addressId } = request.params;
+    const customerId = request.customer!.sub;
+    const address = await updateAddress(getPool(), storeId, customerId, addressId, request.body as AddressInput);
+    if (!address) {
+      return reply.status(404).send({ error: { code: "NOT_FOUND", message: "address not found" } });
+    }
+    return reply.send({ address });
+  });
+
+  app.delete(`${base}/me/addresses/:addressId`, {
+    schema: { params: AddressIdParams },
+    preHandler: [caBearerAuth],
+  }, async (request, reply) => {
+    const { storeId, addressId } = request.params;
+    const customerId = request.customer!.sub;
+    const ok = await deleteAddress(getPool(), storeId, customerId, addressId);
+    if (!ok) {
+      return reply.status(404).send({ error: { code: "NOT_FOUND", message: "address not found" } });
+    }
+    return reply.send({ ok: true });
+  });
+
+  app.post(`${base}/me/addresses/:addressId/default`, {
+    schema: { params: AddressIdParams, body: SetDefaultBody },
+    preHandler: [caBearerAuth],
+  }, async (request, reply) => {
+    const { storeId, addressId } = request.params;
+    const customerId = request.customer!.sub;
+    const address = await setDefault(getPool(), storeId, customerId, addressId, request.body.kind);
+    if (!address) {
+      return reply.status(404).send({ error: { code: "NOT_FOUND", message: "address not found" } });
+    }
+    return reply.send({ address });
+  });
+
+  // ── Admin read (support): list a customer's addresses ──────────────────────
+  app.get(`${base}/customers/:customerId/addresses`, {
+    schema: { params: CustomerIdParams },
+    preHandler: [storeAuthRead("customers")],
+  }, async (request, reply) => {
+    const { storeId, customerId } = request.params;
+    const addresses = await listAddressesForCustomer(getReadDb(), storeId, customerId);
+    return reply.send({ addresses });
   });
 
   // ── Dev mock OAuth (non-production only) ──────────────────────────────────

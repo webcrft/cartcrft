@@ -45,7 +45,23 @@ import type {
   UpdateNotificationProviderInput,
   DeliveryLogRow,
 } from "./types.js";
-import { isValidEvent } from "./types.js";
+import { isValidEvent, WEBHOOK_SPEC_VERSION, isKnownWebhookSpecVersion } from "./types.js";
+
+/**
+ * Resolve the webhook spec version to stamp on a delivery for this provider.
+ *
+ * A provider may pin a version via config.api_version. When that pin is a known
+ * spec version it wins; otherwise (absent / malformed / unrecognised) we fall
+ * back to the current WEBHOOK_SPEC_VERSION (fail-safe forward — never deliver an
+ * un-versioned or speculative-version body).
+ */
+function resolveWebhookVersion(config: Record<string, unknown>): string {
+  const pinned = config["api_version"];
+  if (typeof pinned === "string" && isKnownWebhookSpecVersion(pinned)) {
+    return pinned;
+  }
+  return WEBHOOK_SPEC_VERSION;
+}
 
 // ── Mailer singleton (injectable; auto-resolved from env at module load) ────────
 
@@ -333,15 +349,18 @@ async function _dispatchStoreEvent(
 ): Promise<void> {
   const pool = getPool();
 
-  // Enrich payload with standard fields (mirrors Go source)
+  // Enrich payload with standard fields (mirrors Go source).
+  // NOTE: the `version` field is deliberately NOT added here — it is
+  // provider-specific (a provider may pin config.api_version), so the webhook
+  // path stamps it per-provider just before signing (see deliverWebhook). The
+  // email/sms paths use this base `out` directly (delivery channels other than
+  // webhook do not carry the spec-version contract).
   const out: Record<string, unknown> = {
     ...payload,
     event: eventType,
     store_id: storeId,
     timestamp: new Date().toISOString(),
   };
-
-  const body = JSON.stringify(out);
 
   // Load active providers for this event
   let providers: ProviderRecord[];
@@ -367,7 +386,7 @@ async function _dispatchStoreEvent(
 
   for (const provider of providers) {
     if (provider.type === "webhook") {
-      await deliverWebhook(pool, storeId, provider, eventType, body, out);
+      await deliverWebhook(pool, storeId, provider, eventType, out);
     } else if (provider.type === "email") {
       await deliverEmail(provider, eventType, out);
     } else if (provider.type === "sms" || provider.type === "whatsapp") {
@@ -384,8 +403,7 @@ async function deliverWebhook(
   storeId: string,
   provider: ProviderRecord,
   eventType: string,
-  body: string,
-  payload: Record<string, unknown>
+  basePayload: Record<string, unknown>
 ): Promise<void> {
   const { id: providerId, webhook_url, config } = provider;
   if (!webhook_url) {
@@ -394,6 +412,22 @@ async function deliverWebhook(
   }
 
   const secret = typeof config["webhook_secret"] === "string" ? config["webhook_secret"] : "";
+
+  // Determine the spec version for THIS provider (honours config.api_version pin)
+  // and stamp the outbound payload with it. The signing order is strict:
+  //   enrich (add `version`) → stringify → sign → send
+  // so the HMAC is computed over the exact bytes the receiver gets, including
+  // the version field.
+  //
+  // Future v2 transform slot-in: once a second dated version exists, branch on
+  // `version` here to shape the payload, e.g.
+  //   const payload = version === "2026-12-01"
+  //     ? transformV2(basePayload) : { ...basePayload, version };
+  // Each known version maps to one transform; unknown pins already fell back to
+  // the current version in resolveWebhookVersion().
+  const version = resolveWebhookVersion(config);
+  const payload: Record<string, unknown> = { ...basePayload, version };
+  const body = JSON.stringify(payload);
 
   // SSRF fetch-time guard (authoritative). Validate the URL resolves only to
   // public addresses before any network call. On block, record a failed delivery
@@ -428,8 +462,10 @@ async function deliverWebhook(
         "Content-Type": "application/json",
         "X-Cartcrft-Event": eventType,
         "X-Cartcrft-Store-ID": storeId,
+        "X-Cartcrft-Version": version,
       };
 
+      // Sign the EXACT body that is sent (already includes the `version` field).
       if (secret) {
         const mac = createHmac("sha256", secret);
         mac.update(Buffer.from(body, "utf8"));
