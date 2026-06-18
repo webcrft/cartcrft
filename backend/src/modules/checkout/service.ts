@@ -12,7 +12,7 @@
  */
 
 import { getPool, getReadDb } from "../../db/pool.js";
-import { calcTax, extractAddressCodes, type TaxLine } from "../../lib/tax.js";
+import { calcTax, extractAddressCodes, isTaxExempt, type TaxLine } from "../../lib/tax.js";
 import { round2 } from "../../lib/money.js";
 import { computeDiscounts, type DiscountCartLine } from "../discounts/service.js";
 import { getLatestRates, rateFor, convertMoney } from "../../lib/fx-convert.js";
@@ -376,8 +376,19 @@ export async function createCheckout(
   const shippingTotal = discountResult.shippingTotal;
 
   // Tax — computed on the discounted subtotal.
-  const { countryCode, provinceCode } = extractAddressCodes(body.shipping_address ?? null);
-  const taxResult = await calcTax(pool, storeId, subtotal - discountResult.discountTotal, countryCode, provinceCode);
+  // TAX-EXEMPT guard (Wave-18.1): when the customer OR their company is flagged
+  // tax_exempt, SKIP the tax engine entirely → tax_total 0, tax_lines []. The
+  // non-exempt branch below is byte-identical to the previous behaviour.
+  const exempt = await isTaxExempt(pool, storeId, {
+    customerId,
+    companyId: body.company_id ?? null,
+  });
+  const taxResult = exempt
+    ? { taxTotal: 0, taxLines: [] as TaxLine[] }
+    : await (async () => {
+        const { countryCode, provinceCode } = extractAddressCodes(body.shipping_address ?? null);
+        return calcTax(pool, storeId, subtotal - discountResult.discountTotal, countryCode, provinceCode);
+      })();
 
   const total = round2(subtotal - discountResult.discountTotal + taxResult.taxTotal + shippingTotal);
 
@@ -500,8 +511,9 @@ export async function updateCheckout(
     cart_id: string;
     currency: string;
     customer_id: string | null;
+    company_id: string | null;
   }>(
-    `SELECT cart_id::text, currency, customer_id::text
+    `SELECT cart_id::text, currency, customer_id::text, company_id::text
      FROM checkouts
      WHERE id = $1::uuid AND store_id = $2::uuid AND status = 'pending'`,
     [checkoutId, storeId]
@@ -515,6 +527,7 @@ export async function updateCheckout(
   const cartId = chRows[0]!.cart_id;
   const currency = chRows[0]!.currency;
   const customerId = chRows[0]!.customer_id;
+  const companyId = chRows[0]!.company_id;
 
   const lines = await loadCartLines(pool, cartId);
   const subtotal = round2(cartSubtotal(lines));
@@ -547,8 +560,15 @@ export async function updateCheckout(
   const shippingTotal = discountResult.shippingTotal;
 
   // Tax — on the discounted subtotal.
-  const { countryCode, provinceCode } = extractAddressCodes(body.shipping_address ?? null);
-  const taxResult = await calcTax(pool, storeId, subtotal - discountResult.discountTotal, countryCode, provinceCode);
+  // TAX-EXEMPT guard (Wave-18.1): customer/company tax_exempt → skip the tax
+  // engine (tax_total 0, tax_lines []). Non-exempt branch unchanged.
+  const exempt = await isTaxExempt(pool, storeId, { customerId, companyId });
+  const taxResult = exempt
+    ? { taxTotal: 0, taxLines: [] as TaxLine[] }
+    : await (async () => {
+        const { countryCode, provinceCode } = extractAddressCodes(body.shipping_address ?? null);
+        return calcTax(pool, storeId, subtotal - discountResult.discountTotal, countryCode, provinceCode);
+      })();
 
   const total = round2(subtotal - discountResult.discountTotal + taxResult.taxTotal + shippingTotal);
 

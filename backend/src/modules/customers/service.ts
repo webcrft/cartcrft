@@ -31,6 +31,8 @@ export interface CustomerRow {
   locked_until: string | null;
   auth_provider: string;
   tags: string[];
+  tax_exempt: boolean;
+  tax_exempt_ref: string | null;
   metadata: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
@@ -117,6 +119,8 @@ const CUSTOMER_COLS = `
   c.locked_until,
   c.auth_provider,
   coalesce(c.tags, '{}') as tags,
+  coalesce(c.tax_exempt, false) as tax_exempt,
+  c.tax_exempt_ref,
   c.metadata,
   c.created_at,
   c.updated_at
@@ -319,6 +323,32 @@ export async function unblockCustomer(
      SET is_blocked = false, blocked_reason = null, updated_at = now()
      WHERE store_id = $1::uuid AND id = $2::uuid`,
     [storeId, customerId]
+  );
+  return (res.rowCount ?? 0) > 0;
+}
+
+// ── Tax exemption (Wave-18.1) ───────────────────────────────────────────────────
+
+/**
+ * Set or clear a customer's tax-exempt flag (+ optional certificate reference).
+ *
+ * When `exempt` is true the customer's checkouts compute ZERO tax. `ref` records
+ * the exemption certificate / resale number on file; pass null to clear it.
+ *
+ * Returns false when no matching customer exists in the store.
+ */
+export async function setCustomerTaxExempt(
+  pool: pg.Pool,
+  storeId: string,
+  customerId: string,
+  exempt: boolean,
+  ref: string | null
+): Promise<boolean> {
+  const res = await pool.query(
+    `UPDATE customers
+     SET tax_exempt = $3, tax_exempt_ref = $4, updated_at = now()
+     WHERE store_id = $1::uuid AND id = $2::uuid`,
+    [storeId, customerId, exempt, ref]
   );
   return (res.rowCount ?? 0) > 0;
 }

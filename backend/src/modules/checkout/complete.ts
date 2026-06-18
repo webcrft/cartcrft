@@ -48,6 +48,7 @@ import { earnPointsForOrder } from "../loyalty/service.js";
 import { computeDiscounts, type DiscountCartLine } from "../discounts/service.js";
 import { redeemGiftCardInTx, redeemStoreCreditInTx, TenderError } from "../wallet/service.js";
 import { resolveBundleUnitPrice } from "../catalog/service.js";
+import { isTaxExempt } from "../../lib/tax.js";
 import type { AppliedTender } from "./service.js";
 
 // ── Result type ───────────────────────────────────────────────────────────────
@@ -254,10 +255,28 @@ export async function completeCheckout(
     let subtotal = parseFloat(ch.subtotal);
     const baseShipping = parseFloat(ch.shipping_total);
     let shippingTotal = baseShipping;
-    const taxTotal = parseFloat(ch.tax_total);
+    let taxTotal = parseFloat(ch.tax_total);
     let discountTotal = parseFloat(ch.discount_total);
     let total = parseFloat(ch.total);
     const currency = ch.currency;
+
+    // ── TAX-EXEMPT guard (Wave-18.1) ──────────────────────────────────────
+    // Tax is computed at checkout-create/update time and stored on the row;
+    // this is the authoritative tax step at completion. If the order's customer
+    // OR its company is flagged tax_exempt, the tax engine result is OVERRIDDEN
+    // to zero here (tax_total = 0, tax_lines = []) so the order is created with
+    // no tax regardless of what was stored. This is a clean guarded branch: when
+    // NOT exempt, taxTotal/taxLines stay EXACTLY as read from the checkout row
+    // (byte-identical to the previous behaviour — no tax recompute happens here).
+    let taxLinesJson: string | null = ch.tax_lines ?? null;
+    const taxExempt = await isTaxExempt(client, storeId, {
+      customerId: ch.customer_id,
+      companyId: ch.company_id,
+    });
+    if (taxExempt) {
+      taxTotal = 0;
+      taxLinesJson = "[]";
+    }
 
     // Resolve the explicit discount code (if any) from the stored discount_lines.
     // Automatic discounts carry an empty code; we re-derive them server-side.
@@ -503,6 +522,10 @@ export async function completeCheckout(
         orderMetadata["mandate_id"] = verifiedMandateId;
       }
     }
+    // Audit marker: record that tax was exempted on this order (Wave-18.1).
+    if (taxExempt) {
+      orderMetadata["tax_exempt"] = true;
+    }
 
     const { rows: orderRows } = await client.query<{ id: string }>(
       `INSERT INTO orders
@@ -533,7 +556,7 @@ export async function completeCheckout(
         total,
         ch.shipping_address,
         ch.billing_address,
-        ch.tax_lines ?? null,
+        taxLinesJson,
         ch.shipping_rate ?? null,
         ch.discount_lines ?? null,
         JSON.stringify(orderMetadata),

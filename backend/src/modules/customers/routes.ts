@@ -20,6 +20,7 @@ import {
   deleteCustomer,
   blockCustomer,
   unblockCustomer,
+  setCustomerTaxExempt,
   addCustomerAddress,
   deleteCustomerAddress,
   listCustomerTags,
@@ -74,6 +75,11 @@ const UpdateCustomerBody = z.object({
 
 const BlockBody = z.object({
   reason: z.string().max(500).optional(),
+});
+
+const TaxExemptBody = z.object({
+  tax_exempt: z.boolean(),
+  tax_exempt_ref: z.string().max(200).nullable().optional(),
 });
 
 const AddressBody = z.object({
@@ -222,6 +228,32 @@ export const customersPlugin: FastifyPluginAsyncZod = async (app) => {
       const { storeId, customerId } = request.params;
       const pool = getPool();
       const ok = await unblockCustomer(pool, storeId, customerId);
+      if (!ok) {
+        return reply.status(404).send({ error: { code: "NOT_FOUND", message: "customer not found" } });
+      }
+      return reply.send({ ok: true });
+    }
+  );
+
+  // PUT /commerce/stores/:storeId/customers/:customerId/tax-exempt
+  // Set/clear a customer's tax-exempt flag + optional certificate reference.
+  app.put(
+    `${base}/customers/:customerId/tax-exempt`,
+    {
+      schema: { params: CustomerIdParams, body: TaxExemptBody },
+      preHandler: [storeAuthWrite("customers")],
+    },
+    async (request, reply) => {
+      const { storeId, customerId } = request.params;
+      const body = request.body as { tax_exempt: boolean; tax_exempt_ref?: string | null };
+      const pool = getPool();
+      const ok = await setCustomerTaxExempt(
+        pool,
+        storeId,
+        customerId,
+        body.tax_exempt,
+        body.tax_exempt_ref ?? null
+      );
       if (!ok) {
         return reply.status(404).send({ error: { code: "NOT_FOUND", message: "customer not found" } });
       }

@@ -130,6 +130,62 @@ export function extractAddressCodes(
   };
 }
 
+// ── Tax exemption (Wave-18.1) ───────────────────────────────────────────────────
+//
+// Additive helper. Resolves whether a checkout/order is tax-exempt because the
+// customer OR the company it is placed under is flagged tax_exempt=true (see
+// migration 0043_tax_exempt). When this returns true, callers SKIP the tax
+// engine entirely (tax_total = 0, tax_lines = []). Independent of the
+// calcTax / calcTaxAuto path above — those signatures are unchanged.
+
+/**
+ * Whether the given customer and/or company is tax-exempt for this store.
+ *
+ * Returns true when EITHER the customer row OR the company row has
+ * tax_exempt = true. Returns false when neither id is supplied, or when no
+ * matching row is found. Every query is scoped by storeId (tenant isolation)
+ * and parameterized.
+ *
+ * Never throws — degrades to false (i.e. "charge tax as normal") on any error,
+ * so a transient lookup failure can never silently zero out tax for a
+ * non-exempt customer.
+ *
+ * @param pool    pg pool (or client inside a transaction)
+ * @param storeId Store UUID
+ * @param ids     { customerId?, companyId? } — either/both may be null/omitted
+ */
+export async function isTaxExempt(
+  pool: pg.Pool | pg.PoolClient,
+  storeId: string,
+  ids: { customerId?: string | null | undefined; companyId?: string | null | undefined }
+): Promise<boolean> {
+  const customerId = ids.customerId ?? null;
+  const companyId = ids.companyId ?? null;
+  if (!customerId && !companyId) return false;
+
+  try {
+    if (customerId) {
+      const { rows } = await pool.query<{ tax_exempt: boolean }>(
+        `SELECT tax_exempt FROM customers
+         WHERE id = $1::uuid AND store_id = $2::uuid`,
+        [customerId, storeId]
+      );
+      if (rows[0]?.tax_exempt === true) return true;
+    }
+    if (companyId) {
+      const { rows } = await pool.query<{ tax_exempt: boolean }>(
+        `SELECT tax_exempt FROM companies
+         WHERE id = $1::uuid AND store_id = $2::uuid`,
+        [companyId, storeId]
+      );
+      if (rows[0]?.tax_exempt === true) return true;
+    }
+  } catch {
+    return false;
+  }
+  return false;
+}
+
 // ── Tax-automation provider (env-resolved singleton) ────────────────────────────
 //
 // Mirrors the notifications mailer pattern (modules/notifications/service.ts):
