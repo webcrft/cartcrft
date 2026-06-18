@@ -4,10 +4,17 @@
  * Each OAuth scope maps onto the storeAuth read/write/admin tiers the existing
  * middleware already enforces (lib/auth/middleware.ts). When an access token
  * carries the `oauth_app` + `scope` claims, the route's storeAuth tier still
- * runs (so the token is org/store-bound exactly like a JWT), and a thin
- * requireScope() preHandler additionally asserts the token holds the scope a
- * given route declares. OAuth tokens are an ADDITIONAL principal type layered on
+ * runs (so the token is org/store-bound exactly like a JWT). A route that passes
+ * a RESOURCE tag to its tier guard (e.g. `storeAuthWrite("orders")`) is gated
+ * PER-RESOURCE in resolveStoreAuth(): the token must hold `${resource}:${tier}`
+ * (or a higher tier on the same resource). Untagged routes keep the COARSE
+ * tier-class gate. OAuth tokens are an ADDITIONAL principal type layered on
  * top of the JWT path — they never weaken the existing cc_pub_/cc_prv_/JWT auth.
+ *
+ * NOTE: there is no admin-class scope in this catalogue, so admin-tier routes
+ * (e.g. payment-providers, most /customers routes) are never reachable by an
+ * OAuth token — they fail closed. `payments:*` is intentionally absent for the
+ * same reason; payments mutations are admin/write-only and not OAuth-grantable.
  *
  *   tier "read"  → satisfied by *:read  (and the *:write / checkout:write that imply it where noted)
  *   tier "write" → requires a write-class scope

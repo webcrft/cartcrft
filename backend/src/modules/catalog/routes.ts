@@ -16,7 +16,6 @@ import {
   storeAuthRead,
   storeAuthWrite,
   storeAuthAdmin,
-  requireScope,
 } from "../../lib/auth/middleware.js";
 import {
   listProducts,
@@ -534,12 +533,12 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   // ══════════════════════════════════════════════════════════════════════════
 
   // GET /commerce/stores/:storeId/products
-  // OAuth tokens must additionally carry catalog:read (requireScope is a no-op
-  // for non-OAuth principals, so cc_pub_/cc_prv_/JWT auth is unaffected).
+  // The "catalog" resource tag makes storeAuthRead enforce the catalog:read
+  // OAuth scope per-resource (a no-op for cc_pub_/cc_prv_/JWT principals).
   app.get(
     "/commerce/stores/:storeId/products",
     {
-      preHandler: [storeAuthRead, requireScope("catalog:read")],
+      preHandler: [storeAuthRead("catalog")],
       schema: { params: StoreParams, querystring: ProductsQuery },
     },
     async (request, reply) => {
@@ -554,7 +553,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.post(
     "/commerce/stores/:storeId/products",
     {
-      preHandler: [storeAuthWrite, requireScope("catalog:write")],
+      preHandler: [storeAuthWrite("catalog")],
       schema: { params: StoreParams, body: CreateProductBody },
     },
     async (request, reply) => {
@@ -582,7 +581,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.get(
     "/commerce/stores/:storeId/products/:productId",
     {
-      preHandler: [storeAuthRead],
+      preHandler: [storeAuthRead("catalog")],
       schema: { params: ProductParams },
     },
     async (request, reply) => {
@@ -597,7 +596,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.put(
     "/commerce/stores/:storeId/products/:productId",
     {
-      preHandler: [storeAuthWrite],
+      preHandler: [storeAuthWrite("catalog")],
       schema: { params: ProductParams, body: UpdateProductBody },
     },
     async (request, reply) => {
@@ -623,7 +622,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.delete(
     "/commerce/stores/:storeId/products/:productId",
     {
-      preHandler: [storeAuthAdmin],
+      preHandler: [storeAuthAdmin("catalog")],
       schema: { params: ProductParams },
     },
     async (request, reply) => {
@@ -642,7 +641,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.get(
     "/commerce/stores/:storeId/products/:productId/variants",
     {
-      preHandler: [storeAuthRead],
+      preHandler: [storeAuthRead("catalog")],
       schema: { params: ProductParams },
     },
     async (request, reply) => {
@@ -656,7 +655,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.post(
     "/commerce/stores/:storeId/products/:productId/variants",
     {
-      preHandler: [storeAuthWrite],
+      preHandler: [storeAuthWrite("catalog")],
       schema: { params: ProductParams, body: CreateVariantBody },
     },
     async (request, reply) => {
@@ -677,7 +676,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.put(
     "/commerce/stores/:storeId/products/:productId/variants/:variantId",
     {
-      preHandler: [storeAuthWrite],
+      preHandler: [storeAuthWrite("catalog")],
       schema: { params: VariantParams, body: UpdateVariantBody },
     },
     async (request, reply) => {
@@ -694,7 +693,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.delete(
     "/commerce/stores/:storeId/products/:productId/variants/:variantId",
     {
-      preHandler: [storeAuthAdmin],
+      preHandler: [storeAuthAdmin("catalog")],
       schema: { params: VariantParams },
     },
     async (request, reply) => {
@@ -713,7 +712,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.get(
     "/commerce/stores/:storeId/products/:productId/options",
     {
-      preHandler: [storeAuthRead],
+      preHandler: [storeAuthRead("catalog")],
       schema: { params: ProductParams },
     },
     async (request, reply) => {
@@ -727,7 +726,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.post(
     "/commerce/stores/:storeId/products/:productId/options",
     {
-      preHandler: [storeAuthWrite],
+      preHandler: [storeAuthWrite("catalog")],
       schema: { params: ProductParams, body: CreateOptionBody },
     },
     async (request, reply) => {
@@ -748,7 +747,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.delete(
     "/commerce/stores/:storeId/products/:productId/options/:optionId",
     {
-      preHandler: [storeAuthAdmin],
+      preHandler: [storeAuthAdmin("catalog")],
       schema: { params: OptionParams },
     },
     async (request, reply) => {
@@ -767,7 +766,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.post(
     "/commerce/stores/:storeId/products/:productId/media",
     {
-      preHandler: [storeAuthWrite],
+      preHandler: [storeAuthWrite("catalog")],
       schema: { params: ProductParams, body: AddMediaBody },
     },
     async (request, reply) => {
@@ -788,7 +787,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.delete(
     "/commerce/stores/:storeId/products/:productId/media/:mediaId",
     {
-      preHandler: [storeAuthAdmin],
+      preHandler: [storeAuthAdmin("catalog")],
       schema: { params: MediaParams },
     },
     async (request, reply) => {
@@ -807,7 +806,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.get(
     "/commerce/stores/:storeId/products/:productId/bundle-items",
     {
-      preHandler: [storeAuthRead],
+      preHandler: [storeAuthRead("catalog")],
       schema: { params: ProductParams },
     },
     async (request, reply) => {
@@ -821,7 +820,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.post(
     "/commerce/stores/:storeId/products/:productId/bundle-items",
     {
-      preHandler: [storeAuthWrite],
+      preHandler: [storeAuthWrite("catalog")],
       schema: { params: ProductParams, body: AddBundleItemBody },
     },
     async (request, reply) => {
@@ -842,7 +841,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.put(
     "/commerce/stores/:storeId/products/:productId/bundle-items/:itemId",
     {
-      preHandler: [storeAuthWrite],
+      preHandler: [storeAuthWrite("catalog")],
       schema: { params: BundleItemParams, body: UpdateBundleItemBody },
     },
     async (request, reply) => {
@@ -859,7 +858,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.delete(
     "/commerce/stores/:storeId/products/:productId/bundle-items/:itemId",
     {
-      preHandler: [storeAuthAdmin],
+      preHandler: [storeAuthAdmin("catalog")],
       schema: { params: BundleItemParams },
     },
     async (request, reply) => {
@@ -878,7 +877,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.get(
     "/commerce/stores/:storeId/products/:productId/digital-files",
     {
-      preHandler: [storeAuthRead],
+      preHandler: [storeAuthRead("catalog")],
       schema: { params: ProductParams },
     },
     async (request, reply) => {
@@ -892,7 +891,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.post(
     "/commerce/stores/:storeId/products/:productId/digital-files",
     {
-      preHandler: [storeAuthWrite],
+      preHandler: [storeAuthWrite("catalog")],
       schema: { params: ProductParams, body: CreateDigitalFileBody },
     },
     async (request, reply) => {
@@ -913,7 +912,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.delete(
     "/commerce/stores/:storeId/products/:productId/digital-files/:fileId",
     {
-      preHandler: [storeAuthAdmin],
+      preHandler: [storeAuthAdmin("catalog")],
       schema: { params: DigitalFileParams },
     },
     async (request, reply) => {
@@ -932,7 +931,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.get(
     "/commerce/stores/:storeId/products/:productId/reviews",
     {
-      preHandler: [storeAuthRead],
+      preHandler: [storeAuthRead("catalog")],
       schema: { params: ProductParams, querystring: ReviewsQuery },
     },
     async (request, reply) => {
@@ -947,7 +946,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.post(
     "/commerce/stores/:storeId/products/:productId/reviews",
     {
-      preHandler: [storeAuthWrite],
+      preHandler: [storeAuthWrite("catalog")],
       schema: { params: ProductParams, body: CreateReviewBody },
     },
     async (request, reply) => {
@@ -968,7 +967,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.put(
     "/commerce/stores/:storeId/reviews/:reviewId",
     {
-      preHandler: [storeAuthAdmin],
+      preHandler: [storeAuthAdmin("catalog")],
       schema: { params: ReviewParams, body: UpdateReviewBody },
     },
     async (request, reply) => {
@@ -989,7 +988,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.get(
     "/commerce/stores/:storeId/products/:productId/tags",
     {
-      preHandler: [storeAuthRead],
+      preHandler: [storeAuthRead("catalog")],
       schema: { params: ProductParams },
     },
     async (request, reply) => {
@@ -1003,7 +1002,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.put(
     "/commerce/stores/:storeId/products/:productId/tags",
     {
-      preHandler: [storeAuthWrite],
+      preHandler: [storeAuthWrite("catalog")],
       schema: { params: ProductParams, body: SetTagsBody },
     },
     async (request, reply) => {
@@ -1028,7 +1027,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.get(
     "/commerce/stores/:storeId/collections",
     {
-      preHandler: [storeAuthRead],
+      preHandler: [storeAuthRead("catalog")],
       schema: { params: StoreParams, querystring: PaginationQuery },
     },
     async (request, reply) => {
@@ -1043,7 +1042,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.post(
     "/commerce/stores/:storeId/collections",
     {
-      preHandler: [storeAuthWrite],
+      preHandler: [storeAuthWrite("catalog")],
       schema: { params: StoreParams, body: CreateCollectionBody },
     },
     async (request, reply) => {
@@ -1068,7 +1067,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.get(
     "/commerce/stores/:storeId/collections/:collectionId",
     {
-      preHandler: [storeAuthRead],
+      preHandler: [storeAuthRead("catalog")],
       schema: { params: CollectionParams },
     },
     async (request, reply) => {
@@ -1083,7 +1082,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.put(
     "/commerce/stores/:storeId/collections/:collectionId",
     {
-      preHandler: [storeAuthWrite],
+      preHandler: [storeAuthWrite("catalog")],
       schema: { params: CollectionParams, body: UpdateCollectionBody },
     },
     async (request, reply) => {
@@ -1109,7 +1108,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.delete(
     "/commerce/stores/:storeId/collections/:collectionId",
     {
-      preHandler: [storeAuthAdmin],
+      preHandler: [storeAuthAdmin("catalog")],
       schema: { params: CollectionParams },
     },
     async (request, reply) => {
@@ -1124,7 +1123,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.post(
     "/commerce/stores/:storeId/collections/:collectionId/products",
     {
-      preHandler: [storeAuthWrite],
+      preHandler: [storeAuthWrite("catalog")],
       schema: { params: CollectionParams, body: AddCollectionProductBody },
     },
     async (request, reply) => {
@@ -1145,7 +1144,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.delete(
     "/commerce/stores/:storeId/collections/:collectionId/products/:productId",
     {
-      preHandler: [storeAuthWrite],
+      preHandler: [storeAuthWrite("catalog")],
       schema: { params: CollectionProductParams },
     },
     async (request, reply) => {
@@ -1161,7 +1160,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.get(
     "/commerce/stores/:storeId/collections/:collectionId/products",
     {
-      preHandler: [storeAuthRead],
+      preHandler: [storeAuthRead("catalog")],
       schema: { params: CollectionParams, querystring: PaginationQuery },
     },
     async (request, reply) => {
@@ -1180,7 +1179,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.get(
     "/commerce/stores/:storeId/collections/:collectionId/rules",
     {
-      preHandler: [storeAuthRead],
+      preHandler: [storeAuthRead("catalog")],
       schema: { params: CollectionParams },
     },
     async (request, reply) => {
@@ -1194,7 +1193,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.post(
     "/commerce/stores/:storeId/collections/:collectionId/rules",
     {
-      preHandler: [storeAuthWrite],
+      preHandler: [storeAuthWrite("catalog")],
       schema: { params: CollectionParams, body: AddCollectionRuleBody },
     },
     async (request, reply) => {
@@ -1215,7 +1214,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.delete(
     "/commerce/stores/:storeId/collections/:collectionId/rules/:ruleId",
     {
-      preHandler: [storeAuthAdmin],
+      preHandler: [storeAuthAdmin("catalog")],
       schema: { params: RuleParams },
     },
     async (request, reply) => {
@@ -1234,7 +1233,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.get(
     "/commerce/stores/:storeId/price-lists",
     {
-      preHandler: [storeAuthRead],
+      preHandler: [storeAuthRead("catalog")],
       schema: { params: StoreParams, querystring: PaginationQuery },
     },
     async (request, reply) => {
@@ -1249,7 +1248,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.post(
     "/commerce/stores/:storeId/price-lists",
     {
-      preHandler: [storeAuthWrite],
+      preHandler: [storeAuthWrite("catalog")],
       schema: { params: StoreParams, body: CreatePriceListBody },
     },
     async (request, reply) => {
@@ -1264,7 +1263,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.get(
     "/commerce/stores/:storeId/price-lists/:listId",
     {
-      preHandler: [storeAuthRead],
+      preHandler: [storeAuthRead("catalog")],
       schema: { params: PriceListParams },
     },
     async (request, reply) => {
@@ -1279,7 +1278,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.put(
     "/commerce/stores/:storeId/price-lists/:listId",
     {
-      preHandler: [storeAuthWrite],
+      preHandler: [storeAuthWrite("catalog")],
       schema: { params: PriceListParams, body: UpdatePriceListBody },
     },
     async (request, reply) => {
@@ -1295,7 +1294,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.delete(
     "/commerce/stores/:storeId/price-lists/:listId",
     {
-      preHandler: [storeAuthAdmin],
+      preHandler: [storeAuthAdmin("catalog")],
       schema: { params: PriceListParams },
     },
     async (request, reply) => {
@@ -1310,7 +1309,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.get(
     "/commerce/stores/:storeId/price-lists/:listId/items",
     {
-      preHandler: [storeAuthRead],
+      preHandler: [storeAuthRead("catalog")],
       schema: { params: PriceListParams, querystring: PaginationQuery },
     },
     async (request, reply) => {
@@ -1325,7 +1324,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.post(
     "/commerce/stores/:storeId/price-lists/:listId/items",
     {
-      preHandler: [storeAuthWrite],
+      preHandler: [storeAuthWrite("catalog")],
       schema: { params: PriceListParams, body: UpsertPriceListItemBody },
     },
     async (request, reply) => {
@@ -1346,7 +1345,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.put(
     "/commerce/stores/:storeId/price-lists/:listId/items/:itemId",
     {
-      preHandler: [storeAuthWrite],
+      preHandler: [storeAuthWrite("catalog")],
       schema: { params: PriceListItemParams, body: UpdatePriceListItemBody },
     },
     async (request, reply) => {
@@ -1362,7 +1361,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.delete(
     "/commerce/stores/:storeId/price-lists/:listId/items/:itemId",
     {
-      preHandler: [storeAuthAdmin],
+      preHandler: [storeAuthAdmin("catalog")],
       schema: { params: PriceListItemParams },
     },
     async (request, reply) => {
@@ -1381,7 +1380,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.get(
     "/commerce/stores/:storeId/metafields",
     {
-      preHandler: [storeAuthRead],
+      preHandler: [storeAuthRead("catalog")],
       schema: { params: StoreParams, querystring: MetafieldsQuery },
     },
     async (request, reply) => {
@@ -1396,7 +1395,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.post(
     "/commerce/stores/:storeId/metafields",
     {
-      preHandler: [storeAuthWrite],
+      preHandler: [storeAuthWrite("catalog")],
       schema: { params: StoreParams, body: UpsertMetafieldBody },
     },
     async (request, reply) => {
@@ -1411,7 +1410,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.put(
     "/commerce/stores/:storeId/metafields/:metafieldId",
     {
-      preHandler: [storeAuthWrite],
+      preHandler: [storeAuthWrite("catalog")],
       schema: { params: MetafieldParams, body: UpdateMetafieldBody },
     },
     async (request, reply) => {
@@ -1427,7 +1426,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.delete(
     "/commerce/stores/:storeId/metafields/:metafieldId",
     {
-      preHandler: [storeAuthAdmin],
+      preHandler: [storeAuthAdmin("catalog")],
       schema: { params: MetafieldParams },
     },
     async (request, reply) => {
@@ -1442,7 +1441,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.get(
     "/commerce/stores/:storeId/metafield-definitions",
     {
-      preHandler: [storeAuthRead],
+      preHandler: [storeAuthRead("catalog")],
       schema: { params: StoreParams, querystring: PaginationQuery },
     },
     async (request, reply) => {
@@ -1457,7 +1456,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.post(
     "/commerce/stores/:storeId/metafield-definitions",
     {
-      preHandler: [storeAuthWrite],
+      preHandler: [storeAuthWrite("catalog")],
       schema: { params: StoreParams, body: CreateMetafieldDefinitionBody },
     },
     async (request, reply) => {
@@ -1472,7 +1471,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.put(
     "/commerce/stores/:storeId/metafield-definitions/:defId",
     {
-      preHandler: [storeAuthWrite],
+      preHandler: [storeAuthWrite("catalog")],
       schema: { params: MetafieldDefParams, body: UpdateMetafieldDefinitionBody },
     },
     async (request, reply) => {
@@ -1488,7 +1487,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.delete(
     "/commerce/stores/:storeId/metafield-definitions/:defId",
     {
-      preHandler: [storeAuthAdmin],
+      preHandler: [storeAuthAdmin("catalog")],
       schema: { params: MetafieldDefParams },
     },
     async (request, reply) => {
@@ -1507,7 +1506,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.get(
     "/commerce/stores/:storeId/translations/:resourceType/:resourceId",
     {
-      preHandler: [storeAuthRead],
+      preHandler: [storeAuthRead("catalog")],
       schema: { params: TranslationParams },
     },
     async (request, reply) => {
@@ -1521,7 +1520,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.put(
     "/commerce/stores/:storeId/translations/:resourceType/:resourceId/:locale",
     {
-      preHandler: [storeAuthWrite],
+      preHandler: [storeAuthWrite("catalog")],
       schema: { params: TranslationLocaleParams, body: UpsertTranslationBody },
     },
     async (request, reply) => {
@@ -1537,7 +1536,7 @@ export const catalogPlugin: FastifyPluginAsync = async (app) => {
   app.delete(
     "/commerce/stores/:storeId/translations/:resourceType/:resourceId/:locale",
     {
-      preHandler: [storeAuthAdmin],
+      preHandler: [storeAuthAdmin("catalog")],
       schema: { params: TranslationLocaleParams },
     },
     async (request, reply) => {

@@ -114,7 +114,7 @@ export const customersPlugin: FastifyPluginAsyncZod = async (app) => {
     `${base}/customers`,
     {
       schema: { params: StoreIdParams, querystring: ListQuery },
-      preHandler: [storeAuthAdmin],
+      preHandler: [storeAuthAdmin("customers")],
     },
     async (request, reply) => {
       const { storeId } = request.params;
@@ -131,7 +131,7 @@ export const customersPlugin: FastifyPluginAsyncZod = async (app) => {
     `${base}/customers`,
     {
       schema: { params: StoreIdParams, body: CreateCustomerBody },
-      preHandler: [storeAuthAdmin],
+      preHandler: [storeAuthAdmin("customers")],
     },
     async (request, reply) => {
       const { storeId } = request.params;
@@ -146,7 +146,7 @@ export const customersPlugin: FastifyPluginAsyncZod = async (app) => {
     `${base}/customers/invite`,
     {
       schema: { params: StoreIdParams, body: InviteBody },
-      preHandler: [storeAuthAdmin],
+      preHandler: [storeAuthAdmin("customers")],
     },
     async (request, reply) => {
       const { storeId } = request.params;
@@ -161,7 +161,7 @@ export const customersPlugin: FastifyPluginAsyncZod = async (app) => {
     `${base}/customers/:customerId`,
     {
       schema: { params: CustomerIdParams },
-      preHandler: [storeAuthAdmin],
+      preHandler: [storeAuthAdmin("customers")],
     },
     async (request, reply) => {
       const { storeId, customerId } = request.params;
@@ -180,7 +180,7 @@ export const customersPlugin: FastifyPluginAsyncZod = async (app) => {
     `${base}/customers/:customerId`,
     {
       schema: { params: CustomerIdParams, body: UpdateCustomerBody },
-      preHandler: [storeAuthAdmin],
+      preHandler: [storeAuthAdmin("customers")],
     },
     async (request, reply) => {
       const { storeId, customerId } = request.params;
@@ -198,7 +198,7 @@ export const customersPlugin: FastifyPluginAsyncZod = async (app) => {
     `${base}/customers/:customerId/block`,
     {
       schema: { params: CustomerIdParams, body: BlockBody },
-      preHandler: [storeAuthAdmin],
+      preHandler: [storeAuthAdmin("customers")],
     },
     async (request, reply) => {
       const { storeId, customerId } = request.params;
@@ -216,7 +216,7 @@ export const customersPlugin: FastifyPluginAsyncZod = async (app) => {
     `${base}/customers/:customerId/unblock`,
     {
       schema: { params: CustomerIdParams },
-      preHandler: [storeAuthAdmin],
+      preHandler: [storeAuthAdmin("customers")],
     },
     async (request, reply) => {
       const { storeId, customerId } = request.params;
@@ -234,7 +234,7 @@ export const customersPlugin: FastifyPluginAsyncZod = async (app) => {
     `${base}/customers/:customerId`,
     {
       schema: { params: CustomerIdParams },
-      preHandler: [storeAuthAdmin],
+      preHandler: [storeAuthAdmin("customers")],
     },
     async (request, reply) => {
       const { storeId, customerId } = request.params;
@@ -252,7 +252,7 @@ export const customersPlugin: FastifyPluginAsyncZod = async (app) => {
     `${base}/customers/:customerId/addresses`,
     {
       schema: { params: CustomerIdParams, body: AddressBody },
-      preHandler: [storeAuthWrite],
+      preHandler: [storeAuthWrite("customers")],
     },
     async (request, reply) => {
       const { storeId, customerId } = request.params;
@@ -274,7 +274,7 @@ export const customersPlugin: FastifyPluginAsyncZod = async (app) => {
     `${base}/customers/:customerId/addresses/:addressId`,
     {
       schema: { params: AddressIdParams },
-      preHandler: [storeAuthWrite],
+      preHandler: [storeAuthWrite("customers")],
     },
     async (request, reply) => {
       const { storeId, customerId, addressId } = request.params;
@@ -292,7 +292,7 @@ export const customersPlugin: FastifyPluginAsyncZod = async (app) => {
     `${base}/customers/:customerId/tags`,
     {
       schema: { params: CustomerIdParams },
-      preHandler: [storeAuthAdmin],
+      preHandler: [storeAuthAdmin("customers")],
     },
     async (request, reply) => {
       const { storeId, customerId } = request.params;
@@ -308,7 +308,7 @@ export const customersPlugin: FastifyPluginAsyncZod = async (app) => {
     `${base}/customers/:customerId/tags`,
     {
       schema: { params: CustomerIdParams, body: TagsBody },
-      preHandler: [storeAuthAdmin],
+      preHandler: [storeAuthAdmin("customers")],
     },
     async (request, reply) => {
       const { storeId, customerId } = request.params;
@@ -326,7 +326,7 @@ export const customersPlugin: FastifyPluginAsyncZod = async (app) => {
     `${base}/audit-log`,
     {
       schema: { params: StoreIdParams, querystring: AuditLogQuery },
-      preHandler: [storeAuthAdmin],
+      preHandler: [storeAuthAdmin("customers")],
     },
     async (request, reply) => {
       const { storeId } = request.params;

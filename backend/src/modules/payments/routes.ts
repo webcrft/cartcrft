@@ -120,7 +120,7 @@ export const paymentsPlugin: FastifyPluginAsync = async (app) => {
   app.get(
     "/commerce/stores/:storeId/orders/:orderId/payments",
     {
-      preHandler: [storeAuthWrite],
+      preHandler: [storeAuthWrite("payments")],
       schema: { params: StoreOrderParams },
     },
     async (request, reply) => {
@@ -134,7 +134,7 @@ export const paymentsPlugin: FastifyPluginAsync = async (app) => {
   app.post(
     "/commerce/stores/:storeId/orders/:orderId/payments",
     {
-      preHandler: [storeAuthWrite],
+      preHandler: [storeAuthWrite("payments")],
       schema: { params: StoreOrderParams, body: CreatePaymentBody },
     },
     async (request, reply) => {
@@ -167,7 +167,7 @@ export const paymentsPlugin: FastifyPluginAsync = async (app) => {
   app.post(
     "/commerce/stores/:storeId/orders/:orderId/payments/:paymentId/capture",
     {
-      preHandler: [storeAuthAdmin],
+      preHandler: [storeAuthAdmin("payments")],
       schema: { params: PaymentParams },
     },
     async (request, reply) => {
@@ -205,7 +205,7 @@ export const paymentsPlugin: FastifyPluginAsync = async (app) => {
   app.post(
     "/commerce/stores/:storeId/orders/:orderId/payments/:paymentId/refund",
     {
-      preHandler: [storeAuthAdmin],
+      preHandler: [storeAuthAdmin("payments")],
       schema: { params: PaymentParams, body: CreateRefundBody },
     },
     async (request, reply) => {
@@ -266,7 +266,7 @@ export const paymentsPlugin: FastifyPluginAsync = async (app) => {
   app.get(
     "/commerce/stores/:storeId/payment-providers",
     {
-      preHandler: [storeAuthAdmin],
+      preHandler: [storeAuthAdmin("payments")],
       schema: { params: StoreParams },
     },
     async (request, reply) => {
@@ -280,7 +280,7 @@ export const paymentsPlugin: FastifyPluginAsync = async (app) => {
   app.post(
     "/commerce/stores/:storeId/payment-providers",
     {
-      preHandler: [storeAuthAdmin],
+      preHandler: [storeAuthAdmin("payments")],
       schema: { params: StoreParams, body: UpsertProviderBody },
     },
     async (request, reply) => {
@@ -295,7 +295,7 @@ export const paymentsPlugin: FastifyPluginAsync = async (app) => {
   app.delete(
     "/commerce/stores/:storeId/payment-providers/:providerId",
     {
-      preHandler: [storeAuthAdmin],
+      preHandler: [storeAuthAdmin("payments")],
       schema: { params: ProviderParams },
     },
     async (request, reply) => {

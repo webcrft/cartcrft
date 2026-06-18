@@ -207,7 +207,8 @@ async function resolveStoreAuth(
   request: FastifyRequest,
   reply: FastifyReply,
   requiredTier: AuthTier,
-  allowPublic: boolean
+  allowPublic: boolean,
+  resource?: string | undefined
 ): Promise<void> {
   const params = request.params as Record<string, string>;
   const storeId = params["storeId"] ?? params["store_id"];
@@ -333,32 +334,55 @@ async function resolveStoreAuth(
     ? (typeof claims.scope === "string" ? claims.scope.split(" ").filter(Boolean) : [])
     : undefined;
 
-  // ── Coarse, central OAuth tier enforcement (T-OAuth) ───────────────────────
+  // ── Central OAuth scope enforcement (T-OAuth) ──────────────────────────────
   // requireScope() is wired on only a handful of routes, so without a central
   // gate ANY granted OAuth token would get full read/write/admin across the
-  // ~387 store routes. Enforce here, once, at the shared resolver: an OAuth
-  // principal must hold a scope of the right CLASS for the route's tier —
-  //   read  tier → any *:read   (write/admin imply read, so any scope works)
-  //   write tier → any *:write
-  //   admin tier → an admin-class scope (the fixed OAuth catalogue has NONE,
-  //                so OAuth tokens are denied admin-tier routes — fail closed)
-  // This is COARSE tier-level enforcement; per-resource scope granularity
-  // (e.g. orders:write vs catalog:write on the specific route) is a follow-up
-  // handled by the existing requireScope() preHandler where it is wired.
+  // ~387 store routes. Enforce here, once, at the shared resolver.
+  //
+  // Two modes, selected by whether the route declared a `resource`:
+  //
+  //   PER-RESOURCE (resource provided, e.g. "orders") — require the SPECIFIC
+  //   scope `${resource}:${tier}`, with higher tiers on the SAME resource
+  //   implying lower ones:
+  //     read  → ${resource}:read | :write | :admin
+  //     write → ${resource}:write | :admin
+  //     admin → ${resource}:admin
+  //   A scope on a DIFFERENT resource never satisfies the route (an orders:read
+  //   token cannot read payments). 403 INSUFFICIENT_SCOPE otherwise.
+  //
+  //   COARSE (no resource) — the original tier-class gate, kept verbatim so the
+  //   many untagged store routes do not break: an OAuth principal must hold a
+  //   scope of the right CLASS for the route's tier —
+  //     read  tier → any *:read   (write/admin imply read, so any scope works)
+  //     write tier → any *:write
+  //     admin tier → any *:admin (the fixed OAuth catalogue has none, so OAuth
+  //                  tokens are denied admin-tier untagged routes — fail closed)
+  //
+  // Dashboard JWTs and API keys carry no oauth_app claim, so they skip this
+  // block entirely and are unaffected.
   if (oauthApp) {
     const granted = oauthScopes ?? [];
-    const satisfiesTier =
-      requiredTier === "read"
-        ? granted.some((s) => s.endsWith(":read") || s.endsWith(":write") || s.endsWith(":admin"))
-        : requiredTier === "write"
-          ? granted.some((s) => s.endsWith(":write") || s.endsWith(":admin"))
-          : // admin tier — no admin-class OAuth scope exists; always deny.
-            granted.some((s) => s.endsWith(":admin"));
-    if (!satisfiesTier) {
+    const tierSuffixes: Record<AuthTier, string[]> = {
+      read: [":read", ":write", ":admin"],
+      write: [":write", ":admin"],
+      admin: [":admin"],
+    };
+    const suffixes = tierSuffixes[requiredTier];
+    const satisfies =
+      resource !== undefined
+        ? // Per-resource: only scopes on THIS resource count.
+          suffixes.some((suf) => granted.includes(`${resource}${suf}`))
+        : // Coarse: any resource of the right tier class.
+          granted.some((s) => suffixes.some((suf) => s.endsWith(suf)));
+    if (!satisfies) {
+      const want =
+        resource !== undefined
+          ? `the scope ${resource}:${requiredTier} (or a higher tier on ${resource})`
+          : `a scope sufficient for ${requiredTier}-tier access`;
       return reply.status(403).send({
         error: {
           code: "INSUFFICIENT_SCOPE",
-          message: `this OAuth token lacks a scope sufficient for ${requiredTier}-tier access to this endpoint`,
+          message: `this OAuth token lacks ${want} for this endpoint`,
         },
       });
     }
@@ -475,34 +499,56 @@ export const requireDashboardJwt: preHandlerHookHandler = async (request, reply)
 // ── Tier preHandlers ──────────────────────────────────────────────────────────
 
 /**
+ * A storeAuth tier guard that is usable TWO ways, backward-compatibly:
+ *
+ *   bare        — `preHandler: [storeAuthRead]`           (untagged → COARSE gate)
+ *   per-resource — `preHandler: [storeAuthRead("orders")]` (tagged → PER-RESOURCE gate)
+ *
+ * The bare form is itself a valid Fastify preHandler (Fastify invokes it with
+ * `(request, reply)`). The per-resource form is a factory: invoked with a single
+ * string it returns a configured preHandler. The two are told apart by the type
+ * of the first argument, so the ~387 existing bare call sites keep working
+ * untouched while new routes can opt into a resource scope.
+ */
+type StoreAuthGuard = preHandlerHookHandler & ((resource: string) => preHandlerHookHandler);
+
+function makeStoreAuthGuard(tier: AuthTier, allowPublic: boolean): StoreAuthGuard {
+  const guard = ((
+    a: FastifyRequest | string,
+    b?: FastifyReply
+  ): preHandlerHookHandler | Promise<void> => {
+    // Factory form: storeAuthX("orders") → returns a per-resource preHandler.
+    if (typeof a === "string") {
+      const resource = a;
+      return async (request, reply) =>
+        resolveStoreAuth(request, reply, tier, allowPublic, resource);
+    }
+    // Bare preHandler form: Fastify invoked it with (request, reply).
+    return resolveStoreAuth(a, b as FastifyReply, tier, allowPublic, undefined);
+  }) as StoreAuthGuard;
+  return guard;
+}
+
+/**
  * storeAuthRead — storefront reads.
  * Accepts: cc_pub_ (commerce:read), cc_prv_ (commerce:read+), JWT.
+ * Optional `storeAuthRead("catalog")` enforces the per-resource OAuth scope.
  */
-export const storeAuthRead: preHandlerHookHandler = async (request, reply) => {
-  return resolveStoreAuth(request, reply, "read", true);
-};
+export const storeAuthRead: StoreAuthGuard = makeStoreAuthGuard("read", true);
 
 /**
  * storeAuthWrite — writes that mutate sensitive state.
  * Rejects cc_pub_; requires cc_prv_ with commerce:write+ or JWT.
+ * Optional `storeAuthWrite("orders")` enforces the per-resource OAuth scope.
  */
-export const storeAuthWrite: preHandlerHookHandler = async (
-  request,
-  reply
-) => {
-  return resolveStoreAuth(request, reply, "write", false);
-};
+export const storeAuthWrite: StoreAuthGuard = makeStoreAuthGuard("write", false);
 
 /**
  * storeAuthAdmin — management endpoints (provider config, settings).
  * Rejects cc_pub_; requires cc_prv_ with commerce:admin or JWT.
+ * Optional `storeAuthAdmin("payments")` enforces the per-resource OAuth scope.
  */
-export const storeAuthAdmin: preHandlerHookHandler = async (
-  request,
-  reply
-) => {
-  return resolveStoreAuth(request, reply, "admin", false);
-};
+export const storeAuthAdmin: StoreAuthGuard = makeStoreAuthGuard("admin", false);
 
 // ── OAuth scope enforcement ─────────────────────────────────────────────────
 

@@ -52,7 +52,7 @@ export const catalogCsvPlugin: FastifyPluginAsync = async (app) => {
   // ── GET .../products/export.csv ─────────────────────────────────────────────
   app.get(
     "/commerce/stores/:storeId/products/export.csv",
-    { preHandler: [storeAuthAdmin] },
+    { preHandler: [storeAuthAdmin("catalog")] },
     async (request, reply) => {
       const storeId = request.auth!.storeId;
       const params = StoreIdParams.safeParse(request.params);
@@ -81,7 +81,7 @@ export const catalogCsvPlugin: FastifyPluginAsync = async (app) => {
   // ── GET .../products/import/template ────────────────────────────────────────
   app.get(
     "/commerce/stores/:storeId/products/import/template",
-    { preHandler: [storeAuthAdmin] },
+    { preHandler: [storeAuthAdmin("catalog")] },
     async (request, reply) => {
       const template = csvTemplateString();
       return reply
@@ -94,7 +94,7 @@ export const catalogCsvPlugin: FastifyPluginAsync = async (app) => {
   // ── POST .../products/import ─────────────────────────────────────────────────
   app.post(
     "/commerce/stores/:storeId/products/import",
-    { preHandler: [storeAuthAdmin] },
+    { preHandler: [storeAuthAdmin("catalog")] },
     async (request, reply) => {
       const storeId = request.auth!.storeId;
 

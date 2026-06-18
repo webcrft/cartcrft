@@ -1,20 +1,21 @@
 /**
  * orders/routes.ts — Fastify plugin for orders CRUD.
  *
- * Routes:
- *   GET    /commerce/stores/:storeId/orders                         — storeAuthWrite
- *   POST   /commerce/stores/:storeId/orders                         — storeAuthWrite
- *   GET    /commerce/stores/:storeId/orders/:orderId                — storeAuthWrite
- *   PUT    /commerce/stores/:storeId/orders/:orderId                — storeAuthWrite
- *   POST   /commerce/stores/:storeId/orders/:orderId/cancel         — storeAuthWrite
- *   POST   /commerce/stores/:storeId/orders/:orderId/notes          — storeAuthWrite
- *   GET    /commerce/stores/:storeId/orders/:orderId/events         — storeAuthWrite
- *   POST   /commerce/stores/:storeId/orders/:orderId/collect-balance — storeAuthAdmin
+ * Routes (OAuth scope tier shown after the guard; "orders" is the resource tag):
+ *   GET    /commerce/stores/:storeId/orders                         — storeAuthRead("orders")
+ *   POST   /commerce/stores/:storeId/orders                         — storeAuthWrite("orders")
+ *   GET    /commerce/stores/:storeId/orders/:orderId                — storeAuthRead("orders")
+ *   PUT    /commerce/stores/:storeId/orders/:orderId                — storeAuthWrite("orders")
+ *   POST   /commerce/stores/:storeId/orders/:orderId/cancel         — storeAuthWrite("orders")
+ *   POST   /commerce/stores/:storeId/orders/:orderId/notes          — storeAuthWrite("orders")
+ *   GET    /commerce/stores/:storeId/orders/:orderId/events         — storeAuthRead("orders")
+ *   POST   /commerce/stores/:storeId/orders/:orderId/collect-balance — storeAuthAdmin("orders")
  */
 
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import {
+  storeAuthRead,
   storeAuthWrite,
   storeAuthAdmin,
 } from "../../lib/auth/middleware.js";
@@ -136,7 +137,9 @@ export const ordersPlugin: FastifyPluginAsync = async (app) => {
   app.get(
     "/commerce/stores/:storeId/orders",
     {
-      preHandler: [storeAuthWrite],
+      // Read tier: an OAuth orders:read token may list orders; write/admin imply
+      // read. (JWT/API-key semantics unchanged from the storeAuthRead default.)
+      preHandler: [storeAuthRead("orders")],
       schema: { params: StoreOrderParams, querystring: ListOrdersQuery },
     },
     async (request, reply) => {
@@ -151,7 +154,7 @@ export const ordersPlugin: FastifyPluginAsync = async (app) => {
   app.post(
     "/commerce/stores/:storeId/orders",
     {
-      preHandler: [storeAuthWrite],
+      preHandler: [storeAuthWrite("orders")],
       schema: { params: StoreOrderParams, body: CreateOrderBody },
     },
     async (request, reply) => {
@@ -196,7 +199,7 @@ export const ordersPlugin: FastifyPluginAsync = async (app) => {
   app.get(
     "/commerce/stores/:storeId/orders/:orderId",
     {
-      preHandler: [storeAuthWrite],
+      preHandler: [storeAuthRead("orders")],
       schema: { params: StoreOrderIdParams },
     },
     async (request, reply) => {
@@ -215,7 +218,7 @@ export const ordersPlugin: FastifyPluginAsync = async (app) => {
   app.put(
     "/commerce/stores/:storeId/orders/:orderId",
     {
-      preHandler: [storeAuthWrite],
+      preHandler: [storeAuthWrite("orders")],
       schema: { params: StoreOrderIdParams, body: UpdateOrderBody },
     },
     async (request, reply) => {
@@ -239,7 +242,7 @@ export const ordersPlugin: FastifyPluginAsync = async (app) => {
   app.post(
     "/commerce/stores/:storeId/orders/:orderId/cancel",
     {
-      preHandler: [storeAuthWrite],
+      preHandler: [storeAuthWrite("orders")],
       schema: { params: StoreOrderIdParams, body: CancelOrderBody },
     },
     async (request, reply) => {
@@ -269,7 +272,7 @@ export const ordersPlugin: FastifyPluginAsync = async (app) => {
   app.post(
     "/commerce/stores/:storeId/orders/:orderId/notes",
     {
-      preHandler: [storeAuthWrite],
+      preHandler: [storeAuthWrite("orders")],
       schema: { params: StoreOrderIdParams, body: AddNoteBody },
     },
     async (request, reply) => {
@@ -304,7 +307,7 @@ export const ordersPlugin: FastifyPluginAsync = async (app) => {
   app.get(
     "/commerce/stores/:storeId/orders/:orderId/events",
     {
-      preHandler: [storeAuthWrite],
+      preHandler: [storeAuthRead("orders")],
       schema: { params: StoreOrderIdParams },
     },
     async (request, reply) => {
@@ -319,7 +322,7 @@ export const ordersPlugin: FastifyPluginAsync = async (app) => {
   app.post(
     "/commerce/stores/:storeId/orders/:orderId/fulfillments",
     {
-      preHandler: [storeAuthWrite],
+      preHandler: [storeAuthWrite("orders")],
       schema: { params: StoreOrderIdParams, body: FulfillOrderBody },
     },
     async (request, reply) => {
@@ -347,7 +350,7 @@ export const ordersPlugin: FastifyPluginAsync = async (app) => {
   app.post(
     "/commerce/stores/:storeId/orders/:orderId/edit-lines",
     {
-      preHandler: [storeAuthWrite],
+      preHandler: [storeAuthWrite("orders")],
       schema: { params: StoreOrderIdParams, body: EditOrderLinesBody },
     },
     async (request, reply) => {
@@ -377,7 +380,7 @@ export const ordersPlugin: FastifyPluginAsync = async (app) => {
   app.post(
     "/commerce/stores/:storeId/orders/:orderId/collect-balance",
     {
-      preHandler: [storeAuthAdmin],
+      preHandler: [storeAuthAdmin("orders")],
       schema: { params: StoreOrderIdParams },
     },
     async (request, reply) => {
