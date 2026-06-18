@@ -189,6 +189,7 @@ export async function completeCheckout(
       shipping_total: string;
       tax_total: string;
       discount_total: string;
+      duties_total: string;
       total: string;
       currency: string;
       applied_tenders: AppliedTender[] | null;
@@ -197,7 +198,7 @@ export async function completeCheckout(
               shipping_address::text, billing_address::text,
               shipping_rate::text, tax_lines::text, discount_lines::text,
               subtotal::text, shipping_total::text, tax_total::text,
-              discount_total::text, total::text, currency, applied_tenders
+              discount_total::text, duties_total::text, total::text, currency, applied_tenders
        FROM checkouts
        WHERE id = $1::uuid AND store_id = $2::uuid AND status = 'pending'
        FOR UPDATE`,
@@ -257,6 +258,11 @@ export async function completeCheckout(
     let shippingTotal = baseShipping;
     let taxTotal = parseFloat(ch.tax_total);
     let discountTotal = parseFloat(ch.discount_total);
+    // Import duties (Wave-24): a separate cross-border charge stored on the
+    // checkout. Like tax_total, it is computed at checkout time and read
+    // authoritatively from the row here (NOT recomputed). 0 for the DOMESTIC /
+    // non-cross-border path, so the order total below is byte-identical then.
+    const dutiesTotal = parseFloat(ch.duties_total);
     let total = parseFloat(ch.total);
     const currency = ch.currency;
 
@@ -462,7 +468,7 @@ export async function completeCheckout(
 
     // Persist recomputed totals (subtotal/discount/shipping/total) so the order
     // copy below reads correct values regardless of price/discount drift.
-    total = round2(subtotal + shippingTotal + taxTotal - discountTotal);
+    total = round2(subtotal + shippingTotal + taxTotal - discountTotal + dutiesTotal);
     if (priceChanged || discountTotal !== parseFloat(ch.discount_total) || shippingTotal !== baseShipping) {
       await client.query(
         `UPDATE checkouts
@@ -531,13 +537,13 @@ export async function completeCheckout(
       `INSERT INTO orders
          (store_id, customer_id, company_id, checkout_id, order_number,
           status, financial_status, fulfillment_status,
-          currency, subtotal, shipping_total, tax_total, discount_total, total,
+          currency, subtotal, shipping_total, tax_total, discount_total, duties_total, total,
           shipping_address, billing_address,
           tax_lines, shipping_lines, discount_lines,
           source_name, metadata)
        VALUES ($1::uuid, $2, $3, $4::uuid, $5,
                'open', 'pending', 'unfulfilled',
-               $6, $7, $8, $9, $10, $11,
+               $6, $7, $8, $9, $10, $18, $11,
                COALESCE($12::jsonb, '{}'), COALESCE($13::jsonb, '{}'),
                COALESCE($14::jsonb, '[]'::jsonb), COALESCE($15::jsonb, 'null'::jsonb), COALESCE($16::jsonb, '[]'::jsonb),
                'web', $17::jsonb)
@@ -560,6 +566,7 @@ export async function completeCheckout(
         ch.shipping_rate ?? null,
         ch.discount_lines ?? null,
         JSON.stringify(orderMetadata),
+        dutiesTotal,
       ]
     );
     const orderId = orderRows[0]!.id;

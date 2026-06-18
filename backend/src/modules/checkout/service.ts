@@ -12,7 +12,7 @@
  */
 
 import { getPool, getReadDb } from "../../db/pool.js";
-import { calcTax, extractAddressCodes, isTaxExempt, type TaxLine } from "../../lib/tax.js";
+import { calcTax, calcDuties, extractAddressCodes, isTaxExempt, type TaxLine } from "../../lib/tax.js";
 import { round2 } from "../../lib/money.js";
 import { computeDiscounts, type DiscountCartLine } from "../discounts/service.js";
 import { getLatestRates, rateFor, convertMoney } from "../../lib/fx-convert.js";
@@ -211,6 +211,51 @@ async function lookupShippingRatePrice(
 }
 
 /**
+ * Look up the store's ORIGIN country code (stores.country_code) for duty
+ * computation. Returns "" when unset/null — calcDuties then treats duties as
+ * having no same-country guard, but with no origin and no matching duty rates
+ * the domestic path stays unchanged (duties_total = 0).
+ */
+async function lookupStoreOriginCountry(
+  pool: ReturnType<typeof getPool>,
+  storeId: string
+): Promise<string> {
+  const { rows } = await pool.query<{ country_code: string | null }>(
+    `SELECT country_code FROM stores WHERE id = $1::uuid`,
+    [storeId]
+  );
+  return rows[0]?.country_code ?? "";
+}
+
+/**
+ * Compute import duties for a checkout (additive — Wave-24).
+ *
+ * Duties are a SEPARATE import charge (DDP / landed cost), independent of sales
+ * tax and of tax exemption: a tax-exempt customer can still owe import duty.
+ * The duty base is the taxable/goods value (subtotal − discount), matching the
+ * tax base; shipping is NOT included (the duty model assesses declared goods
+ * value only).
+ *
+ * calcDuties never throws and returns 0 when the destination is empty, equals
+ * the origin, or no matching duty rate exists — so the DOMESTIC / non-cross-
+ * border path yields duties_total = 0 and an UNCHANGED total.
+ */
+async function computeDuties(
+  pool: ReturnType<typeof getPool>,
+  storeId: string,
+  declaredValue: number,
+  shippingAddress: Record<string, unknown> | null | undefined
+): Promise<number> {
+  const { countryCode } = extractAddressCodes(shippingAddress ?? null);
+  if (!countryCode) return 0;
+  const originCountry = await lookupStoreOriginCountry(pool, storeId);
+  const { dutyTotal } = await calcDuties(pool, storeId, declaredValue, countryCode, {
+    originCountry,
+  });
+  return dutyTotal;
+}
+
+/**
  * Compute discounts for a checkout (read-only preview — no burn).
  *
  * Delegates to the discounts module's execution engine, which evaluates:
@@ -295,6 +340,7 @@ export async function createCheckout(
   shipping_total: number;
   tax_total: number;
   discount_total: number;
+  duties_total: number;
   total: number;
   currency: string;
   tax_lines: TaxLine[];
@@ -390,17 +436,31 @@ export async function createCheckout(
         return calcTax(pool, storeId, subtotal - discountResult.discountTotal, countryCode, provinceCode);
       })();
 
-  const total = round2(subtotal - discountResult.discountTotal + taxResult.taxTotal + shippingTotal);
+  // Duties — import / landed-cost charge for cross-border orders (Wave-24).
+  // Independent of sales tax and tax exemption. Assessed on the goods value
+  // (subtotal − discount), the same base as tax. Returns 0 for the DOMESTIC /
+  // non-cross-border path (no destination, destination === origin, or no
+  // matching duty rate), keeping `total` unchanged vs. before.
+  const dutiesTotal = await computeDuties(
+    pool,
+    storeId,
+    subtotal - discountResult.discountTotal,
+    body.shipping_address ?? null
+  );
+
+  const total = round2(
+    subtotal - discountResult.discountTotal + taxResult.taxTotal + shippingTotal + dutiesTotal
+  );
 
   const { rows: insertRows } = await pool.query<{ id: string }>(
     `INSERT INTO checkouts
        (cart_id, store_id, customer_id, company_id, email,
         shipping_address, billing_address,
         shipping_rate, tax_lines, discount_lines,
-        subtotal, shipping_total, tax_total, discount_total, total, currency)
+        subtotal, shipping_total, tax_total, discount_total, duties_total, total, currency)
      VALUES ($1::uuid, $2::uuid, $3, $4, $5,
              $6, $7, $8, $9::jsonb, $10::jsonb,
-             $11, $12, $13, $14, $15, $16)
+             $11, $12, $13, $14, $15, $16, $17)
      RETURNING id::text`,
     [
       cartId,
@@ -417,6 +477,7 @@ export async function createCheckout(
       shippingTotal,
       taxResult.taxTotal,
       discountResult.discountTotal,
+      dutiesTotal,
       total,
       currency,
     ]
@@ -428,6 +489,7 @@ export async function createCheckout(
     shipping_total: shippingTotal,
     tax_total: taxResult.taxTotal,
     discount_total: discountResult.discountTotal,
+    duties_total: dutiesTotal,
     total,
     currency,
     tax_lines: taxResult.taxLines,
@@ -499,6 +561,7 @@ export async function updateCheckout(
   shipping_total: number;
   tax_total: number;
   discount_total: number;
+  duties_total: number;
   total: number;
   currency: string;
   tax_lines: TaxLine[];
@@ -570,7 +633,20 @@ export async function updateCheckout(
         return calcTax(pool, storeId, subtotal - discountResult.discountTotal, countryCode, provinceCode);
       })();
 
-  const total = round2(subtotal - discountResult.discountTotal + taxResult.taxTotal + shippingTotal);
+  // Duties — import / landed-cost (Wave-24). Mirrors tax: computed from the
+  // request body's shipping_address on the goods value (subtotal − discount),
+  // independent of tax exemption. 0 (and total unchanged) for the DOMESTIC /
+  // non-cross-border path.
+  const dutiesTotal = await computeDuties(
+    pool,
+    storeId,
+    subtotal - discountResult.discountTotal,
+    body.shipping_address ?? null
+  );
+
+  const total = round2(
+    subtotal - discountResult.discountTotal + taxResult.taxTotal + shippingTotal + dutiesTotal
+  );
 
   await pool.query(
     `UPDATE checkouts SET
@@ -584,6 +660,7 @@ export async function updateCheckout(
        shipping_total   = $10,
        tax_total        = $11,
        discount_total   = $12,
+       duties_total     = $14,
        total            = $13,
        updated_at       = now()
      WHERE id = $1::uuid AND store_id = $2::uuid`,
@@ -601,6 +678,7 @@ export async function updateCheckout(
       taxResult.taxTotal,
       discountResult.discountTotal,
       total,
+      dutiesTotal,
     ]
   );
 
@@ -609,6 +687,7 @@ export async function updateCheckout(
     shipping_total: shippingTotal,
     tax_total: taxResult.taxTotal,
     discount_total: discountResult.discountTotal,
+    duties_total: dutiesTotal,
     total,
     currency,
     tax_lines: taxResult.taxLines,
