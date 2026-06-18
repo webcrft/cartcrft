@@ -71,6 +71,7 @@ import { threeplPlugin } from "../modules/threepl/routes.js";
 import { staticPlugin } from "./static.js";
 import { recoveryPlugin } from "../modules/recovery/routes.js";
 import { backInStockPlugin } from "../modules/back-in-stock/routes.js";
+import { draftOrdersPlugin } from "../modules/draft-orders/routes.js";
 import { catalogCsvPlugin } from "../modules/catalog/csv-routes.js";
 import { bookingsPlugin } from "../modules/bookings/index.js";
 import { setAnalyticsSink, PgAnalyticsSink } from "../lib/analytics.js";
@@ -539,6 +540,7 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
 
   // ── Wave 18.2 — Back-in-stock notification subscriptions (storefront) ────────
   await app.register(backInStockPlugin);
+  await app.register(draftOrdersPlugin);
 
   // ── T6.6 — CSV product import/export ─────────────────────────────────────────
   await app.register(catalogCsvPlugin);
