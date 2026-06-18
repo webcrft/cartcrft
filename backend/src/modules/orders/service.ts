@@ -10,6 +10,7 @@ import { dispatchStoreEvent } from "../notifications/service.js";
 import { calcTaxAuto, extractAddressCodes } from "../../lib/tax.js";
 import { round2 } from "../../lib/money.js";
 import type pg from "pg";
+import type { ReconcileOutcome } from "../payments/service.js";
 import type {
   Order,
   OrderLine,
@@ -904,6 +905,16 @@ export interface EditLinesResult {
   discount_total: string;
   shipping_total: string;
   total: string;
+  /**
+   * Result of reconciling captured payments against the new total. Present when
+   * the edit changed the total against an order that had captured money:
+   *  - "refunded":            an over-payment was auto-refunded.
+   *  - "balance_outstanding": the customer now owes more; recorded but NOT
+   *                           auto-charged (collect via collect-balance).
+   *  - "none":                no captured money / no material delta.
+   *  - "error":               reconciliation failed; edit is still committed.
+   */
+  reconciliation?: ReconcileOutcome | undefined;
 }
 
 /**
@@ -929,7 +940,7 @@ export async function editOrderLines(
   ops: EditLineOp[],
   userId?: string | undefined
 ): Promise<EditLinesResult | null> {
-  return withTx(async (client) => {
+  const edited = await withTx(async (client) => {
     const { rows: ordRows } = await client.query<{
       status: string;
       total: string;
@@ -1075,11 +1086,31 @@ export async function editOrderLines(
     });
 
     return {
-      subtotal: priced.subtotal.toFixed(2),
-      tax_total: priced.tax_total.toFixed(2),
-      discount_total: priced.discount_total.toFixed(2),
-      shipping_total: priced.shipping_total.toFixed(2),
-      total: priced.total.toFixed(2),
+      result: {
+        subtotal: priced.subtotal.toFixed(2),
+        tax_total: priced.tax_total.toFixed(2),
+        discount_total: priced.discount_total.toFixed(2),
+        shipping_total: priced.shipping_total.toFixed(2),
+        total: priced.total.toFixed(2),
+      } satisfies EditLinesResult,
+      totalChanged: balanceDelta !== 0,
     };
   });
+
+  if (!edited) return null;
+
+  // ── Payment reconciliation (Wave 6.1) ───────────────────────────────────────
+  // Runs AFTER the edit transaction commits so a reconciliation failure can
+  // never roll the edit back. Conservative + money-safe: auto-refunds an
+  // over-payment, records (but does NOT auto-charge) an amount owed. Best-effort
+  // — any error is captured into the response and recorded as an order_event.
+  if (edited.totalChanged) {
+    const { reconcilePaymentDelta } = await import("../payments/service.js");
+    const reconciliation = await reconcilePaymentDelta(orderId, storeId, userId);
+    if (reconciliation.kind !== "none") {
+      return { ...edited.result, reconciliation };
+    }
+  }
+
+  return edited.result;
 }

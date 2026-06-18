@@ -9,12 +9,14 @@
  *   POST   /commerce/stores/:storeId/orders/:orderId/cancel         — storeAuthWrite
  *   POST   /commerce/stores/:storeId/orders/:orderId/notes          — storeAuthWrite
  *   GET    /commerce/stores/:storeId/orders/:orderId/events         — storeAuthWrite
+ *   POST   /commerce/stores/:storeId/orders/:orderId/collect-balance — storeAuthAdmin
  */
 
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import {
   storeAuthWrite,
+  storeAuthAdmin,
 } from "../../lib/auth/middleware.js";
 import {
   listOrders,
@@ -27,6 +29,7 @@ import {
   fulfillOrderLines,
   editOrderLines,
 } from "./service.js";
+import { collectOutstandingBalance } from "../payments/service.js";
 
 // ── Schemas ────────────────────────────────────────────────────────────────────
 
@@ -359,6 +362,30 @@ export const ordersPlugin: FastifyPluginAsync = async (app) => {
             .status(404)
             .send({ error: { code: "NOT_FOUND", message: "order not found" } });
         }
+        return reply.send(result);
+      } catch (err: unknown) {
+        return mapServiceError(reply, err);
+      }
+    }
+  );
+
+  // ── POST /commerce/stores/:storeId/orders/:orderId/collect-balance ───────────
+  // EXPLICIT collection of an outstanding balance left by an edit that increased
+  // the order total. We NEVER auto-charge on edit; this endpoint is the only way
+  // the saved payment method is charged for the delta. Admin-gated (money
+  // movement), mirroring the payment capture route.
+  app.post(
+    "/commerce/stores/:storeId/orders/:orderId/collect-balance",
+    {
+      preHandler: [storeAuthAdmin],
+      schema: { params: StoreOrderIdParams },
+    },
+    async (request, reply) => {
+      const { storeId, orderId } = request.params as z.infer<typeof StoreOrderIdParams>;
+      const userId = request.auth?.userId;
+
+      try {
+        const result = await collectOutstandingBalance(orderId, storeId, userId);
         return reply.send(result);
       } catch (err: unknown) {
         return mapServiceError(reply, err);

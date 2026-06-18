@@ -9,6 +9,7 @@
  */
 
 import { getPool, getReadDb, withTx } from "../../db/pool.js";
+import { round2 } from "../../lib/money.js";
 import { config } from "../../config/config.js";
 import { encodeSecretValue } from "../../lib/secrets.js";
 import { dispatchStoreEvent } from "../notifications/service.js";
@@ -857,6 +858,400 @@ export async function createRefund(
       throw err;
     }
   });
+}
+
+// ── Post-edit payment reconciliation ────────────────────────────────────────────
+//
+// When an order's total changes (e.g. orders.editOrderLines re-prices the order
+// after a line edit) the amount already captured no longer matches the new
+// total. This reconciles that delta CONSERVATIVELY:
+//
+//   NEW total < captured  (customer overpaid)  → AUTO-issue a refund for the
+//       difference. Refunds are customer-favourable and low-risk, so this is
+//       safe to do automatically. Idempotent: keyed off (order, expected
+//       refunded amount) so a retried edit landing on the same total does not
+//       double-refund.
+//
+//   NEW total > captured  (customer owes more) → DO NOT auto-charge. Record the
+//       outstanding balance (financial_status → 'partially_paid' + a metadata
+//       marker + an order_event) and wait for an explicit collect-balance call.
+//
+// All work is best-effort relative to the (already committed) edit: callers run
+// this AFTER the edit transaction so a reconciliation failure never rolls the
+// edit back. Errors are returned in the result and recorded as order_events.
+
+export type ReconcileOutcome =
+  | { kind: "none"; captured: string; total: string }
+  | {
+      kind: "refunded";
+      refund_id: string;
+      amount: string;
+      status: string;
+      captured: string;
+      total: string;
+    }
+  | {
+      kind: "refund_skipped";
+      reason: string;
+      amount: string;
+      captured: string;
+      total: string;
+    }
+  | {
+      kind: "balance_outstanding";
+      amount: string;
+      captured: string;
+      total: string;
+    }
+  | { kind: "error"; error: string };
+
+/**
+ * Build the deterministic idempotency marker for an auto-refund. Keyed off the
+ * order id and the amount that SHOULD have been refunded by the time the order
+ * total settled at `total` against `captured`. A retried edit that lands on the
+ * same (captured, total) pair therefore reuses the same key and the refund is
+ * deduped at the refunds(payment_id, idempotency_key) unique index.
+ */
+function editRefundIdempotencyKey(orderId: string, refundAmount: number): string {
+  return `edit-reconcile:${orderId}:refund:${refundAmount.toFixed(2)}`;
+}
+
+/**
+ * Reconcile captured payments against the order's CURRENT total after an edit.
+ *
+ * Runs in its own transaction (locks the order row FOR UPDATE) so it is safe to
+ * call concurrently / on retry. Never throws on a money-movement failure — the
+ * failure is captured, recorded as an order_event, and returned as
+ * `{ kind: "error" }` so the caller can surface it without rolling back the
+ * already-committed edit.
+ */
+export async function reconcilePaymentDelta(
+  orderId: string,
+  storeId: string,
+  userId?: string | undefined
+): Promise<ReconcileOutcome> {
+  // Read order + captured/refunded snapshot under a row lock.
+  let total: number;
+  let captured: number;
+  let alreadyRefunded: number;
+  let financialStatus: string;
+  let refundTargetPaymentId: string | null = null;
+
+  try {
+    const snapshot = await withTx(async (client) => {
+      const { rows: ordRows } = await client.query<{
+        total: string;
+        financial_status: string;
+      }>(
+        `SELECT total::text, financial_status
+         FROM orders WHERE id = $1::uuid AND store_id = $2::uuid
+         FOR UPDATE`,
+        [orderId, storeId]
+      );
+      const ord = ordRows[0];
+      if (!ord) {
+        const e = new Error("order not found");
+        (e as NodeJS.ErrnoException).code = "NOT_FOUND";
+        throw e;
+      }
+
+      const { rows: capRows } = await client.query<{ sum: string }>(
+        `SELECT COALESCE(SUM(amount), 0)::text AS sum
+         FROM payments WHERE order_id = $1::uuid AND status = 'captured'`,
+        [orderId]
+      );
+      const { rows: refRows } = await client.query<{ sum: string }>(
+        `SELECT COALESCE(SUM(amount), 0)::text AS sum
+         FROM refunds
+         WHERE order_id = $1::uuid AND status IN ('pending','processing','succeeded')`,
+        [orderId]
+      );
+
+      // Most-recent captured payment is the target for an auto-refund.
+      const { rows: payRows } = await client.query<{ id: string }>(
+        `SELECT id::text FROM payments
+         WHERE order_id = $1::uuid AND status = 'captured'
+         ORDER BY captured_at DESC NULLS LAST, created_at DESC
+         LIMIT 1`,
+        [orderId]
+      );
+
+      return {
+        total: parseFloat(ord.total) || 0,
+        financial_status: ord.financial_status,
+        captured: parseFloat(capRows[0]?.sum ?? "0") || 0,
+        refunded: parseFloat(refRows[0]?.sum ?? "0") || 0,
+        targetPaymentId: payRows[0]?.id ?? null,
+      };
+    });
+
+    total = snapshot.total;
+    captured = snapshot.captured;
+    alreadyRefunded = snapshot.refunded;
+    financialStatus = snapshot.financial_status;
+    refundTargetPaymentId = snapshot.targetPaymentId;
+  } catch (err) {
+    return { kind: "error", error: err instanceof Error ? err.message : String(err) };
+  }
+
+  // Net amount the customer has actually paid (captured minus refunds).
+  const netPaid = round2(captured - alreadyRefunded);
+  const delta = round2(total - netPaid);
+
+  const totalStr = total.toFixed(2);
+  const capturedStr = netPaid.toFixed(2);
+
+  // No captured money at all → nothing to refund and no balance to "leave
+  // outstanding" against a payment (the order was never paid). Leave the
+  // financial_status as-is (still 'pending').
+  if (captured <= 0) {
+    return { kind: "none", captured: capturedStr, total: totalStr };
+  }
+
+  // Within a cent → no action.
+  if (Math.abs(delta) <= 0.005) {
+    return { kind: "none", captured: capturedStr, total: totalStr };
+  }
+
+  if (delta < 0) {
+    // ── Overpaid → AUTO-refund the difference. ────────────────────────────────
+    const refundAmount = round2(-delta);
+    if (!refundTargetPaymentId) {
+      // Shouldn't happen (captured > 0 implies a captured payment) but guard.
+      return {
+        kind: "refund_skipped",
+        reason: "no captured payment to refund against",
+        amount: refundAmount.toFixed(2),
+        captured: capturedStr,
+        total: totalStr,
+      };
+    }
+
+    try {
+      const result = await createRefund(
+        refundTargetPaymentId,
+        orderId,
+        storeId,
+        {
+          amount: refundAmount.toFixed(2),
+          reason: "other",
+          notes: "auto-refund: order total reduced by edit",
+          idempotency_key: editRefundIdempotencyKey(orderId, refundAmount),
+        },
+        userId
+      );
+      return {
+        kind: "refunded",
+        refund_id: result.id,
+        amount: refundAmount.toFixed(2),
+        status: result.status ?? "pending",
+        captured: capturedStr,
+        total: totalStr,
+      };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      await recordReconcileEvent(orderId, "edit_refund_failed", {
+        amount: refundAmount.toFixed(2),
+        error: msg,
+      });
+      return { kind: "error", error: msg };
+    }
+  }
+
+  // ── Owed → DO NOT auto-charge. Record outstanding balance. ──────────────────
+  const owed = round2(delta);
+  try {
+    await withTx(async (client) => {
+      // Re-lock to write atomically. Only downgrade 'paid' → 'partially_paid';
+      // never override 'refunded'/'voided' states.
+      await client.query(
+        `UPDATE orders
+         SET financial_status = 'partially_paid',
+             metadata = metadata || jsonb_build_object(
+               'outstanding_balance', $2::text,
+               'outstanding_reason', 'order total increased by edit'
+             ),
+             updated_at = now()
+         WHERE id = $1::uuid AND store_id = $3::uuid
+           AND financial_status IN ('pending','authorized','partially_paid','paid')`,
+        [orderId, owed.toFixed(2), storeId]
+      );
+
+      await client
+        .query(
+          `INSERT INTO order_events (order_id, type, data, created_by)
+           VALUES ($1::uuid, 'balance_outstanding',
+                   jsonb_build_object('amount', $2::text, 'captured', $3::text, 'total', $4::text),
+                   $5)`,
+          [orderId, owed.toFixed(2), capturedStr, totalStr, userId ?? null]
+        )
+        .catch(() => undefined);
+    });
+  } catch (err) {
+    return { kind: "error", error: err instanceof Error ? err.message : String(err) };
+  }
+
+  // Suppress unused-var lint for financialStatus (kept for clarity/debugging).
+  void financialStatus;
+
+  return {
+    kind: "balance_outstanding",
+    amount: owed.toFixed(2),
+    captured: capturedStr,
+    total: totalStr,
+  };
+}
+
+/** Best-effort order_event writer for reconciliation diagnostics. */
+async function recordReconcileEvent(
+  orderId: string,
+  type: string,
+  data: Record<string, unknown>
+): Promise<void> {
+  try {
+    const pool = getPool();
+    await pool.query(
+      `INSERT INTO order_events (order_id, type, data, created_by)
+       VALUES ($1::uuid, $2, $3::jsonb, NULL)`,
+      [orderId, type, JSON.stringify(data)]
+    );
+  } catch {
+    // best-effort only
+  }
+}
+
+/**
+ * Explicitly collect the outstanding balance on an order via the saved payment
+ * method. ONLY invoked when a merchant/customer deliberately calls the
+ * collect-balance endpoint — we never auto-charge from reconciliation.
+ *
+ * Captures the difference between the order total and net captured money by
+ * creating a 'pending' payment for the delta against the same provider as the
+ * order's last captured payment, then capturing it (which emits
+ * payment.captured and rolls financial_status forward to paid/partially_paid).
+ *
+ * Idempotent at the balance level: if there is no outstanding balance (already
+ * collected) it returns { collected: false }.
+ */
+export interface CollectBalanceResult {
+  collected: boolean;
+  amount: string;
+  payment_id?: string | undefined;
+}
+
+export async function collectOutstandingBalance(
+  orderId: string,
+  storeId: string,
+  userId?: string | undefined
+): Promise<CollectBalanceResult> {
+  // Compute the outstanding delta and create the pending payment atomically so
+  // two concurrent collect calls can't each create a full-delta payment.
+  const prepared = await withTx(async (client) => {
+    const { rows: ordRows } = await client.query<{
+      total: string;
+      currency: string;
+    }>(
+      `SELECT total::text, currency
+       FROM orders WHERE id = $1::uuid AND store_id = $2::uuid
+       FOR UPDATE`,
+      [orderId, storeId]
+    );
+    const ord = ordRows[0];
+    if (!ord) {
+      const e = new Error("order not found");
+      (e as NodeJS.ErrnoException).code = "NOT_FOUND";
+      throw e;
+    }
+
+    const { rows: capRows } = await client.query<{ sum: string }>(
+      `SELECT COALESCE(SUM(amount), 0)::text AS sum
+       FROM payments WHERE order_id = $1::uuid AND status = 'captured'`,
+      [orderId]
+    );
+    const { rows: pendRows } = await client.query<{ sum: string }>(
+      `SELECT COALESCE(SUM(amount), 0)::text AS sum
+       FROM payments WHERE order_id = $1::uuid AND status = 'pending'`,
+      [orderId]
+    );
+    const { rows: refRows } = await client.query<{ sum: string }>(
+      `SELECT COALESCE(SUM(amount), 0)::text AS sum
+       FROM refunds
+       WHERE order_id = $1::uuid AND status IN ('pending','processing','succeeded')`,
+      [orderId]
+    );
+
+    const total = parseFloat(ord.total) || 0;
+    const captured = parseFloat(capRows[0]?.sum ?? "0") || 0;
+    const pending = parseFloat(pendRows[0]?.sum ?? "0") || 0;
+    const refunded = parseFloat(refRows[0]?.sum ?? "0") || 0;
+
+    // Outstanding = order total − net captured − already-pending captures.
+    const netPaid = round2(captured - refunded);
+    const outstanding = round2(total - netPaid - pending);
+    if (outstanding <= 0.005) {
+      return { outstanding: 0, paymentId: null as string | null, currency: ord.currency };
+    }
+
+    // Mirror the provider/mode of the order's last captured payment so the
+    // capture lands against the saved payment method.
+    const { rows: srcRows } = await client.query<{
+      provider_id: string | null;
+      mode: string;
+      is_test: boolean;
+    }>(
+      `SELECT provider_id::text, mode, is_test FROM payments
+       WHERE order_id = $1::uuid AND status = 'captured'
+       ORDER BY captured_at DESC NULLS LAST, created_at DESC
+       LIMIT 1`,
+      [orderId]
+    );
+    const src = srcRows[0];
+
+    const { rows: insRows } = await client.query<{ id: string }>(
+      `INSERT INTO payments
+         (order_id, provider_id, amount, currency, status, is_test, mode)
+       VALUES ($1::uuid, $2, $3::numeric, $4, 'pending', $5, $6)
+       RETURNING id::text`,
+      [
+        orderId,
+        src?.provider_id ?? null,
+        outstanding,
+        ord.currency,
+        src?.is_test ?? false,
+        src?.mode ?? "live",
+      ]
+    );
+    const paymentId = insRows[0]?.id ?? null;
+    return { outstanding, paymentId, currency: ord.currency };
+  });
+
+  if (prepared.outstanding <= 0 || !prepared.paymentId) {
+    return { collected: false, amount: "0.00" };
+  }
+
+  // Capture the pending balance payment (separate tx — emits payment.captured
+  // and advances financial_status). Capture itself is the explicit charge.
+  await capturePayment(prepared.paymentId, orderId, storeId, userId);
+
+  // Clear the outstanding-balance marker now that it's been collected.
+  try {
+    const pool = getPool();
+    await pool.query(
+      `UPDATE orders
+       SET metadata = (metadata - 'outstanding_balance' - 'outstanding_reason'),
+           updated_at = now()
+       WHERE id = $1::uuid AND store_id = $2::uuid`,
+      [orderId, storeId]
+    );
+  } catch {
+    // best-effort marker cleanup
+  }
+
+  return {
+    collected: true,
+    amount: prepared.outstanding.toFixed(2),
+    payment_id: prepared.paymentId,
+  };
 }
 
 // ── Payment providers (store-level) ───────────────────────────────────────────
