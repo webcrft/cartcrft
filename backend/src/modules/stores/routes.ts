@@ -151,7 +151,7 @@ export const storesPlugin: FastifyPluginAsync = async (app) => {
   app.get(
     "/commerce/stores/:storeId",
     {
-      preHandler: [storeAuthAdmin],
+      preHandler: [storeAuthAdmin("store")],
       schema: { params: StoreIdParams },
     },
     async (request, reply) => {
@@ -170,7 +170,7 @@ export const storesPlugin: FastifyPluginAsync = async (app) => {
   app.put(
     "/commerce/stores/:storeId",
     {
-      preHandler: [storeAuthAdmin],
+      preHandler: [storeAuthAdmin("store")],
       schema: { params: StoreIdParams, body: UpdateStoreBody },
     },
     async (request, reply) => {

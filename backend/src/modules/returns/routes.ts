@@ -97,7 +97,7 @@ export const returnsPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.get(
     "/commerce/stores/:storeId/returns",
-    { preHandler: storeAuthAdmin, schema: { params: StoreParams, querystring: ListReturnsQuerystring } },
+    { preHandler: storeAuthAdmin("returns"), schema: { params: StoreParams, querystring: ListReturnsQuerystring } },
     async (request, reply) => {
       const { returns, total } = await listReturns(request.params.storeId, request.query);
       return reply.send({ returns, total });
@@ -106,7 +106,7 @@ export const returnsPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.get(
     "/commerce/stores/:storeId/returns/:returnId",
-    { preHandler: storeAuthAdmin, schema: { params: ReturnParams } },
+    { preHandler: storeAuthAdmin("returns"), schema: { params: ReturnParams } },
     async (request, reply) => {
       const ret = await getReturn(request.params.storeId, request.params.returnId);
       if (!ret) return reply.status(404).send(notFound("return not found"));
@@ -118,7 +118,7 @@ export const returnsPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.post(
     "/commerce/stores/:storeId/orders/:orderId/returns",
-    { preHandler: storeAuthAdmin, schema: { params: OrderParams, body: CreateReturnBody } },
+    { preHandler: storeAuthAdmin("returns"), schema: { params: OrderParams, body: CreateReturnBody } },
     async (request, reply) => {
       const userId =
         (request as { auth?: { userId?: string } }).auth?.userId ??
@@ -145,7 +145,7 @@ export const returnsPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.put(
     "/commerce/stores/:storeId/returns/:returnId",
-    { preHandler: storeAuthAdmin, schema: { params: ReturnParams, body: UpdateReturnBody } },
+    { preHandler: storeAuthAdmin("returns"), schema: { params: ReturnParams, body: UpdateReturnBody } },
     async (request, reply) => {
       const userId =
         (request as { auth?: { userId?: string } }).auth?.userId ??
@@ -170,7 +170,7 @@ export const returnsPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.post(
     "/commerce/stores/:storeId/returns/:returnId/label",
-    { preHandler: storeAuthWrite, schema: { params: ReturnParams } },
+    { preHandler: storeAuthWrite("returns"), schema: { params: ReturnParams } },
     async (request, reply) => {
       try {
         const label = await generateReturnLabel(
@@ -207,7 +207,7 @@ export const returnsPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.get(
     "/commerce/stores/:storeId/returns/:returnId/events",
-    { preHandler: storeAuthAdmin, schema: { params: ReturnParams } },
+    { preHandler: storeAuthAdmin("returns"), schema: { params: ReturnParams } },
     async (request, reply) => {
       const events = await listReturnEvents(request.params.storeId, request.params.returnId);
       return reply.send({ events });
@@ -216,7 +216,7 @@ export const returnsPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.post(
     "/commerce/stores/:storeId/returns/:returnId/events",
-    { preHandler: storeAuthAdmin, schema: { params: ReturnParams, body: AddReturnEventBody } },
+    { preHandler: storeAuthAdmin("returns"), schema: { params: ReturnParams, body: AddReturnEventBody } },
     async (request, reply) => {
       const userId =
         (request as { auth?: { userId?: string } }).auth?.userId ??

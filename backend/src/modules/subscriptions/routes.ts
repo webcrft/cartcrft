@@ -112,7 +112,7 @@ export const subscriptionsPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.get(
     "/commerce/stores/:storeId/subscription-plans",
-    { preHandler: storeAuthAdmin, schema: { params: StoreParams } },
+    { preHandler: storeAuthAdmin("subscriptions"), schema: { params: StoreParams } },
     async (request, reply) => {
       const plans = await listSubscriptionPlans(request.params.storeId);
       return reply.send({ plans });
@@ -121,7 +121,7 @@ export const subscriptionsPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.get(
     "/commerce/stores/:storeId/subscription-plans/:planId",
-    { preHandler: storeAuthAdmin, schema: { params: PlanParams } },
+    { preHandler: storeAuthAdmin("subscriptions"), schema: { params: PlanParams } },
     async (request, reply) => {
       const plan = await getSubscriptionPlan(request.params.storeId, request.params.planId);
       if (!plan) return reply.status(404).send(notFound("subscription plan not found"));
@@ -131,7 +131,7 @@ export const subscriptionsPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.post(
     "/commerce/stores/:storeId/subscription-plans",
-    { preHandler: storeAuthAdmin, schema: { params: StoreParams, body: CreatePlanBody } },
+    { preHandler: storeAuthAdmin("subscriptions"), schema: { params: StoreParams, body: CreatePlanBody } },
     async (request, reply) => {
       const id = await createSubscriptionPlan(request.params.storeId, request.body);
       return reply.status(201).send({ id });
@@ -140,7 +140,7 @@ export const subscriptionsPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.put(
     "/commerce/stores/:storeId/subscription-plans/:planId",
-    { preHandler: storeAuthAdmin, schema: { params: PlanParams, body: UpdatePlanBody } },
+    { preHandler: storeAuthAdmin("subscriptions"), schema: { params: PlanParams, body: UpdatePlanBody } },
     async (request, reply) => {
       await updateSubscriptionPlan(request.params.storeId, request.params.planId, request.body);
       return reply.send({ ok: true });
@@ -149,7 +149,7 @@ export const subscriptionsPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.delete(
     "/commerce/stores/:storeId/subscription-plans/:planId",
-    { preHandler: storeAuthAdmin, schema: { params: PlanParams } },
+    { preHandler: storeAuthAdmin("subscriptions"), schema: { params: PlanParams } },
     async (request, reply) => {
       await deleteSubscriptionPlan(request.params.storeId, request.params.planId);
       return reply.send({ ok: true });
@@ -160,7 +160,7 @@ export const subscriptionsPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.get(
     "/commerce/stores/:storeId/subscriptions",
-    { preHandler: storeAuthWrite, schema: { params: StoreParams, querystring: ListSubsQuerystring } },
+    { preHandler: storeAuthWrite("subscriptions"), schema: { params: StoreParams, querystring: ListSubsQuerystring } },
     async (request, reply) => {
       const { subscriptions, total } = await listSubscriptions(request.params.storeId, request.query);
       return reply.send({ subscriptions, total });
@@ -169,7 +169,7 @@ export const subscriptionsPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.get(
     "/commerce/stores/:storeId/subscriptions/:subId",
-    { preHandler: storeAuthWrite, schema: { params: SubParams } },
+    { preHandler: storeAuthWrite("subscriptions"), schema: { params: SubParams } },
     async (request, reply) => {
       const sub = await getSubscription(request.params.storeId, request.params.subId);
       if (!sub) return reply.status(404).send(notFound("subscription not found"));
@@ -179,7 +179,7 @@ export const subscriptionsPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.post(
     "/commerce/stores/:storeId/subscriptions",
-    { preHandler: storeAuthWrite, schema: { params: StoreParams, body: CreateSubBody } },
+    { preHandler: storeAuthWrite("subscriptions"), schema: { params: StoreParams, body: CreateSubBody } },
     async (request, reply) => {
       try {
         const result = await createSubscription(
@@ -199,7 +199,7 @@ export const subscriptionsPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.post(
     "/commerce/stores/:storeId/subscriptions/:subId/pause",
-    { preHandler: storeAuthWrite, schema: { params: SubParams } },
+    { preHandler: storeAuthWrite("subscriptions"), schema: { params: SubParams } },
     async (request, reply) => {
       const ok = await pauseSubscription(request.params.storeId, request.params.subId);
       if (!ok) return reply.status(422).send(unprocessable("subscription not found or not in an allowed state for paused"));
@@ -209,7 +209,7 @@ export const subscriptionsPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.post(
     "/commerce/stores/:storeId/subscriptions/:subId/resume",
-    { preHandler: storeAuthWrite, schema: { params: SubParams } },
+    { preHandler: storeAuthWrite("subscriptions"), schema: { params: SubParams } },
     async (request, reply) => {
       const result = await resumeSubscription(
         request.params.storeId,
@@ -224,7 +224,7 @@ export const subscriptionsPlugin: FastifyPluginAsyncZod = async (app) => {
   app.post(
     "/commerce/stores/:storeId/subscriptions/:subId/cancel",
     // Body is optional (cancel_reason only); thin safeParse to handle missing body gracefully
-    { preHandler: storeAuthWrite, schema: { params: SubParams } },
+    { preHandler: storeAuthWrite("subscriptions"), schema: { params: SubParams } },
     async (request, reply) => {
       const body = CancelSubBody.safeParse(request.body ?? {});
       const reason = body.success ? body.data.cancel_reason : undefined;
@@ -236,7 +236,7 @@ export const subscriptionsPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.post(
     "/commerce/stores/:storeId/subscriptions/:subId/bill",
-    { preHandler: storeAuthAdmin, schema: { params: SubParams } },
+    { preHandler: storeAuthAdmin("subscriptions"), schema: { params: SubParams } },
     async (request, reply) => {
       try {
         const result = await billSubscription(

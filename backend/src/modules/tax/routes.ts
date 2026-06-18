@@ -127,7 +127,7 @@ export const taxPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.get(`${base}/tax-categories`, {
     schema: { params: StoreParams },
-    preHandler: [storeAuthAdmin],
+    preHandler: [storeAuthAdmin("tax")],
   }, async (request, reply) => {
     const { storeId } = request.params;
     return reply.send({ categories: await listTaxCategories(storeId) });
@@ -135,7 +135,7 @@ export const taxPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.post(`${base}/tax-categories`, {
     schema: { params: StoreParams, body: CreateCategoryBody },
-    preHandler: [storeAuthAdmin],
+    preHandler: [storeAuthAdmin("tax")],
   }, async (request, reply) => {
     const { storeId } = request.params;
     const result = await createTaxCategory(storeId, request.body);
@@ -147,7 +147,7 @@ export const taxPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.delete(`${base}/tax-categories/:categoryId`, {
     schema: { params: CategoryParams },
-    preHandler: [storeAuthAdmin],
+    preHandler: [storeAuthAdmin("tax")],
   }, async (request, reply) => {
     const { storeId, categoryId } = request.params;
     const deleted = await deleteTaxCategory(storeId, categoryId);
@@ -159,7 +159,7 @@ export const taxPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.get(`${base}/tax-zones`, {
     schema: { params: StoreParams },
-    preHandler: [storeAuthAdmin],
+    preHandler: [storeAuthAdmin("tax")],
   }, async (request, reply) => {
     const { storeId } = request.params;
     return reply.send({ zones: await listTaxZones(storeId) });
@@ -167,7 +167,7 @@ export const taxPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.post(`${base}/tax-zones`, {
     schema: { params: StoreParams, body: CreateZoneBody },
-    preHandler: [storeAuthAdmin],
+    preHandler: [storeAuthAdmin("tax")],
   }, async (request, reply) => {
     const { storeId } = request.params;
     const id = await createTaxZone(storeId, request.body);
@@ -176,7 +176,7 @@ export const taxPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.put(`${base}/tax-zones/:zoneId`, {
     schema: { params: ZoneParams, body: UpdateZoneBody },
-    preHandler: [storeAuthAdmin],
+    preHandler: [storeAuthAdmin("tax")],
   }, async (request, reply) => {
     const { storeId, zoneId } = request.params;
     await updateTaxZone(storeId, zoneId, request.body);
@@ -185,7 +185,7 @@ export const taxPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.delete(`${base}/tax-zones/:zoneId`, {
     schema: { params: ZoneParams },
-    preHandler: [storeAuthAdmin],
+    preHandler: [storeAuthAdmin("tax")],
   }, async (request, reply) => {
     const { storeId, zoneId } = request.params;
     await deleteTaxZone(storeId, zoneId);
@@ -196,7 +196,7 @@ export const taxPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.get(`${base}/tax-zones/:zoneId/rates`, {
     schema: { params: ZoneParams },
-    preHandler: [storeAuthAdmin],
+    preHandler: [storeAuthAdmin("tax")],
   }, async (request, reply) => {
     const { storeId, zoneId } = request.params;
     return reply.send({ rates: await listTaxRates(storeId, zoneId) });
@@ -204,7 +204,7 @@ export const taxPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.post(`${base}/tax-zones/:zoneId/rates`, {
     schema: { params: ZoneParams, body: CreateRateBody },
-    preHandler: [storeAuthAdmin],
+    preHandler: [storeAuthAdmin("tax")],
   }, async (request, reply) => {
     const { storeId, zoneId } = request.params;
     const id = await createTaxRate(storeId, zoneId, request.body);
@@ -214,7 +214,7 @@ export const taxPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.put(`${base}/tax-zones/:zoneId/rates/:rateId`, {
     schema: { params: ZoneRateParams, body: UpdateRateBody },
-    preHandler: [storeAuthAdmin],
+    preHandler: [storeAuthAdmin("tax")],
   }, async (request, reply) => {
     const { storeId, zoneId, rateId } = request.params;
     const ok = await updateTaxRate(storeId, zoneId, rateId, request.body);
@@ -224,7 +224,7 @@ export const taxPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.delete(`${base}/tax-zones/:zoneId/rates/:rateId`, {
     schema: { params: ZoneRateParams },
-    preHandler: [storeAuthAdmin],
+    preHandler: [storeAuthAdmin("tax")],
   }, async (request, reply) => {
     const { storeId, zoneId, rateId } = request.params;
     await deleteTaxRate(storeId, zoneId, rateId);
@@ -235,7 +235,7 @@ export const taxPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.get(`${base}/tax/duty-rates`, {
     schema: { params: StoreParams, querystring: ListDutyQuery },
-    preHandler: [storeAuthRead],
+    preHandler: [storeAuthRead("tax")],
   }, async (request, reply) => {
     const { storeId } = request.params;
     const { destination_country } = request.query;
@@ -244,7 +244,7 @@ export const taxPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.post(`${base}/tax/duty-rates`, {
     schema: { params: StoreParams, body: CreateDutyBody },
-    preHandler: [storeAuthWrite],
+    preHandler: [storeAuthWrite("tax")],
   }, async (request, reply) => {
     const { storeId } = request.params;
     const id = await createDutyRate(storeId, request.body);
@@ -253,7 +253,7 @@ export const taxPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.put(`${base}/tax/duty-rates/:rateId`, {
     schema: { params: DutyRateParams, body: UpdateDutyBody },
-    preHandler: [storeAuthWrite],
+    preHandler: [storeAuthWrite("tax")],
   }, async (request, reply) => {
     const { storeId, rateId } = request.params;
     const ok = await updateDutyRate(storeId, rateId, request.body);
@@ -263,7 +263,7 @@ export const taxPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.delete(`${base}/tax/duty-rates/:rateId`, {
     schema: { params: DutyRateParams },
-    preHandler: [storeAuthWrite],
+    preHandler: [storeAuthWrite("tax")],
   }, async (request, reply) => {
     const { storeId, rateId } = request.params;
     const ok = await deleteDutyRate(storeId, rateId);
@@ -277,7 +277,7 @@ export const taxPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.post(`${base}/tax/landed-cost`, {
     schema: { params: StoreParams, body: LandedCostBody },
-    preHandler: [storeAuthRead],
+    preHandler: [storeAuthRead("tax")],
   }, async (request, reply) => {
     const { storeId } = request.params;
     const b = request.body;
@@ -293,7 +293,7 @@ export const taxPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.get(`${base}/tax/landed-cost`, {
     schema: { params: StoreParams, querystring: LandedCostQuery },
-    preHandler: [storeAuthRead],
+    preHandler: [storeAuthRead("tax")],
   }, async (request, reply) => {
     const { storeId } = request.params;
     const q = request.query;

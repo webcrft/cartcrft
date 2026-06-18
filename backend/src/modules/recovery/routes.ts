@@ -65,7 +65,7 @@ export const recoveryPlugin: FastifyPluginAsync = async (app) => {
   // ── POST /commerce/stores/:storeId/abandoned-carts/:abandonedCartId/resend ─
   app.post(
     "/commerce/stores/:storeId/abandoned-carts/:abandonedCartId/resend",
-    { preHandler: [storeAuthAdmin] },
+    { preHandler: [storeAuthAdmin("recovery")] },
     async (request, reply) => {
       const storeId = request.auth!.storeId;
       const params = ResendParams.safeParse(request.params);

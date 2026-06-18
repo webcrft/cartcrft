@@ -43,7 +43,7 @@ export const channelsPlugin: FastifyPluginAsync = async (app) => {
   // ── GET /channels ────────────────────────────────────────────────────────
   app.get(
     "/commerce/stores/:storeId/channels",
-    { preHandler: [storeAuthRead] },
+    { preHandler: [storeAuthRead("channels")] },
     async (request, reply) => {
       const storeId = request.auth!.storeId;
       const channels = await listChannelSyncs(storeId);
@@ -54,7 +54,7 @@ export const channelsPlugin: FastifyPluginAsync = async (app) => {
   // ── PUT /channels/:channel — enable/configure ─────────────────────────────
   app.put(
     "/commerce/stores/:storeId/channels/:channel",
-    { preHandler: [storeAuthWrite] },
+    { preHandler: [storeAuthWrite("channels")] },
     async (request, reply) => {
       const storeId = request.auth!.storeId;
       const params = ChannelParam.safeParse(request.params);
@@ -82,7 +82,7 @@ export const channelsPlugin: FastifyPluginAsync = async (app) => {
   // ── DELETE /channels/:channel ─────────────────────────────────────────────
   app.delete(
     "/commerce/stores/:storeId/channels/:channel",
-    { preHandler: [storeAuthAdmin] },
+    { preHandler: [storeAuthAdmin("channels")] },
     async (request, reply) => {
       const storeId = request.auth!.storeId;
       const params = ChannelParam.safeParse(request.params);
@@ -99,7 +99,7 @@ export const channelsPlugin: FastifyPluginAsync = async (app) => {
   // ── GET /channels/:channel/items — per-product sync state ─────────────────
   app.get(
     "/commerce/stores/:storeId/channels/:channel/items",
-    { preHandler: [storeAuthRead] },
+    { preHandler: [storeAuthRead("channels")] },
     async (request, reply) => {
       const storeId = request.auth!.storeId;
       const params = ChannelParam.safeParse(request.params);
@@ -122,7 +122,7 @@ export const channelsPlugin: FastifyPluginAsync = async (app) => {
   // ── POST /channels/:channel/sync — trigger a manual sync (admin) ──────────
   app.post(
     "/commerce/stores/:storeId/channels/:channel/sync",
-    { preHandler: [storeAuthAdmin] },
+    { preHandler: [storeAuthAdmin("channels")] },
     async (request, reply) => {
       const storeId = request.auth!.storeId;
       const params = ChannelParam.safeParse(request.params);

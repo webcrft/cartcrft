@@ -175,7 +175,7 @@ export const discountsPlugin: FastifyPluginAsyncZod = async (app) => {
     "/commerce/stores/:storeId/discounts",
     {
       schema: { params: StoreDiscountParams, querystring: ListQuerystring },
-      preHandler: [storeAuthAdmin],
+      preHandler: [storeAuthAdmin("discounts")],
     },
     async (request, reply) => {
       const { storeId } = request.params;
@@ -193,7 +193,7 @@ export const discountsPlugin: FastifyPluginAsyncZod = async (app) => {
     "/commerce/stores/:storeId/discounts",
     {
       schema: { params: StoreDiscountParams, body: CreateDiscountBody },
-      preHandler: [storeAuthAdmin],
+      preHandler: [storeAuthAdmin("discounts")],
     },
     async (request, reply) => {
       const { storeId } = request.params;
@@ -220,7 +220,7 @@ export const discountsPlugin: FastifyPluginAsyncZod = async (app) => {
     "/commerce/stores/:storeId/discounts/validate",
     {
       schema: { params: StoreDiscountParams, querystring: ValidateQuerystring },
-      preHandler: [storeAuthRead],
+      preHandler: [storeAuthRead("discounts")],
     },
     async (request, reply) => {
       const { storeId } = request.params;
@@ -256,7 +256,7 @@ export const discountsPlugin: FastifyPluginAsyncZod = async (app) => {
     "/commerce/stores/:storeId/discounts/:discountId",
     {
       schema: { params: DiscountIdParams },
-      preHandler: [storeAuthAdmin],
+      preHandler: [storeAuthAdmin("discounts")],
     },
     async (request, reply) => {
       const { storeId, discountId } = request.params;
@@ -275,7 +275,7 @@ export const discountsPlugin: FastifyPluginAsyncZod = async (app) => {
     "/commerce/stores/:storeId/discounts/:discountId",
     {
       schema: { params: DiscountIdParams, body: UpdateDiscountBody },
-      preHandler: [storeAuthAdmin],
+      preHandler: [storeAuthAdmin("discounts")],
     },
     async (request, reply) => {
       const { storeId, discountId } = request.params;
@@ -306,7 +306,7 @@ export const discountsPlugin: FastifyPluginAsyncZod = async (app) => {
     "/commerce/stores/:storeId/discounts/:discountId",
     {
       schema: { params: DiscountIdParams },
-      preHandler: [storeAuthAdmin],
+      preHandler: [storeAuthAdmin("discounts")],
     },
     async (request, reply) => {
       const { storeId, discountId } = request.params;
@@ -327,7 +327,7 @@ export const discountsPlugin: FastifyPluginAsyncZod = async (app) => {
     "/commerce/stores/:storeId/auto-discounts",
     {
       schema: { params: StoreDiscountParams, querystring: ListQuerystring },
-      preHandler: [storeAuthAdmin],
+      preHandler: [storeAuthAdmin("discounts")],
     },
     async (request, reply) => {
       const { storeId } = request.params;
@@ -345,7 +345,7 @@ export const discountsPlugin: FastifyPluginAsyncZod = async (app) => {
     "/commerce/stores/:storeId/auto-discounts",
     {
       schema: { params: StoreDiscountParams, body: CreateAutoDiscountBody },
-      preHandler: [storeAuthAdmin],
+      preHandler: [storeAuthAdmin("discounts")],
     },
     async (request, reply) => {
       const { storeId } = request.params;
@@ -359,7 +359,7 @@ export const discountsPlugin: FastifyPluginAsyncZod = async (app) => {
     "/commerce/stores/:storeId/auto-discounts/:discountId",
     {
       schema: { params: DiscountIdParams },
-      preHandler: [storeAuthAdmin],
+      preHandler: [storeAuthAdmin("discounts")],
     },
     async (request, reply) => {
       const { storeId, discountId } = request.params;
@@ -378,7 +378,7 @@ export const discountsPlugin: FastifyPluginAsyncZod = async (app) => {
     "/commerce/stores/:storeId/auto-discounts/:discountId",
     {
       schema: { params: DiscountIdParams, body: UpdateAutoDiscountBody },
-      preHandler: [storeAuthAdmin],
+      preHandler: [storeAuthAdmin("discounts")],
     },
     async (request, reply) => {
       const { storeId, discountId } = request.params;
@@ -397,7 +397,7 @@ export const discountsPlugin: FastifyPluginAsyncZod = async (app) => {
     "/commerce/stores/:storeId/auto-discounts/:discountId",
     {
       schema: { params: DiscountIdParams },
-      preHandler: [storeAuthAdmin],
+      preHandler: [storeAuthAdmin("discounts")],
     },
     async (request, reply) => {
       const { storeId, discountId } = request.params;

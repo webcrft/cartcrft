@@ -48,7 +48,7 @@ export const digitalPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.get(
     "/commerce/stores/:storeId/orders/:orderId/download-links",
-    { preHandler: storeAuthWrite, schema: { params: OrderParams } },
+    { preHandler: storeAuthWrite("digital"), schema: { params: OrderParams } },
     async (request, reply) => {
       const links = await listDownloadLinks(request.params.storeId, request.params.orderId);
       return reply.send({ links });
@@ -59,7 +59,7 @@ export const digitalPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.post(
     "/commerce/stores/:storeId/orders/:orderId/download-links",
-    { preHandler: storeAuthWrite, schema: { params: OrderParams, body: GenerateLinksBody } },
+    { preHandler: storeAuthWrite("digital"), schema: { params: OrderParams, body: GenerateLinksBody } },
     async (request, reply) => {
       try {
         const result = await generateDownloadLinks(

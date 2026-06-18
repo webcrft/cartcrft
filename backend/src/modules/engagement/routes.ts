@@ -72,7 +72,7 @@ export const engagementPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.get(
     "/commerce/stores/:storeId/wishlists",
-    { preHandler: storeAuthRead, schema: { params: StoreParams, querystring: ListWishlistsQuerystring } },
+    { preHandler: storeAuthRead("engagement"), schema: { params: StoreParams, querystring: ListWishlistsQuerystring } },
     async (request, reply) => {
       const customerId = request.query.customer_id;
       const wishlists = await listWishlists(request.params.storeId, customerId);
@@ -82,7 +82,7 @@ export const engagementPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.post(
     "/commerce/stores/:storeId/wishlists",
-    { preHandler: storeAuthRead, schema: { params: StoreParams, body: CreateWishlistBody } },
+    { preHandler: storeAuthRead("engagement"), schema: { params: StoreParams, body: CreateWishlistBody } },
     async (request, reply) => {
       if (!request.body.customer_id && !request.body.session_id) {
         return reply.status(400).send({ error: { code: "VALIDATION_ERROR", message: "customer_id or session_id required" } });
@@ -96,7 +96,7 @@ export const engagementPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.get(
     "/commerce/stores/:storeId/wishlists/:wishlistId",
-    { preHandler: storeAuthRead, schema: { params: WishlistParams } },
+    { preHandler: storeAuthRead("engagement"), schema: { params: WishlistParams } },
     async (request, reply) => {
       const wl = await getWishlist(request.params.storeId, request.params.wishlistId);
       if (!wl) return reply.status(404).send(notFound("wishlist not found"));
@@ -106,7 +106,7 @@ export const engagementPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.delete(
     "/commerce/stores/:storeId/wishlists/:wishlistId",
-    { preHandler: storeAuthWrite, schema: { params: WishlistParams } },
+    { preHandler: storeAuthWrite("engagement"), schema: { params: WishlistParams } },
     async (request, reply) => {
       const ok = await deleteWishlist(request.params.storeId, request.params.wishlistId);
       if (!ok) return reply.status(404).send(notFound("wishlist not found"));
@@ -116,7 +116,7 @@ export const engagementPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.post(
     "/commerce/stores/:storeId/wishlists/:wishlistId/items",
-    { preHandler: storeAuthRead, schema: { params: WishlistParams, body: AddWishlistItemBody } },
+    { preHandler: storeAuthRead("engagement"), schema: { params: WishlistParams, body: AddWishlistItemBody } },
     async (request, reply) => {
       const item = await addWishlistItem(
         request.params.storeId,
@@ -130,7 +130,7 @@ export const engagementPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.delete(
     "/commerce/stores/:storeId/wishlists/:wishlistId/items/:itemId",
-    { preHandler: storeAuthRead, schema: { params: WishlistItemParams } },
+    { preHandler: storeAuthRead("engagement"), schema: { params: WishlistItemParams } },
     async (request, reply) => {
       const ok = await removeWishlistItem(
         request.params.storeId,
@@ -164,7 +164,7 @@ export const engagementPlugin: FastifyPluginAsyncZod = async (app) => {
   app.post(
     "/commerce/stores/:storeId/abandoned-carts/:cartId/recover",
     // Body is optional (order_id only); thin safeParse to handle missing body gracefully
-    { preHandler: storeAuthAdmin, schema: { params: AbandonedCartParams } },
+    { preHandler: storeAuthAdmin("engagement"), schema: { params: AbandonedCartParams } },
     async (request, reply) => {
       const body = RecoverCartBody.safeParse(request.body ?? {});
       const orderId = body.success ? (body.data.order_id ?? undefined) : undefined;

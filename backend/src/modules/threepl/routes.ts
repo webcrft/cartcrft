@@ -40,7 +40,7 @@ export const threeplPlugin: FastifyPluginAsync = async (app) => {
   // ── GET /threepl/providers ────────────────────────────────────────────────
   app.get(
     "/commerce/stores/:storeId/threepl/providers",
-    { preHandler: [storeAuthRead] },
+    { preHandler: [storeAuthRead("threepl")] },
     async (request, reply) => {
       const storeId = request.auth!.storeId;
       const providers = await listThreePlProviders(storeId);
@@ -51,7 +51,7 @@ export const threeplPlugin: FastifyPluginAsync = async (app) => {
   // ── PUT /threepl/providers/:provider — enable/configure ───────────────────
   app.put(
     "/commerce/stores/:storeId/threepl/providers/:provider",
-    { preHandler: [storeAuthWrite] },
+    { preHandler: [storeAuthWrite("threepl")] },
     async (request, reply) => {
       const storeId = request.auth!.storeId;
       const params = ProviderParam.safeParse(request.params);
@@ -79,7 +79,7 @@ export const threeplPlugin: FastifyPluginAsync = async (app) => {
   // ── DELETE /threepl/providers/:provider ───────────────────────────────────
   app.delete(
     "/commerce/stores/:storeId/threepl/providers/:provider",
-    { preHandler: [storeAuthAdmin] },
+    { preHandler: [storeAuthAdmin("threepl")] },
     async (request, reply) => {
       const storeId = request.auth!.storeId;
       const params = ProviderParam.safeParse(request.params);
@@ -96,7 +96,7 @@ export const threeplPlugin: FastifyPluginAsync = async (app) => {
   // ── POST /orders/:orderId/threepl/:provider/submit (admin) ────────────────
   app.post(
     "/commerce/stores/:storeId/orders/:orderId/threepl/:provider/submit",
-    { preHandler: [storeAuthAdmin] },
+    { preHandler: [storeAuthAdmin("threepl")] },
     async (request, reply) => {
       const storeId = request.auth!.storeId;
       const params = z
@@ -131,7 +131,7 @@ export const threeplPlugin: FastifyPluginAsync = async (app) => {
   // ── GET /threepl/fulfillments — list (read) ───────────────────────────────
   app.get(
     "/commerce/stores/:storeId/threepl/fulfillments",
-    { preHandler: [storeAuthRead] },
+    { preHandler: [storeAuthRead("threepl")] },
     async (request, reply) => {
       const storeId = request.auth!.storeId;
       const q = z
@@ -150,7 +150,7 @@ export const threeplPlugin: FastifyPluginAsync = async (app) => {
   // ── GET /orders/:orderId/threepl — an order's 3PL fulfillment status (read) ─
   app.get(
     "/commerce/stores/:storeId/orders/:orderId/threepl",
-    { preHandler: [storeAuthRead] },
+    { preHandler: [storeAuthRead("threepl")] },
     async (request, reply) => {
       const storeId = request.auth!.storeId;
       const params = z.object({ orderId: z.string().uuid() }).safeParse(request.params);

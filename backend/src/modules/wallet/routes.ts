@@ -100,7 +100,7 @@ export const walletPlugin: FastifyPluginAsyncZod = async (app) => {
     "/commerce/stores/:storeId/customers/:customerId/credits",
     {
       schema: { params: StoreCustomerParams, querystring: ListQuerystring },
-      preHandler: [storeAuthAdmin],
+      preHandler: [storeAuthAdmin("wallet")],
     },
     async (request, reply) => {
       const { storeId, customerId } = request.params;
@@ -115,7 +115,7 @@ export const walletPlugin: FastifyPluginAsyncZod = async (app) => {
     "/commerce/stores/:storeId/customers/:customerId/credits/issue",
     {
       schema: { params: StoreCustomerParams, body: IssueCreditBody },
-      preHandler: [storeAuthAdmin],
+      preHandler: [storeAuthAdmin("wallet")],
     },
     async (request, reply) => {
       const { storeId, customerId } = request.params;
@@ -149,7 +149,7 @@ export const walletPlugin: FastifyPluginAsyncZod = async (app) => {
     "/commerce/stores/:storeId/customers/:customerId/credits/adjust",
     {
       schema: { params: StoreCustomerParams, body: AdjustCreditBody },
-      preHandler: [storeAuthAdmin],
+      preHandler: [storeAuthAdmin("wallet")],
     },
     async (request, reply) => {
       const { storeId, customerId } = request.params;
@@ -199,7 +199,7 @@ export const walletPlugin: FastifyPluginAsyncZod = async (app) => {
     "/commerce/stores/:storeId/customers/:customerId/credits/transactions",
     {
       schema: { params: StoreCustomerParams, querystring: ListQuerystring },
-      preHandler: [storeAuthAdmin],
+      preHandler: [storeAuthAdmin("wallet")],
     },
     async (request, reply) => {
       const { storeId, customerId } = request.params;
@@ -220,7 +220,7 @@ export const walletPlugin: FastifyPluginAsyncZod = async (app) => {
     "/commerce/stores/:storeId/gift-cards",
     {
       schema: { params: StoreParams, querystring: ListQuerystring },
-      preHandler: [storeAuthAdmin],
+      preHandler: [storeAuthAdmin("wallet")],
     },
     async (request, reply) => {
       const { storeId } = request.params;
@@ -238,7 +238,7 @@ export const walletPlugin: FastifyPluginAsyncZod = async (app) => {
     "/commerce/stores/:storeId/gift-cards",
     {
       schema: { params: StoreParams, body: CreateGiftCardBody },
-      preHandler: [storeAuthAdmin],
+      preHandler: [storeAuthAdmin("wallet")],
     },
     async (request, reply) => {
       const { storeId } = request.params;
@@ -265,7 +265,7 @@ export const walletPlugin: FastifyPluginAsyncZod = async (app) => {
     "/commerce/stores/:storeId/gift-cards/lookup",
     {
       schema: { params: StoreParams, querystring: LookupQuerystring },
-      preHandler: [storeAuthRead],
+      preHandler: [storeAuthRead("wallet")],
     },
     async (request, reply) => {
       const { storeId } = request.params;
@@ -298,7 +298,7 @@ export const walletPlugin: FastifyPluginAsyncZod = async (app) => {
     "/commerce/stores/:storeId/gift-cards/:giftCardId",
     {
       schema: { params: GiftCardIdParams },
-      preHandler: [storeAuthAdmin],
+      preHandler: [storeAuthAdmin("wallet")],
     },
     async (request, reply) => {
       const { storeId, giftCardId } = request.params;
@@ -317,7 +317,7 @@ export const walletPlugin: FastifyPluginAsyncZod = async (app) => {
     "/commerce/stores/:storeId/gift-cards/:giftCardId/disable",
     {
       schema: { params: GiftCardIdParams },
-      preHandler: [storeAuthAdmin],
+      preHandler: [storeAuthAdmin("wallet")],
     },
     async (request, reply) => {
       const { storeId, giftCardId } = request.params;

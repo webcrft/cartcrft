@@ -93,7 +93,7 @@ export const integrationsPlugin: FastifyPluginAsyncZod = async (app) => {
   // ── GET /commerce/stores/:storeId/integrations ───────────────────────────
   app.get(
     "/commerce/stores/:storeId/integrations",
-    { preHandler: [storeAuthAdmin], schema: { params: StoreIdParams } },
+    { preHandler: [storeAuthAdmin("integrations")], schema: { params: StoreIdParams } },
     async (request, reply) => {
       const integrations = await listStoreIntegrations(request.params.storeId);
       return reply.send({ integrations });
@@ -103,7 +103,7 @@ export const integrationsPlugin: FastifyPluginAsyncZod = async (app) => {
   // ── POST /commerce/stores/:storeId/integrations ──────────────────────────
   app.post(
     "/commerce/stores/:storeId/integrations",
-    { preHandler: [storeAuthAdmin], schema: { params: StoreIdParams, body: UpsertIntegrationBody } },
+    { preHandler: [storeAuthAdmin("integrations")], schema: { params: StoreIdParams, body: UpsertIntegrationBody } },
     async (request, reply) => {
       try {
         const result = await upsertStoreIntegration(request.params.storeId, request.body);
@@ -130,7 +130,7 @@ export const integrationsPlugin: FastifyPluginAsyncZod = async (app) => {
   // ── DELETE /commerce/stores/:storeId/integrations/:integrationId ─────────
   app.delete(
     "/commerce/stores/:storeId/integrations/:integrationId",
-    { preHandler: [storeAuthAdmin], schema: { params: IntegrationIdParams } },
+    { preHandler: [storeAuthAdmin("integrations")], schema: { params: IntegrationIdParams } },
     async (request, reply) => {
       await deleteStoreIntegration(request.params.integrationId, request.params.storeId);
       return reply.send({ ok: true });
@@ -140,7 +140,7 @@ export const integrationsPlugin: FastifyPluginAsyncZod = async (app) => {
   // ── GET /commerce/stores/:storeId/tracking-pixels ────────────────────────
   app.get(
     "/commerce/stores/:storeId/tracking-pixels",
-    { preHandler: [storeAuthAdmin], schema: { params: StoreIdParams } },
+    { preHandler: [storeAuthAdmin("integrations")], schema: { params: StoreIdParams } },
     async (request, reply) => {
       const pixels = await listTrackingPixels(request.params.storeId);
       return reply.send({ pixels });
@@ -150,7 +150,7 @@ export const integrationsPlugin: FastifyPluginAsyncZod = async (app) => {
   // ── POST /commerce/stores/:storeId/tracking-pixels ───────────────────────
   app.post(
     "/commerce/stores/:storeId/tracking-pixels",
-    { preHandler: [storeAuthAdmin], schema: { params: StoreIdParams, body: UpsertPixelBody } },
+    { preHandler: [storeAuthAdmin("integrations")], schema: { params: StoreIdParams, body: UpsertPixelBody } },
     async (request, reply) => {
       try {
         const id = await upsertTrackingPixel(request.params.storeId, request.body);
@@ -167,7 +167,7 @@ export const integrationsPlugin: FastifyPluginAsyncZod = async (app) => {
   // ── DELETE /commerce/stores/:storeId/tracking-pixels/:pixelId ────────────
   app.delete(
     "/commerce/stores/:storeId/tracking-pixels/:pixelId",
-    { preHandler: [storeAuthAdmin], schema: { params: PixelIdParams } },
+    { preHandler: [storeAuthAdmin("integrations")], schema: { params: PixelIdParams } },
     async (request, reply) => {
       await deleteTrackingPixel(request.params.pixelId, request.params.storeId);
       return reply.send({ ok: true });

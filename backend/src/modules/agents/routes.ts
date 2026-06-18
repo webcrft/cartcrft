@@ -128,7 +128,7 @@ export const agentsPlugin: FastifyPluginAsyncZod = async (app) => {
   // ── POST /commerce/stores/:storeId/agents — create agent ─────────────────
   app.post(
     "/commerce/stores/:storeId/agents",
-    { preHandler: [storeAuthAdmin], schema: { params: StoreParams, body: CreateAgentBody } },
+    { preHandler: [storeAuthAdmin("agents")], schema: { params: StoreParams, body: CreateAgentBody } },
     async (request, reply) => {
       const storeId = request.auth!.storeId;
       try {
@@ -148,7 +148,7 @@ export const agentsPlugin: FastifyPluginAsyncZod = async (app) => {
   // ── GET /commerce/stores/:storeId/agents — list agents ───────────────────
   app.get(
     "/commerce/stores/:storeId/agents",
-    { preHandler: [storeAuthAdmin], schema: { params: StoreParams, querystring: ListQuerystring } },
+    { preHandler: [storeAuthAdmin("agents")], schema: { params: StoreParams, querystring: ListQuerystring } },
     async (request, reply) => {
       const storeId = request.auth!.storeId;
       const listOpts: { limit?: number; offset?: number } = {};
@@ -162,7 +162,7 @@ export const agentsPlugin: FastifyPluginAsyncZod = async (app) => {
   // ── GET /commerce/stores/:storeId/agents/:agentId — get agent ────────────
   app.get(
     "/commerce/stores/:storeId/agents/:agentId",
-    { preHandler: [storeAuthAdmin], schema: { params: StoreAgentParams } },
+    { preHandler: [storeAuthAdmin("agents")], schema: { params: StoreAgentParams } },
     async (request, reply) => {
       const storeId = request.auth!.storeId;
       const agent = await getAgent(storeId, request.params.agentId);
@@ -176,7 +176,7 @@ export const agentsPlugin: FastifyPluginAsyncZod = async (app) => {
   // ── PUT /commerce/stores/:storeId/agents/:agentId — update agent ─────────
   app.put(
     "/commerce/stores/:storeId/agents/:agentId",
-    { preHandler: [storeAuthAdmin], schema: { params: StoreAgentParams, body: UpdateAgentBody } },
+    { preHandler: [storeAuthAdmin("agents")], schema: { params: StoreAgentParams, body: UpdateAgentBody } },
     async (request, reply) => {
       const storeId = request.auth!.storeId;
       const updated = await updateAgent(storeId, request.params.agentId, request.body as import("./types.js").UpdateAgentInput);
@@ -190,7 +190,7 @@ export const agentsPlugin: FastifyPluginAsyncZod = async (app) => {
   // ── DELETE /commerce/stores/:storeId/agents/:agentId — revoke agent ──────
   app.delete(
     "/commerce/stores/:storeId/agents/:agentId",
-    { preHandler: [storeAuthAdmin], schema: { params: StoreAgentParams } },
+    { preHandler: [storeAuthAdmin("agents")], schema: { params: StoreAgentParams } },
     async (request, reply) => {
       const storeId = request.auth!.storeId;
       const revoked = await revokeAgent(storeId, request.params.agentId);
@@ -204,7 +204,7 @@ export const agentsPlugin: FastifyPluginAsyncZod = async (app) => {
   // ── GET /commerce/stores/:storeId/agents/:agentId/audit-log ──────────────
   app.get(
     "/commerce/stores/:storeId/agents/:agentId/audit-log",
-    { preHandler: [storeAuthAdmin], schema: { params: StoreAgentParams, querystring: ListQuerystring } },
+    { preHandler: [storeAuthAdmin("agents")], schema: { params: StoreAgentParams, querystring: ListQuerystring } },
     async (request, reply) => {
       const storeId = request.auth!.storeId;
       const auditOpts: { agentId?: string; limit?: number; offset?: number; status?: string } = {
@@ -221,7 +221,7 @@ export const agentsPlugin: FastifyPluginAsyncZod = async (app) => {
   // ── POST /commerce/stores/:storeId/agents/:agentId/mandates — create ──────
   app.post(
     "/commerce/stores/:storeId/agents/:agentId/mandates",
-    { preHandler: [storeAuthAdmin], schema: { params: StoreAgentParams, body: CreateMandateBody } },
+    { preHandler: [storeAuthAdmin("agents")], schema: { params: StoreAgentParams, body: CreateMandateBody } },
     async (request, reply) => {
       const storeId = request.auth!.storeId;
       try {
@@ -253,7 +253,7 @@ export const agentsPlugin: FastifyPluginAsyncZod = async (app) => {
   // ── GET /commerce/stores/:storeId/agents/:agentId/mandates — list ─────────
   app.get(
     "/commerce/stores/:storeId/agents/:agentId/mandates",
-    { preHandler: [storeAuthAdmin], schema: { params: StoreAgentParams, querystring: ListQuerystring } },
+    { preHandler: [storeAuthAdmin("agents")], schema: { params: StoreAgentParams, querystring: ListQuerystring } },
     async (request, reply) => {
       const storeId = request.auth!.storeId;
       const mandOpts: { limit?: number; offset?: number; type?: string; active?: boolean } = {};
@@ -269,7 +269,7 @@ export const agentsPlugin: FastifyPluginAsyncZod = async (app) => {
   // ── GET /commerce/stores/:storeId/agents/:agentId/mandates/:mandateId/verify
   app.get(
     "/commerce/stores/:storeId/agents/:agentId/mandates/:mandateId/verify",
-    { preHandler: [storeAuthAdmin], schema: { params: MandateParams } },
+    { preHandler: [storeAuthAdmin("agents")], schema: { params: MandateParams } },
     async (request, reply) => {
       const storeId = request.auth!.storeId;
       const result = await verifyMandate(storeId, request.params.mandateId);
@@ -282,7 +282,7 @@ export const agentsPlugin: FastifyPluginAsyncZod = async (app) => {
   app.delete(
     "/commerce/stores/:storeId/agents/:agentId/mandates/:mandateId",
     // Body is optional (reason only); thin safeParse to handle missing body gracefully
-    { preHandler: [storeAuthAdmin], schema: { params: MandateParams } },
+    { preHandler: [storeAuthAdmin("agents")], schema: { params: MandateParams } },
     async (request, reply) => {
       const storeId = request.auth!.storeId;
       const body = RevokeBody.safeParse(request.body ?? {});
@@ -301,7 +301,7 @@ export const agentsPlugin: FastifyPluginAsyncZod = async (app) => {
   // ── GET /commerce/stores/:storeId/agents/audit-log — store-level agent audit log ─
   app.get(
     "/commerce/stores/:storeId/agents/audit-log",
-    { preHandler: [storeAuthAdmin], schema: { params: StoreParams, querystring: ListQuerystring } },
+    { preHandler: [storeAuthAdmin("agents")], schema: { params: StoreParams, querystring: ListQuerystring } },
     async (request, reply) => {
       const storeId = request.auth!.storeId;
       const storeAuditOpts: { agentId?: string; limit?: number; offset?: number; status?: string } = {};

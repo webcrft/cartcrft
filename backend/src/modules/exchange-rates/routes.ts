@@ -29,7 +29,7 @@ export const exchangeRatesPlugin: FastifyPluginAsync = async (app) => {
   app.get(
     "/commerce/stores/:storeId/exchange-rates",
     {
-      preHandler: [storeAuthRead],
+      preHandler: [storeAuthRead("exchange-rates")],
       schema: { params: StoreIdParams },
     },
     async (request, reply) => {

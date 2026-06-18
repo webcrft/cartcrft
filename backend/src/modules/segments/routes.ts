@@ -86,7 +86,7 @@ const MembersQuery = z.object({
 export const segmentsPlugin: FastifyPluginAsyncZod = async (app) => {
   app.get(
     "/commerce/stores/:storeId/segments",
-    { preHandler: storeAuthRead, schema: { params: StoreParams } },
+    { preHandler: storeAuthRead("segments"), schema: { params: StoreParams } },
     async (request, reply) => {
       const segments = await listSegments(request.params.storeId);
       return reply.send({ segments });
@@ -95,7 +95,7 @@ export const segmentsPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.post(
     "/commerce/stores/:storeId/segments",
-    { preHandler: storeAuthWrite, schema: { params: StoreParams, body: CreateSegmentBody } },
+    { preHandler: storeAuthWrite("segments"), schema: { params: StoreParams, body: CreateSegmentBody } },
     async (request, reply) => {
       try {
         const segment = await createSegment(request.params.storeId, {
@@ -117,7 +117,7 @@ export const segmentsPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.get(
     "/commerce/stores/:storeId/segments/:segmentId",
-    { preHandler: storeAuthRead, schema: { params: SegmentParams } },
+    { preHandler: storeAuthRead("segments"), schema: { params: SegmentParams } },
     async (request, reply) => {
       const segment = await getSegment(request.params.storeId, request.params.segmentId);
       if (!segment) return reply.status(404).send(notFound("segment not found"));
@@ -127,7 +127,7 @@ export const segmentsPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.put(
     "/commerce/stores/:storeId/segments/:segmentId",
-    { preHandler: storeAuthWrite, schema: { params: SegmentParams, body: UpdateSegmentBody } },
+    { preHandler: storeAuthWrite("segments"), schema: { params: SegmentParams, body: UpdateSegmentBody } },
     async (request, reply) => {
       try {
         const segment = await updateSegment(request.params.storeId, request.params.segmentId, {
@@ -150,7 +150,7 @@ export const segmentsPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.delete(
     "/commerce/stores/:storeId/segments/:segmentId",
-    { preHandler: storeAuthAdmin, schema: { params: SegmentParams } },
+    { preHandler: storeAuthAdmin("segments"), schema: { params: SegmentParams } },
     async (request, reply) => {
       const ok = await deleteSegment(request.params.storeId, request.params.segmentId);
       if (!ok) return reply.status(404).send(notFound("segment not found"));
@@ -160,7 +160,7 @@ export const segmentsPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.get(
     "/commerce/stores/:storeId/segments/:segmentId/members",
-    { preHandler: storeAuthRead, schema: { params: SegmentParams, querystring: MembersQuery } },
+    { preHandler: storeAuthRead("segments"), schema: { params: SegmentParams, querystring: MembersQuery } },
     async (request, reply) => {
       const result = await evaluateSegment(request.params.storeId, request.params.segmentId, {
         ...(request.query.limit !== undefined ? { limit: request.query.limit } : {}),
@@ -173,7 +173,7 @@ export const segmentsPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.get(
     "/commerce/stores/:storeId/customers/:customerId/segments",
-    { preHandler: storeAuthRead, schema: { params: CustomerParams } },
+    { preHandler: storeAuthRead("segments"), schema: { params: CustomerParams } },
     async (request, reply) => {
       const segments = await customerSegments(request.params.storeId, request.params.customerId);
       return reply.send({ segments });

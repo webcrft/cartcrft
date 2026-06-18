@@ -254,7 +254,7 @@ export const customerAuthPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.get(`${base}/auth/config`, {
     schema: { params: StoreIdParams },
-    preHandler: [storeAuthAdmin],
+    preHandler: [storeAuthAdmin("customers")],
   }, async (request, reply) => {
     const { storeId } = request.params;
     const pool = getPool();
@@ -264,7 +264,7 @@ export const customerAuthPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.put(`${base}/auth/config`, {
     schema: { params: StoreIdParams, body: AuthConfigBody },
-    preHandler: [storeAuthAdmin],
+    preHandler: [storeAuthAdmin("customers")],
   }, async (request, reply) => {
     const { storeId } = request.params;
     const pool = getPool();
@@ -275,7 +275,7 @@ export const customerAuthPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.get(`${base}/auth/email/log`, {
     schema: { params: StoreIdParams },
-    preHandler: [storeAuthAdmin],
+    preHandler: [storeAuthAdmin("customers")],
   }, async (request, reply) => {
     const { storeId } = request.params;
     const entries = await getEmailLog(getReadDb(), storeId);
@@ -284,7 +284,7 @@ export const customerAuthPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.post(`${base}/auth/email/test`, {
     schema: { params: StoreIdParams, body: TestEmailBody },
-    preHandler: [storeAuthAdmin],
+    preHandler: [storeAuthAdmin("customers")],
   }, async (request, reply) => {
     const { storeId } = request.params;
     const pool = getPool();
@@ -301,7 +301,7 @@ export const customerAuthPlugin: FastifyPluginAsyncZod = async (app) => {
   // success would silently hide misconfigured credentials.
   app.post(`${base}/auth/email/connect`, {
     schema: { params: StoreIdParams },
-    preHandler: [storeAuthAdmin],
+    preHandler: [storeAuthAdmin("customers")],
   }, async (_request, reply) => {
     return reply.status(501).send({
       error: {

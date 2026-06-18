@@ -192,7 +192,7 @@ export const feedsPlugin: FastifyPluginAsyncZod = async (app) => {
   // ── GET /commerce/stores/:storeId/merchant-feeds ─────────────────────────
   app.get(
     "/commerce/stores/:storeId/merchant-feeds",
-    { preHandler: [storeAuthAdmin], schema: { params: StoreIdParams } },
+    { preHandler: [storeAuthAdmin("feeds")], schema: { params: StoreIdParams } },
     async (request, reply) => {
       const feeds = await listMerchantFeeds(request.params.storeId);
       return reply.send({ feeds });
@@ -202,7 +202,7 @@ export const feedsPlugin: FastifyPluginAsyncZod = async (app) => {
   // ── POST /commerce/stores/:storeId/merchant-feeds ─────────────────────────
   app.post(
     "/commerce/stores/:storeId/merchant-feeds",
-    { preHandler: [storeAuthAdmin], schema: { params: StoreIdParams, body: CreateMerchantFeedBody } },
+    { preHandler: [storeAuthAdmin("feeds")], schema: { params: StoreIdParams, body: CreateMerchantFeedBody } },
     async (request, reply) => {
       try {
         const id = await createMerchantFeed(request.params.storeId, request.body);
@@ -216,7 +216,7 @@ export const feedsPlugin: FastifyPluginAsyncZod = async (app) => {
   // ── PUT /commerce/stores/:storeId/merchant-feeds/:feedId ─────────────────
   app.put(
     "/commerce/stores/:storeId/merchant-feeds/:feedId",
-    { preHandler: [storeAuthAdmin], schema: { params: FeedParams, body: UpdateMerchantFeedBody } },
+    { preHandler: [storeAuthAdmin("feeds")], schema: { params: FeedParams, body: UpdateMerchantFeedBody } },
     async (request, reply) => {
       const updated = await updateMerchantFeed(request.params.feedId, request.params.storeId, request.body);
       if (!updated) {
@@ -229,7 +229,7 @@ export const feedsPlugin: FastifyPluginAsyncZod = async (app) => {
   // ── DELETE /commerce/stores/:storeId/merchant-feeds/:feedId ──────────────
   app.delete(
     "/commerce/stores/:storeId/merchant-feeds/:feedId",
-    { preHandler: [storeAuthAdmin], schema: { params: FeedParams } },
+    { preHandler: [storeAuthAdmin("feeds")], schema: { params: FeedParams } },
     async (request, reply) => {
       await deleteMerchantFeed(request.params.feedId, request.params.storeId);
       return reply.send({ ok: true });
@@ -239,7 +239,7 @@ export const feedsPlugin: FastifyPluginAsyncZod = async (app) => {
   // ── GET /commerce/stores/:storeId/variants/:variantId/feed-data ───────────
   app.get(
     "/commerce/stores/:storeId/variants/:variantId/feed-data",
-    { preHandler: [storeAuthRead], schema: { params: VariantFeedParams } },
+    { preHandler: [storeAuthRead("feeds")], schema: { params: VariantFeedParams } },
     async (request, reply) => {
       const data = await getProductFeedData(request.params.variantId, request.params.storeId);
       return reply.send({ feed_data: data ?? null });
@@ -249,7 +249,7 @@ export const feedsPlugin: FastifyPluginAsyncZod = async (app) => {
   // ── PUT /commerce/stores/:storeId/variants/:variantId/feed-data ───────────
   app.put(
     "/commerce/stores/:storeId/variants/:variantId/feed-data",
-    { preHandler: [storeAuthWrite], schema: { params: VariantFeedParams, body: UpsertFeedDataBody } },
+    { preHandler: [storeAuthWrite("feeds")], schema: { params: VariantFeedParams, body: UpsertFeedDataBody } },
     async (request, reply) => {
       try {
         const id = await upsertProductFeedData(request.params.variantId, request.params.storeId, request.body);

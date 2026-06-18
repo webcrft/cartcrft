@@ -59,7 +59,7 @@ export const notificationsPlugin: FastifyPluginAsyncZod = async (app) => {
   // ── GET /commerce/stores/:storeId/notification-providers ──────────────────
   app.get(
     "/commerce/stores/:storeId/notification-providers",
-    { preHandler: [storeAuthAdmin], schema: { params: StoreIdParams } },
+    { preHandler: [storeAuthAdmin("notifications")], schema: { params: StoreIdParams } },
     async (request, reply) => {
       const providers = await listNotificationProviders(request.params.storeId);
       return reply.send({ providers });
@@ -69,7 +69,7 @@ export const notificationsPlugin: FastifyPluginAsyncZod = async (app) => {
   // ── POST /commerce/stores/:storeId/notification-providers ─────────────────
   app.post(
     "/commerce/stores/:storeId/notification-providers",
-    { preHandler: [storeAuthAdmin], schema: { params: StoreIdParams, body: CreateProviderBody } },
+    { preHandler: [storeAuthAdmin("notifications")], schema: { params: StoreIdParams, body: CreateProviderBody } },
     async (request, reply) => {
       try {
         const id = await createNotificationProvider(request.params.storeId, request.body);
@@ -86,7 +86,7 @@ export const notificationsPlugin: FastifyPluginAsyncZod = async (app) => {
   // ── PUT /commerce/stores/:storeId/notification-providers/:providerId ──────
   app.put(
     "/commerce/stores/:storeId/notification-providers/:providerId",
-    { preHandler: [storeAuthAdmin], schema: { params: ProviderIdParams, body: UpdateProviderBody } },
+    { preHandler: [storeAuthAdmin("notifications")], schema: { params: ProviderIdParams, body: UpdateProviderBody } },
     async (request, reply) => {
       try {
         const updated = await updateNotificationProvider(
@@ -110,7 +110,7 @@ export const notificationsPlugin: FastifyPluginAsyncZod = async (app) => {
   // ── DELETE /commerce/stores/:storeId/notification-providers/:providerId ───
   app.delete(
     "/commerce/stores/:storeId/notification-providers/:providerId",
-    { preHandler: [storeAuthAdmin], schema: { params: ProviderIdParams } },
+    { preHandler: [storeAuthAdmin("notifications")], schema: { params: ProviderIdParams } },
     async (request, reply) => {
       const deleted = await deleteNotificationProvider(request.params.providerId, request.params.storeId);
       if (!deleted) {
@@ -123,7 +123,7 @@ export const notificationsPlugin: FastifyPluginAsyncZod = async (app) => {
   // ── GET /commerce/stores/:storeId/webhook-log ─────────────────────────────
   app.get(
     "/commerce/stores/:storeId/webhook-log",
-    { preHandler: [storeAuthAdmin], schema: { params: StoreIdParams } },
+    { preHandler: [storeAuthAdmin("notifications")], schema: { params: StoreIdParams } },
     async (request, reply) => {
       const log = await getWebhookLog(request.params.storeId);
       return reply.send({ log });

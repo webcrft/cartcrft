@@ -102,7 +102,7 @@ export const loyaltyPlugin: FastifyPluginAsyncZod = async (app) => {
   // ── Admin: GET config ──────────────────────────────────────────────────────
   app.get(
     "/commerce/stores/:storeId/loyalty/config",
-    { schema: { params: StoreParams }, preHandler: [storeAuthAdmin] },
+    { schema: { params: StoreParams }, preHandler: [storeAuthAdmin("loyalty")] },
     async (request, reply) => {
       const config_ = await getOrCreateConfig(request.params.storeId);
       return reply.send({ config: config_ });
@@ -112,7 +112,7 @@ export const loyaltyPlugin: FastifyPluginAsyncZod = async (app) => {
   // ── Admin: PUT config ──────────────────────────────────────────────────────
   app.put(
     "/commerce/stores/:storeId/loyalty/config",
-    { schema: { params: StoreParams, body: UpdateConfigBody }, preHandler: [storeAuthAdmin] },
+    { schema: { params: StoreParams, body: UpdateConfigBody }, preHandler: [storeAuthAdmin("loyalty")] },
     async (request, reply) => {
       const input: {
         points_per_currency_unit?: string;
@@ -133,7 +133,7 @@ export const loyaltyPlugin: FastifyPluginAsyncZod = async (app) => {
   // ── Admin: GET a customer's balance ─────────────────────────────────────────
   app.get(
     "/commerce/stores/:storeId/loyalty/customers/:customerId",
-    { schema: { params: StoreCustomerParams }, preHandler: [storeAuthAdmin] },
+    { schema: { params: StoreCustomerParams }, preHandler: [storeAuthAdmin("loyalty")] },
     async (request, reply) => {
       const { storeId, customerId } = request.params;
       const balance = await getBalance(storeId, customerId);
@@ -144,7 +144,7 @@ export const loyaltyPlugin: FastifyPluginAsyncZod = async (app) => {
   // ── Admin: GET a customer's ledger ──────────────────────────────────────────
   app.get(
     "/commerce/stores/:storeId/loyalty/customers/:customerId/ledger",
-    { schema: { params: StoreCustomerParams, querystring: ListQuerystring }, preHandler: [storeAuthAdmin] },
+    { schema: { params: StoreCustomerParams, querystring: ListQuerystring }, preHandler: [storeAuthAdmin("loyalty")] },
     async (request, reply) => {
       const { storeId, customerId } = request.params;
       const opts: { limit?: number; offset?: number } = {};
@@ -158,7 +158,7 @@ export const loyaltyPlugin: FastifyPluginAsyncZod = async (app) => {
   // ── Admin: POST manual adjust ───────────────────────────────────────────────
   app.post(
     "/commerce/stores/:storeId/loyalty/customers/:customerId/adjust",
-    { schema: { params: StoreCustomerParams, body: AdjustBody }, preHandler: [storeAuthAdmin] },
+    { schema: { params: StoreCustomerParams, body: AdjustBody }, preHandler: [storeAuthAdmin("loyalty")] },
     async (request, reply) => {
       const { storeId, customerId } = request.params;
       try {

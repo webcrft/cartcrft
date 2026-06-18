@@ -177,7 +177,7 @@ export const b2bPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.get(
     "/commerce/stores/:storeId/companies",
-    { preHandler: storeAuthAdmin, schema: { params: StoreParams } },
+    { preHandler: storeAuthAdmin("b2b"), schema: { params: StoreParams } },
     async (request, reply) => {
       const companies = await listCompanies(request.params.storeId);
       return reply.send({ companies });
@@ -186,7 +186,7 @@ export const b2bPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.post(
     "/commerce/stores/:storeId/companies",
-    { preHandler: storeAuthAdmin, schema: { params: StoreParams, body: CreateCompanyBody } },
+    { preHandler: storeAuthAdmin("b2b"), schema: { params: StoreParams, body: CreateCompanyBody } },
     async (request, reply) => {
       const id = await createCompany(request.params.storeId, request.body);
       return reply.status(201).send({ id });
@@ -195,7 +195,7 @@ export const b2bPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.get(
     "/commerce/stores/:storeId/companies/:companyId",
-    { preHandler: storeAuthAdmin, schema: { params: CompanyParams } },
+    { preHandler: storeAuthAdmin("b2b"), schema: { params: CompanyParams } },
     async (request, reply) => {
       const company = await getCompany(request.params.storeId, request.params.companyId);
       if (!company) return reply.status(404).send(notFound("company not found"));
@@ -205,7 +205,7 @@ export const b2bPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.put(
     "/commerce/stores/:storeId/companies/:companyId",
-    { preHandler: storeAuthAdmin, schema: { params: CompanyParams, body: UpdateCompanyBody } },
+    { preHandler: storeAuthAdmin("b2b"), schema: { params: CompanyParams, body: UpdateCompanyBody } },
     async (request, reply) => {
       const ok = await updateCompany(request.params.storeId, request.params.companyId, request.body);
       if (!ok) return reply.status(404).send(notFound("company not found"));
@@ -215,7 +215,7 @@ export const b2bPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.delete(
     "/commerce/stores/:storeId/companies/:companyId",
-    { preHandler: storeAuthAdmin, schema: { params: CompanyParams } },
+    { preHandler: storeAuthAdmin("b2b"), schema: { params: CompanyParams } },
     async (request, reply) => {
       const ok = await deleteCompany(request.params.storeId, request.params.companyId);
       if (!ok) return reply.status(404).send(notFound("company not found"));
@@ -227,7 +227,7 @@ export const b2bPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.get(
     "/commerce/stores/:storeId/companies/:companyId/customers",
-    { preHandler: storeAuthAdmin, schema: { params: CompanyParams } },
+    { preHandler: storeAuthAdmin("b2b"), schema: { params: CompanyParams } },
     async (request, reply) => {
       const customers = await listCompanyCustomers(request.params.storeId, request.params.companyId);
       return reply.send({ customers });
@@ -236,7 +236,7 @@ export const b2bPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.post(
     "/commerce/stores/:storeId/companies/:companyId/customers",
-    { preHandler: storeAuthAdmin, schema: { params: CompanyParams, body: AddCompanyCustomerBody } },
+    { preHandler: storeAuthAdmin("b2b"), schema: { params: CompanyParams, body: AddCompanyCustomerBody } },
     async (request, reply) => {
       try {
         await addCompanyCustomer(
@@ -257,7 +257,7 @@ export const b2bPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.delete(
     "/commerce/stores/:storeId/companies/:companyId/customers/:customerId",
-    { preHandler: storeAuthAdmin, schema: { params: CompanyCustomerParams } },
+    { preHandler: storeAuthAdmin("b2b"), schema: { params: CompanyCustomerParams } },
     async (request, reply) => {
       await removeCompanyCustomer(
         request.params.storeId,
@@ -272,7 +272,7 @@ export const b2bPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.get(
     "/commerce/stores/:storeId/companies/:companyId/catalog-access",
-    { preHandler: storeAuthAdmin, schema: { params: CompanyParams } },
+    { preHandler: storeAuthAdmin("b2b"), schema: { params: CompanyParams } },
     async (request, reply) => {
       const access = await listCompanyCatalogAccess(
         request.params.storeId,
@@ -284,7 +284,7 @@ export const b2bPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.post(
     "/commerce/stores/:storeId/companies/:companyId/catalog-access",
-    { preHandler: storeAuthAdmin, schema: { params: CompanyParams, body: GrantCatalogAccessBody } },
+    { preHandler: storeAuthAdmin("b2b"), schema: { params: CompanyParams, body: GrantCatalogAccessBody } },
     async (request, reply) => {
       try {
         const id = await grantCatalogAccess(
@@ -309,7 +309,7 @@ export const b2bPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.delete(
     "/commerce/stores/:storeId/companies/:companyId/catalog-access/:accessId",
-    { preHandler: storeAuthAdmin, schema: { params: CatalogAccessParams } },
+    { preHandler: storeAuthAdmin("b2b"), schema: { params: CatalogAccessParams } },
     async (request, reply) => {
       const ok = await revokeCatalogAccess(
         request.params.storeId,
@@ -324,7 +324,7 @@ export const b2bPlugin: FastifyPluginAsyncZod = async (app) => {
   // Assign (or clear with null) the company's price list.
   app.put(
     "/commerce/stores/:storeId/companies/:companyId/price-list",
-    { preHandler: storeAuthWrite, schema: { params: CompanyParams, body: AssignPriceListBody } },
+    { preHandler: storeAuthWrite("b2b"), schema: { params: CompanyParams, body: AssignPriceListBody } },
     async (request, reply) => {
       const ok = await assignPriceList(
         request.params.storeId,
@@ -340,7 +340,7 @@ export const b2bPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.get(
     "/commerce/stores/:storeId/customer-groups",
-    { preHandler: storeAuthAdmin, schema: { params: StoreParams } },
+    { preHandler: storeAuthAdmin("b2b"), schema: { params: StoreParams } },
     async (request, reply) => {
       const groups = await listCustomerGroups(request.params.storeId);
       return reply.send({ groups });
@@ -349,7 +349,7 @@ export const b2bPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.post(
     "/commerce/stores/:storeId/customer-groups",
-    { preHandler: storeAuthAdmin, schema: { params: StoreParams, body: CreateGroupBody } },
+    { preHandler: storeAuthAdmin("b2b"), schema: { params: StoreParams, body: CreateGroupBody } },
     async (request, reply) => {
       const id = await createCustomerGroup(request.params.storeId, request.body);
       return reply.status(201).send({ id });
@@ -358,7 +358,7 @@ export const b2bPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.put(
     "/commerce/stores/:storeId/customer-groups/:groupId",
-    { preHandler: storeAuthAdmin, schema: { params: GroupParams, body: UpdateGroupBody } },
+    { preHandler: storeAuthAdmin("b2b"), schema: { params: GroupParams, body: UpdateGroupBody } },
     async (request, reply) => {
       const ok = await updateCustomerGroup(
         request.params.storeId,
@@ -372,7 +372,7 @@ export const b2bPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.delete(
     "/commerce/stores/:storeId/customer-groups/:groupId",
-    { preHandler: storeAuthAdmin, schema: { params: GroupParams } },
+    { preHandler: storeAuthAdmin("b2b"), schema: { params: GroupParams } },
     async (request, reply) => {
       await deleteCustomerGroup(request.params.storeId, request.params.groupId);
       return reply.send({ ok: true });
@@ -381,7 +381,7 @@ export const b2bPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.post(
     "/commerce/stores/:storeId/customer-groups/:groupId/members",
-    { preHandler: storeAuthAdmin, schema: { params: GroupParams, body: AddGroupMemberBody } },
+    { preHandler: storeAuthAdmin("b2b"), schema: { params: GroupParams, body: AddGroupMemberBody } },
     async (request, reply) => {
       await addGroupMember(request.params.storeId, request.params.groupId, request.body.customer_id);
       return reply.send({ ok: true });
@@ -390,7 +390,7 @@ export const b2bPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.delete(
     "/commerce/stores/:storeId/customer-groups/:groupId/members/:customerId",
-    { preHandler: storeAuthAdmin, schema: { params: GroupMemberParams } },
+    { preHandler: storeAuthAdmin("b2b"), schema: { params: GroupMemberParams } },
     async (request, reply) => {
       await removeGroupMember(
         request.params.storeId,
@@ -405,7 +405,7 @@ export const b2bPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.get(
     "/commerce/stores/:storeId/quotes",
-    { preHandler: storeAuthAdmin, schema: { params: StoreParams, querystring: QuotesQuerystring } },
+    { preHandler: storeAuthAdmin("b2b"), schema: { params: StoreParams, querystring: QuotesQuerystring } },
     async (request, reply) => {
       const { quotes, total } = await listQuotes(request.params.storeId, request.query);
       return reply.send({ quotes, total });
@@ -414,7 +414,7 @@ export const b2bPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.get(
     "/commerce/stores/:storeId/quotes/:quoteId",
-    { preHandler: storeAuthAdmin, schema: { params: QuoteParams } },
+    { preHandler: storeAuthAdmin("b2b"), schema: { params: QuoteParams } },
     async (request, reply) => {
       const quote = await getQuote(request.params.storeId, request.params.quoteId);
       if (!quote) return reply.status(404).send(notFound("quote not found"));
@@ -424,7 +424,7 @@ export const b2bPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.post(
     "/commerce/stores/:storeId/quotes",
-    { preHandler: storeAuthAdmin, schema: { params: StoreParams, body: CreateQuoteBody } },
+    { preHandler: storeAuthAdmin("b2b"), schema: { params: StoreParams, body: CreateQuoteBody } },
     async (request, reply) => {
       const userId = (request as { auth?: { userId?: string } }).auth?.userId ?? "00000000-0000-0000-0000-000000000000";
       const id = await createQuote(request.params.storeId, request.body, userId);
@@ -434,7 +434,7 @@ export const b2bPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.put(
     "/commerce/stores/:storeId/quotes/:quoteId",
-    { preHandler: storeAuthAdmin, schema: { params: QuoteParams, body: UpdateQuoteBody } },
+    { preHandler: storeAuthAdmin("b2b"), schema: { params: QuoteParams, body: UpdateQuoteBody } },
     async (request, reply) => {
       const ok = await updateQuote(request.params.storeId, request.params.quoteId, request.body);
       if (!ok) return reply.status(404).send(notFound("quote not found"));
@@ -444,7 +444,7 @@ export const b2bPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.post(
     "/commerce/stores/:storeId/quotes/:quoteId/send",
-    { preHandler: storeAuthAdmin, schema: { params: QuoteParams } },
+    { preHandler: storeAuthAdmin("b2b"), schema: { params: QuoteParams } },
     async (request, reply) => {
       const ok = await sendQuote(request.params.storeId, request.params.quoteId);
       if (!ok) return reply.status(422).send(unprocessable("quote not found or not in draft status"));
@@ -454,7 +454,7 @@ export const b2bPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.post(
     "/commerce/stores/:storeId/quotes/:quoteId/accept",
-    { preHandler: storeAuthAdmin, schema: { params: QuoteParams } },
+    { preHandler: storeAuthAdmin("b2b"), schema: { params: QuoteParams } },
     async (request, reply) => {
       try {
         const result = await acceptQuote(request.params.storeId, request.params.quoteId);
@@ -474,7 +474,7 @@ export const b2bPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.post(
     "/commerce/stores/:storeId/quotes/:quoteId/reject",
-    { preHandler: storeAuthAdmin, schema: { params: QuoteParams } },
+    { preHandler: storeAuthAdmin("b2b"), schema: { params: QuoteParams } },
     async (request, reply) => {
       const ok = await rejectQuote(request.params.storeId, request.params.quoteId);
       if (!ok) return reply.status(422).send(unprocessable("quote not found or already finalized"));
@@ -486,7 +486,7 @@ export const b2bPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.get(
     "/commerce/stores/:storeId/purchase-orders",
-    { preHandler: storeAuthAdmin, schema: { params: StoreParams } },
+    { preHandler: storeAuthAdmin("b2b"), schema: { params: StoreParams } },
     async (request, reply) => {
       const pos = await listPurchaseOrders(request.params.storeId);
       return reply.send({ purchase_orders: pos });
@@ -495,7 +495,7 @@ export const b2bPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.get(
     "/commerce/stores/:storeId/purchase-orders/:poId",
-    { preHandler: storeAuthAdmin, schema: { params: PoParams } },
+    { preHandler: storeAuthAdmin("b2b"), schema: { params: PoParams } },
     async (request, reply) => {
       const po = await getPurchaseOrder(request.params.storeId, request.params.poId);
       if (!po) return reply.status(404).send(notFound("purchase order not found"));
@@ -505,7 +505,7 @@ export const b2bPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.put(
     "/commerce/stores/:storeId/purchase-orders/:poId",
-    { preHandler: storeAuthAdmin, schema: { params: PoParams, body: UpdatePoBody } },
+    { preHandler: storeAuthAdmin("b2b"), schema: { params: PoParams, body: UpdatePoBody } },
     async (request, reply) => {
       const ok = await updatePurchaseOrder(request.params.storeId, request.params.poId, request.body);
       if (!ok) return reply.status(404).send(notFound("purchase order not found"));
@@ -516,7 +516,7 @@ export const b2bPlugin: FastifyPluginAsyncZod = async (app) => {
   // Attach PO to an order
   app.post(
     "/commerce/stores/:storeId/orders/:orderId/purchase-order",
-    { preHandler: storeAuthWrite, schema: { params: OrderParams, body: AttachPoBody } },
+    { preHandler: storeAuthWrite("b2b"), schema: { params: OrderParams, body: AttachPoBody } },
     async (request, reply) => {
       try {
         const id = await attachPurchaseOrder(

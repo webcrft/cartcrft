@@ -207,7 +207,7 @@ export const shippingPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.get(`${base}/shipping-zones`, {
     schema: { params: StoreParams },
-    preHandler: [storeAuthAdmin],
+    preHandler: [storeAuthAdmin("shipping")],
   }, async (request, reply) => {
     const { storeId } = request.params;
     return reply.send({ zones: await listShippingZones(storeId) });
@@ -215,7 +215,7 @@ export const shippingPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.post(`${base}/shipping-zones`, {
     schema: { params: StoreParams, body: CreateZoneBody },
-    preHandler: [storeAuthAdmin],
+    preHandler: [storeAuthAdmin("shipping")],
   }, async (request, reply) => {
     const { storeId } = request.params;
     const id = await createShippingZone(storeId, request.body);
@@ -224,7 +224,7 @@ export const shippingPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.put(`${base}/shipping-zones/:zoneId`, {
     schema: { params: ZoneParams, body: UpdateZoneBody },
-    preHandler: [storeAuthAdmin],
+    preHandler: [storeAuthAdmin("shipping")],
   }, async (request, reply) => {
     const { storeId, zoneId } = request.params;
     await updateShippingZone(storeId, zoneId, request.body);
@@ -233,7 +233,7 @@ export const shippingPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.delete(`${base}/shipping-zones/:zoneId`, {
     schema: { params: ZoneParams },
-    preHandler: [storeAuthAdmin],
+    preHandler: [storeAuthAdmin("shipping")],
   }, async (request, reply) => {
     const { storeId, zoneId } = request.params;
     await deleteShippingZone(storeId, zoneId);
@@ -244,7 +244,7 @@ export const shippingPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.get(`${base}/shipping-zones/:zoneId/rates`, {
     schema: { params: ZoneParams },
-    preHandler: [storeAuthAdmin],
+    preHandler: [storeAuthAdmin("shipping")],
   }, async (request, reply) => {
     const { storeId, zoneId } = request.params;
     return reply.send({ shipping_rates: await listShippingRates(storeId, zoneId) });
@@ -252,7 +252,7 @@ export const shippingPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.post(`${base}/shipping-zones/:zoneId/rates`, {
     schema: { params: ZoneParams, body: CreateRateBody },
-    preHandler: [storeAuthAdmin],
+    preHandler: [storeAuthAdmin("shipping")],
   }, async (request, reply) => {
     const { storeId, zoneId } = request.params;
     // H3.2: parse decimal-string money fields to numbers for the service layer
@@ -268,7 +268,7 @@ export const shippingPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.put(`${base}/shipping-zones/:zoneId/rates/:rateId`, {
     schema: { params: ZoneRateParams, body: UpdateRateBody },
-    preHandler: [storeAuthAdmin],
+    preHandler: [storeAuthAdmin("shipping")],
   }, async (request, reply) => {
     const { storeId, zoneId, rateId } = request.params;
     // H3.2: parse decimal-string money fields to numbers for the service layer
@@ -284,7 +284,7 @@ export const shippingPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.delete(`${base}/shipping-zones/:zoneId/rates/:rateId`, {
     schema: { params: ZoneRateParams },
-    preHandler: [storeAuthAdmin],
+    preHandler: [storeAuthAdmin("shipping")],
   }, async (request, reply) => {
     const { storeId, zoneId, rateId } = request.params;
     await deleteShippingRate(storeId, zoneId, rateId);
@@ -295,7 +295,7 @@ export const shippingPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.get(`${base}/shipping-rates/available`, {
     schema: { params: StoreParams, querystring: AvailableRatesQuery },
-    preHandler: [storeAuthRead],
+    preHandler: [storeAuthRead("shipping")],
   }, async (request, reply) => {
     const { storeId } = request.params;
     const rates = await getAvailableShippingRates(storeId, request.query);
@@ -306,7 +306,7 @@ export const shippingPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.get(`${base}/shipping-providers`, {
     schema: { params: StoreParams },
-    preHandler: [storeAuthAdmin],
+    preHandler: [storeAuthAdmin("shipping")],
   }, async (request, reply) => {
     const { storeId } = request.params;
     return reply.send({ providers: await listShippingProviders(storeId) });
@@ -314,7 +314,7 @@ export const shippingPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.post(`${base}/shipping-providers`, {
     schema: { params: StoreParams, body: CreateProviderBody },
-    preHandler: [storeAuthAdmin],
+    preHandler: [storeAuthAdmin("shipping")],
   }, async (request, reply) => {
     const { storeId } = request.params;
     const id = await upsertShippingProvider(storeId, request.body);
@@ -323,7 +323,7 @@ export const shippingPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.delete(`${base}/shipping-providers/:providerId`, {
     schema: { params: ProviderParams },
-    preHandler: [storeAuthAdmin],
+    preHandler: [storeAuthAdmin("shipping")],
   }, async (request, reply) => {
     const { storeId, providerId } = request.params;
     await deleteShippingProvider(storeId, providerId);
@@ -334,7 +334,7 @@ export const shippingPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.get(`${base}/collection-points`, {
     schema: { params: StoreParams },
-    preHandler: [storeAuthRead],
+    preHandler: [storeAuthRead("shipping")],
   }, async (request, reply) => {
     const { storeId } = request.params;
     const q = request.query as { active?: string; provider_id?: string };
@@ -347,7 +347,7 @@ export const shippingPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.post(`${base}/collection-points`, {
     schema: { params: StoreParams, body: UpsertPointBody },
-    preHandler: [storeAuthAdmin],
+    preHandler: [storeAuthAdmin("shipping")],
   }, async (request, reply) => {
     const { storeId } = request.params;
     // Build address: use provided address or construct from top-level country_code
@@ -361,7 +361,7 @@ export const shippingPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.put(`${base}/collection-points/:pointId`, {
     schema: { params: PointParams, body: UpdatePointBody },
-    preHandler: [storeAuthAdmin],
+    preHandler: [storeAuthAdmin("shipping")],
   }, async (request, reply) => {
     const { storeId, pointId } = request.params;
     const ok = await updateCollectionPoint(storeId, pointId, request.body as Parameters<typeof updateCollectionPoint>[2]);
@@ -371,7 +371,7 @@ export const shippingPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.delete(`${base}/collection-points/:pointId`, {
     schema: { params: PointParams },
-    preHandler: [storeAuthAdmin],
+    preHandler: [storeAuthAdmin("shipping")],
   }, async (request, reply) => {
     const { storeId, pointId } = request.params;
     await deleteCollectionPoint(storeId, pointId);
@@ -382,7 +382,7 @@ export const shippingPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.get(`${base}/orders/:orderId/shipments`, {
     schema: { params: OrderParams },
-    preHandler: [storeAuthWrite],
+    preHandler: [storeAuthWrite("shipping")],
   }, async (request, reply) => {
     const { storeId, orderId } = request.params;
     return reply.send({ shipments: await listShipments(storeId, orderId) });
@@ -390,7 +390,7 @@ export const shippingPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.post(`${base}/orders/:orderId/shipments`, {
     schema: { params: OrderParams, body: CreateShipmentBody },
-    preHandler: [storeAuthWrite],
+    preHandler: [storeAuthWrite("shipping")],
   }, async (request, reply) => {
     const { storeId, orderId } = request.params;
     const id = await createShipment(storeId, orderId, request.body);
@@ -400,7 +400,7 @@ export const shippingPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.put(`${base}/orders/:orderId/shipments/:shipmentId`, {
     schema: { params: ShipmentParams, body: UpdateShipmentBody },
-    preHandler: [storeAuthWrite],
+    preHandler: [storeAuthWrite("shipping")],
   }, async (request, reply) => {
     const { storeId, orderId, shipmentId } = request.params;
     const ok = await updateShipment(storeId, orderId, shipmentId, request.body);
@@ -410,7 +410,7 @@ export const shippingPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.get(`${base}/orders/:orderId/shipments/:shipmentId/tracking`, {
     schema: { params: ShipmentParams },
-    preHandler: [storeAuthWrite],
+    preHandler: [storeAuthWrite("shipping")],
   }, async (request, reply) => {
     const { storeId, orderId, shipmentId } = request.params;
     return reply.send({ events: await listShipmentTracking(storeId, orderId, shipmentId) });
@@ -420,7 +420,7 @@ export const shippingPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.get(`${base}/orders/:orderId/fulfillment-orders`, {
     schema: { params: OrderParams },
-    preHandler: [storeAuthWrite],
+    preHandler: [storeAuthWrite("shipping")],
   }, async (request, reply) => {
     const { storeId, orderId } = request.params;
     return reply.send({ fulfillment_orders: await listFulfillmentOrders(storeId, orderId) });
@@ -428,7 +428,7 @@ export const shippingPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.post(`${base}/orders/:orderId/fulfillment-orders`, {
     schema: { params: OrderParams, body: CreateFoBody },
-    preHandler: [storeAuthWrite],
+    preHandler: [storeAuthWrite("shipping")],
   }, async (request, reply) => {
     const { storeId, orderId } = request.params;
     const id = await createFulfillmentOrder(storeId, orderId, request.body);
@@ -438,7 +438,7 @@ export const shippingPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.put(`${base}/fulfillment-orders/:foId`, {
     schema: { params: FoParams, body: UpdateFoBody },
-    preHandler: [storeAuthWrite],
+    preHandler: [storeAuthWrite("shipping")],
   }, async (request, reply) => {
     const { storeId, foId } = request.params;
     const ok = await updateFulfillmentOrder(storeId, foId, request.body);

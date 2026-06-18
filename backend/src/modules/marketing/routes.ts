@@ -90,7 +90,7 @@ export const marketingPlugin: FastifyPluginAsyncZod = async (app) => {
   // ── List flows ──────────────────────────────────────────────────────────
   app.get(
     "/commerce/stores/:storeId/marketing/flows",
-    { schema: { params: StoreParams }, preHandler: [storeAuthRead] },
+    { schema: { params: StoreParams }, preHandler: [storeAuthRead("marketing")] },
     async (request, reply) => {
       const flows = await listFlows(request.params.storeId);
       return reply.send({ flows });
@@ -100,7 +100,7 @@ export const marketingPlugin: FastifyPluginAsyncZod = async (app) => {
   // ── Create flow ─────────────────────────────────────────────────────────
   app.post(
     "/commerce/stores/:storeId/marketing/flows",
-    { schema: { params: StoreParams, body: CreateFlowBody }, preHandler: [storeAuthWrite] },
+    { schema: { params: StoreParams, body: CreateFlowBody }, preHandler: [storeAuthWrite("marketing")] },
     async (request, reply) => {
       try {
         const steps = request.body.steps.map((s) => ({
@@ -127,7 +127,7 @@ export const marketingPlugin: FastifyPluginAsyncZod = async (app) => {
   // ── Get one flow ────────────────────────────────────────────────────────
   app.get(
     "/commerce/stores/:storeId/marketing/flows/:flowId",
-    { schema: { params: FlowParams }, preHandler: [storeAuthRead] },
+    { schema: { params: FlowParams }, preHandler: [storeAuthRead("marketing")] },
     async (request, reply) => {
       const flow = await getFlow(request.params.storeId, request.params.flowId);
       if (!flow) {
@@ -140,7 +140,7 @@ export const marketingPlugin: FastifyPluginAsyncZod = async (app) => {
   // ── Update flow ─────────────────────────────────────────────────────────
   app.put(
     "/commerce/stores/:storeId/marketing/flows/:flowId",
-    { schema: { params: FlowParams, body: UpdateFlowBody }, preHandler: [storeAuthWrite] },
+    { schema: { params: FlowParams, body: UpdateFlowBody }, preHandler: [storeAuthWrite("marketing")] },
     async (request, reply) => {
       try {
         const input: Parameters<typeof updateFlow>[2] = {};
@@ -170,7 +170,7 @@ export const marketingPlugin: FastifyPluginAsyncZod = async (app) => {
   // ── Delete flow ─────────────────────────────────────────────────────────
   app.delete(
     "/commerce/stores/:storeId/marketing/flows/:flowId",
-    { schema: { params: FlowParams }, preHandler: [storeAuthAdmin] },
+    { schema: { params: FlowParams }, preHandler: [storeAuthAdmin("marketing")] },
     async (request, reply) => {
       const ok = await deleteFlow(request.params.storeId, request.params.flowId);
       if (!ok) {
@@ -183,7 +183,7 @@ export const marketingPlugin: FastifyPluginAsyncZod = async (app) => {
   // ── List all runs for a store ───────────────────────────────────────────
   app.get(
     "/commerce/stores/:storeId/marketing/runs",
-    { schema: { params: StoreParams, querystring: ListRunsQuery }, preHandler: [storeAuthRead] },
+    { schema: { params: StoreParams, querystring: ListRunsQuery }, preHandler: [storeAuthRead("marketing")] },
     async (request, reply) => {
       const opts: Parameters<typeof listRuns>[1] = {};
       if (request.query.limit !== undefined) opts.limit = request.query.limit;
@@ -196,7 +196,7 @@ export const marketingPlugin: FastifyPluginAsyncZod = async (app) => {
   // ── List runs for a specific flow ───────────────────────────────────────
   app.get(
     "/commerce/stores/:storeId/marketing/flows/:flowId/runs",
-    { schema: { params: FlowParams, querystring: ListRunsQuery }, preHandler: [storeAuthRead] },
+    { schema: { params: FlowParams, querystring: ListRunsQuery }, preHandler: [storeAuthRead("marketing")] },
     async (request, reply) => {
       const opts: Parameters<typeof listRuns>[1] = { flowId: request.params.flowId };
       if (request.query.limit !== undefined) opts.limit = request.query.limit;
@@ -209,7 +209,7 @@ export const marketingPlugin: FastifyPluginAsyncZod = async (app) => {
   // ── Test-enroll a customer into a flow (admin; for testing) ─────────────
   app.post(
     "/commerce/stores/:storeId/marketing/flows/:flowId/test-enroll",
-    { schema: { params: FlowParams, body: TestEnrollBody }, preHandler: [storeAuthAdmin] },
+    { schema: { params: FlowParams, body: TestEnrollBody }, preHandler: [storeAuthAdmin("marketing")] },
     async (request, reply) => {
       const { storeId, flowId } = request.params;
       const flow = await getFlow(storeId, flowId);

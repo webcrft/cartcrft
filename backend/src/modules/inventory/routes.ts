@@ -10,7 +10,7 @@
  *   POST   /commerce/stores/:storeId/inventory/set
  *   POST   /commerce/stores/:storeId/inventory/adjust
  *   GET    /commerce/stores/:storeId/inventory/adjustments
- *   GET    /commerce/stores/:storeId/inventory/low-stock   (storeAuthRead)
+ *   GET    /commerce/stores/:storeId/inventory/low-stock   (storeAuthRead("inventory"))
  *   GET    /commerce/stores/:storeId/inventory/lots
  *   POST   /commerce/stores/:storeId/inventory/lots
  *   PUT    /commerce/stores/:storeId/inventory/lots/:lotId
@@ -156,7 +156,7 @@ export const inventoryPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.get(`${base}/warehouses`, {
     schema: { params: StoreParams },
-    preHandler: [storeAuthAdmin],
+    preHandler: [storeAuthAdmin("inventory")],
   }, async (request, reply) => {
     const { storeId } = request.params;
     const warehouses = await listWarehouses(storeId);
@@ -165,7 +165,7 @@ export const inventoryPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.post(`${base}/warehouses`, {
     schema: { params: StoreParams, body: CreateWarehouseBody },
-    preHandler: [storeAuthAdmin],
+    preHandler: [storeAuthAdmin("inventory")],
   }, async (request, reply) => {
     const { storeId } = request.params;
     const id = await createWarehouse(storeId, request.body);
@@ -174,7 +174,7 @@ export const inventoryPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.put(`${base}/warehouses/:warehouseId`, {
     schema: { params: WarehouseParams, body: UpdateWarehouseBody },
-    preHandler: [storeAuthAdmin],
+    preHandler: [storeAuthAdmin("inventory")],
   }, async (request, reply) => {
     const { storeId, warehouseId } = request.params;
     const ok = await updateWarehouse(storeId, warehouseId, request.body);
@@ -184,7 +184,7 @@ export const inventoryPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.delete(`${base}/warehouses/:warehouseId`, {
     schema: { params: WarehouseParams },
-    preHandler: [storeAuthAdmin],
+    preHandler: [storeAuthAdmin("inventory")],
   }, async (request, reply) => {
     const { storeId, warehouseId } = request.params;
     await deleteWarehouse(storeId, warehouseId);
@@ -195,7 +195,7 @@ export const inventoryPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.get(`${base}/inventory`, {
     schema: { params: StoreParams, querystring: InventoryQuery },
-    preHandler: [storeAuthAdmin],
+    preHandler: [storeAuthAdmin("inventory")],
   }, async (request, reply) => {
     const { storeId } = request.params;
     const levels = await listInventoryLevels(storeId, request.query);
@@ -204,7 +204,7 @@ export const inventoryPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.post(`${base}/inventory/set`, {
     schema: { params: StoreParams, body: SetInventoryBody },
-    preHandler: [storeAuthAdmin],
+    preHandler: [storeAuthAdmin("inventory")],
   }, async (request, reply) => {
     const { storeId } = request.params;
     const userId = request.auth!.userId;
@@ -214,7 +214,7 @@ export const inventoryPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.post(`${base}/inventory/adjust`, {
     schema: { params: StoreParams, body: AdjustInventoryBody },
-    preHandler: [storeAuthAdmin],
+    preHandler: [storeAuthAdmin("inventory")],
   }, async (request, reply) => {
     const { storeId } = request.params;
     const userId = request.auth!.userId;
@@ -224,7 +224,7 @@ export const inventoryPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.get(`${base}/inventory/adjustments`, {
     schema: { params: StoreParams, querystring: InventoryQuery },
-    preHandler: [storeAuthAdmin],
+    preHandler: [storeAuthAdmin("inventory")],
   }, async (request, reply) => {
     const { storeId } = request.params;
     const adjustments = await listInventoryAdjustments(storeId, request.query);
@@ -234,7 +234,7 @@ export const inventoryPlugin: FastifyPluginAsyncZod = async (app) => {
   // Low-stock dashboard view — tracked variants at/below their reorder_point.
   app.get(`${base}/inventory/low-stock`, {
     schema: { params: StoreParams },
-    preHandler: [storeAuthRead],
+    preHandler: [storeAuthRead("inventory")],
   }, async (request, reply) => {
     const { storeId } = request.params;
     const items = await listLowStockItems(storeId);
@@ -245,7 +245,7 @@ export const inventoryPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.get(`${base}/inventory/lots`, {
     schema: { params: StoreParams, querystring: LotQuery },
-    preHandler: [storeAuthAdmin],
+    preHandler: [storeAuthAdmin("inventory")],
   }, async (request, reply) => {
     const { storeId } = request.params;
     const lots = await listInventoryLots(storeId, request.query);
@@ -254,7 +254,7 @@ export const inventoryPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.post(`${base}/inventory/lots`, {
     schema: { params: StoreParams, body: CreateLotBody },
-    preHandler: [storeAuthAdmin],
+    preHandler: [storeAuthAdmin("inventory")],
   }, async (request, reply) => {
     const { storeId } = request.params;
     // H3.2: parse decimal-string money fields to numbers for the service layer
@@ -268,7 +268,7 @@ export const inventoryPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.put(`${base}/inventory/lots/:lotId`, {
     schema: { params: LotParams, body: UpdateLotBody },
-    preHandler: [storeAuthAdmin],
+    preHandler: [storeAuthAdmin("inventory")],
   }, async (request, reply) => {
     const { storeId, lotId } = request.params;
     // H3.2: parse decimal-string money fields to numbers for the service layer
@@ -282,7 +282,7 @@ export const inventoryPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.delete(`${base}/inventory/lots/:lotId`, {
     schema: { params: LotParams },
-    preHandler: [storeAuthAdmin],
+    preHandler: [storeAuthAdmin("inventory")],
   }, async (request, reply) => {
     const { storeId, lotId } = request.params;
     await deleteInventoryLot(storeId, lotId);
@@ -293,7 +293,7 @@ export const inventoryPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.get(`${base}/inventory/serials`, {
     schema: { params: StoreParams, querystring: SerialQuery },
-    preHandler: [storeAuthAdmin],
+    preHandler: [storeAuthAdmin("inventory")],
   }, async (request, reply) => {
     const { storeId } = request.params;
     const serials = await listSerialNumbers(storeId, request.query);
@@ -302,7 +302,7 @@ export const inventoryPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.post(`${base}/inventory/serials`, {
     schema: { params: StoreParams, body: BulkCreateSerialsBody },
-    preHandler: [storeAuthAdmin],
+    preHandler: [storeAuthAdmin("inventory")],
   }, async (request, reply) => {
     const { storeId } = request.params;
     const count = await bulkCreateSerialNumbers(storeId, request.body);
@@ -311,7 +311,7 @@ export const inventoryPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.get(`${base}/inventory/serials/:serialId`, {
     schema: { params: SerialParams },
-    preHandler: [storeAuthAdmin],
+    preHandler: [storeAuthAdmin("inventory")],
   }, async (request, reply) => {
     const { storeId, serialId } = request.params;
     const sn = await getSerialNumber(storeId, serialId);
@@ -321,7 +321,7 @@ export const inventoryPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.put(`${base}/inventory/serials/:serialId`, {
     schema: { params: SerialParams, body: UpdateSerialBody },
-    preHandler: [storeAuthAdmin],
+    preHandler: [storeAuthAdmin("inventory")],
   }, async (request, reply) => {
     const { storeId, serialId } = request.params;
     const ok = await updateSerialNumber(storeId, serialId, request.body);
@@ -333,7 +333,7 @@ export const inventoryPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.get(`${base}/suppliers`, {
     schema: { params: StoreParams },
-    preHandler: [storeAuthAdmin],
+    preHandler: [storeAuthAdmin("inventory")],
   }, async (request, reply) => {
     const { storeId } = request.params;
     const suppliers = await listSuppliers(storeId);
@@ -342,7 +342,7 @@ export const inventoryPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.post(`${base}/suppliers`, {
     schema: { params: StoreParams, body: CreateSupplierBody },
-    preHandler: [storeAuthAdmin],
+    preHandler: [storeAuthAdmin("inventory")],
   }, async (request, reply) => {
     const { storeId } = request.params;
     const id = await createSupplier(storeId, request.body);
@@ -351,7 +351,7 @@ export const inventoryPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.put(`${base}/suppliers/:supplierId`, {
     schema: { params: SupplierParams, body: UpdateSupplierBody },
-    preHandler: [storeAuthAdmin],
+    preHandler: [storeAuthAdmin("inventory")],
   }, async (request, reply) => {
     const { storeId, supplierId } = request.params;
     const ok = await updateSupplier(storeId, supplierId, request.body);
@@ -361,7 +361,7 @@ export const inventoryPlugin: FastifyPluginAsyncZod = async (app) => {
 
   app.delete(`${base}/suppliers/:supplierId`, {
     schema: { params: SupplierParams },
-    preHandler: [storeAuthAdmin],
+    preHandler: [storeAuthAdmin("inventory")],
   }, async (request, reply) => {
     const { storeId, supplierId } = request.params;
     const ok = await deleteSupplier(storeId, supplierId);

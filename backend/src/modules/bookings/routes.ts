@@ -239,7 +239,7 @@ export const bookingsPlugin: FastifyPluginAsync = async (app) => {
 
   app.get(
     "/commerce/stores/:storeId/booking-policies",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite("bookings") },
     async (request, reply) => {
       const { storeId } = StoreParams.parse(request.params);
       try {
@@ -254,7 +254,7 @@ export const bookingsPlugin: FastifyPluginAsync = async (app) => {
 
   app.post(
     "/commerce/stores/:storeId/booking-policies",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite("bookings") },
     async (request, reply) => {
       const { storeId } = StoreParams.parse(request.params);
       const Body = z.object({
@@ -277,7 +277,7 @@ export const bookingsPlugin: FastifyPluginAsync = async (app) => {
 
   app.get(
     "/commerce/stores/:storeId/booking-policies/:policyId",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite("bookings") },
     async (request, reply) => {
       const { storeId, policyId } = StorePolicyParams.parse(request.params);
       try {
@@ -292,7 +292,7 @@ export const bookingsPlugin: FastifyPluginAsync = async (app) => {
 
   app.put(
     "/commerce/stores/:storeId/booking-policies/:policyId",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite("bookings") },
     async (request, reply) => {
       const { storeId, policyId } = StorePolicyParams.parse(request.params);
       const Body = z.object({
@@ -315,7 +315,7 @@ export const bookingsPlugin: FastifyPluginAsync = async (app) => {
 
   app.delete(
     "/commerce/stores/:storeId/booking-policies/:policyId",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite("bookings") },
     async (request, reply) => {
       const { storeId, policyId } = StorePolicyParams.parse(request.params);
       try {
@@ -330,7 +330,7 @@ export const bookingsPlugin: FastifyPluginAsync = async (app) => {
 
   app.put(
     "/commerce/stores/:storeId/booking-policies/:policyId/translations/:locale",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite("bookings") },
     async (request, reply) => {
       const { policyId, locale } = StorePolicyLocaleParams.parse(request.params);
       const Body = z.object({
@@ -354,7 +354,7 @@ export const bookingsPlugin: FastifyPluginAsync = async (app) => {
 
   app.get(
     "/commerce/stores/:storeId/booking-resources",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite("bookings") },
     async (request, reply) => {
       const { storeId } = StoreParams.parse(request.params);
       const Query = z.object({
@@ -376,7 +376,7 @@ export const bookingsPlugin: FastifyPluginAsync = async (app) => {
 
   app.post(
     "/commerce/stores/:storeId/booking-resources",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite("bookings") },
     async (request, reply) => {
       const { storeId } = StoreParams.parse(request.params);
       const Body = z.object({
@@ -420,7 +420,7 @@ export const bookingsPlugin: FastifyPluginAsync = async (app) => {
 
   app.get(
     "/commerce/stores/:storeId/booking-resources/:resourceId",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite("bookings") },
     async (request, reply) => {
       const { storeId, resourceId } = StoreResourceParams.parse(request.params);
       try {
@@ -435,7 +435,7 @@ export const bookingsPlugin: FastifyPluginAsync = async (app) => {
 
   app.put(
     "/commerce/stores/:storeId/booking-resources/:resourceId",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite("bookings") },
     async (request, reply) => {
       const { storeId, resourceId } = StoreResourceParams.parse(request.params);
       const Body = z.object({
@@ -479,7 +479,7 @@ export const bookingsPlugin: FastifyPluginAsync = async (app) => {
 
   app.delete(
     "/commerce/stores/:storeId/booking-resources/:resourceId",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite("bookings") },
     async (request, reply) => {
       const { storeId, resourceId } = StoreResourceParams.parse(request.params);
       try {
@@ -494,7 +494,7 @@ export const bookingsPlugin: FastifyPluginAsync = async (app) => {
 
   app.put(
     "/commerce/stores/:storeId/booking-resources/:resourceId/translations/:locale",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite("bookings") },
     async (request, reply) => {
       const { resourceId, locale } = StoreResourceLocaleParams.parse(request.params);
       const Body = z.object({
@@ -520,7 +520,7 @@ export const bookingsPlugin: FastifyPluginAsync = async (app) => {
 
   app.get(
     "/commerce/stores/:storeId/booking-resources/:resourceId/availability",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite("bookings") },
     async (request, reply) => {
       const { resourceId } = StoreResourceParams.parse(request.params);
       const Query = z.object({
@@ -540,7 +540,7 @@ export const bookingsPlugin: FastifyPluginAsync = async (app) => {
 
   app.post(
     "/commerce/stores/:storeId/booking-resources/:resourceId/availability",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite("bookings") },
     async (request, reply) => {
       const { resourceId } = StoreResourceParams.parse(request.params);
       const EntrySchema = z.object({
@@ -571,7 +571,7 @@ export const bookingsPlugin: FastifyPluginAsync = async (app) => {
 
   app.get(
     "/commerce/stores/:storeId/booking-resources/:resourceId/price-rules",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite("bookings") },
     async (request, reply) => {
       const { resourceId } = StoreResourceParams.parse(request.params);
       try {
@@ -586,7 +586,7 @@ export const bookingsPlugin: FastifyPluginAsync = async (app) => {
 
   app.post(
     "/commerce/stores/:storeId/booking-resources/:resourceId/price-rules",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite("bookings") },
     async (request, reply) => {
       const { resourceId } = StoreResourceParams.parse(request.params);
       const Body = z.object({
@@ -617,7 +617,7 @@ export const bookingsPlugin: FastifyPluginAsync = async (app) => {
 
   app.put(
     "/commerce/stores/:storeId/booking-resources/:resourceId/price-rules/:ruleId",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite("bookings") },
     async (request, reply) => {
       const { resourceId, ruleId } = StoreResourceRuleParams.parse(request.params);
       const Body = z.object({
@@ -648,7 +648,7 @@ export const bookingsPlugin: FastifyPluginAsync = async (app) => {
 
   app.delete(
     "/commerce/stores/:storeId/booking-resources/:resourceId/price-rules/:ruleId",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite("bookings") },
     async (request, reply) => {
       const { resourceId, ruleId } = StoreResourceRuleParams.parse(request.params);
       try {
@@ -667,7 +667,7 @@ export const bookingsPlugin: FastifyPluginAsync = async (app) => {
 
   app.get(
     "/commerce/stores/:storeId/bookings",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite("bookings") },
     async (request, reply) => {
       const { storeId } = StoreParams.parse(request.params);
       const Query = z.object({
@@ -690,7 +690,7 @@ export const bookingsPlugin: FastifyPluginAsync = async (app) => {
 
   app.post(
     "/commerce/stores/:storeId/bookings",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite("bookings") },
     async (request, reply) => {
       const { storeId } = StoreParams.parse(request.params);
       const Body = z.object({
@@ -727,7 +727,7 @@ export const bookingsPlugin: FastifyPluginAsync = async (app) => {
 
   app.get(
     "/commerce/stores/:storeId/bookings/:bookingId",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite("bookings") },
     async (request, reply) => {
       const { storeId, bookingId } = StoreBookingParams.parse(request.params);
       try {
@@ -742,7 +742,7 @@ export const bookingsPlugin: FastifyPluginAsync = async (app) => {
 
   app.post(
     "/commerce/stores/:storeId/bookings/:bookingId/confirm",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite("bookings") },
     async (request, reply) => {
       const { storeId, bookingId } = StoreBookingParams.parse(request.params);
       try {
@@ -757,7 +757,7 @@ export const bookingsPlugin: FastifyPluginAsync = async (app) => {
 
   app.post(
     "/commerce/stores/:storeId/bookings/:bookingId/check-in",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite("bookings") },
     async (request, reply) => {
       const { storeId, bookingId } = StoreBookingParams.parse(request.params);
       try {
@@ -772,7 +772,7 @@ export const bookingsPlugin: FastifyPluginAsync = async (app) => {
 
   app.post(
     "/commerce/stores/:storeId/bookings/:bookingId/check-out",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite("bookings") },
     async (request, reply) => {
       const { storeId, bookingId } = StoreBookingParams.parse(request.params);
       try {
@@ -787,7 +787,7 @@ export const bookingsPlugin: FastifyPluginAsync = async (app) => {
 
   app.post(
     "/commerce/stores/:storeId/bookings/:bookingId/cancel",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite("bookings") },
     async (request, reply) => {
       const { storeId, bookingId } = StoreBookingParams.parse(request.params);
       const Body = z.object({
@@ -806,7 +806,7 @@ export const bookingsPlugin: FastifyPluginAsync = async (app) => {
 
   app.post(
     "/commerce/stores/:storeId/bookings/:bookingId/no-show",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite("bookings") },
     async (request, reply) => {
       const { storeId, bookingId } = StoreBookingParams.parse(request.params);
       try {
@@ -821,7 +821,7 @@ export const bookingsPlugin: FastifyPluginAsync = async (app) => {
 
   app.get(
     "/commerce/stores/:storeId/bookings/:bookingId/events",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite("bookings") },
     async (request, reply) => {
       const { storeId, bookingId } = StoreBookingParams.parse(request.params);
       try {
@@ -838,7 +838,7 @@ export const bookingsPlugin: FastifyPluginAsync = async (app) => {
 
   app.post(
     "/commerce/stores/:storeId/bookings/:bookingId/modifications",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite("bookings") },
     async (request, reply) => {
       const { storeId, bookingId } = StoreBookingParams.parse(request.params);
       const Body = z.object({
@@ -862,7 +862,7 @@ export const bookingsPlugin: FastifyPluginAsync = async (app) => {
 
   app.post(
     "/commerce/stores/:storeId/bookings/:bookingId/modifications/:modId/approve",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite("bookings") },
     async (request, reply) => {
       const { storeId, bookingId, modId } = StoreBookingModParams.parse(request.params);
       try {
@@ -879,7 +879,7 @@ export const bookingsPlugin: FastifyPluginAsync = async (app) => {
 
   app.post(
     "/commerce/stores/:storeId/bookings/:bookingId/modifications/:modId/reject",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite("bookings") },
     async (request, reply) => {
       const { storeId, bookingId, modId } = StoreBookingModParams.parse(request.params);
       try {
@@ -897,7 +897,7 @@ export const bookingsPlugin: FastifyPluginAsync = async (app) => {
 
   app.get(
     "/commerce/stores/:storeId/bookings/:bookingId/messages",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite("bookings") },
     async (request, reply) => {
       const { storeId, bookingId } = StoreBookingParams.parse(request.params);
       try {
@@ -912,7 +912,7 @@ export const bookingsPlugin: FastifyPluginAsync = async (app) => {
 
   app.post(
     "/commerce/stores/:storeId/bookings/:bookingId/messages",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite("bookings") },
     async (request, reply) => {
       const { storeId, bookingId } = StoreBookingParams.parse(request.params);
       const Body = z.object({
@@ -935,7 +935,7 @@ export const bookingsPlugin: FastifyPluginAsync = async (app) => {
 
   app.post(
     "/commerce/stores/:storeId/bookings/:bookingId/check-in-tokens",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite("bookings") },
     async (request, reply) => {
       const { storeId, bookingId } = StoreBookingParams.parse(request.params);
       const Body = z.object({
@@ -959,7 +959,7 @@ export const bookingsPlugin: FastifyPluginAsync = async (app) => {
 
   app.get(
     "/commerce/stores/:storeId/bookings/:bookingId/damage-claims",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite("bookings") },
     async (request, reply) => {
       const { storeId, bookingId } = StoreBookingParams.parse(request.params);
       try {
@@ -974,7 +974,7 @@ export const bookingsPlugin: FastifyPluginAsync = async (app) => {
 
   app.post(
     "/commerce/stores/:storeId/bookings/:bookingId/damage-claims",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite("bookings") },
     async (request, reply) => {
       const { storeId, bookingId } = StoreBookingParams.parse(request.params);
       const Body = z.object({
@@ -996,7 +996,7 @@ export const bookingsPlugin: FastifyPluginAsync = async (app) => {
 
   app.put(
     "/commerce/stores/:storeId/bookings/:bookingId/damage-claims/:claimId",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite("bookings") },
     async (request, reply) => {
       const { storeId, bookingId, claimId } = StoreBookingClaimParams.parse(request.params);
       void bookingId;
@@ -1023,7 +1023,7 @@ export const bookingsPlugin: FastifyPluginAsync = async (app) => {
 
   app.get(
     "/commerce/stores/:storeId/booking-resources/:resourceId/ical-feeds",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite("bookings") },
     async (request, reply) => {
       const { resourceId } = StoreResourceParams.parse(request.params);
       try {
@@ -1038,7 +1038,7 @@ export const bookingsPlugin: FastifyPluginAsync = async (app) => {
 
   app.post(
     "/commerce/stores/:storeId/booking-resources/:resourceId/ical-feeds",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite("bookings") },
     async (request, reply) => {
       const { resourceId } = StoreResourceParams.parse(request.params);
       const Body = z.object({
@@ -1061,7 +1061,7 @@ export const bookingsPlugin: FastifyPluginAsync = async (app) => {
 
   app.put(
     "/commerce/stores/:storeId/booking-resources/:resourceId/ical-feeds/:feedId",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite("bookings") },
     async (request, reply) => {
       const { resourceId, feedId } = StoreResourceFeedParams.parse(request.params);
       const Body = z.object({
@@ -1082,7 +1082,7 @@ export const bookingsPlugin: FastifyPluginAsync = async (app) => {
 
   app.delete(
     "/commerce/stores/:storeId/booking-resources/:resourceId/ical-feeds/:feedId",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite("bookings") },
     async (request, reply) => {
       const { resourceId, feedId } = StoreResourceFeedParams.parse(request.params);
       try {
@@ -1116,7 +1116,7 @@ export const bookingsPlugin: FastifyPluginAsync = async (app) => {
   // Import endpoint: accepts raw iCal text or JSON with ical_text field
   app.post(
     "/commerce/stores/:storeId/booking-resources/:resourceId/ical-feeds/:feedId/import",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite("bookings") },
     async (request, reply) => {
       const { resourceId, feedId } = StoreResourceFeedParams.parse(request.params);
       // Accept raw text/calendar body or JSON { ical_text: string }
@@ -1145,7 +1145,7 @@ export const bookingsPlugin: FastifyPluginAsync = async (app) => {
 
   app.get(
     "/commerce/stores/:storeId/booking-channel-providers",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite("bookings") },
     async (request, reply) => {
       const { storeId } = StoreParams.parse(request.params);
       try {
@@ -1160,7 +1160,7 @@ export const bookingsPlugin: FastifyPluginAsync = async (app) => {
 
   app.post(
     "/commerce/stores/:storeId/booking-channel-providers",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite("bookings") },
     async (request, reply) => {
       const { storeId } = StoreParams.parse(request.params);
       const Body = z.object({
@@ -1191,7 +1191,7 @@ export const bookingsPlugin: FastifyPluginAsync = async (app) => {
 
   app.put(
     "/commerce/stores/:storeId/booking-channel-providers/:providerId",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite("bookings") },
     async (request, reply) => {
       const { storeId, providerId } = StoreProviderParams.parse(request.params);
       const Body = z.object({
@@ -1220,7 +1220,7 @@ export const bookingsPlugin: FastifyPluginAsync = async (app) => {
 
   app.delete(
     "/commerce/stores/:storeId/booking-channel-providers/:providerId",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite("bookings") },
     async (request, reply) => {
       const { storeId, providerId } = StoreProviderParams.parse(request.params);
       try {
@@ -1239,7 +1239,7 @@ export const bookingsPlugin: FastifyPluginAsync = async (app) => {
 
   app.get(
     "/commerce/stores/:storeId/booking-resources/:resourceId/channel-listings",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite("bookings") },
     async (request, reply) => {
       const { resourceId } = StoreResourceParams.parse(request.params);
       try {
@@ -1254,7 +1254,7 @@ export const bookingsPlugin: FastifyPluginAsync = async (app) => {
 
   app.post(
     "/commerce/stores/:storeId/booking-resources/:resourceId/channel-listings",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite("bookings") },
     async (request, reply) => {
       const { resourceId } = StoreResourceParams.parse(request.params);
       const Body = z.object({
@@ -1282,7 +1282,7 @@ export const bookingsPlugin: FastifyPluginAsync = async (app) => {
 
   app.put(
     "/commerce/stores/:storeId/booking-resources/:resourceId/channel-listings/:listingId",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite("bookings") },
     async (request, reply) => {
       const { resourceId, listingId } = StoreResourceListingParams.parse(request.params);
       const Body = z.object({
@@ -1309,7 +1309,7 @@ export const bookingsPlugin: FastifyPluginAsync = async (app) => {
 
   app.delete(
     "/commerce/stores/:storeId/booking-resources/:resourceId/channel-listings/:listingId",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite("bookings") },
     async (request, reply) => {
       const { resourceId, listingId } = StoreResourceListingParams.parse(request.params);
       try {
@@ -1324,7 +1324,7 @@ export const bookingsPlugin: FastifyPluginAsync = async (app) => {
 
   app.post(
     "/commerce/stores/:storeId/booking-resources/:resourceId/channel-listings/:listingId/push",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite("bookings") },
     async (request, reply) => {
       const { storeId, resourceId, listingId } = StoreResourceListingParams.parse(request.params);
       void resourceId;
@@ -1342,7 +1342,7 @@ export const bookingsPlugin: FastifyPluginAsync = async (app) => {
   // (pushARIToProvider) for an explicit date window + optional provider override.
   app.post(
     "/commerce/stores/:storeId/booking-channel-listings/:listingId/push-ari",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite("bookings") },
     async (request, reply) => {
       const { storeId, listingId } = StoreListingParams.parse(request.params);
       const Body = z.object({
@@ -1373,7 +1373,7 @@ export const bookingsPlugin: FastifyPluginAsync = async (app) => {
 
   app.get(
     "/commerce/stores/:storeId/booking-channel-sync-jobs",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite("bookings") },
     async (request, reply) => {
       const { storeId } = StoreParams.parse(request.params);
       const Query = z.object({
@@ -1395,7 +1395,7 @@ export const bookingsPlugin: FastifyPluginAsync = async (app) => {
 
   app.post(
     "/commerce/stores/:storeId/booking-channel-sync-jobs",
-    { preHandler: storeAuthWrite },
+    { preHandler: storeAuthWrite("bookings") },
     async (request, reply) => {
       const { storeId } = StoreParams.parse(request.params);
       const Body = z.object({
