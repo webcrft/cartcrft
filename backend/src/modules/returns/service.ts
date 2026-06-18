@@ -11,7 +11,10 @@
  *
  * Resolution actions (on resolved transition):
  *   refund      — creates a refund row via direct SQL (mirrors payments service semantics)
- *   store_credit — adjusts store credit balance via wallet service (issueStoreCredit)
+ *   store_credit — auto-issues store credit to the customer wallet via the wallet
+ *                 service (issueStoreCreditInTx). Atomic + idempotent: the issue and
+ *                 the idempotency marker (return_requests.store_credit_issued_at) commit
+ *                 together inside one withTx, so a retried resolution never double-credits.
  *   exchange    — creates a replacement order for each exchange_variant_id × quantity at
  *                 current variant price; links back via return_requests.replacement_order_id.
  *                 Restock applied per-line when restock=true.
@@ -19,11 +22,12 @@
  *
  * RMA number: uses sequence next_rma_number() or falls back to timestamp-based generation.
  *
- * Note: store_credit resolution calls issueStoreCredit from wallet service (not direct SQL).
- * This is noted in the implementation where relevant.
+ * Note: store_credit resolution calls issueStoreCreditInTx from the wallet service
+ * (not direct SQL) inside the same transaction that records the idempotency marker.
  */
 
 import { getPool, getReadDb, withTx } from "../../db/pool.js";
+import { round2 } from "../../lib/money.js";
 import type {
   ReturnWithLines,
   CreateReturnInput,
@@ -32,7 +36,7 @@ import type {
   ReturnEvent,
   ReturnLabel,
 } from "./types.js";
-import { issueStoreCredit } from "../wallet/service.js";
+import { issueStoreCreditInTx } from "../wallet/service.js";
 import {
   newShippoClient,
   type ShippoClient,
@@ -512,21 +516,39 @@ async function handleResolution(
   const effectiveType = (input.return_type ?? returnType) as string;
 
   if (effectiveType === "store_credit" && customerId && input.credit_amount && input.credit_amount > 0) {
-    // Issue store credit via wallet service (import not direct SQL)
-    // wallet/service.ts:issueStoreCredit handles UPSERT + FOR UPDATE + ledger atomically
-    try {
-      await issueStoreCredit(storeId, {
+    // Auto-issue store credit ATOMICALLY + IDEMPOTENTLY (Wave-20).
+    //
+    // Everything below runs inside one withTx: we (1) claim the idempotency
+    // marker on the return with a conditional UPDATE guarded on
+    // store_credit_issued_at IS NULL, and (2) issue the credit via the wallet
+    // in-tx primitive. If the credit issue throws, the whole transaction rolls
+    // back and the marker is NOT set — so a retry re-attempts. If the marker is
+    // already set (a prior resolution already issued), the UPDATE matches no row
+    // and we skip — no double-credit.
+    const amount = round2(input.credit_amount).toFixed(2);
+    await withTx(async (client) => {
+      const { rowCount } = await client.query(
+        `UPDATE return_requests
+            SET store_credit_issued_at = now(), updated_at = now()
+          WHERE id = $1::uuid
+            AND store_id = $2::uuid
+            AND store_credit_issued_at IS NULL`,
+        [returnId, storeId]
+      );
+      if ((rowCount ?? 0) === 0) {
+        // Already issued (idempotent no-op) — nothing more to do.
+        return;
+      }
+
+      await issueStoreCreditInTx(client, storeId, {
         customer_id: customerId,
-        amount: input.credit_amount.toFixed(2),
+        amount,
         currency,
         order_id: orderId,
         notes: `Store credit for RMA return ${returnId}`,
         created_by: updatedBy,
       });
-    } catch (err) {
-      // Best-effort: log but don't fail the status update
-      console.error("handleResolution: issueStoreCredit failed", err);
-    }
+    });
   }
 
   if (effectiveType === "refund" && input.credit_amount && input.credit_amount > 0) {

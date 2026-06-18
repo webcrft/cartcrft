@@ -130,6 +130,25 @@ export async function issueStoreCredit(
   storeId: string,
   input: IssueStoreCreditInput
 ): Promise<{ credit: StoreCredit; transaction: StoreCreditTransaction }> {
+  return withTx((client) => issueStoreCreditInTx(client, storeId, input));
+}
+
+/**
+ * Issue store credit inside a CALLER-SUPPLIED transaction.
+ *
+ * Mirrors `issueStoreCredit` but takes a `pg.PoolClient` instead of opening its
+ * own `withTx`, so the credit + ledger write commit (or roll back) together with
+ * the caller's other writes (e.g. recording a return resolution). Same semantics:
+ * UPSERT the wallet row, lock FOR UPDATE, apply the positive delta, append a
+ * store_credit_transactions row with type='issue'. Returns the new balance.
+ *
+ * The existing `issueStoreCredit` is unchanged; it now delegates to this.
+ */
+export async function issueStoreCreditInTx(
+  client: pg.PoolClient,
+  storeId: string,
+  input: IssueStoreCreditInput
+): Promise<{ credit: StoreCredit; transaction: StoreCreditTransaction }> {
   const currency = input.currency.toUpperCase();
   const amount = parseFloat(input.amount);
 
@@ -139,65 +158,63 @@ export async function issueStoreCredit(
     throw e;
   }
 
-  return withTx(async (client) => {
-    // UPSERT the wallet row so it exists
-    await client.query(
-      `INSERT INTO store_credits (store_id, customer_id, currency, balance, expires_at)
-       VALUES ($1::uuid, $2::uuid, $3, 0, $4::timestamptz)
-       ON CONFLICT (store_id, customer_id, currency) DO UPDATE
-         SET updated_at = now()`,
-      [storeId, input.customer_id, currency, input.expires_at ?? null]
-    );
+  // UPSERT the wallet row so it exists
+  await client.query(
+    `INSERT INTO store_credits (store_id, customer_id, currency, balance, expires_at)
+     VALUES ($1::uuid, $2::uuid, $3, 0, $4::timestamptz)
+     ON CONFLICT (store_id, customer_id, currency) DO UPDATE
+       SET updated_at = now()`,
+    [storeId, input.customer_id, currency, input.expires_at ?? null]
+  );
 
-    // Lock the row
-    const { rows: lockRows } = await client.query<{ id: string; balance: string }>(
-      `SELECT id::text, balance::text
-       FROM store_credits
-       WHERE store_id = $1::uuid AND customer_id = $2::uuid AND currency = $3
-       FOR UPDATE`,
-      [storeId, input.customer_id, currency]
-    );
-    const locked = lockRows[0];
-    if (!locked) throw new Error("issueStoreCredit: wallet row not found after upsert");
+  // Lock the row
+  const { rows: lockRows } = await client.query<{ id: string; balance: string }>(
+    `SELECT id::text, balance::text
+     FROM store_credits
+     WHERE store_id = $1::uuid AND customer_id = $2::uuid AND currency = $3
+     FOR UPDATE`,
+    [storeId, input.customer_id, currency]
+  );
+  const locked = lockRows[0];
+  if (!locked) throw new Error("issueStoreCreditInTx: wallet row not found after upsert");
 
-    const newBalance = parseFloat(locked.balance) + amount;
+  const newBalance = round2(parseFloat(locked.balance) + amount);
 
-    // Update balance
-    await client.query(
-      `UPDATE store_credits
-       SET balance = $1::numeric, updated_at = now()
-       WHERE id = $2::uuid`,
-      [newBalance.toFixed(2), locked.id]
-    );
+  // Update balance
+  await client.query(
+    `UPDATE store_credits
+     SET balance = $1::numeric, updated_at = now()
+     WHERE id = $2::uuid`,
+    [newBalance.toFixed(2), locked.id]
+  );
 
-    // Insert transaction (type = 'issue')
-    const { rows: txRows } = await client.query<StoreCreditTransaction>(
-      `INSERT INTO store_credit_transactions
-         (store_credit_id, order_id, amount_delta, balance_after, type, notes, created_by)
-       VALUES ($1::uuid, $2::uuid, $3::numeric, $4::numeric, 'issue', $5, $6::uuid)
-       RETURNING ${SC_TX_COLS}`,
-      [
-        locked.id,
-        input.order_id ?? null,
-        amount.toFixed(2),
-        newBalance.toFixed(2),
-        input.notes ?? null,
-        input.created_by ?? null,
-      ]
-    );
-    const tx = txRows[0];
-    if (!tx) throw new Error("issueStoreCredit: no transaction row returned");
+  // Insert transaction (type = 'issue')
+  const { rows: txRows } = await client.query<StoreCreditTransaction>(
+    `INSERT INTO store_credit_transactions
+       (store_credit_id, order_id, amount_delta, balance_after, type, notes, created_by)
+     VALUES ($1::uuid, $2::uuid, $3::numeric, $4::numeric, 'issue', $5, $6::uuid)
+     RETURNING ${SC_TX_COLS}`,
+    [
+      locked.id,
+      input.order_id ?? null,
+      amount.toFixed(2),
+      newBalance.toFixed(2),
+      input.notes ?? null,
+      input.created_by ?? null,
+    ]
+  );
+  const tx = txRows[0];
+  if (!tx) throw new Error("issueStoreCreditInTx: no transaction row returned");
 
-    // Fetch updated credit
-    const { rows: creditRows } = await client.query<StoreCredit>(
-      `SELECT ${STORE_CREDIT_COLS} FROM store_credits WHERE id = $1::uuid`,
-      [locked.id]
-    );
-    const credit = creditRows[0];
-    if (!credit) throw new Error("issueStoreCredit: no credit row returned");
+  // Fetch updated credit
+  const { rows: creditRows } = await client.query<StoreCredit>(
+    `SELECT ${STORE_CREDIT_COLS} FROM store_credits WHERE id = $1::uuid`,
+    [locked.id]
+  );
+  const credit = creditRows[0];
+  if (!credit) throw new Error("issueStoreCreditInTx: no credit row returned");
 
-    return { credit, transaction: tx };
-  });
+  return { credit, transaction: tx };
 }
 
 /**
