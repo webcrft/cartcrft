@@ -11,6 +11,7 @@
 
 import type pg from "pg";
 import { getPool, getReadDb, withTx } from "../../db/pool.js";
+import { round2 } from "../../lib/money.js";
 import type {
   ProductPublic,
   CreateProductInput,
@@ -664,6 +665,66 @@ export async function listBundleItems(
     [productId, storeId]
   );
   return rows as BundleItemPublic[];
+}
+
+/**
+ * Resolve a bundle product's authoritative unit price from its component
+ * variants at their CURRENT (live) prices — the source of truth for charging a
+ * bundle line at checkout completion.
+ *
+ * Pricing model (matches the schema, which has no explicit bundle-price or
+ * discount column on product_bundle_items):
+ *
+ *   unit_price = round2( SUM(component.price × component.quantity)
+ *                        × (1 − bundle_discount_pct) )
+ *
+ * where bundle_discount_pct is an OPTIONAL store-set discount read from the
+ * bundle product's metadata.bundle_discount_pct (a fraction in [0,1], or a
+ * percentage in (1,100] which is normalised to a fraction). Absent/invalid →
+ * 0, i.e. pure sum-of-components. Optional add-on components (is_optional =
+ * true) are excluded from the auto-priced base — they represent separately
+ * chosen extras and are out of scope for this pass.
+ *
+ * Component prices are read FOR the supplied client/handle so a caller inside a
+ * transaction (checkout completion) prices against the same snapshot it locks.
+ * Returns null when the product is not a bundle or has no (required) components,
+ * letting the caller fall back to the stored line price unchanged.
+ *
+ * @param db    any `.query()`-capable handle (tx client / getPool / getReadDb)
+ * @param productId the BUNDLE product id (products.type = 'bundle')
+ */
+export async function resolveBundleUnitPrice(
+  db: pg.PoolClient | pg.Pool,
+  storeId: string,
+  productId: string
+): Promise<number | null> {
+  const { rows } = await db.query<{ bundle_discount_pct: string | null; components_total: string | null }>(
+    `SELECT (p.metadata->>'bundle_discount_pct')          AS bundle_discount_pct,
+            SUM(cv.price * bi.quantity)::text             AS components_total
+     FROM products p
+     JOIN product_bundle_items bi ON bi.product_id = p.id AND bi.is_optional = false
+     JOIN product_variants     cv ON cv.id = bi.variant_id
+     WHERE p.id = $1::uuid AND p.store_id = $2::uuid AND p.type = 'bundle'
+     GROUP BY p.id`,
+    [productId, storeId]
+  );
+  const row = rows[0];
+  if (!row || row.components_total === null) return null;
+
+  const base = parseFloat(row.components_total);
+  if (!Number.isFinite(base)) return null;
+
+  let pct = 0;
+  if (row.bundle_discount_pct !== null && row.bundle_discount_pct !== "") {
+    const raw = parseFloat(row.bundle_discount_pct);
+    if (Number.isFinite(raw) && raw > 0) {
+      // Accept either a fraction (0.10) or a percentage (10) and normalise.
+      const frac = raw > 1 ? raw / 100 : raw;
+      pct = Math.min(Math.max(frac, 0), 1);
+    }
+  }
+
+  return round2(base * (1 - pct));
 }
 
 export async function addBundleItem(

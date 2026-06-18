@@ -47,6 +47,7 @@ import { dispatchStoreEvent } from "../notifications/service.js";
 import { earnPointsForOrder } from "../loyalty/service.js";
 import { computeDiscounts, type DiscountCartLine } from "../discounts/service.js";
 import { redeemGiftCardInTx, redeemStoreCreditInTx, TenderError } from "../wallet/service.js";
+import { resolveBundleUnitPrice } from "../catalog/service.js";
 import type { AppliedTender } from "./service.js";
 
 // ── Result type ───────────────────────────────────────────────────────────────
@@ -289,14 +290,17 @@ export async function completeCheckout(
     const { rows: priceRows } = await client.query<{
       variant_id: string;
       product_id: string;
+      product_type: string;
       quantity: number;
       cart_price: string;
       current_price: string;
     }>(
-      `SELECT cl.variant_id::text, pv.product_id::text, cl.quantity,
+      `SELECT cl.variant_id::text, pv.product_id::text, p.type AS product_type,
+              cl.quantity,
               cl.price::text AS cart_price, pv.price::text AS current_price
        FROM cart_lines cl
        JOIN product_variants pv ON pv.id = cl.variant_id
+       JOIN products p ON p.id = pv.product_id
        WHERE cl.cart_id = $1::uuid`,
       [cartId]
     );
@@ -307,7 +311,19 @@ export async function completeCheckout(
 
     for (const pr of priceRows) {
       const cartPrice = parseFloat(pr.cart_price);
-      const currentPrice = parseFloat(pr.current_price);
+      // Authoritative unit price for this line. Non-bundle lines use the live
+      // variant price (unchanged behaviour). BUNDLE lines NEVER trust the stored
+      // line/variant price: we recompute the unit price server-side from the
+      // bundle's component variants at their CURRENT prices (tamper-resistant —
+      // a manipulated cart_lines.price is overridden here).
+      let currentPrice = parseFloat(pr.current_price);
+      if (pr.product_type === "bundle") {
+        const bundlePrice = await resolveBundleUnitPrice(client, storeId, pr.product_id);
+        // Fall back to the stored variant price only when the bundle has no
+        // (required) components to price from; otherwise the bundle definition
+        // is authoritative.
+        if (bundlePrice !== null) currentPrice = bundlePrice;
+      }
       if (cartPrice !== currentPrice) {
         priceChanged = true;
         await client.query(
